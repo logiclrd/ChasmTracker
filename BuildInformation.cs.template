@@ -1,0 +1,16 @@
+// This file is intended to be rewritten at the start of each build.
+using System;
+
+public class BuildInformation
+{
+	// Expected format: "built 2025-06-01 13:45:56 CST"
+	public const string Timestamp = "TIMESTAMP";
+
+	// Git hash
+	public const string Commit = "COMMIT";
+
+	// false if the repository had a diff or if the build directory was not a repository
+	public const bool IsPristine = PRISTINE;
+
+	const bool PRISTINE = true;
+}

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<OutputType>Exe</OutputType>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.MAUI.Essentials" Version="9.0.70" />
+		<PackageReference Include="Mono.Posix" Version="7.1.0-final.1.21458.1" />
+		<PackageReference Include="SDL3-CS" Version="3.2.16.1" />
+		<PackageReference Include="SkiaSharp" Version="3.119.0" />
+		<PackageReference Include="X11" Version="1.0.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="LogoBanner.png" />
+		<EmbeddedResource Include="ImpulseTrackerLogo.png" />
+	</ItemGroup>
+
+	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+		<PWSH>powershell.exe</PWSH>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+		<PWSH>/usr/bin/pwsh</PWSH>
+	</PropertyGroup>
+
+	<Target Name="PopulateBuildInformation" BeforeTargets="Build">
+		<Exec Command="$(PWSH) -f $(ProjectDir)/PopulateBuildInformation.ps1" />
+	</Target>
+</Project>

@@ -1,0 +1,693 @@
+using System;
+using System.IO;
+using System.Threading;
+
+namespace ChasmTracker;
+
+using ChasmTracker.Configurations;
+using ChasmTracker.Dialogs;
+using ChasmTracker.DiskOutput;
+using ChasmTracker.Events;
+using ChasmTracker.Memory;
+using ChasmTracker.Menus;
+using ChasmTracker.Pages;
+using ChasmTracker.Songs;
+
+public class Program
+{
+	//VideoDriver s_videoDriver;
+	//AudioDriver s_audioDriver;
+	//AudioDevice s_audioDevice;
+
+	static CommandLineArguments? s_args;
+	static ShutdownFlags s_shutdownProcess;
+
+	static void EventLoop()
+	{
+		Point lastPosition = default; /* character */
+		DateTime lastMouseDown, lastAudioPoll;
+		KeySym lastKey = KeySym.None;
+		DateTime startDown;
+		bool downTrip;
+		NumLockHandling fixNumLockKey;
+		bool screensaver;
+		MouseButton button = MouseButton.Unknown;
+		KeyEvent kk = new KeyEvent();
+
+		int keyboard_focus = 0;
+
+		fixNumLockKey = Status.FixNumLockSetting;
+
+		downTrip = 0;
+		lastMouseDown = DateTime.MinValue;
+		lastAudioPoll = DateTime.UtcNow;
+		startDown = DateTime.MinValue;
+		Status.LastKeySym = KeySym.None;
+
+		Status.KeyMod = Events.CurrentKeyMod;
+
+		OS.GetModKey(ref Status.KeyMod);
+
+		s_video.ToggleScreenSaver(true);
+		screensaver = true;
+
+		Status.Now = DateTime.UtcNow;
+
+		while (true)
+		{
+			while (Events.PollEvent(out var se))
+			{
+				if (MIDIEngine.HandleEvent(se))
+					continue;
+
+				kk.Reset(kk.StartPosition);
+
+				if (se is ButtonPressEvent buttonPress)
+					kk.State = buttonPress.KeyState;
+
+				if ((se is KeyboardEvent) || (se is TextInputEvent))
+				{
+					if ((se is KeyboardEvent keyboardEvent) && (keyboardEvent.Sym == KeySym.None))
+					{
+						// XXX when does this happen?
+						kk.Mouse = MouseState.None;
+						kk.IsRepeat = false;
+					}
+				}
+
+				switch (se)
+				{
+					case QuitEvent:
+						show_exit_prompt();
+						break;
+					case AudioDevicesChangedEvent:
+						refresh_audio_device_list();
+						Status.Flags |= StatusFlags.NeedUpdate;
+						break;
+					case TextInputEvent textEvent:
+						handle_text_input(textEvent.Text);
+						break;
+					case KeyboardEvent keyboardEvent:
+						if (keyboardEvent.IsPressEvent)
+						{
+							if (keyboardEvent.IsRepeat)
+							{
+								if (kbd_key_repeat_enabled())
+									break;
+
+								kk.IsRepeat = true;
+							}
+						}
+
+						// grab the keymod
+						Status.KeyMod = keyboardEvent.Mod;
+						// fix it
+						OS.GetModKey(ref Status.KeyMod);
+
+						kk.Sym = keyboardEvent.Sym;
+						kk.ScanCode = keyboardEvent.ScanCode;
+
+						switch (fixNumLockKey)
+						{
+							case NumLockHandling.Guess:
+								/* should be handled per OS */
+								break;
+							case NumLockHandling.AlwaysOff:
+								Status.KeyMod &= ~KeyMod.Num;
+								break;
+							case NumLockHandling.AlwaysOn:
+								Status.KeyMod |= KeyMod.Num;
+								break;
+						}
+
+						kk.Modifiers = Status.KeyMod;
+						kk.Mouse = MouseState.None;
+
+						kk.Text = keyboardEvent.Text;
+
+						kbd_key_translate(kk);
+
+						handle_key(kk);
+
+						if (keyboardEvent.IsReleaseEvent)
+						{
+							/* only empty the key repeat if
+								* the last keydown is the same sym */
+							if (lastKey == kk.Sym)
+								Keyboard.EmptyKeyRepeat();
+						}
+						else
+						{
+							Keyboard.CacheKeyRepeat(kk);
+
+							Status.LastKeySym = lastKey;
+							lastKey = kk.Sym;
+						}
+
+						break;
+					case MouseEvent mouseEvent:
+						if (kk.State == KeyState.Press)
+						{
+							Status.KeyMod = events_get_keymod_state();
+							OS.GetModKey(ref Status.KeyMod);
+						}
+
+						kk.Sym = KeySym.None;
+						kk.Modifiers = KeyMod.None;
+
+						video.Translate(mouseEvent.Position, out kk.MousePositionFine);
+
+						if (mouseEvent is MouseWheelEvent mouseWheelEvent)
+						{
+							kk.State = KeyState.Unknown;
+							kk.Mouse = (mouseWheelEvent.WheelDelta.Y > 0) ? MouseState.ScrollUp : MouseState.ScrollDown;
+						}
+
+						if ((mouseEvent is MouseButtonEvent mouseButtonEvent) && mouseButtonEvent.IsPressEvent)
+						{
+							// we also have to update the current button
+							if (Status.KeyMod.HasAnyFlag(KeyMod.Control)
+							 || (mouseButtonEvent.Button == MouseButton.Right))
+								button = MouseButton.Right;
+							else if (status.KeyMod.HasAnyFlag(KeyMod.Alt | KeyMod.GUI)
+							 || (mouseButtonEvent.Button == MouseButton.Middle))
+								button = MouseButton.Middle;
+							else
+								button = MouseButton.Left;
+						}
+
+						/* character resolution */
+						kk.MousePosition = kk.MousePositionFine / kk.CharacterResolution;
+						/* half-character selection */
+						kk.MouseXHalfCharacter = (kk.MousePositionFine.X * 2 / kk.CharacterResolution.X) & 1;
+
+						if (se is MouseWheelEvent)
+						{
+							handle_key(kk);
+							break; /* nothing else to do here */
+						}
+
+						if ((se is MouseButtonEvent mouseButtonEvent) && mouseButtonEvent.IsPressEvent)
+							kk.StartPosition = kk.MousePosition;
+
+						// what?
+						startDown = default;
+
+						if (button != MouseButton.Unknown)
+						{
+							kk.MouseButton = button;
+
+							if (kk.State == KeyState.Release)
+							{
+								var ticker = DateTime.UtcNow;
+
+								if ((lastPosition == kk.MousePosition) && ((ticker - lastMouseDown).TotalMilliseconds < 300))
+								{
+									lastMouseDown = default;
+									kk.Mouse = MouseState.DoubleClick;
+								}
+								else
+								{
+									lastMouseDown = ticker;
+									kk.Mouse = MouseState.Click;
+								}
+
+								lastPosition = kk.MousePosition;
+
+								// dirty hack
+								button = MouseButton.Unknown;
+							}
+							else
+								kk.Mouse = MouseState.Click;
+
+							if (Status.DialogType == DialogTypes.None)
+							{
+								if (kk.MousePosition.Y <= 9 && (Status.CurrentPage is not FontEditPage))
+								{
+									if ((kk.State == KeyState.Release) && (kk.MouseButton == MouseButton.Right))
+									{
+										menu_show();
+										break;
+									}
+
+									if ((kk.State == KeyState.Press) && (kk.MouseButton == MouseButton.Left))
+										startDown = DateTime.UtcNow;
+								}
+							}
+
+							kk.OnTarget = widget_change_focus_to_xy(kk.MousePosition);
+
+							if ((se is MouseButtonEvent mouseButtonEvent) && mouseButtonEvent.IsReleaseEvent && downTrip)
+							{
+								downTrip = false;
+								break;
+							}
+
+							handle_key(kk);
+						}
+
+						break;
+
+					case WindowEvent windowEvent:
+						/* this logic sucks, but it does what should probably be considered the "right" thing to do */
+						switch (windowEvent.EventType)
+						{
+							case WindowEventType.FocusGained:
+								keyboard_focus = 1;
+								goto case WindowEventType.Shown;
+
+							case WindowEventType.Shown:
+								video_mousecursor(MOUSE_RESET_STATE);
+								break;
+
+							case WindowEventType.Enter:
+								if (keyboard_focus)
+									video_mousecursor(MOUSE_RESET_STATE);
+								break;
+
+							case WindowEventType.FocusLost:
+								keyboard_focus = false;
+								goto WindowEventType.Leave;
+
+							case WindowEventType.Leave:
+								video_show_cursor(1);
+								break;
+
+							case WindowEventType.SizeChanged: /* tiling window managers */
+								video_resize(se.window.data.resized.width, se.window.data.resized.height);
+								goto case WindowEventType.Exposed;
+
+							case WindowEventType.Exposed:
+								Status.Flags |= StatusFlags.NeedUpdate;
+								break;
+						}
+
+						break;
+					case FileDropEvent fileDropEvent:
+						Dialog.Destroy();
+
+						if (Status.CurrentPage is IDropTarget dropTarget)
+							dropTarget.Drop(fileDropEvent);
+
+						switch (Status.CurrentPage)
+						{
+							case SampleListPage:
+							case SampleLoadPage:
+							case SampleLibraryPage:
+								Song.CurrentSong?.LoadSample(fileDropEvent.FilePath);
+								MemoryUsage.NotifySongChanged();
+								Status.Flags |= StatusFlags.SongNeedsSave;
+								Page.SetPage(PageNumbers.SampleList);
+								break;
+							case InstrumentListGeneralPage:
+							case InstrumentListVolumePage:
+							case InstrumentListPanningPage:
+							case InstrumentListPitchPage:
+							case InstrumentLoadPage:
+							case InstrumentLibraryPage:
+								Song.CurrentSong?.LoadInstrumentWithPrompt(fileDropEvent.FilePath);
+								MemoryUsage.NotifySongChanged();
+								Status.Flags |= StatusFlags.SongNeedsSave;
+								Page.SetPage(PageNumbers.SampleList);
+								break;
+							default:
+								Song.Load(fileDropEvent.FilePath);
+								break;
+						}
+
+						break;
+
+					case UpdateIPMIDIEvent:
+						Status.Flags |= StatusFlags.NeedUpdate;
+						MIDIEngine.PollPorts();
+						break;
+
+					case PlaybackEvent:
+						/* this is the sound thread */
+						MIDIEngine.SendFlush();
+						if (!Status.Flags.HasAnyFlag(StatusFlags.DiskWriterActive | StatusFlags.DiskWriterActiveForPattern))
+							Page.PlaybackUpdate();
+						break;
+
+					case ClipboardPasteEvent clipboardPasteEvent:
+						/* handle clipboard events */
+						if (Dialog.DoClipboardPaste(clipboardPasteEvent))
+							break;
+						if (Page.DoClipboardPaste(clipboardPasteEvent))
+							break;
+
+						handle_text_input(clipboardPasteEvent.Clipboard);
+
+						break;
+
+					case NativeOpenEvent openEvent: /* open song */
+						Song.Load(openEvent.FilePath);
+						break;
+
+					case NativeScriptEvent scriptEvent:
+						/* destroy any active dialog before changing pages */
+						Dialog.Destroy();
+
+						switch (scriptEvent.Which)
+						{
+							case "new": new_song_dialog(); break;
+							case "save": save_song_or_save_as(); break;
+							case "save_as": Page.SetPage(PageNumbers.ModuleSave); break;
+							case "export_song": Page.SetPage(PageNumbers.ModuleExport); break;
+							case "logviewer": Page.SetPage(PageNumbers.Log); break;
+							case "font_editor": Page.SetPage(PageNumbers.FontEditor); break;
+							case "load": Page.SetPage(PageNumbers.ModuleLoad); break;
+							case "help": Page.SetPage(PageNumbers.Help); break;
+							case "pattern": Page.SetPage(PageNumbers.PatternEditor); break;
+							case "orders": Page.SetPage(PageNumbers.OrderListPanning); break;
+							case "variables": Page.SetPage(PageNumbers.SongVariables); break;
+							case "message_edit": Page.SetPage(PageNumbers.Message); break;
+							case "info": Page.SetPage(PageNumbers.Info); break;
+							case "play": Song.Start(); break;
+							case "play_pattern": Song.LoopPattern(AllPages.PatternEditor.CurrentPattern); break;
+							case "play_order": Song.StartAtOrder(AllPages.OrderList.CurrentOrder); break;
+							case "play_mark": AllPages.PatternEditor.PlaySongFromMark(); break;
+							case "stop": Song.Stop(); break;
+							case "calc_length": Page.ShowSongLength(); break;
+							case "sample_page": Page.SetPage(PageNumbers.SampleList); break;
+							case "sample_library": Page.SetPage(PageNumbers.SampleLibrary); break;
+							case "init_sound": /* does nothing :) */ break;
+							case "inst_page": Page.SetPage(PageNumbers.InstrumentList); break;
+							case "inst_library": Page.SetPage(PageNumbers.InstrumentLibrary); break;
+							case "preferences": Page.SetPage(PageNumbers.Preferences); break;
+							case "system_config": Page.SetPage(PageNumbers.Config); break;
+							case "midi_config": Page.SetPage(PageNumbers.MIDI); break;
+							case "palette_page": Page.SetPage(PageNumbers.PaletteEditor); break;
+							case "fullscreen": Video.ToggleDisplayFullscreen(); break;
+						}
+				}
+			}
+
+			/* handle key repeats */
+			Keyboard.HandleKeyRepeat();
+
+			/* now we can do whatever we need to do */
+			Status.Now = DateTime.UtcNow;
+
+			if ((Status.DialogType == DialogTypes.None)
+			 && (startDown != default)
+			 && (Status.Now - startDown > TimeSpan.FromSeconds(1)))
+			{
+				Menu.Show();
+				startDown = default;
+				downTrip = true;
+			}
+
+			if (Status.Flags.HasAnyFlag(StatusFlags.ClippyPasteSelection | StatusFlags.ClippyPasteBuffer))
+			{
+				Clippy.Paste(Status.Flags.HasFlag(StatusFlags.ClippyPasteBuffer)
+					? ClippySource.Buffer : ClippySource.Select);
+				Status.Flags &= ~(StatusFlags.ClippyPasteSelection | StatusFlags.ClippyPasteBuffer);
+			}
+
+			Video.CheckUpdate();
+
+			switch (Song.Mode) {
+				case SongMode.Playing:
+				case SongMode.PatternLoop:
+					if (screensaver)
+					{
+						s_video.ToggleScreenSaver(false);
+						screensaver = false;
+					}
+					break;
+				default:
+					if (!screensaver)
+					{
+						s_video.ToggleScreenSaver(true);
+						screensaver = true;
+					}
+					break;
+			};
+
+			// Check for new audio devices every 5 seconds.
+			if (Status.Now - lastAudioPoll > TimeSpan.FromMilliseconds(5000))
+			{
+				Audio.RefreshDeviceList();
+				Status.Flags |= StatusFlags.NeedUpdate;
+				lastAudioPoll = DateTime.UtcNow;
+			}
+
+			if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+			{
+				var q = DiskWriter.Sync();
+
+				while (q == SyncResult.More && !Events.HaveEvent)
+				{
+					Video.CheckUpdate();
+					q = DiskWriter.Sync();
+				}
+
+				if (q == SyncResult.Done)
+				{
+					Hooks.DiskWriterOutputComplete();
+
+					if (s_args.DiskwriteTo != null)
+					{
+						Console.WriteLine("Diskwrite complete, exiting...\n");
+						Exit(0);
+					}
+				}
+			}
+
+			/* let dmoz build directory lists, etc
+			 *
+			 * as long as there's no user-event going on... */
+			while (!Status.Flags.HasFlag(StatusFlags.NeedUpdate) && dmoz_worker() && !Events.HaveEvent)
+				;
+
+			/* sleep for a little bit to not hog CPU time */
+			if (!Events.HaveEvent())
+				Thread.Sleep(5);
+		}
+	}
+
+	public static void Exit(int x)
+	{
+		if (s_shutdownProcess.HasFlag(ShutdownFlags.RunHook))
+			Hooks.Exit();
+
+		if (s_shutdownProcess.HasFlag(ShutdownFlags.SaveConfiguration))
+			Configuration.AtExitSave();
+
+		if (s_shutdownProcess.HasFlag(ShutdownFlags.SDLQuit))
+		{
+			Video.Refresh();
+			Video.Blit();
+			Video.Shutdown();
+			/*
+			Don't use this function as atexit handler, because that will cause
+			segfault when MESA runs on Wayland or KMS/DRM: Never call SDL_Quit()
+			inside an atexit handler.
+			You're probably still on X11 if this has not bitten you yet.
+			See long-standing bug: https://github.com/libsdl-org/SDL/issues/3184
+				/ Vanfanel
+			*/
+		}
+
+		Song.LockAudio();
+		Song.StopUnlocked(true);
+		Song.UnlockAudio();
+
+		MIDIEngine.Stop();
+
+		DMOZ.Quit();
+		s_audio.Quit();
+		Clippy.Quit();
+		Events.Quit();
+		Timer.Quit();
+		MT.Quit();
+
+		OS.SysExit();
+
+		Environment.Exit(x);
+	}
+
+	static int Main(string[] args)
+	{
+		OS.SysInit();
+
+		Vis.Init();
+
+		Ver.Init();
+
+		var args = new CommandLineArguments(); /* shouldn't this be like, first? */
+
+		if (args.StartupFlags.HasFlag(StartupFlags.Headless))
+			Status.Flags |= StatusFlags.Headless;
+
+		/* Eh. */
+		Log.Append(false, 3, ChasmVersion.Banner(false));
+		Log.AppendNewLine();
+
+		if (!DMOZ.Init())
+		{
+			Log.Append(false, 4, "Failed to initialize a filesystem backend!");
+			Log.Append(false, 4, "Portable mode will not work properly!");
+			Log.AppendNewLine();
+		}
+
+		Configuration.InitializeDirectory();
+
+		if (args.StartupFlags.HasFlag(StartupFlags.Hooks))
+		{
+			Hooks.Startup();
+			s_shutdownProcess |= ShutdownFlags.RunHook;
+		}
+
+		Song.Initialize();
+
+		Configuration.Load();
+
+		if (!Clippy.Initialize())
+		{
+			Log.Append(4, "Failed to initialize a clipboard backend!");
+			Log.Append(4, "Copying to the system clipboard will not work properly!");
+			Log.AppendNewLine();
+		}
+
+		if (args.ClassicModeSpecified)
+		{
+			Status.Flags &= ~StatusFlags.ClassicMode;
+
+			if (args.StartupFlags.HasFlag(StartupFlags.Classic))
+				Status.Flags |= StatusFlags.ClassicMode;
+		}
+
+		if (!args.StartupFlags.HasFlag(StartupFlags.Network))
+			Status.Flags |= StatusFlags.NoNetwork;
+
+		s_shutdownProcess |= ShutdownFlags.SaveConfiguration;
+		s_shutdownProcess |= ShutdownFlags.SDLQuit;
+
+		if (args.StartupFlags.HasFlag(StartupFlags.Headless))
+		{
+			if (args.DiskwriteTo == null)
+			{
+				Console.Error.WriteLine("Error: --headless requires --diskwrite");
+				return 1;
+			}
+			if (args.InitialSong == null)
+			{
+				Console.Error.WriteLine("Error: --headless requires an input song file");
+				return 1;
+			}
+
+			// Initialize modplug only
+			Song.InitializeModPlug();
+
+			// Load and export song
+			if (Song.LoadUnchecked(args.InitialSong))
+			{
+				int multiOffset = args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
+
+				string driver = args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
+					? "AIFF"
+					: "WAV";
+
+				if (multiOffset >= 0)
+					driver = "M" + driver;
+
+				if (Song.Export(args.DiskwriteTo, driver) != SaveResult.Success)
+					Exit(1);
+
+				// Wait for diskwrite to complete
+				while (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+				{
+					var q = DiskWriter.Sync();
+
+					if (q == SyncResult.Done)
+						break;
+					else if (q != SyncResult.More)
+					{
+						Console.Error.WriteLine("Error: Diskwrite failed");
+						Exit(1);
+					}
+				}
+
+				Exit(0);
+			}
+			else
+			{
+				Console.Error.WriteLine("Error: Failed to load song %s", args.InitialSong);
+				Exit(1);
+			}
+		}
+
+		Assert.IsTrue(() => Video.Startup(), "Failed to initialize video!");
+
+		if (args.WantFullScreenSpecified)
+			Video.Fullscreen(args.WantFullScreen);
+
+		Palette.Apply();
+		Font.Initialize();
+		MIDIEngine.Start();
+		Audio.Initialize(audio_driver, audio_device);
+		Song.InitializeModPlug();
+
+		Video.MouseCursor(Configuration.Video.MouseCursor);
+		Status.FlashText(" "); /* silence the mouse cursor message */
+
+		Page.NotifySongChanged();
+
+		if ((args.InitialSong != null) && (args.InitialDirectory == null))
+			args.InitialDirectory = Path.GetDirectoryName(Path.GetFullPath(args.InitialSong!));
+
+		if (args.InitialDirectory != null)
+		{
+			Configuration.Files.ModulesDirectory = args.InitialDirectory;
+			Configuration.Files.SamplesDirectory = args.InitialDirectory;
+			Configuration.Files.InstrumentsDirectory = args.InitialDirectory;
+		}
+
+		if (args.StartupFlags.HasFlag(StartupFlags.FontEdit))
+		{
+			Status.Flags |= StatusFlags.StartupFontEdit;
+			Page.SetPage(PageNumbers.FontEditor);
+		}
+		else if (args.InitialSong != null)
+		{
+			Page.SetPage(PageNumbers.Log);
+
+			if (Song.LoadUnchecked(args.InitialSong))
+			{
+				if (args.DiskwriteTo != null)
+				{
+					// make a guess?
+					int multiOffset = args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
+
+					string driver = args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
+						? "AIFF"
+						: "WAV";
+
+					if (multiOffset >= 0)
+						driver = "M" + driver;
+
+					if (Song.Export(args.DiskwriteTo, driver) != SaveResult.Success)
+						Exit(1);
+				}
+				else if (args.StartupFlags.HasFlag(StartupFlags.Play))
+				{
+					Song.Start();
+					Page.SetPage(PageNumbers.Info);
+				}
+			}
+		}
+		else
+			Page.SetPage(PageNumbers.About);
+
+		Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+
+		/* poll once */
+		MIDIEngine.PollPorts();
+
+		EventLoop();
+
+		return 0; /* blah */
+	}
+}
