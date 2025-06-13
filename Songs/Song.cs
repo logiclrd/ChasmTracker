@@ -32,6 +32,7 @@ public class Song
 	public readonly List<SongSample?> Samples = new List<SongSample?>();
 	public readonly List<SongInstrument?> Instruments = new List<SongInstrument?>();
 	public readonly List<int> OrderList = new List<int>();
+	public readonly SongChannel[] Channels = new SongChannel[Constants.MaxChannels];
 
 	public SongFlags Flags;
 
@@ -50,7 +51,7 @@ public class Song
 
 		// Make a new instrument if it doesn't exist.
 		if (Instruments[n] == null)
-			Instruments[n] = new SongInstrument();
+			Instruments[n] = new SongInstrument(this);
 
 		return Instruments[n];
 	}
@@ -72,6 +73,14 @@ public class Song
 
 		return pattern?.Rows.Count
 			?? ((n >= Constants.MaxPatterns) ? 0 : Constants.DefaultPatternLength);
+	}
+
+	public SongChannel? GetChannel(int n)
+	{
+		if ((n < 0) || (n >= Channels.Length))
+			return null;
+
+		return Channels[n];
 	}
 }
 

@@ -14,6 +14,30 @@ public class Pattern
 			Rows.Add(new PatternRow());
 	}
 
+	public Pattern(IEnumerable<SongNote> data, int numChannels)
+		: this()
+	{
+		int x = 0;
+		int y = 0;
+
+		foreach (var note in data)
+		{
+			if (x < Rows[y].Notes.Length)
+				Rows[y].Notes[x] = note;
+
+			x++;
+
+			if (x >= numChannels)
+			{
+				x = 0;
+				y++;
+
+				if (y >= Rows.Count)
+					break;
+			}
+		}
+	}
+
 	public void Resize(int numRows)
 	{
 		if (Rows.Count > numRows)

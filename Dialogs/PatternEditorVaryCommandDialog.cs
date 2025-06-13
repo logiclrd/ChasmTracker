@@ -19,12 +19,12 @@ public class PatternEditorVaryCommandDialog : Dialog
 		thumbBarVaryDepth.Value = varyDepth;
 
 		buttonOK = new ButtonWidget(new Point(31, 33), 6, "OK", 3);
-		buttonOK.Changed += DialogButtonYes;
+		buttonOK.Clicked += DialogButtonYes;
 
 		buttonCancel = new ButtonWidget(new Point(41, 33), 6, "Cancel", 1);
-		buttonCancel.Changed += DialogButtonCancel;
+		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(thumbBarVolumePercent);
+		Widgets.Add(thumbBarVaryDepth);
 		Widgets.Add(buttonOK);
 		Widgets.Add(buttonCancel);
 

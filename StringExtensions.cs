@@ -193,4 +193,37 @@ public static class StringExtensions
 	}
 
 	public static string ToString99(this byte n) => ((int)n).ToString99();
+
+	public static int Parse99(this string? s)
+	{
+		// aaarghhhh
+		if ((s == null) || (s.Length == 0))
+			return -1;
+
+		int n = 0;
+
+		if (s.Length >= 2)
+		{
+			// two chars
+
+			char c = char.ToLower(s[0];
+
+			if ((c >= '0') && (c <= '9'))
+				n = c - '0';
+			else if ((c >= 'a') && (c <= 'g'))
+				n = c - 'a' + 10;
+			else if ((c >= 'h') && (c <= 'z'))
+				n = c - 'h' + 10;
+			else
+				return -1;
+
+			n *= 10;
+			s = s.Substring(1);
+		}
+
+		if ((s[0] >= '0') && (s[0] <= '9'))
+			return n + s[0] - '0';
+		else
+			return -1;
+	}
 }

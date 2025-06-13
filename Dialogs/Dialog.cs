@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+namespace ChasmTracker.Dialogs;
+
 using ChasmTracker.Menus;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
-
-namespace ChasmTracker.Dialogs;
 
 public class Dialog
 {
@@ -25,11 +25,9 @@ public class Dialog
 
 	static Stack<Dialog> s_activeDialogs = new Stack<Dialog>();
 
-	public static Dialog Create<T>()
-		where T : Dialog, new()
+	public static T Show<T>(T dialog)
+		where T : Dialog
 	{
-		var dialog = new T();
-
 		s_activeDialogs.Push(dialog);
 
 		return dialog;
@@ -62,6 +60,118 @@ public class Dialog
 	{
 		while (s_activeDialogs.Any())
 			Destroy();
+	}
+
+	public static void DrawActiveDialogs(VGAMem vgaMem)
+	{
+		foreach (var dialog in s_activeDialogs)
+		{
+			/* draw the border and background */
+			vgaMem.DrawBox(
+				dialog.Position,
+				dialog.Position.Advance(dialog.Size).Advance(-1, -1),
+				BoxTypes.Thick | BoxTypes.Outer | BoxTypes.FlatLight);
+
+			vgaMem.DrawFillChars(
+				dialog.Position.Advance(1, 1),
+				dialog.Position.Advance(dialog.Size).Advance(-2, -2),
+				VGAMem.DefaultForeground, 2);
+
+			/* then the rest of the stuff */
+			dialog.DrawConst(vgaMem);
+
+			if (!string.IsNullOrWhiteSpace(dialog.Text))
+				vgaMem.DrawText(dialog.Text, new Point(dialog.TextX, 27), 0, 2);
+
+			for (int i = 0; i < dialog.Widgets.Count; i++)
+			{
+				var widget = dialog.Widgets[i];
+				bool isSelected = (i == dialog.SelectedWidget);
+
+				widget.DrawWidget(vgaMem, isSelected);
+			}
+		}
+	}
+
+	public static bool HandleKeyForCurrentDialog(KeyEvent k)
+	{
+		if (!s_activeDialogs.Any())
+		{
+			Console.Error.WriteLine("{0} called with no dialog", nameof(HandleKeyForCurrentDialog));
+			return false;
+		}
+
+		var dialog = s_activeDialogs.Peek();
+
+		if (dialog.HandleKey(k))
+			return true;
+
+		/* this SHOULD be handling on k.State press but the widget key handler is stealing that key. */
+		if (k.State == KeyState.Release && !k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+		{
+			switch (k.Sym)
+			{
+				case KeySym.y:
+					switch (Status.DialogType)
+					{
+						case DialogTypes.YesNo:
+						case DialogTypes.OKCancel:
+							DialogButtonYes(dialog.Data);
+							return true;
+					}
+					break;
+				case KeySym.n:
+					switch (Status.DialogType)
+					{
+						case DialogTypes.YesNo:
+							/* in Impulse Tracker, 'n' means cancel, not "no"!
+							(results in different behavior on sample quality convert dialog) */
+							if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+							{
+								DialogButtonNo(dialog.Data);
+								return true;
+							}
+							goto case DialogTypes.OKCancel;
+						case DialogTypes.OKCancel:
+							DialogButtonCancel(dialog.Data);
+							return true;
+					}
+
+					break;
+				case KeySym.c:
+					switch (Status.DialogType)
+					{
+						case DialogTypes.YesNo:
+						case DialogTypes.OKCancel:
+							break;
+						default:
+							return false;
+					}
+
+					goto case KeySym.Escape;
+				case KeySym.Escape:
+					DialogButtonCancel(dialog.Data);
+					return true;
+				case KeySym.o:
+					switch (Status.DialogType)
+					{
+						case DialogTypes.YesNo:
+						case DialogTypes.OKCancel:
+							break;
+						default:
+							return false;
+					}
+
+					goto case KeySym.Return;
+				case KeySym.Return:
+					DialogButtonYes(dialog.Data);
+					return true;
+				default:
+					break;
+			}
+		}
+
+		return false;
 	}
 
 	public virtual void DrawConst(VGAMem vgaMem)
@@ -101,7 +211,7 @@ public class Dialog
 
 		Widgets.Add(buttonOK);
 
-		buttonOK.Changed += DialogButtonYes;
+		buttonOK.Clicked += DialogButtonYes;
 	}
 
 	void DialogCreateOKCancel()
@@ -127,8 +237,8 @@ public class Dialog
 		var buttonOK = new ButtonWidget(new Point(31, 30), 6, "OK", 3);
 		var buttonCancel = new ButtonWidget(new Point(42, 30), 6, "Cancel", 3);
 
-		buttonOK.Changed += DialogButtonYes;
-		buttonCancel.Changed += DialogButtonCancel;
+		buttonOK.Clicked += DialogButtonYes;
+		buttonCancel.Clicked += DialogButtonCancel;
 
 		Widgets.Add(buttonOK);
 		Widgets.Add(buttonCancel);
@@ -155,8 +265,8 @@ public class Dialog
 		var buttonOK = new ButtonWidget(new Point(30, 30), 6, "Yes", 3);
 		var buttonCancel = new ButtonWidget(new Point(42, 30), 6, "No", 3);
 
-		buttonOK.Changed += DialogButtonYes;
-		buttonCancel.Changed += DialogButtonNo;
+		buttonOK.Clicked += DialogButtonYes;
+		buttonCancel.Clicked += DialogButtonNo;
 
 		Widgets.Add(buttonOK);
 		Widgets.Add(buttonCancel);
@@ -318,19 +428,41 @@ public class Dialog
 
 	protected virtual void Initialize() { }
 
+	static void DialogButton(string functionName, Func<Dialog, Action<object?>?> getFunctor, object? data)
+	{
+		if (!s_activeDialogs.Any())
+		{
+			Console.Error.WriteLine("{0} called with no dialog", functionName);
+			return;
+		}
+
+		var dialog = s_activeDialogs.Peek();
+
+		var action = getFunctor(dialog);
+
+		if (data == null)
+			data = dialog.Data;
+
+		Dialog.Destroy();
+
+		action?.Invoke(data);
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
 	public static void DialogButtonYes(object? data)
 	{
-		// TODO
+		DialogButton(nameof(DialogButtonYes), d => d.ActionYes, data);
 	}
 
 	public static void DialogButtonNo(object? data)
 	{
-		// TODO
+		DialogButton(nameof(DialogButtonYes), d => d.ActionNo, data);
 	}
 
 	public static void DialogButtonCancel(object? data)
 	{
-		// TODO
+		DialogButton(nameof(DialogButtonYes), d => d.ActionCancel, data);
 	}
 
 	public static void DialogButtonYes() => DialogButtonYes(default);

@@ -39,7 +39,7 @@ public class PatternEditorLengthDialog : Dialog
 
 		buttonOK = new ButtonWidget(new Point(35, 31), 8, "OK", 4);
 
-		buttonOK.Changed += DialogButtonYes;
+		buttonOK.Clicked += DialogButtonYes;
 
 		_currentPattern = currentPattern;
 

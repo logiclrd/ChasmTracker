@@ -9,18 +9,22 @@ public class ButtonWidget : Widget
 	public string Text;
 	public int Padding;
 
+	public event Action? Clicked;
+
 	public ButtonWidget(Point position, int width, string text, int padding)
 		: base(position)
 	{
 		Size = new Size(width);
 		Text = text;
 		Padding = padding;
+
+		Changed += () => Clicked?.Invoke();
 	}
 
-	public ButtonWidget(Point position, int width, Action changedAction, string text, int padding)
+	public ButtonWidget(Point position, int width, Action clickedAction, string text, int padding)
 		: this(position, width, text, padding)
 	{
-		Changed += changedAction;
+		Clicked += clickedAction;
 	}
 
 	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)

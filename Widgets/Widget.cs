@@ -10,6 +10,7 @@ public abstract class Widget
 
 	/* for redrawing */
 	public Point Position;
+	public int Width;
 	public Size Size;
 	public bool IsDepressed;
 	public int ClipStart, ClipEnd;
@@ -17,9 +18,10 @@ public abstract class Widget
 	/* these fields specify what widget gets selected next */
 	public WidgetNext Next;
 
-	public Widget(Point position)
+	public Widget(Point position, int width)
 	{
 		Position = position;
+		Width = width;
 	}
 
 	public event Action? Changed;

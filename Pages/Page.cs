@@ -24,7 +24,7 @@ public abstract class Page
 	public static List<Widget>? ActiveWidgets;
 	public static SharedInt? SelectedActiveWidget;
 
-	public static MinipopState MinipopActive;
+	public static MiniPopState MiniPopActive;
 
 	protected Page(PageNumbers pageNumber, string title, HelpTexts helpText)
 	{
@@ -123,17 +123,20 @@ public abstract class Page
 	{
 		var miniPopDialog = new PageMiniPopSlideDialog(currentValue, name, min, max, mid);
 
-		miniPopDialog.SetMPActiveTo2 = () => { MinipopActive = MinipopState.Two; };
+		miniPopDialog.MiniPopUsed +=
+			() => { MiniPopActive = MiniPopState.ActiveUsed; };
+
+		MiniPopActive = MiniPopState.Active;
 
 		return miniPopDialog;
 	}
 
 	public void FinishMiniPop()
 	{
-		if (MinipopActive != MinipopState.Zero)
+		if (MiniPopActive != MiniPopState.Inactive)
 		{
 			Dialog.DestroyAll();
-			MinipopActive = MinipopState.Zero;
+			MiniPopActive = MiniPopState.Inactive;
 		}
 	}
 
@@ -142,15 +145,15 @@ public abstract class Page
 		/* returns true if the key was handled */
 	public bool HandleKeyGlobal(KeyEvent k)
 	{
-		if ((MinipopActive == MinipopState.Two) && (k.Mouse == MouseState.Click) && (k.State == KeyState.Release))
+		if ((MiniPopActive == MiniPopState.ActiveUsed) && (k.Mouse == MouseState.Click) && (k.State == KeyState.Release))
 		{
 			Status.Flags |= StatusFlags.NeedUpdate;
 			Dialog.DestroyAll();
-			MinipopActive = 0;
+			MiniPopActive = MiniPopState.Inactive;
 			// eat it...
 			return true;
 		}
-		if ((MinipopActive == MinipopState.Zero) && (k.State == KeyState.Press) && (k.Mouse == MouseState.Click))
+		if ((MiniPopActive == MiniPopState.Inactive) && (k.State == KeyState.Press) && (k.Mouse == MouseState.Click))
 		{
 			if (k.MousePosition.X >= 63 && k.MousePosition.X <= 77 && k.MousePosition.Y >= 6 && k.MousePosition.Y <= 7)
 			{
@@ -284,7 +287,7 @@ public abstract class Page
 				}
 			}
 		}
-		else if ((MinipopActive == MinipopState.Zero) && (k.Mouse == MouseState.DoubleClick))
+		else if ((MiniPopActive == MiniPopState.Inactive) && (k.Mouse == MouseState.DoubleClick))
 		{
 			if (k.MousePosition.Y == 4 && k.MousePosition.X >= 11 && k.MousePosition.X <= 28)
 			{

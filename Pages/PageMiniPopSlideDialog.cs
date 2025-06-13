@@ -17,6 +17,8 @@ public class PageMiniPopSlideDialog : Dialog
 	public event Action<int>? SetValue;
 	public event Action<int>? SetValueNoPlay;
 
+	public event Action? MiniPopUsed;
+
 	public PageMiniPopSlideDialog(int currentValue, string name, int min, int max, Point mid)
 		: base(mid.Advance(-10, -3), new Size(20, 6))
 	{
@@ -81,8 +83,6 @@ public class PageMiniPopSlideDialog : Dialog
 		if (!Song.Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop))
 			SetValueNoPlay?.Invoke(thumbBarValue.Value);
 
-		SetMPActiveTo2?.Invoke();
+		MiniPopUsed?.Invoke();
 	}
-
-	public Action? SetMPActiveTo2;
 }
