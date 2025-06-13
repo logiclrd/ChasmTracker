@@ -22,7 +22,6 @@ public class Dialog
 	public Action<object?>? ActionYes;
 	public Action<object?>? ActionNo;
 	public Action<object?>? ActionCancel;
-	public Func<KeyEvent, bool>? HandleKey;
 
 	static Stack<Dialog> s_activeDialogs = new Stack<Dialog>();
 
@@ -67,6 +66,11 @@ public class Dialog
 
 	public virtual void DrawConst(VGAMem vgaMem)
 	{
+	}
+
+	public virtual bool HandleKey(KeyEvent keyEvent)
+	{
+		return false;
 	}
 
 	/* --------------------------------------------------------------------- */

@@ -138,7 +138,7 @@ public class PatternEditorPage : Page
 	int _volumePercent = 100;
 	int _varyDepth = 10;
 	int _fastVolumePercent = 67;
-	int _fastVolumeMode = 0;        /* toggled with ctrl-j */
+	bool _fastVolumeMode = false;        /* toggled with ctrl-j */
 
 	CopySearchMode _maskCopySearchMode = CopySearchMode.Off;
 
@@ -931,137 +931,87 @@ public class PatternEditorPage : Page
 		base.SetPage(vgaMem);
 	}
 
-#if false
-/* --------------------------------------------------------------------------------------------------------- */
-/* volume amplify/attenuate and fast volume setup handlers */
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* volume amplify/attenuate and fast volume setup handlers */
 
-/* this is shared by the fast and normal volume dialogs */
-static struct widget volume_setup_widgets[3];
+	void FastVolumeToggle()
+	{
+		if (_fastVolumeMode)
+		{
+			_fastVolumeMode = false;
+			Status.FlashText("Alt-I / Alt-J fast volume changes disabled");
+		}
+		else
+		{
+			var dialog = new PatternEditorFastVolumeDialog(_fastVolumePercent);
 
-static void fast_volume_setup_ok(SCHISM_UNUSED void *data)
-{
-	fast_volume_percent = volume_setup_widgets[0].d.thumbbar.value;
-	fast_volume_mode = 1;
-	status_text_flash("Alt-I / Alt-J fast volume changes enabled");
-}
-
-static void fast_volume_setup_cancel(SCHISM_UNUSED void *data)
-{
-	status_text_flash("Alt-I / Alt-J fast volume changes not enabled");
-}
-
-static void fast_volume_setup_draw_const(void)
-{
-	draw_text("Volume Amplification %", 29, 27, 0, 2);
-	draw_box(32, 29, 44, 31, BOX_THIN | BOX_INNER | BOX_INSET);
-}
-
-static void fast_volume_toggle(void)
-{
-	struct dialog *dialog;
-
-	if (fast_volume_mode) {
-		fast_volume_mode = 0;
-		status_text_flash("Alt-I / Alt-J fast volume changes disabled");
-	} else {
-		widget_create_thumbbar(volume_setup_widgets + 0, 33, 30, 11, 0, 1, 1, NULL, 10, 90);
-
-		volume_setup_widgets[0].d.thumbbar.value = fast_volume_percent;
-		widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2,
-			      dialog_yes_NULL, "OK", 3);
-		widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1,
-			      dialog_cancel_NULL, "Cancel", 1);
-
-		dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
-					      3, 0, fast_volume_setup_draw_const, NULL);
-		dialog->action_yes = fast_volume_setup_ok;
-		dialog->action_cancel = fast_volume_setup_cancel;
+			dialog.AcceptDialog +=
+				newFastVolumePercent =>
+				{
+					_fastVolumePercent = newFastVolumePercent;
+					_fastVolumeMode = true;
+				};
+		}
 	}
-}
 
-static void fast_volume_amplify(void)
-{
-	selection_amplify((100/fast_volume_percent)*100);
-}
-
-static void fast_volume_attenuate(void)
-{
-	selection_amplify(fast_volume_percent);
-}
-
-/* --------------------------------------------------------------------------------------------------------- */
-/* normal (not fast volume) amplify */
-
-static void volume_setup_draw_const(void)
-{
-	draw_text("Volume Amplification %", 29, 27, 0, 2);
-	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
-}
-
-static void volume_amplify_ok(SCHISM_UNUSED void *data)
-{
-	volume_percent = volume_setup_widgets[0].d.thumbbar.value;
-	selection_amplify(volume_percent);
-}
-
-static int volume_amplify_jj(struct key_event *k)
-{
-	if (k->state == KEY_PRESS && (k->mod & SCHISM_KEYMOD_ALT) && (k->sym == SCHISM_KEYSYM_j)) {
-		dialog_yes(NULL);
-		return 1;
+	void FastVolumeAmplify()
+	{
+		/* multiply before divide here, otherwise most of the time
+		 * (100 / percentage) is just always going to be 0 or 1 */
+		SelectionAmplify(100 * 100 / _fastVolumePercent);
 	}
-	return 0;
-}
 
-static void volume_amplify(void)
-{
-	struct dialog *dialog;
+	void FastVolumeAttenuate()
+	{
+		SelectionAmplify(_fastVolumePercent);
+	}
 
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* normal (not fast volume) amplify */
+
+	void VolumeAmplify()
+	{
 		if (!SelectionExists())
 		{
 			ShowNoSelectionError();
 			return;
 		}
-	widget_create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 200);
-	volume_setup_widgets[0].d.thumbbar.value = volume_percent;
-	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
-				      3, 0, volume_setup_draw_const, NULL);
-	dialog->handle_key = volume_amplify_jj;
-	dialog->action_yes = volume_amplify_ok;
-}
 
-/* --------------------------------------------------------------------------------------------------------- */
-/* vary depth */
-static int current_vary = -1;
+		var dialog = new PatternEditorVolumeAmplifyDialog(_volumePercent);
 
-static void vary_setup_draw_const(void)
-{
-	draw_text("Vary depth limit %", 31, 27, 0, 2);
-	draw_box(25, 29, 52, 31, BOX_THIN | BOX_INNER | BOX_INSET);
-}
+		dialog.AcceptDialog +=
+			newVolumePercent =>
+			{
+				_volumePercent = newVolumePercent;
+				SelectionAmplify(_volumePercent);
+			};
+	}
 
-static void vary_amplify_ok(SCHISM_UNUSED void *data)
-{
-	vary_depth = volume_setup_widgets[0].d.thumbbar.value;
-	selection_vary(0, vary_depth, current_vary);
-}
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* vary depth */
+	enum VaryMode
+	{
+		ChannelVolume,
+		PanbrelloParameter,
+	}
 
-static void vary_command(int how)
-{
-	struct dialog *dialog;
+	VaryMode _currentVary;
 
-	widget_create_thumbbar(volume_setup_widgets + 0, 26, 30, 26, 0, 1, 1, NULL, 0, 50);
-	volume_setup_widgets[0].d.thumbbar.value = vary_depth;
-	widget_create_button(volume_setup_widgets + 1, 31, 33, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-	widget_create_button(volume_setup_widgets + 2, 41, 33, 6, 0, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-	dialog = dialog_create_custom(22, 25, 36, 11, volume_setup_widgets,
-				      3, 0, vary_setup_draw_const, NULL);
-	dialog->action_yes = vary_amplify_ok;
-	current_vary = how;
-}
+	void VaryCommand(VaryMode how)
+	{
+		_currentVary = how;
 
+		var dialog = new PatternEditorVaryCommandDialog(_varyDepth);
+
+		dialog.AcceptDialog +=
+			newVaryDepth =>
+			{
+				_varyDepth = newVaryDepth;
+				SelectionVary(0, _varyDepth, _currentVary);
+			};
+	}
+
+#if false
 static int current_effect(void)
 {
 	song_note_t *pattern, *cur_note;
@@ -1087,8 +1037,8 @@ void cfg_save_patedit(cfg_file_t *cfg)
 	CFG_SET_PE(highlight_current_row);
 	CFG_SET_PE(_editCopyMask);
 	CFG_SET_PE(volume_percent);
-	CFG_SET_PE(fast_volume_percent);
-	CFG_SET_PE(fast_volume_mode);
+	CFG_SET_PE(_fastVolumePercent);
+	CFG_SET_PE(_fastVolumeMode);
 	CFG_SET_PE(keyjazz_noteoff);
 	CFG_SET_PE(keyjazz_write_noteoff);
 	CFG_SET_PE(keyjazz_repeat);
@@ -1120,8 +1070,8 @@ void cfg_load_patedit(cfg_file_t *cfg)
 	CFG_GET_PE(highlight_current_row, 0);
 	CFG_GET_PE(_editCopyMask, MASK_NOTE | MASK_INSTRUMENT | MASK_VOLUME);
 	CFG_GET_PE(volume_percent, 100);
-	CFG_GET_PE(fast_volume_percent, 67);
-	CFG_GET_PE(fast_volume_mode, 0);
+	CFG_GET_PE(_fastVolumePercent, 67);
+	CFG_GET_PE(_fastVolumeMode, 0);
 	CFG_GET_PE(keyjazz_noteoff, 0);
 	CFG_GET_PE(keyjazz_write_noteoff, 0);
 	CFG_GET_PE(keyjazz_repeat, 1);
@@ -1747,7 +1697,7 @@ totalRows = pattern + 64 * row + selection.FirstChannel - 1;
 	}
 	pattern_selection_system_copyout();
 }
-static void selection_amplify(int percentage)
+static void SelectionAmplify(int percentage)
 {
 	int row, chan, volume, total_rows;
 	song_note_t *pattern, *note;
@@ -3736,7 +3686,7 @@ LastRow;
 			return 1;
 		if (k->mod & SCHISM_KEYMOD_SHIFT)
 			template_mode = TEMPLATE_OFF;
-		else if (fast_volume_mode)
+		else if (_fastVolumeMode)
 			fast_volume_amplify();
 		else
 			template_mode = (template_mode + 1) % TEMPLATE_MODE_MAX; /* cycle */
@@ -3744,7 +3694,7 @@ LastRow;
 	case SCHISM_KEYSYM_j:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (fast_volume_mode)
+		if (_fastVolumeMode)
 			fast_volume_attenuate();
 		else
 			volume_amplify();
@@ -3950,8 +3900,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SCHISM_KEYSYM_u:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (fast_volume_mode)
-			selection_vary(1, 100-fast_volume_percent, FX_CHANNELVOLUME);
+		if (_fastVolumeMode)
+			selection_vary(1, 100-_fastVolumePercent, FX_CHANNELVOLUME);
 		else
 			vary_command(FX_CHANNELVOLUME);
 		status.flags |= NEED_UPDATE;
@@ -3959,8 +3909,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SCHISM_KEYSYM_y:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (fast_volume_mode)
-			selection_vary(1, 100-fast_volume_percent, FX_PANBRELLO);
+		if (_fastVolumeMode)
+			selection_vary(1, 100-_fastVolumePercent, FX_PANBRELLO);
 		else
 			vary_command(FX_PANBRELLO);
 		status.flags |= NEED_UPDATE;
@@ -3968,8 +3918,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SCHISM_KEYSYM_k:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (fast_volume_mode)
-			selection_vary(1, 100-fast_volume_percent, current_effect());
+		if (_fastVolumeMode)
+			selection_vary(1, 100-_fastVolumePercent, current_effect());
 		else
 			vary_command(current_effect());
 		status.flags |= NEED_UPDATE;
@@ -4616,4 +4566,4 @@ void pattern_editor_load_page(struct page *page)
 }
 
 #endif
-}
+	}
