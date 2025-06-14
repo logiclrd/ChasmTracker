@@ -31,11 +31,18 @@ public class PatternEditorPage : Page
 			};
 	}
 
-	bool RowIsMajor(int r) => (Song.CurrentSong.RowHighlightMajor != 0) && ((r % Song.CurrentSong.RowHighlightMajor) == 0);
-	bool RowIsMinor(int r) => (Song.CurrentSong.RowHighlightMinor != 0) && ((r % Song.CurrentSong.RowHighlightMinor) == 0);
+	bool RowIsMajor(int r) => (Song.CurrentSong != null) && (Song.CurrentSong.RowHighlightMajor != 0) && ((r % Song.CurrentSong.RowHighlightMajor) == 0);
+	bool RowIsMinor(int r) => (Song.CurrentSong != null) && (Song.CurrentSong.RowHighlightMinor != 0) && ((r % Song.CurrentSong.RowHighlightMinor) == 0);
 	bool RowIsHighlight(int r) => RowIsMinor(r) || RowIsMajor(r);
 
 	bool SongPlaying() => Song.Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop);
+
+	int CurrentInstrument =>
+		((Song.CurrentSong != null) && Song.CurrentSong.Flags.HasFlag(SongFlags.InstrumentMode))
+		? AllPages.InstrumentList.CurrentInstrument
+		: AllPages.SampleList.CurrentSample;
+
+	static Random s_rnd = new Random();
 
 	/* this is actually used by pattern-view.c */
 	//int show_default_volumes = 0;
@@ -69,8 +76,8 @@ public class PatternEditorPage : Page
 	int _currentChannel = 1, _currentPosition = 0;
 	int _currentRow = 0;
 
-	bool _keyjazzNoteoff = false;      /* issue noteoffs when releasing note */
-	bool _keyjazzWriteNoteoff = false; /* write noteoffs when releasing note */
+	bool _keyjazzNoteOff = false;      /* issue noteoffs when releasing note */
+	bool _keyjazzWriteNoteOff = false; /* write noteoffs when releasing note */
 	bool _keyjazzRepeat = true;        /* insert multiple notes on key repeat */
 	bool _keyjazzCapslock = false;     /* keyjazz when capslock is on, not while it is down */
 
@@ -109,8 +116,8 @@ public class PatternEditorPage : Page
 
 	int _shiftChordChannels = 0;       /* incremented for each shift-note played */
 
-	int _centraliseCursor = 0;
-	int _highlightCurrentRow = 0;
+	bool _centraliseCursor = 0;
+	bool _highlightCurrentRow = 0;
 
 	bool _playbackTracing = false;     /* scroll lock */
 	bool _midiPlaybackTracing = false;
@@ -256,7 +263,8 @@ public class PatternEditorPage : Page
 		curChannel--; /* make it zero-based. oh look, it's a hammer. */
 		i = curChannel;
 
-		if (_channelMulti[curChannel]) {
+		if (_channelMulti[curChannel])
+		{
 			/* we're in a multichan-enabled channel, so look for the next one */
 			do
 			{
@@ -623,7 +631,10 @@ public class PatternEditorPage : Page
 			return;
 		}
 
-		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
 
 		PatEdSave("Undo paste data                (Alt-P)");
 
@@ -983,8 +994,8 @@ public class PatternEditorPage : Page
 					if (chan + x >= 64) /* defensive */
 						break;
 
-					pattern.Rows[y].Notes[chan + x].SetNoteNote(
-						pattern.Rows[y].Notes[chan + x].Note,
+					pattern.Rows[y][chan + x].SetNoteNote(
+						pattern.Rows[y][chan + x].Note,
 						xlate);
 				}
 			}
@@ -1123,899 +1134,1074 @@ public class PatternEditorPage : Page
 			};
 	}
 
-#if false
-static int current_effect(void)
-{
-	song_note_t *pattern, *cur_note;
+	int GetCurrentEffect()
+	{
+		if (Song.CurrentSong?.GetPattern(_currentPattern) is Pattern pattern)
+			return pattern.Rows[_currentRow][_currentChannel].Effect;
 
-	song_get_pattern(current_pattern, &pattern);
-	cur_note = pattern + 64 * current_row + current_channel - 1;
+		return -1;
+	}
 
-	return cur_note->effect;
-}
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* settings */
+	void ConfigSave(ConfigurationFile cfg)
+	{
+		void SetNumber(string name, int value)
+			=> cfg.SetNumber("Pattern Editor", name, value);
+		void SetEnum<T>(string name, T value) where T : Enum
+			=> cfg.SetNumber("Pattern Editor", name, Convert.ToInt32(value));
+		void SetBool(string name, bool value)
+			=> cfg.SetBool("Pattern Editor", name, value);
+		void SetString(string name, string value)
+			=> cfg.SetString("Pattern Editor", name, value);
 
-/* --------------------------------------------------------------------------------------------------------- */
-/* settings */
+		SetBool("link_effect_column", _linkEffectColumn);
+		SetBool("draw_divisions", _drawDivisions);
+		SetBool("centralise_cursor", _centraliseCursor);
+		SetBool("highlight_current_row", _highlightCurrentRow);
+		SetEnum("edit_copy_mask", _editCopyMask);
+		SetNumber("volume_percent", _volumePercent);
+		SetNumber("fast_volume_percent", _fastVolumePercent);
+		SetBool("fast_volume_mode", _fastVolumeMode);
+		SetBool("keyjazz_noteoff", _keyjazzNoteOff);
+		SetBool("keyjazz_write_noteoff", _keyjazzWriteNoteOff);
+		SetBool("keyjazz_repeat", _keyjazzRepeat);
+		SetBool("keyjazz_capslock", _keyjazzCapslock);
+		SetEnum("mask_copy_search_mode", _maskCopySearchMode);
+		SetBool("invert_home_end", _invertHomeEnd);
 
-#define CFG_SET_PE(v) cfg_set_number(cfg, "Pattern Editor", #v, v)
-void cfg_save_patedit(cfg_file_t *cfg)
-{
-	int n;
-	char s[65];
+		SetBool("crayola_mode", Status.Flags.HasFlag(StatusFlags.CrayolaMode));
 
-	CFG_SET_PE(link_effect_column);
-	CFG_SET_PE(draw_divisions);
-	CFG_SET_PE(centralise_cursor);
-	CFG_SET_PE(highlight_current_row);
-	CFG_SET_PE(_editCopyMask);
-	CFG_SET_PE(volume_percent);
-	CFG_SET_PE(_fastVolumePercent);
-	CFG_SET_PE(_fastVolumeMode);
-	CFG_SET_PE(keyjazz_noteoff);
-	CFG_SET_PE(keyjazz_write_noteoff);
-	CFG_SET_PE(keyjazz_repeat);
-	CFG_SET_PE(keyjazz_capslock);
-	CFG_SET_PE(mask_copy_search_mode);
-	CFG_SET_PE(invert_home_end);
+		char[] channelData = new char[Constants.MaxChannels];
 
-	cfg_set_number(cfg, "Pattern Editor", "crayola_mode", !!(status.flags & CRAYOLA_MODE));
-	for (n = 0; n < 64; n++)
-		s[n] = track_view_scheme[n] + 'a';
-	s[64] = 0;
+		for (int n = 0; n < Constants.MaxChannels; n++)
+			channelData[n] = (char)('a' + _trackViewScheme[n]);
 
-	cfg_set_string(cfg, "Pattern Editor", "track_view_scheme", s);
-	for (n = 0; n < 64; n++)
-		s[n] = (channel_multi[n]) ? 'M' : '-';
-	s[64] = 0;
-	cfg_set_string(cfg, "Pattern Editor", "channel_multi", s);
-}
+		SetString("track_view_scheme", new string(channelData));
 
-#define CFG_GET_PE(v,d) v = cfg_get_number(cfg, "Pattern Editor", #v, d)
-void cfg_load_patedit(cfg_file_t *cfg)
-{
-	int n, r = 0;
-	char s[65];
+		for (int n = 0; n < Constants.MaxChannels; n++)
+			channelData[n] = _channelMulti[n] ? 'M' : '-';
 
-	CFG_GET_PE(link_effect_column, 0);
-	CFG_GET_PE(draw_divisions, 1);
-	CFG_GET_PE(centralise_cursor, 0);
-	CFG_GET_PE(highlight_current_row, 0);
-	CFG_GET_PE(_editCopyMask, MASK_NOTE | MASK_INSTRUMENT | MASK_VOLUME);
-	CFG_GET_PE(volume_percent, 100);
-	CFG_GET_PE(_fastVolumePercent, 67);
-	CFG_GET_PE(_fastVolumeMode, 0);
-	CFG_GET_PE(keyjazz_noteoff, 0);
-	CFG_GET_PE(keyjazz_write_noteoff, 0);
-	CFG_GET_PE(keyjazz_repeat, 1);
-	CFG_GET_PE(keyjazz_capslock, 0);
-	CFG_GET_PE(mask_copy_search_mode, 0);
-	CFG_GET_PE(invert_home_end, 0);
+		SetString("channel_multi", new string(channelData));
+	}
 
-	if (cfg_get_number(cfg, "Pattern Editor", "crayola_mode", 0))
-		status.flags |= CRAYOLA_MODE;
-	else
-		status.flags &= ~CRAYOLA_MODE;
+	void ConfigLoad(ConfigurationFile cfg)
+	{
+		int GetNumber(string name, int defaultValue)
+			=> cfg.GetNumber("Pattern Editor", name, defaultValue);
+		T GetEnum<T>(string name, T defaultValue) where T : Enum
+			=> (T)(object)cfg.GetNumber("Pattern Editor", name, Convert.ToInt32(defaultValue));
+		bool GetBool(string name, bool defaultValue)
+			=> cfg.GetBool("Pattern Editor", name, defaultValue);
+		string GetString(string name, string defaultValue)
+			=> cfg.GetString("Pattern Editor", name, defaultValue);
 
-	cfg_get_string(cfg, "Pattern Editor", "track_view_scheme", s, 64, "a");
+		_linkEffectColumn = GetBool("link_effect_column", false);
+		_drawDivisions = GetBool("draw_divisions", true);
+		_centraliseCursor = GetBool("centralise_cursor", false);
+		_highlightCurrentRow = GetBool("highlight_current_row", false);
+		_editCopyMask = GetEnum("edit_copy_mask", PatternEditorMask.Note | PatternEditorMask.Instrument | PatternEditorMask.Volume);
+		_volumePercent = GetNumber("volume_percent", 100);
+		_fastVolumePercent = GetNumber("fast_volume_percent", 67);
+		_fastVolumeMode = GetBool("fast_volume_mode", false);
+		_keyjazzNoteOff = GetBool("keyjazz_noteoff", false);
+		_keyjazzWriteNoteOff = GetBool("keyjazz_write_noteoff", false);
+		_keyjazzRepeat = GetBool("keyjazz_repeat", true);
+		_keyjazzCapslock = GetBool("keyjazz_capslock", false);
+		_maskCopySearchMode = GetEnum("mask_copy_search_mode", CopySearchMode.Off);
+		_invertHomeEnd = GetBool("invert_home_end", false);
 
-	/* "decode" the track view scheme */
-	for (n = 0; n < 64; n++) {
-		if (s[n] == '\0') {
-			/* end of the string */
-			break;
-		} else if (s[n] >= 'a' && s[n] <= 'z') {
-			s[n] -= 'a';
-		} else if (s[n] >= 'A' && s[n] <= 'Z') {
-			s[n] -= 'A';
-		} else {
-			log_appendf(4, "Track view scheme corrupted; using default");
-			n = 64;
-			r = 0;
-			break;
+		bool crayolaMode = GetBool("crayola_mode", false);
+
+		if (crayolaMode)
+			Status.Flags |= StatusFlags.CrayolaMode;
+		else
+			Status.Flags &= ~StatusFlags.CrayolaMode;
+
+		string channelData = GetString("track_view_scheme", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+
+		/* "decode" the track view scheme */
+		for (int n = 0; (n < Constants.MaxChannels) && (n < channelData.Length); n++)
+		{
+			char ch = channelData[n];
+
+			if ((ch >= 'a') && (ch <= 'z'))
+				_trackViewScheme[n] = ch - 'a';
+			else if ((ch >= 'A') && (ch <= 'Z'))
+				_trackViewScheme[n] = ch - 'A';
+			else
+				_trackViewScheme[n] = -1;
+
+			if ((_trackViewScheme[n] < 0) || (_trackViewScheme[n] >= _trackViews.Length))
+			{
+				Log.Append(4, "Track view scheme corrupted; using default");
+
+				for (n = 0; n < Constants.MaxChannels; n++)
+					_trackViewScheme[n] = _trackViews.Length - 1;
+
+				break;
+			}
 		}
-		r = s[n];
-	}
-	memcpy(track_view_scheme, s, n);
-	if (n < 64)
-		memset(track_view_scheme + n, r, 64 - n);
 
-	cfg_get_string(cfg, "Pattern Editor", "channel_multi", s, 64, "");
-	memset(channel_multi, 0, sizeof(channel_multi));
-	channel_multi_enabled = 0;
-	for (n = 0; n < 64; n++) {
-		if (!s[n])
-			break;
-		channel_multi[n] = ((s[n] >= 'A' && s[n] <= 'Z') || (s[n] >= 'a' && s[n] <= 'z')) ? 1 : 0;
-		if (channel_multi[n])
-			channel_multi_enabled = 1;
+		channelData = GetString("channel_multi", "----------------------------------------------------------------");
+
+		for (int n = 0; n < Constants.MaxChannels; n++)
+			_channelMulti[n] = char.IsLetter(channelData[n]);
+
+		RecalculateVisibleArea;
+		Reposition();
+
+		if (Status.CurrentPage is PatternEditorPage)
+			Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
-	recalculate_visible_area();
-	pattern_editor_reposition();
-	if (status.current_page == PAGE_PATTERN_EDITOR)
-		status.flags |= NEED_UPDATE;
-}
+	/* --------------------------------------------------------------------- */
+	/* selection handling functions */
 
-/* --------------------------------------------------------------------- */
-/* selection handling functions */
-
-static inline int is_in_selection(int chan, int row)
-{
-	return (SELECTION_EXISTS
-		&& chan >= selection.FirstChannel && chan <= selection.LastChannel
-		&& row >= selection.FirstRow && row <= LastRow.last_row);
-}
-totalRows void normalise_block_selection(void)
-{
-	int n;
-
-	if (!SELECTION_EXISTS)
-		return;
-
-	if (selection.FirstChannel > selection.LastChannel) {
-		n = selection.FirstChannel;
-		selection.FirstChannel = selection.LastChannel;
-		selection.LastChannel = n;
+	bool IsInselection(int channel, int row)
+	{
+		return SelectionExists()
+			&& (channel >= _selection.FirstChannel) && (channel <= _selection.LastChannel)
+			&& (row >= _selection.FirstChannel) && (row <= _selection.LastChannel);
 	}
 
-	if (selection.FirstRow < 0) selection.FirstRow LastRow 0;
-	itotalRows (selection.LastRow < 0) stotalRows.last_row = 0;
-	if (selection.FirstChannel < 1) selection.FirstChannel = 1;
-	if (selection.LastChannel < 1) selection.LastChannel = 1;
+	void NormaliseBlockSelection()
+	{
+		if (!SelectionExists())
+			return;
 
-	if (selection.FirstRow > selection.last_row) LastRow
-		n = setotalRows.FirstRow;
-		selection.FirstRow = LastRow.last_row;
-LatotalRows.last_row = n;totalRows
-}
+		if (_selection.FirstChannel > _selection.LastChannel)
+			(_selection.FirstChannel, _selection.LastChannel) = (_selection.LastChannel, _selection.FirstChannel);
 
-static void shift_selection_begin(void)
-{
-	shift_selection.in_progress = 1;
-	shift_selection.FirstChannel = current_channel;
-	shift_selection.FirstRow = current_row;
-}
+		if (_selection.FirstRow < 0) _selection.FirstRow = 0;
+		if (_selection.LastRow < 0) _selection.LastRow = 0;
+		if (_selection.FirstChannel < 1) _selection.FirstChannel = 1;
+		if (_selection.LastChannel < 1) _selection.LastChannel = 1;
 
-LastRow void shift_selection_update(vototalRows)
-{
-	if (shift_selection.in_progress) {
-		selection.FirstChannel = shift_selection.FirstChannel;
-		selection.LastChannel = current_channel;
-		selection.FirstRow = shift_selection.FirstRow;
-LastRow.last_row = LatotalRows;
-		normalise_block_selection();
-	}totalRows
-
-static void shift_selection_end(void)
-{
-	shift_selection.in_progress = 0;
-	pattern_selection_system_copyout();
-}
-
-static void selection_clear(void)
-{
-	selection.FirstChannel = 0;
-	pattern_selection_system_copyout();
-}
-
-
-// FIXME | this misbehaves if height is an odd number -- e.g. if an odd number
-// FIXME | of rows is selected and 2 * sel_rows overlaps the end of the pattern
-static void block_length_double(void)
-{
-	song_note_t *pattern, *src, *dest;
-	int sel_rows, total_rows;
-	int src_end, dest_end; // = first row that is NOT affected
-	int width, height, offset;
-
-	if (!SELECTION_EXISTS)
-		return;
-
-	status.flags |= SONG_NEEDS_SAVE;
-	total_rows = song_get_pattern(current_pattern, &pattern);
-
-	if (selection.last_row >= total_rows)
-		selection.last_row = total_rows - 1;
-	if (selection.FirstRow > selection.last_row)
-LastRow.FirstRow = setotalRows.last_row;
-LastRow = selection.latotalRows - selection.FirstRow + 1;
-	offset = LastRow.FirstChannel - 1;totalRows = selection.LastChannel - offset;
-	dest_end = MIN(selection.FirstRow + 2 * sel_rows,LastRow);
-	height = totalRows - selection.FirstRow;
-	src_end = selection.LastRow + height / totalRows;LastRow
-	src = patotalRows + 64 * (src_end - 1);
-	dest = pattern + 64 * (dest_end - 1);
-
-	pated_history_add("Undo block length double       (Alt-F)",
-		offset, selection.FirstRow, width, height);
-LastRow (dest > srtotalRows) {
-		memset(dest + offset, 0, width * sizeof(song_note_t));
-		dest -= 64;
-		memcpy(dest + offset, src + offset, width * sizeof(song_note_t));
-		dest -= 64;
-		src -= 64;
+		if (_selection.FirstRow > _selection.LastRow)
+			(_selection.FirstRow, _selection.LastRow) = (_selection.LastRow, _selection.FirstRow);
 	}
 
-	pattern_selection_system_copyout();
-}
-
-// FIXME: this should erase the end of the selection if 2 * sel_rows > total_rows
-static void block_length_halve(void)
-{
-	song_note_t *pattern, *src, *dest;
-	int sel_rows, src_end, total_rows, row;
-	int width, height, offset;
-
-	if (!SELECTION_EXISTS)
-		return;
-
-	status.flags |= SONG_NEEDS_SAVE;
-	total_rows = song_get_pattern(current_pattern, &pattern);
-
-	if (selection.last_row >= total_rows)
-		selection.last_row = total_rows - 1;
-	if (selection.FirstRow > selection.last_row)
-LastRow.FirstRow = setotalRows.last_row;
-LastRow = selection.latotalRows - selection.FirstRow + 1;
-	offset = LastRow.FirstChannel - 1;totalRows = selection.LastChannel - offset;
-	src_end = MIN(selection.FirstRow + 2 * sel_rows,LastRow);
-	height = totalRows - selection.FirstRow;
-	src = dest LastRow pattern + 64totalRows selection.FirstRow;
-
-	pated_history_add("Undo LastRow length halve   totalRows-G)",
-		offset, selection.FirstRow, width, height);
-LastRow (row = 0;totalRows < height / 2; row++) {
-		memcpy(dest + offset, src + offset, width * sizeof(song_note_t));
-		src += 64 * 2;
-		dest += 64;
+	void ShiftSelectionBegin()
+	{
+		_shiftSelection.InProgress = true;
+		_shiftSelection.FirstChannel = _currentChannel;
+		_shiftSelection.FirstRow = _currentRow;
 	}
 
-	pattern_selection_system_copyout();
-}
+	void ShiftSelectionUpdate()
+	{
+		if (_shiftSelection.InProgress)
+		{
+			_selection.FirstChannel = _shiftSelection.FirstChannel;
+			_selection.LastChannel = _currentChannel;
+			_selection.FirstRow = _shiftSelection.FirstRow;
+			_selection.LastRow = _currentRow;
 
-
-static void selection_erase(void)
-{
-	song_note_t *pattern, *note;
-	int row;
-	int chan_width;
-	int total_rows;
-
-	if (!SELECTION_EXISTS)
-		return;
-
-	status.flags |= SONG_NEEDS_SAVE;
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.FirstRow > selection.last_row) LastRow.FirstRow = setotalRows.last_row;
-LastRow("Undo bltotalRows cut                 (Alt-Z)",
-		selection.FirstChannel - 1,
-		selection.FirstRow,
-		(selection.LastChannel - LastRow.FirstChannel) + totalRows,
-		(selection.last_row - selection.FirstRow) + 1);
-LastRow (selection.FirstChannel ==totalRows && selection.LastChannel == 64) {
-		memset(pattern + 64 * selection.FirstRow, 0, (selection.last_row LastRow selection.FirstRow + totalRows)
-		       * 64 LastRow sizeof(song_note_t));totalRows else {
-		chan_width = selection.LastChannel - selection.FirstChannel + 1;
-		for (row = selection.FirstRow; row <= selection.LastRow; row++) {
-totalRows = pattern + 64 * row + selection.FirstChannel - 1;
-			memset(note, 0, chan_width * sizeof(song_note_t));
+			NormaliseBlockSelection();
 		}
 	}
-	pattern_selection_system_copyout();
-}
 
-static void selection_set_sample(void)
-{
-	int row, chan;
-	song_note_t *pattern, *note;
-	int total_rows;
+	void ShiftSelectionEnd()
+	{
+		_shiftSelection.InProgress = false;
+		PatternSelectionSystemCopyOut();
+	}
 
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.FirstRow > selection.last_row) LastRow.FirstRow = setotalRows.last_row;
-LastRow.flags |= SOtotalRows;
-	pated_history_add("Undo set sample/instrument     (Alt-S)",
-		selection.FirstChannel - 1,
-		selection.FirstRow,
-		(selection.LastChannel - LastRow.FirstChannel) + totalRows,
-		(selection.last_row - selection.FirstRow) + 1);
-LastRow (SELECTION_EXISTS) {
-totalRows (row = selection.FirstRow; row <= selection.LastRow; row++) {
-totalRows = pattern + 64 * row + selection.FirstChannel - 1;
-			for (chan = selection.FirstChannel; chan <= selection.LastChannel; chan++, note++) {
-				if (note->instrument) {
-					note->instrument = song_get_current_instrument();
+	void SelectionClear()
+	{
+		_selection.FirstChannel = 0;
+		PatternSelectionSystemCopyOut();
+	}
+
+	// FIXME | this misbehaves if height is an odd number -- e.g. if an odd number
+	// FIXME | of rows is selected and 2 * sel_rows overlaps the end of the pattern
+	void BlockLengthDouble()
+	{
+		if (!SelectionExists())
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count)
+			_selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow)
+			_selection.FirstRow = _selection.LastRow;
+
+		int selectedRows = _selection.LastRow - _selection.FirstRow + 1;
+		int offset = _selection.FirstChannel - 1;
+		int width = _selection.LastChannel - offset;
+
+		// end = first row that is NOT affected
+		int destEnd = Math.Min(_selection.FirstRow + 2 * selectedRows, pattern.Rows.Count);
+		int height = destEnd - _selection.FirstRow;
+		int srcEnd = _selection.FirstRow + height / 2;
+
+		int srcRow = srcEnd - 1;
+		int destRow = destEnd - 1;
+
+		HistoryAdd("Undo block length double       (Alt-F)",
+			offset, _selection.FirstRow, width, height);
+
+		while (destRow > srcRow
+		{
+			for (int i = 0; i < width; i++)
+				pattern.Rows[destRow][offset + i] = SongNote.Empty;
+
+			destRow--;
+
+			for (int i = 0; i < width; i++)
+				pattern.Rows[destRow][offset + i] = pattern.Rows[srcRow][offset + i];
+
+			destRow--;
+			srcRow--;
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	// FIXME: this should erase the end of the selection if 2 * sel_rows > total_rows
+	void BlockLengthHalve()
+	{
+		if (!SelectionExists())
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count)
+			_selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow)
+			_selection.FirstRow = _selection.LastRow;
+
+		int selectedRows = _selection.LastRow - _selection.FirstRow + 1;
+		int offset = _selection.FirstChannel - 1;
+		int width = _selection.LastChannel - offset;
+
+		int srcEnd = Math.Min(_selection.FirstRow + 2 * selectedRows, pattern.Rows.Count);
+		int height = srcEnd - _selection.FirstRow;
+		int srcRow = _selection.FirstRow;
+		int destRow = srcRow;
+
+		HistoryAdd("Undo block length halve        (Alt-G)",
+			offset, _selection.FirstRow, width, height);
+
+		for (int row = 0; row < height / 2; row++)
+		{
+			Array.Copy(pattern.Rows[destRow].Notes, offset, pattern.Rows[srcRow].Notes, offset, width);
+			srcRow += 2;
+			destRow++;
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	void SelectionErase()
+	{
+		if (!SelectionExists())
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		HistoryAdd("Undo block cut                 (Alt-Z)",
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			(_selection.LastChannel - _selection.FirstChannel) + 1,
+			(_selection.LastRow - _selection.FirstRow) + 1);
+
+		for (int row = _selection.FirstRow; row <= _selection.LastRow; row++)
+		{
+			var patternRow = pattern.Rows[row];
+
+			for (int channel = _selection.FirstChannel; channel <= _selection.LastChannel; channel++)
+				patternRow[channel] = SongNote.Empty;
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	void SelectionSetSample()
+	{
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		HistoryAdd("Undo set sample/instrument     (Alt-S)",
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			(_selection.LastChannel - _selection.FirstChannel) + 1,
+			(_selection.LastRow - _selection.FirstRow) + 1);
+
+		byte currentInstrument = (byte)CurrentInstrument;
+
+		if (SelectionExists())
+		{
+			for (int row = _selection.FirstRow; row <= _selection.LastRow; row++)
+			{
+				for (int chan = _selection.FirstChannel; chan <= _selection.LastChannel; chan++)
+				{
+					ref var note = ref pattern.Rows[row][chan];
+
+					if (note.Instrument != 0)
+						note.Instrument = currentInstrument;
 				}
 			}
 		}
-	} else {
-		note = pattern + 64 * current_row + current_channel - 1;
-		if (note->instrument) {
-			note->instrument = song_get_current_instrument();
-		}
-	}
-	pattern_selection_system_copyout();
-}
+		else
+		{
+			ref var note = ref pattern.Rows[_currentRow][_currentChannel];
 
-
-static void selection_swap(void)
-{
-	/* s_note = selection; p_note = position */
-	song_note_t *pattern, *s_note, *p_note, tmp;
-	int row, chan, sel_rows, sel_chans, total_rows;
-	int affected_width, affected_height;
-
-	CHECK_FOR_SELECTION(return);
-
-	status.flags |= SONG_NEEDS_SAVE;
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
-	sel_rows = selection.last_row - selection.first_row + 1;
-	sel_chans = selection.last_channel - selection.first_channel + 1;
-
-	affected_width = MAX(selection.last_channel, current_channel + sel_chans - 1)
-			- MIN(selection.first_channel, current_channel) + 1;
-	affected_height = MAX(selection.last_row, current_row + sel_rows - 1)
-			- MIN(selection.first_row, current_row) + 1;
-
-	/* The minimum combined size for the two blocks is double the number of rows in the selection by
-	 * double the number of channels. So, if the width and height don't add up, they must overlap. It's
-	 * of course possible to have the blocks adjacent but not overlapping -- there is only overlap if
-	 * *both* the width and height are less than double the size. */
-	if (affected_width < 2 * sel_chans && affected_height < 2 * sel_rows) {
-		dialog_create(DIALOG_OK, "   Swap blocks overlap    ", NULL, NULL, 0, NULL);
-		return;
-	}
-
-	if (current_row + sel_rows > total_rows || current_channel + sel_chans - 1 > 64) {
-		dialog_create(DIALOG_OK, "   Out of pattern range   ", NULL, NULL, 0, NULL);
-		return;
-	}
-
-	pated_history_add("Undo swap block                (Alt-Y)",
-		MIN(selection.first_channel, current_channel) - 1,
-		MIN(selection.first_row, current_row),
-		affected_width, affected_height);
-
-	for (row = 0; row < sel_rows; row++) {
-		s_note = pattern + 64 * (selection.first_row + row) + selection.first_channel - 1;
-		p_note = pattern + 64 * (current_row + row) + current_channel - 1;
-		for (chan = 0; chan < sel_chans; chan++, s_note++, p_note++) {
-			tmp = *s_note;
-			*s_note = *p_note;
-			*p_note = tmp;
-		}
-	}
-	pattern_selection_system_copyout();
-}
-
-static void selection_set_volume(void)
-{
-	int row, chan, total_rows;
-	song_note_t *pattern, *note;
-
-	CHECK_FOR_SELECTION(return);
-
-	status.flags |= SONG_NEEDS_SAVE;
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
-
-	pated_history_add("Undo set volume/panning        (Alt-V)",
-		selection.first_channel - 1,
-		selection.first_row,
-		(selection.last_channel - selection.first_channel) + 1,
-		(selection.last_row - selection.first_row) + 1);
-
-	for (row = selection.first_row; row <= selection.last_row; row++) {
-		note = pattern + 64 * row + selection.first_channel - 1;
-		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-			note->volparam = mask_note.volparam;
-			note->voleffect = mask_note.voleffect;
-		}
-	}
-	pattern_selection_system_copyout();
-}
-
-/* The logic for this one makes my head hurt. */
-static void selection_slide_volume(void)
-{
-	int row, chan, total_rows;
-	song_note_t *pattern, *note, *last_note;
-	int first, last;                /* the volumes */
-	int ve, lve;                    /* volume effect */
-
-	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
-	/* Impulse Tracker displays a box "No block is marked" */
-	CHECK_FOR_SELECTION(return);
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
-
-	/* can't slide one row */
-	if (selection.first_row == selection.last_row)
-		return;
-
-	status.flags |= SONG_NEEDS_SAVE;
-
-	pated_history_add("Undo volume or panning slide   (Alt-K)",
-		selection.first_channel - 1,
-		selection.first_row,
-		(selection.last_channel - selection.first_channel) + 1,
-		(selection.last_row - selection.first_row) + 1);
-
-	/* the channel loop has to go on the outside for this one */
-	for (chan = selection.first_channel; chan <= selection.last_channel; chan++) {
-		note = pattern + 64 * selection.first_row + chan - 1;
-		last_note = pattern + 64 * selection.last_row + chan - 1;
-
-		/* valid combinations:
-		 *     [ volume - volume ]
-		 *     [panning - panning]
-		 *     [ volume - none   ] \ only valid if the 'none'
-		 *     [   none - volume ] / note has a sample number
-		 * in any other case, no slide occurs. */
-
-		ve = note->voleffect;
-		lve = last_note->voleffect;
-
-		first = note->volparam;
-		last = last_note->volparam;
-
-		/* Note: IT only uses the sample's default volume if there is an instrument number *AND* a
-		note. I'm just checking the instrument number, as it's the minimal information needed to
-		get the default volume for the instrument.
-
-		Would be nice but way hard to do: if there's a note but no sample number, look back in the
-		pattern and use the last sample number in that channel (if there is one). */
-		if (ve == VOLFX_NONE) {
-			if (note->instrument == 0)
-				continue;
-			ve = VOLFX_VOLUME;
-			/* Modplug hack: volume bit shift */
-			first = song_get_sample(note->instrument)->volume >> 2;
+			if (note.Instrument != 0)
+				note.Instrument = currentInstrument;
 		}
 
-		if (lve == VOLFX_NONE) {
-			if (last_note->instrument == 0)
-				continue;
-			lve = VOLFX_VOLUME;
-			last = song_get_sample(last_note->instrument)->volume >> 2;
-		}
-
-		if (!(ve == lve && (ve == VOLFX_VOLUME || ve == VOLFX_PANNING))) {
-			continue;
-		}
-
-		for (row = selection.first_row; row <= selection.last_row; row++, note += 64) {
-			note->voleffect = ve;
-			note->volparam = (((last - first)
-					 * (row - selection.first_row)
-					 / (selection.last_row - selection.first_row)
-					 ) + first);
-		}
-	}
-	pattern_selection_system_copyout();
-}
-
-static void selection_wipe_volume(int reckless)
-{
-	int row, chan, total_rows;
-	song_note_t *pattern, *note;
-
-	CHECK_FOR_SELECTION(return);
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.first_row > selection.last_row) selection.first_row = selection.last_row;
-
-	status.flags |= SONG_NEEDS_SAVE;
-
-	pated_history_add((reckless
-				? "Recover volumes/pannings     (2*Alt-K)"
-				: "Replace extra volumes/pannings (Alt-W)"),
-		selection.first_channel - 1,
-		selection.first_row,
-		(selection.last_channel - selection.first_channel) + 1,
-		(selection.last_row - selection.first_row) + 1);
-
-
-	for (row = selection.first_row; row <= selection.last_row; row++) {
-		note = pattern + 64 * row + selection.first_channel - 1;
-		for (chan = selection.first_channel; chan <= selection.last_channel; chan++, note++) {
-			if (reckless || (note->instrument == 0 && !NOTE_IS_NOTE(note->note))) {
-				note->volparam = 0;
-				note->voleffect = VOLFX_NONE;
-			}
-		}
-	}
-	pattern_selection_system_copyout();
-}
-
-static int vary_value(int ov, int limit, int depth)
-{
-	int j;
-	j = (int)((((float)limit)*rand()) / (RAND_MAX+1.0));
-	j = ((limit >> 1) - j);
-	j = ov+((j * depth) / 100);
-	if (j < 0) j = 0;
-	if (j > limit) j = limit;
-	return j;
-}
-
-static int common_variable_group(int ch)
-{
-	switch (ch) {
-	case FX_PORTAMENTODOWN:
-	case FX_PORTAMENTOUP:
-	case FX_TONEPORTAMENTO:
-		return FX_TONEPORTAMENTO;
-	case FX_VOLUMESLIDE:
-	case FX_TONEPORTAVOL:
-	case FX_VIBRATOVOL:
-		return FX_VOLUMESLIDE;
-	case FX_PANNING:
-	case FX_PANNINGSLIDE:
-	case FX_PANBRELLO:
-		return FX_PANNING;
-	default:
-		return ch; /* err... */
-	};
-}
-
-static void selection_vary(int fast, int depth, int how)
-{
-	int row, chan, total_rows;
-	song_note_t *pattern, *note;
-	static char last_vary[39];
-	const char *vary_how;
-	char ch;
-
-	/* don't ever vary these things */
-	switch (how) {
-	default:
-		if (!FX_IS_EFFECT(how))
-			return;
-		break;
-
-	case FX_NONE:
-	case FX_SPECIAL:
-	case FX_SPEED:
-	case FX_POSITIONJUMP:
-	case FX_PATTERNBREAK:
-
-	case FX_KEYOFF:
-	case FX_SETENVPOSITION:
-	case FX_VOLUME:
-	case FX_NOTESLIDEUP:
-	case FX_NOTESLIDEDOWN:
-			return;
+		PatternSelectionSystemCopyOut();
 	}
 
+	void SelectionSwap()
+	{
 		if (!SelectionExists())
 		{
-			ShowNoSelectionError();
+			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
 			return;
 		}
 
-	status.flags |= SONG_NEEDS_SAVE;
-	switch (how) {
-	case FX_CHANNELVOLUME:
-	case FX_CHANNELVOLSLIDE:
-		vary_how = "Undo volume-channel vary      (Ctrl-U)";
-		if (fast) status_text_flash("Fast volume vary");
-		break;
-	case FX_PANNING:
-	case FX_PANNINGSLIDE:
-	case FX_PANBRELLO:
-		vary_how = "Undo panning vary             (Ctrl-Y)";
-		if (fast) status_text_flash("Fast panning vary");
-		break;
-	default:
-		sprintf(last_vary, "%-28s  (Ctrl-K)",
-			"Undo Xxx effect-value vary");
-		last_vary[5] = common_variable_group(how);
-		if (fast) status_text_flash("Fast %-21s", last_vary+5);
-		vary_how = last_vary;
-		break;
-	};
+		Status.Flags |= StatusFlags.SongNeedsSave;
 
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.FirstRow > selection.last_row) LastRow.FirstRow = setotalRows.last_row;
-LastRow(vary_how,
-		totalRows.FirstChannel - 1,
-		selection.FirstRow,
-		(selection.LastChannel - LastRow.FirstChannel) + totalRows,
-		(selection.last_row - selection.FirstRow) + 1);
-LastRow (row = setotalRows.FirstRow; row <= selection.LastRow; row++) {
-totalRows = pattern + 64 * row + selection.FirstChannel - 1;
-		for (chan = selection.FirstChannel; chan <= selection.LastChannel; chan++, note++) {
-			if (how == FX_CHANNELVOLUME || how == FX_CHANNELVOLSLIDE) {
-				if (note->voleffect == VOLFX_VOLUME) {
-					note->volparam = vary_value(note->volparam, 64, depth);
-				}
-			}
-			if (how == FX_PANNINGSLIDE || how == FX_PANNING || how == FX_PANBRELLO) {
-				if (note->voleffect == VOLFX_PANNING) {
-					note->volparam = vary_value(note->volparam, 64, depth);
-				}
-			}
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
 
-			ch = note->effect;
-			if (!FX_IS_EFFECT(ch)) continue;
-			if (common_variable_group(ch) != common_variable_group(how)) continue;
-			switch (ch) {
-			/* these are .0 0. and .f f. values */
-			case FX_VOLUMESLIDE:
-			case FX_CHANNELVOLSLIDE:
-			case FX_PANNINGSLIDE:
-			case FX_GLOBALVOLSLIDE:
-			case FX_VIBRATOVOL:
-			case FX_TONEPORTAVOL:
-				if ((note->param & 15) == 15) continue;
-				if ((note->param & 0xF0) == (0xF0))continue;
-				if ((note->param & 15) == 0) {
-					note->param = (1+(vary_value(note->param>>4, 15, depth))) << 4;
-				} else {
-					note->param = 1+(vary_value(note->param & 15, 15, depth));
-				}
-				break;
-			/* tempo has a slide */
-			case FX_TEMPO:
-				if ((note->param & 15) == 15) continue;
-				if ((note->param & 0xF0) == (0xF0))continue;
-				/* but otherwise it's absolute */
-				note->param = 1 + (vary_value(note->param, 255, depth));
-				break;
-			/* don't vary .E. and .F. values */
-			case FX_PORTAMENTODOWN:
-			case FX_PORTAMENTOUP:
-				if ((note->param & 15) == 15) continue;
-				if ((note->param & 15) == 14) continue;
-				if ((note->param & 0xF0) == (0xF0))continue;
-				if ((note->param & 0xF0) == (0xE0))continue;
-				note->param = 16 + (vary_value(note->param-16, 224, depth));
-				break;
-			/* these are all "xx" commands */
-			// FIXME global/channel volume should be limited to 0-128 and 0-64, respectively
-			case FX_TONEPORTAMENTO:
-			case FX_CHANNELVOLUME:
-			case FX_OFFSET:
-			case FX_GLOBALVOLUME:
-			case FX_PANNING:
-				note->param = 1 + (vary_value(note->param, 255, depth));
-				break;
-			/* these are all "xy" commands */
-			case FX_VIBRATO:
-			case FX_TREMOR:
-			case FX_ARPEGGIO:
-			case FX_RETRIG:
-			case FX_TREMOLO:
-			case FX_PANBRELLO:
-			case FX_FINEVIBRATO:
-				note->param = (1 + (vary_value(note->param & 15, 15, depth)))
-					| ((1 + (vary_value((note->param >> 4) & 15, 15, depth))) << 4);
-				break;
-			};
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		int selectedRows = _selection.LastRow - _selection.FirstRow + 1;
+		int selectedChans = _selection.LastChannel - _selection.FirstChannel + 1;
+
+		int affectedWidth = Math.Max(_selection.LastChannel, _currentChannel + selectedChans - 1)
+				- Math.Min(_selection.FirstChannel, _currentChannel) + 1;
+		int affectedHeight = Math.Max(_selection.LastRow, _currentRow + selectedRows - 1)
+				- Math.Min(_selection.FirstRow, _currentRow) + 1;
+
+		/* The minimum combined size for the two blocks is double the number of rows in the selection by
+		* double the number of channels. So, if the width and height don't add up, they must overlap. It's
+		* of course possible to have the blocks adjacent but not overlapping -- there is only overlap if
+		* *both* the width and height are less than double the size. */
+		if (affectedWidth < 2 * selectedChans && affectedHeight < 2 * selectedRows)
+		{
+			MessageBox.Show(DialogTypes.OK, "   Swap blocks overlap    ");
+			return;
 		}
+
+		if (_currentRow + selectedRows > pattern.Rows.Count || _currentChannel + selectedChans - 1 > Constants.MaxChannels)
+		{
+			MessageBox.Show(DialogTypes.OK, "   Out of pattern range   ");
+			return;
+		}
+
+		HistoryAdd("Undo swap block                (Alt-Y)",
+			Math.Min(_selection.FirstRow, _currentRow),
+			Math.Min(_selection.FirstChannel, _currentChannel) - 1,
+			affectedWidth, affectedHeight);
+
+		for (int row = 0; row <= selectedRows; row++)
+		{
+			var sRow = pattern.Rows[row + _selection.FirstRow];
+			var pRow = pattern.Rows[row + _currentRow];
+
+			for (int chan = _selection.FirstChannel; chan <= _selection.LastChannel; chan++)
+				(sRow[chan], pRow[chan]) = (pRow[chan], sRow[chan]);
+		}
+
+		PatternSelectionSystemCopyOut();
 	}
-	pattern_selection_system_copyout();
-}
-static void SelectionAmplify(int percentage)
-{
-	int row, chan, volume, total_rows;
-	song_note_t *pattern, *note;
 
-	if (!SELECTION_EXISTS)
-		return;
+	void SelectionSetVolume()
+	{
+		if (!SelectionExists())
+		{
+			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			return;
+		}
 
-	status.flags |= SONG_NEEDS_SAVE;
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.FirstRow > selection.last_row) LastRow.FirstRow = setotalRows.last_row;
-LastRow it says AltotalRows-J even when Alt-I was used */
-	pated_history_add("Undo volume amplification      (Alt-J)",
-		selection.FirstChannel - 1,
-		selection.FirstRow,
-		(selection.LastChannel - LastRow.FirstChannel) + totalRows,
-		(selection.last_row - selection.FirstRow) + 1);
-LastRow (row = setotalRows.FirstRow; row <= selection.LastRow; row++) {
-totalRows = pattern + 64 * row + selection.FirstChannel - 1;
-		for (chan = selection.FirstChannel; chan <= selection.LastChannel; chan++, note++) {
-			if (note->voleffect == VOLFX_NONE && note->instrument != 0) {
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		HistoryAdd("Undo set volume/panning        (Alt-V)",
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			(_selection.LastChannel - _selection.FirstChannel) + 1,
+			(_selection.LastRow - _selection.FirstRow) + 1);
+
+		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
+		{
+			var row = pattern.Rows[rowNumber];
+
+			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
+			{
+				ref var note = ref row[channelNumber];
+
+				note.VolumeParameter = _maskNote.VolumeParameter;
+				note.VolumeEffect = _maskNote.VolumeEffect;
+			}
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	/* The logic for this one makes my head hurt. */
+	void SelectionSlideVolume()
+	{
+		/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
+		/* Impulse Tracker displays a box "No block is marked" */
+		if (!SelectionExists())
+		{
+			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			return;
+		}
+
+		if (Song.CurrentSong == null)
+			return;
+
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		/* can't slide one row */
+		if (_selection.FirstRow == _selection.LastRow)
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		HistoryAdd("Undo volume or panning slide   (Alt-K)",
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			_selection.LastChannel - _selection.FirstChannel + 1,
+			_selection.LastRow - _selection.FirstRow + 1);
+
+		/* the channel loop has to go on the outside for this one */
+		for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
+		{
+			ref var note = ref pattern.Rows[_selection.FirstRow][channelNumber];
+			ref var lastNote = ref pattern.Rows[_selection.LastRow][channelNumber];
+
+			/* valid combinations:
+			*     [ volume - volume ]
+			*     [panning - panning]
+			*     [ volume - none   ] \ only valid if the 'none'
+			*     [   none - volume ] / note has a sample number
+			* in any other case, no slide occurs. */
+
+			var ve = note.VolumeEffect;
+			var lve = lastNote.VolumeEffect;
+
+			int first = note.VolumeParameter;
+			int last = lastNote.VolumeParameter;
+
+			/* Note: IT only uses the sample's default volume if there is an instrument number *AND* a
+			note. I'm just checking the instrument number, as it's the minimal information needed to
+			get the default volume for the instrument.
+
+			Would be nice but way hard to do: if there's a note but no sample number, look back in the
+			pattern and use the last sample number in that channel (if there is one). */
+			if (ve == VolumeEffects.None)
+			{
+				if (note.instrument == 0)
+					continue;
+
+				ve = VolumeEffects.Volume;
+
 				/* Modplug hack: volume bit shift */
-				if (song_is_instrument_mode())
-					volume = 64; /* XXX */
-				else
-					volume = song_get_sample(note->instrument)->volume >> 2;
-			} else if (note->voleffect == VOLFX_VOLUME) {
-				volume = note->volparam;
-			} else {
-				continue;
+				first = (Song.CurrentSong.GetSample(note.Instrument)?.Volume ?? 0) >> 2;
 			}
-			volume *= percentage;
-			volume /= 100;
-			if (volume > 64) volume = 64;
-			else if (volume < 0) volume = 0;
-			note->volparam = volume;
-			note->voleffect = VOLFX_VOLUME;
+
+			if (lve == VolumeEffects.None)
+			{
+				if (lastNote.Instrument == 0)
+					continue;
+
+				lve = VolumeEffects.Volume;
+				last = (Song.CurrentSong.GetSample(lastNote.Instrument)?.Valuem ?? 0) >> 2;
+			}
+
+			if (!(ve == lve && (ve == VolumeEffects.Volume || ve == VolumeEffects.Panning)))
+				continue;
+
+			for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
+			{
+				ref var sNote = ref pattern.Rows[rowNumber][channelNumber];
+
+				sNote.VolumeEffect = ve;
+				sNote.VolumeParameter = unchecked((byte)(((last - first)
+						* (rowNumber - _selection.FirstRow)
+						/ (_selection.LastRow - _selection.FirstRow)
+						) + first));
+			}
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	void selection_wipe_volume(bool reckless)
+	{
+		if (!SelectionExists())
+		{
+			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			return;
+		}
+
+		if (Song.CurrentSong == null)
+			return;
+
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		HistoryAdd((reckless
+					? "Recover volumes/pannings     (2*Alt-K)"
+					: "Replace extra volumes/pannings (Alt-W)"),
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			_selection.LastChannel - _selection.FirstChannel + 1,
+			_selection.LastRow - _selection.FirstRow + 1);
+
+		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
+		{
+			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++, note++)
+			{
+				ref var note = ref pattern.Rows[rowNumber][channelNumber];
+
+				if (reckless || (note.Instrument == 0 && !note.NoteIsNote))
+				{
+					note.VolumeParameter = 0;
+					note.VolumeEffect = VolumeEffects.None;
+				}
+			}
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	byte VaryValue(int ov, int limit, int depth)
+	{
+		int j;
+
+		j = (int)(limit * s_rnd.NextDouble());
+		j = (limit >> 1) - j;
+		j = ov + (j * depth / 100);
+		if (j < 0) j = 0;
+		if (j > limit) j = limit;
+
+		return unchecked((byte)j);
+	}
+
+	Effects CommonVariableGroup(Effects effect)
+	{
+		switch (effect)
+		{
+			case Effects.PortamentoDown:
+			case Effects.PortamentoUp:
+			case Effects.TonePortamento:
+				return Effects.TonePortamento;
+			case Effects.VolumeSlide:
+			case Effects.TonePortaVol:
+			case Effects.VibratoVol:
+				return Effects.VolumeSlide;
+			case Effects.Panning:
+			case Effects.PanningSlide:
+			case Effects.Panbrello:
+				return Effects.Panning;
+			default:
+				return effect; /* err... */
 		}
 	}
-	pattern_selection_system_copyout();
-}
 
-static void selection_slide_effect(void)
-{
-	int row, chan, total_rows;
-	song_note_t *pattern, *note;
-	int first, last;                /* the effect values */
+	void SelectionVary(bool fast, int depth, Effects how)
+	{
+		/* don't ever vary these things */
+		switch (how)
+		{
+			default:
+				if (!how.IsEffect())
+					return;
+				break;
 
-	/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
+			case Effects.None:
+			case Effects.Special:
+			case Effects.Speed:
+			case Effects.PositionJump:
+			case Effects.PatternBreak:
+
+			case Effects.KeyOff:
+			case Effects.SetEnvPosition:
+			case Effects.Volume:
+			case Effects.NoteSlideUp:
+			case Effects.NoteSlideDown:
+				return;
+		}
+
+		if (!SelectionExists())
+		{
+			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			return;
+		}
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		string varyHow;
+
+		switch (how)
+		{
+			case Effects.ChannelVolume:
+			case Effects.ChannelVolSlide:
+				varyHow = "Undo volume-channel vary      (Ctrl-U)";
+				if (fast) Status.FlashText("Fast volume vary");
+				break;
+			case Effects.Panning:
+			case Effects.PanningSlide:
+			case Effects.Panbrello:
+				varyHow = "Undo panning vary             (Ctrl-Y)";
+				if (fast) Status.FlashText("Fast panning vary");
+				break;
+			default:
+				string lastVary = $"Undo {(char)CommonVariableGroup(how)}xx effect-value".PadRight(28) + "  (Ctrl-K)";
+				if (fast) Status.FlashText("Fast " + lastVary.Substring(5).PadRight(21));
+				varyHow = lastVary;
+				break;
+		}
+
+		if (Song.CurrentSong == null)
+			return;
+
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		HistoryAdd(varyHow,
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			_selection.LastChannel - _selection.FirstChannel + 1,
+			_selection.LastRow - _selection.FirstRow + 1);
+
+		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
+		{
+			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++, note++)
+			{
+				ref var note = ref pattern.Rows[rowNumber][channelNumber];
+
+				if (how == Effects.ChannelVolume || how == Effects.ChannelVolSlide)
+				{
+					if (note.VolumeEffect == VolumeEffects.Volume)
+					{
+						note.VolumeParameter = VaryValue(note.VolumeParameter, 64, depth);
+					}
+				}
+				if (how == Effects.PanningSlide || how == Effects.Panning || how == Effects.Panbrello)
+				{
+					if (note.VolumeEffect == VolumeEffects.Panning)
+						note.VolumeParameter = VaryValue(note.VolumeParameter, 64, depth);
+				}
+
+				var ch = (Effects)note.Effect;
+				if (ch.IsEffect()) continue;
+				if (CommonVariableGroup(ch) != CommonVariableGroup(how)) continue;
+				switch (ch)
+				{
+					/* these are .0 0. and .f f. values */
+					case Effects.VolumeSlide:
+					case Effects.ChannelVolSlide:
+					case Effects.PanningSlide:
+					case Effects.GlobalVolSlide:
+					case Effects.VibratoVol:
+					case Effects.TonePortaVol:
+						if ((note.Parameter & 15) == 15) continue;
+						if ((note.Parameter & 0xF0) == (0xF0)) continue;
+						if ((note.Parameter & 15) == 0)
+							note.Parameter = (byte)((1 + VaryValue(note.Parameter >> 4, 15, depth)) << 4);
+						else
+							note.Parameter = (byte)(1 + VaryValue(note.Parameter & 15, 15, depth));
+						break;
+					/* tempo has a slide */
+					case Effects.Tempo:
+						if ((note.Parameter & 15) == 15) continue;
+						if ((note.Parameter & 0xF0) == (0xF0)) continue;
+						/* but otherwise it's absolute */
+						note.Parameter = (byte)(1 + VaryValue(note.Parameter, 255, depth));
+						break;
+					/* don't vary .E. and .F. values */
+					case Effects.PortamentoDown:
+					case Effects.PortamentoUp:
+						if ((note.Parameter & 15) == 15) continue;
+						if ((note.Parameter & 15) == 14) continue;
+						if ((note.Parameter & 0xF0) == (0xF0)) continue;
+						if ((note.Parameter & 0xF0) == (0xE0)) continue;
+						note.Parameter = (byte)(16 + VaryValue(note.Parameter - 16, 224, depth));
+						break;
+					/* these are all "xx" commands */
+					// FIXME global/channel volume should be limited to 0-128 and 0-64, respectively
+					case Effects.TonePortamento:
+					case Effects.ChannelVolume:
+					case Effects.Offset:
+					case Effects.GlobalVolume:
+					case Effects.Panning:
+						note.Parameter = (byte)(1 + VaryValue(note.Parameter, 255, depth));
+						break;
+					/* these are all "xy" commands */
+					case Effects.Vibrato:
+					case Effects.Tremor:
+					case Effects.Arpeggio:
+					case Effects.Retrig:
+					case Effects.Tremolo:
+					case Effects.Panbrello:
+					case Effects.FineVibrato:
+						note.Parameter = (byte)((1 + VaryValue(note.Parameter & 15, 15, depth))
+							| (((1 + VaryValue((note.Parameter >> 4) & 15, 15, depth))) << 4));
+						break;
+				}
+			}
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	void SelectionAmplify(int percentage)
+	{
+		if (!SelectionExists())
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		if (Song.CurrentSong == null)
+			return;
+
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		/* it says Alt-J even when Alt-I was used */
+		HistoryAdd("Undo volume amplification      (Alt-J)",
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			_selection.LastChannel - _selection.FirstChannel + 1,
+			_selection.LastRow - _selection.FirstRow + 1);
+
+		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
+		{
+			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++, note++)
+			{
+				ref var note = ref pattern.Rows[rowNumber][channelNumber];
+
+				int volume;
+
+				if (note.VolumeEffect == VolumeEffects.None && note.Instrument != 0)
+				{
+					/* Modplug hack: volume bit shift */
+					if (Song.CurrentSong.Flags.HasFlag(SongFlags.InstrumentMode))
+						volume = 64; /* XXX */
+					else
+						volume = Song.CurrentSong.GetSample(note.Instrument)!.Volume >> 2;
+				}
+				else if (note.VolumeEffect == VolumeEffects.Volume)
+					volume = note.VolumeParameter;
+				else
+					continue;
+
+				volume *= percentage;
+				volume /= 100;
+
+				if (volume > 64) volume = 64;
+				else if (volume < 0) volume = 0;
+
+				note.VolumeParameter = (byte)volume;
+				note.VolumeEffect = VolumeEffects.Volume;
+			}
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	void SelectionSlideEffect()
+	{
+		/* FIXME: if there's no selection, should this display a dialog, or bail silently? */
 		if (!SelectionExists())
 		{
 			ShowNoSelectionError();
 			return;
 		}
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.FirstRow > selection.last_row) LastRow.FirstRow = setotalRows.last_row;
-LastRow (selection.FirstRow ==totalRows.last_row)LastRow;
 
-	status.fltotalRows |= SONG_NEEDS_SAVE;
+		if (Song.CurrentSong == null)
+			return;
 
-	pated_history_add("Undo effect data slide         (Alt-X)",
-		selection.FirstChannel - 1,
-		selection.FirstRow,
-		(selection.LastChannel - LastRow.FirstChannel) + totalRows,
-		(selection.last_row - selection.FirstRow) + 1);
-LastRow the channel lototalRows has to go on the outside for this one */
-	for (chan = selection.FirstChannel; chan <= selection.LastChannel; chan++) {
-		note = pattern + chan - 1;
-		first = note[64 * selection.FirstRow].param;
-		last = LastRow[64 * setotalRows.last_row].param;
-		note += 64 * selection.FirstRow;
-		for (row = LastRow.FirstRow; rototalRows <= selection.LastRow; row++, nototalRows += 64) {
-			note->param = (((last - first)
-					    * (row - selection.FirstRow)
-					    / (selection.last_row LastRow selection.FirstRow)
-	totalRows + first)LastRow
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		if (_selection.FirstRow == _selection.LastRow)
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		HistoryAdd("Undo effect data slide         (Alt-X)",
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			_selection.LastChannel - _selection.FirstChannel + 1,
+			_selection.LastRow - _selection.FirstRow + 1);
+
+		/* the channel loop has to go on the outside for this one */
+		for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
+		{
+			int first = pattern.Rows[_selection.FirstRow][channelNumber].Parameter;
+			int last = pattern.Rows[_selection.LastRow][channelNumber].Parameter;
+
+			for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++, note += MAX_CHANNELS)
+			{
+				pattern.Rows[rowNumber][channelNumber].Parameter = (byte)(
+					(((last - first)
+					* (rowNumber - _selection.FirstRow)
+					/ (_selection.LastRow - _selection.FirstRow)
+					) + first));
+			}
 		}
+
+		PatternSelectionSystemCopyOut();
 	}
-	ptotalRows();
-}
 
-static void selection_wipe_effect(void)
-{
-	int row, chan, total_rows;
-	song_note_t *pattern, *note;
-
+	void SelectionWipeEffect()
+	{
 		if (!SelectionExists())
 		{
 			ShowNoSelectionError();
 			return;
 		}
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows)selection.last_row = total_rows-1;
-	if (selection.FirstRow > selection.last_row) LastRow.FirstRow = setotalRows.last_row;
-LastRow.flags |= SOtotalRows;
 
-	pated_history_add("Recover effects/effect data  (2*Alt-X)",
-		selection.FirstChannel - 1,
-		selection.FirstRow,
-		(selection.LastChannel - LastRow.FirstChannel) + totalRows,
-		(selection.last_row - selection.FirstRow) + 1);
-LastRow (row = setotalRows.FirstRow; row <= selection.LastRow; row++) {
-totalRows = pattern + 64 * row + selection.FirstChannel - 1;
-		for (chan = selection.FirstChannel; chan <= selection.LastChannel; chan++, note++) {
-			note->effect = 0;
-			note->param = 0;
+		if (Song.CurrentSong == null)
+			return;
+
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		HistoryAdd("Recover effects/effect data  (2*Alt-X)",
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			_selection.LastChannel - _selection.FirstChannel + 1,
+			_selection.LastRow - _selection.FirstRow + 1);
+
+		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
+		{
+			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++, note++)
+			{
+				ref var note = ref pattern.Rows[rowNumber][channelNumber];
+
+				note.Effect = 0;
+				note.Parameter = 0;
+			}
 		}
+
+		PatternSelectionSystemCopyOut();
 	}
-	pattern_selection_system_copyout();
-}
 
+	enum RollDirection
+	{
+		Down = -1,
+		Up = +1,
+	}
 
-enum roll_dir { ROLL_DOWN = -1, ROLL_UP = +1 };
-static void selection_roll(enum roll_dir direction)
-{
-	song_note_t *pattern, *seldata;
-	int row, sel_rows, sel_chans, total_rows, copy_bytes, n;
+	void SelectionRoll(RollDirection direction)
+	{
+		if (!SelectionExists())
+		{
+			ShowNoSelectionError();
+			return;
+		}
 
-	if (!SELECTION_EXISTS) { return; }
-	total_rows = song_get_pattern(current_pattern, &pattern);
-	if (selection.last_row >= total_rows) { selection.last_row = total_rows - 1; }
-	if (selection.FirstRow > selection.last_row) LastRow selection.FirstRow = totalRows.last_row; LastRow
-	sel_rows = setotalRows.last_row - selection.FirstRow + 1;
-	sel_chans = LastRow.LastChannel - setotalRows.FirstChannel + 1;
-	if (sel_rows < 2) { return; }
-	seldata = pattern + 64 * selection.FirstRow + selection.FirstChannel - LastRow;
+		if (Song.CurrentSong == null)
+			return;
 
-	SCHISM_VLA_ALLOC(sototalRows, temp, sel_chans);
-	copy_bytes = sizeof(temp);
-	row = (direction == ROLL_DOWN ? sel_rows - 1 : 0);
-	memcpy(temp, seldata + 64 * row, copy_bytes);
-	for (n = 1; n < sel_rows; n++, row += direction)
-		memcpy(seldata + 64 * row, seldata + 64 * (row + direction), copy_bytes);
-	memcpy(seldata + 64 * row, temp, copy_bytes);
-	SCHISM_VLA_FREE(temp);
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
 
-	status.flags |= SONG_NEEDS_SAVE;
-}
+		if (pattern == null)
+			return;
 
-/* --------------------------------------------------------------------------------------------------------- */
-/* Row shifting operations */
+		if (_selection.LastRow >= pattern.Rows.Count) _selection.LastRow = pattern.Rows.Count - 1;
+		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
 
-/* A couple of the param names here might seem a bit confusing, so:
- *     what_row = what row to start the insert (generally this would be current_row)
- *     num_rows = the number of rows to insert */
-static void pattern_insert_rows(int what_row, int num_rows, int FirstChannel, int chan_width)
-{
-	song_note_t *pattern;
-	int row, total_rows = song_get_pattern(current_pattern, &pattern);
+		int selectedRows = _selection.LastRow - _selection.FirstRow + 1;
+		int selectedChannels = _selection.LastChannel - _selection.FirstChannel + 1;
+		if (selectedRows < 2) return;
 
-	status.flags |= SONG_NEEDS_SAVE;
-	if (FirstChannel < 1)
-		FirstChannel = 1;
-	if (chan_width + FirstChannel - 1 > 64)
-		chan_width = 64 - FirstChannel + 1;
+		var wrapRow = new SongNote[selectedChannels];
 
-	if (num_rows + what_row > total_rows)
-		num_rows = total_rows - what_row;
+		int rowNumber = (direction == RollDirection.Down) ? selectedRows - 1 : 0;
 
-	if (FirstChannel == 1 && chan_width == 64) {
-		memmove(pattern + 64 * (what_row + num_rows), pattern + 64 * what_row,
-			64 * sizeof(song_note_t) * (total_rows - what_row - num_rows));
-		memset(pattern + 64 * what_row, 0, num_rows * 64 * sizeof(song_note_t));
-	} else {
+		for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
+			wrapRow[channelNumber - _selection.FirstChannel] = pattern.Rows[rowNumber][channelNumber];
+
+		for (int n = 1; n < selectedRows; n++, rowNumber += (int)direction)
+		{
+			int nextRowNumber = rowNumber + (int)direction;
+
+			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
+				pattern.Rows[rowNumber][channelNumber] = pattern.Rows[nextRowNumber][channelNumber];
+		}
+
+		for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
+			pattern.Rows[rowNumber][channelNumber] = wrapRow[channelNumber - _selection.FirstChannel];
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+	}
+
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* Row shifting operations */
+
+	/* A couple of the param names here might seem a bit confusing, so:
+	*     what_row = what row to start the insert (generally this would be current_row)
+	*     num_rows = the number of rows to insert */
+	void PatternInsertRows(int whatRow, int numRows, int firstChannel, int channelWidth)
+	{
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		if (firstChannel < 1)
+			firstChannel = 1;
+		if (channelWidth + firstChannel - 1 > 64)
+			channelWidth = 64 - firstChannel + 1;
+
+		if (numRows + whatRow > pattern.Rows.Count)
+			numRows = pattern.Rows.Count - whatRow;
+
 		/* shift the area down */
-		for (row = total_rows - num_rows - 1; row >= what_row; row--) {
-			memmove(pattern + 64 * (row + num_rows) + FirstChannel - 1,
-				pattern + 64 * row + FirstChannel - 1, chan_width * sizeof(song_note_t));
+		for (int row = pattern.Rows.Count - numRows - 1; row >= whatRow; row--)
+		{
+			for (int column = 0; column < channelWidth; column++)
+			{
+				int channel = column + firstChannel;
+
+				pattern.Rows[row + numRows][channel] = pattern.Rows[row][channel];
+			}
 		}
+
 		/* clear the inserted rows */
-		for (row = what_row; row < what_row + num_rows; row++) {
-			memset(pattern + 64 * row + FirstChannel - 1, 0, chan_width * sizeof(song_note_t));
+		for (int row = whatRow; row < whatRow + numRows; row++)
+		{
+			for (int column = 0; column < channelWidth; column++)
+			{
+				int channel = column + firstChannel;
+
+				pattern.Rows[row][channel] = SongNote.Empty;
+			}
 		}
+
+		PatternSelectionSystemCopyOut();
 	}
-	pattern_selection_system_copyout();
-}
 
-/* Same as above, but with a couple subtle differences. */
-static void pattern_delete_rows(int what_row, int num_rows, int FirstChannel, int chan_width)
-{
-	song_note_t *pattern;
-	int row, total_rows = song_get_pattern(current_pattern, &pattern);
+	/* Same as above, but with a couple subtle differences. */
+	void PatternDeleteRows(int whatRow, int numRows, int firstChannel, int channelWidth)
+	{
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
 
-	status.flags |= SONG_NEEDS_SAVE;
-	if (FirstChannel < 1)
-		FirstChannel = 1;
-	if (chan_width + FirstChannel - 1 > 64)
-		chan_width = 64 - FirstChannel + 1;
+		if (pattern == null)
+			return;
 
-	if (num_rows + what_row > total_rows)
-		num_rows = total_rows - what_row;
+		Status.Flags |= StatusFlags.SongNeedsSave;
 
-	if (FirstChannel == 1 && chan_width == 64) {
-		memmove(pattern + 64 * what_row, pattern + 64 * (what_row + num_rows),
-			64 * sizeof(song_note_t) * (total_rows - what_row - num_rows));
-		memset(pattern + 64 * (total_rows - num_rows), 0, num_rows * 64 * sizeof(song_note_t));
-	} else {
+		if (firstChannel < 1)
+			firstChannel = 1;
+		if (channelWidth + firstChannel - 1 > 64)
+			channelWidth = 64 - firstChannel + 1;
+
+		if (numRows + whatRow > pattern.Rows.Count)
+			numRows = pattern.Rows.Count - whatRow;
+
 		/* shift the area up */
-		for (row = what_row; row <= total_rows - num_rows - 1; row++) {
-			memmove(pattern + 64 * row + FirstChannel - 1,
-				pattern + 64 * (row + num_rows) + FirstChannel - 1,
-				chan_width * sizeof(song_note_t));
-		}
-		/* clear the last rows */
-		for (row = total_rows - num_rows; row < total_rows; row++) {
-			memset(pattern + 64 * row + FirstChannel - 1, 0, chan_width * sizeof(song_note_t));
-		}
-	}
-	pattern_selection_system_copyout();
-}
+		for (int row = whatRow; row <= totalRows - numRows - 1; row++)
+		{
+			for (int column = 0; column < channelWidth; column++)
+			{
+				int channel = column + firstChannel;
 
+				pattern.Rows[row][channel] = pattern.Rows[row + numRows][channel];
+			}
+		}
+
+		/* clear the last rows */
+		for (int row = pattern.Rows.Count - numRows; row < pattern.Rows.Count; row++)
+		{
+			for (int column = 0; column < channelWidth; column++)
+			{
+				int channel = column + firstChannel;
+
+				pattern.Rows[row][channel] = SongNote.Empty;
+			}
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+#if false
 /* --------------------------------------------------------------------------------------------------------- */
 /* history/undo */
 
@@ -2142,12 +2328,10 @@ static void pated_history_restore(int n)
 
 }
 
-static void PatEdSave(const char *descr)
+void PatEdSave(string descr)
 {
-	int total_rows;
-
-	total_rows = song_get_pattern(current_pattern, NULL);
-	pated_history_add(descr,0,0,64,total_rows);
+	if (Song.CurrentSong?.GetPattern(_currentPattern) is Pattern pattern)
+		PatEdHistoryAdd(descr, new Point(0, 0), new Size(64, pattern.Rows.Count));
 }
 static void pated_history_add(const char *descr, int x, int y, int width, int height)
 {
@@ -2229,7 +2413,7 @@ LastRow = 0;
 	clippy_yank();
 
 	if (flag) {
-		status_text_flash("Selection honors current mute settings");
+		Status.FlashText("Selection honors current mute settings");
 	}
 }
 

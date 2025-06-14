@@ -2,10 +2,10 @@ namespace ChasmTracker.Songs;
 
 public class PatternRow
 {
-	public SongNote[] Notes = new SongNote[Constants.MaxChannels];
+	SongNote[] _notes = new SongNote[Constants.MaxChannels];
 
 	public ref SongNote this[int channelNumber]
 	{
-		get => ref Notes[channelNumber - 1];
+		get => ref _notes[channelNumber - 1];
 	}
 }
