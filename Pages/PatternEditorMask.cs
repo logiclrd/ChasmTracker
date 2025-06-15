@@ -1,9 +1,9 @@
 using System;
 
-namespace ChasmTracker.Pages.TrackViews;
+namespace ChasmTracker.Pages;
 
 [Flags]
-public enum MaskFields
+public enum PatternEditorMask
 {
 	Note = 1, /* immutable */
 	Instrument = 2,

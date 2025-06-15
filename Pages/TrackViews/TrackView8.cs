@@ -35,7 +35,7 @@ public class TrackView8 : TrackView
 		vgaMem.DrawText(effectBuf, position.Advance(5), fg, bg);
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, MaskFields mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
 	{
 		// Unused. The 8-column track view is only used on the Info page.
 	}

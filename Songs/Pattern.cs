@@ -14,6 +14,10 @@ public class Pattern
 			Rows.Add(new PatternRow());
 	}
 
+	public PatternRow this[int row] => Rows[row];
+
+	public static readonly Pattern Empty = new Pattern();
+
 	public Pattern(IEnumerable<SongNote> data, int numChannels)
 		: this()
 	{

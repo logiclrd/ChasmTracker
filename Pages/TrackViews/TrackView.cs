@@ -9,7 +9,7 @@ public abstract class TrackView
 
 	public abstract void DrawChannelHeader(VGAMem vgaMem, int chan, Point position, int fg);
 	public abstract void DrawNote(VGAMem vgaMem, Point position, SongNote note, int cursorPos, int fg, int bg);
-	public abstract void DrawMask(VGAMem vgaMem, Point position, MaskFields mask, int cursorPos, int fg, int bg);
+	public abstract void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg);
 
 	/* --------------------------------------------------------------------- */
 	/* pattern edit mask indicators */
@@ -31,7 +31,7 @@ public abstract class TrackView
 			'\xAB', // masked && over && atnote
 		};
 
-	protected static char MASK_CHAR(MaskFields field, int pos, int pos2, MaskFields mask, int cursorPos)
+	protected static char MASK_CHAR(PatternEditorMask field, int pos, int pos2, PatternEditorMask mask, int cursorPos)
 		=> MaskChars
 				[
 					((cursorPos == 0) ? 1 : 0) |

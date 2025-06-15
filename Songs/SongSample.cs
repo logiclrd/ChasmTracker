@@ -18,8 +18,9 @@ public class SongSample
 	public int VibratoRate;
 	public int VibratoDepth;
 	public int VibratoSpeed;
-	public string? Name;
-	public string? FileName;
+	public string Name = "";
+	public string FileName = "";
+	public int? DiskWriterBoundPattern;
 
 	public bool IsPlayed; // for note playback dots
 	public int SavedGlobalVolume; // for muting individual samples

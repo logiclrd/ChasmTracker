@@ -112,18 +112,18 @@ public class TrackView7 : TrackView
 			(cursorPos == 6) ? 0 : 2, (cursorPos == 6) ? 3 : bg);
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, MaskFields mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
 	{
 		var buf = new string(
 			new char[]
 			{
-				MASK_CHAR(MaskFields.Note, 0, -1, mask, cursorPos),
-				MASK_CHAR(MaskFields.Note, 0, -1, mask, cursorPos),
-				MASK_CHAR(MaskFields.Note, 0, 1, mask, cursorPos),
-				MASK_CHAR(MaskFields.Instrument, 2, 3, mask, cursorPos),
-				MASK_CHAR(MaskFields.Volume, 4, 5, mask, cursorPos),
-				MASK_CHAR(MaskFields.Effect, 6, -1, mask, cursorPos),
-				MASK_CHAR(MaskFields.Effect, 7, 8, mask, cursorPos),
+				MASK_CHAR(PatternEditorMask.Note, 0, -1, mask, cursorPos),
+				MASK_CHAR(PatternEditorMask.Note, 0, -1, mask, cursorPos),
+				MASK_CHAR(PatternEditorMask.Note, 0, 1, mask, cursorPos),
+				MASK_CHAR(PatternEditorMask.Instrument, 2, 3, mask, cursorPos),
+				MASK_CHAR(PatternEditorMask.Volume, 4, 5, mask, cursorPos),
+				MASK_CHAR(PatternEditorMask.Effect, 6, -1, mask, cursorPos),
+				MASK_CHAR(PatternEditorMask.Effect, 7, 8, mask, cursorPos),
 			});
 
 		vgaMem.DrawText(buf, position, fg, bg);

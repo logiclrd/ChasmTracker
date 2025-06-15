@@ -126,26 +126,26 @@ public class TrackView1 : TrackView
 			vgaMem.DrawCharacter('\xAD', position, fg, bg);
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, MaskFields mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
 	{
 		char c = '\x8F';
 
 		switch (cursorPos)
 		{
 			case 0: case 1:
-				c = MASK_CHAR(MaskFields.Note, 0, 1, mask, cursorPos);
+				c = MASK_CHAR(PatternEditorMask.Note, 0, 1, mask, cursorPos);
 				break;
 			case 2: case 3:
-				c = MASK_CHAR(MaskFields.Instrument, 2, 3, mask, cursorPos);
+				c = MASK_CHAR(PatternEditorMask.Instrument, 2, 3, mask, cursorPos);
 				break;
 			case 4: case 5:
-				c = MASK_CHAR(MaskFields.Volume, 4, 5, mask, cursorPos);
+				c = MASK_CHAR(PatternEditorMask.Volume, 4, 5, mask, cursorPos);
 				break;
 			case 6:
-				c = MASK_CHAR(MaskFields.Effect, 6, -1, mask, cursorPos);
+				c = MASK_CHAR(PatternEditorMask.Effect, 6, -1, mask, cursorPos);
 				break;
 			case 7: case 8:
-				c = MASK_CHAR(MaskFields.Effect, 7, 8, mask, cursorPos);
+				c = MASK_CHAR(PatternEditorMask.Effect, 7, 8, mask, cursorPos);
 				break;
 		}
 

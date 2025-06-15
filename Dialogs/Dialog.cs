@@ -25,6 +25,10 @@ public class Dialog
 
 	static Stack<Dialog> s_activeDialogs = new Stack<Dialog>();
 
+	public static T Show<T>()
+		where T : Dialog, new()
+		=> Show(new T());
+
 	public static T Show<T>(T dialog)
 		where T : Dialog
 	{

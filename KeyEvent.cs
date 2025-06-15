@@ -29,6 +29,29 @@ public struct KeyEvent
 	public bool IsSynthetic; /* 1 came from paste */
 	public bool IsHandled;
 
+	public int HexValue
+	{
+		get
+		{
+			if ((OriginalSym >= KeySym._0) && (OriginalSym <= KeySym._9))
+				return OriginalSym - KeySym._0;
+
+			if (Modifiers.HasFlag(KeyMod.Num))
+			{
+				if (OriginalSym == KeySym.KP_0)
+					return 0;
+
+				if ((OriginalSym >= KeySym.KP_1) && (OriginalSym <= KeySym.KP_9))
+					return OriginalSym - KeySym.KP_1 + 1;
+			}
+
+			if ((OriginalSym >= KeySym.a) && (OriginalSym <= KeySym.f))
+				return OriginalSym - KeySym.a + 10;
+
+			return -1;
+		}
+	}
+
 	public void Reset(Point startPosition)
 	{
 		Sym = default;

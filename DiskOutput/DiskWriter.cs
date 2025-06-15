@@ -52,4 +52,10 @@ public class DiskWriter // "disko"
 		// TODO
 		throw new NotImplementedException();
 	}
+
+	public static DiskWriterStatus WriteOutSample(int smpnum, int pattern, bool bind)
+	{
+		// TODO
+		return DiskWriterStatus.NotRunning;
+	}
 }

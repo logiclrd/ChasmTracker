@@ -159,27 +159,27 @@ public class TrackView2 : TrackView
 		}
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, MaskFields mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
 	{
 		var buf = new char[] { '\x8F', '\x8F' };
 
 		switch (cursorPos)
 		{
 			case 0: case 1:
-				buf[0] = MASK_CHAR(MaskFields.Note, 0, -1, mask, cursorPos);
-				buf[1] = MASK_CHAR(MaskFields.Note, 0, 1, mask, cursorPos);
+				buf[0] = MASK_CHAR(PatternEditorMask.Note, 0, -1, mask, cursorPos);
+				buf[1] = MASK_CHAR(PatternEditorMask.Note, 0, 1, mask, cursorPos);
 				break;
 			case 2: case 3:
-				buf[0] = MASK_CHAR(MaskFields.Instrument, 2, -1, mask, cursorPos);
-				buf[1] = MASK_CHAR(MaskFields.Instrument, 3, -1, mask, cursorPos);
+				buf[0] = MASK_CHAR(PatternEditorMask.Instrument, 2, -1, mask, cursorPos);
+				buf[1] = MASK_CHAR(PatternEditorMask.Instrument, 3, -1, mask, cursorPos);
 				break;
 			case 4: case 5:
-				buf[0] = MASK_CHAR(MaskFields.Volume, 4, -1, mask, cursorPos);
-				buf[1] = MASK_CHAR(MaskFields.Volume, 5, -1, mask, cursorPos);
+				buf[0] = MASK_CHAR(PatternEditorMask.Volume, 4, -1, mask, cursorPos);
+				buf[1] = MASK_CHAR(PatternEditorMask.Volume, 5, -1, mask, cursorPos);
 				break;
 			case 6: case 7: case 8:
-				buf[0] = MASK_CHAR(MaskFields.Effect, 6, -1, mask, cursorPos);
-				buf[1] = MASK_CHAR(MaskFields.Effect, 7, 8, mask, cursorPos);
+				buf[0] = MASK_CHAR(PatternEditorMask.Effect, 6, -1, mask, cursorPos);
+				buf[1] = MASK_CHAR(PatternEditorMask.Effect, 7, 8, mask, cursorPos);
 				break;
 		}
 
