@@ -93,7 +93,20 @@ public class PatternEditorPage : Page
 	public int CurrentRow
 	{
 		get => _currentRow;
-		set => _currentRow = value;
+		set
+		{
+			int totalRows = Song.CurrentSong?.GetPatternLength(_currentPattern) ?? 64;
+
+			_currentRow = Math.Max(0, Math.Min(totalRows, value));
+			Reposition();
+			Status.Flags |= StatusFlags.NeedUpdate;
+		}
+	}
+
+	public int CurrentChannel
+	{
+		get => _currentChannel;
+		set => _currentChannel = Math.Max(0, Math.Min(Constants.MaxChannels, value));
 	}
 
 	int _skipValue = 1;                /* aka cursor step */
@@ -116,8 +129,8 @@ public class PatternEditorPage : Page
 
 	int _shiftChordChannels = 0;       /* incremented for each shift-note played */
 
-	bool _centraliseCursor = 0;
-	bool _highlightCurrentRow = 0;
+	bool _centraliseCursor = false;
+	bool _highlightCurrentRow = false;
 
 	bool _playbackTracing = false;     /* scroll lock */
 	bool _midiPlaybackTracing = false;
@@ -230,7 +243,7 @@ public class PatternEditorPage : Page
 
 	void ShowNoSelectionError()
 	{
-		Dialog.Show(new PatternEditorNoSelectionErrorDialog());
+		ShowNoSelectionError();
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -535,122 +548,6 @@ public class PatternEditorPage : Page
 		return 1;
 	}
 
-	/* clipboard */
-	void ClipboardFree()
-	{
-		_clipboard.Data = Array.Empty<SongNote>();
-	}
-
-	/* ClipboardCopy is fundementally the same as SelectionErase
-	* except it uses memcpy instead of memset :) */
-	void ClipboardCopy(bool honourMute)
-	{
-		bool flag;
-
-		if (!SelectionExists())
-		{
-			ShowNoSelectionError();
-			return;
-		}
-
-		ClipboardFree();
-
-		SnapCopy(
-			_clipboard,
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			(_selection.LastChannel - _selection.FirstChannel) + 1,
-			(_selection.LastRow - _selection.FirstRow) + 1);
-
-		flag = false;
-		if (honourMute)
-			flag = SnapHonourMute(_clipboard, _selection.FirstChannel - 1);
-
-		/* transfer to system where appropriate */
-		Clippy.Yank();
-
-		if (flag)
-			Status.FlashText("Selection honours current mute settings");
-	}
-
-	void ClipboardPasteOverwrite(bool suppress, bool grow)
-	{
-		if (_clipboard.Data == null)
-		{
-			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
-			return;
-		}
-
-		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
-
-		if (pattern == null)
-			return;
-
-		int numRows = pattern.Rows.Count - _currentRow;
-
-		if (_clipboard.Rows < numRows)
-			numRows = _clipboard.Rows;
-
-		if (_clipboard.Rows > numRows && grow)
-		{
-			if (_currentRow + _clipboard.Rows > 200)
-			{
-				Status.FlashText($"Resized pattern {_currentPattern}, but clipped to 200 rows");
-				pattern.Resize(200);
-			}
-			else
-			{
-				int newSize = _currentRow + _clipboard.Rows;
-
-				Status.FlashText($"Resized pattern {_currentPattern} to {newSize} rows");
-				pattern.Resize(newSize);
-			}
-		}
-
-		int chanWidth = _clipboard.Channels;
-
-		if (_currentChannel + chanWidth > 64)
-			chanWidth = 64 - _currentChannel + 1;
-
-		if (!suppress)
-		{
-			HistoryAddGrouped(
-				"Replace overwritten data       (Alt-O)",
-				_currentChannel - 1, _currentRow,
-				chanWidth, numRows);
-		}
-
-		SnapPaste(_clipboard, _currentChannel - 1, _currentRow, 0);
-	}
-
-	void ClipboardPasteInsert()
-	{
-		if (_clipboard.Data == null)
-		{
-			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
-			return;
-		}
-
-		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
-
-		if (pattern == null)
-			return;
-
-		PatEdSave("Undo paste data                (Alt-P)");
-
-		int numRows = pattern.Rows.Count - _currentRow;
-		if (_clipboard.Rows < numRows)
-			numRows = _clipboard.Rows;
-
-		int chanWidth = _clipboard.Channels;
-		if (chanWidth + _currentChannel > 64)
-			chanWidth = 64 - _currentChannel + 1;
-
-		PatternInsertRows(_currentRow, _clipboard.Rows, _currentChannel, chanWidth);
-		ClipboardPasteOverwrite(true, false);
-		PatternSelectionSystemCopyOut();
-	}
-
 	byte SongGetCurrentInstrument()
 	{
 		if ((Song.CurrentSong != null) && Song.CurrentSong.Flags.HasFlag(SongFlags.InstrumentMode))
@@ -686,8 +583,8 @@ public class PatternEditorPage : Page
 		/* note that IT doesn't do this for "fields" either... */
 		HistoryAddGrouped(
 			"Replace mixed data             (Alt-M)",
-			_currentChannel - 1, _currentRow,
-			chanWidth, numRows);
+			new Point(_currentChannel - 1, _currentRow),
+			new Size(chanWidth, numRows));
 
 		int c = 0;
 
@@ -951,14 +848,14 @@ public class PatternEditorPage : Page
 		base.SetPage(vgaMem);
 	}
 
-	void SnapPaste(PatternSnap s, int x, int y, int xlate)
+	void SnapPaste(PatternSnap s, Point position, int xlate)
 	{
 		Status.Flags |= StatusFlags.SongNeedsSave;
 
-		if (x < 0)
-			x = s.Position.X;
-		if (y < 0)
-			y = s.Position.Y;
+		if (position.X < 0)
+			position.X = s.Position.X;
+		if (position.Y < 0)
+			position.Y = s.Position.Y;
 
 		var pattern = Song.CurrentSong?.GetPattern(CurrentPattern);
 
@@ -975,83 +872,33 @@ public class PatternEditorPage : Page
 
 		int chanWidth = s.Channels;
 
-		if (x + chanWidth >= 64)
-			chanWidth = 64 - x;
+		if (position.X + chanWidth >= 64)
+			chanWidth = 64 - position.X;
 
 		for (int row = 0; row < numRows; row++)
 		{
 			Array.Copy(
 				s.Data,
 				row * s.Channels,
-				pattern.Rows[y].Notes,
-				x,
+				pattern.Rows[position.Y].Notes,
+				position.X,
 				chanWidth);
 
 			if (xlate != 0)
 			{
 				for (int chan = 0; chan < chanWidth; chan++)
 				{
-					if (chan + x >= 64) /* defensive */
+					if (chan + position.X >= 64) /* defensive */
 						break;
 
-					pattern.Rows[y][chan + x].SetNoteNote(
-						pattern.Rows[y][chan + x].Note,
+					pattern.Rows[position.Y][chan + position.X].SetNoteNote(
+						pattern.Rows[position.Y][chan + position.X].Note,
 						xlate);
 				}
 			}
 		}
 
 		PatternSelectionSystemCopyOut();
-	}
-
-	void SnapCopyFromPattern(Pattern pattern, PatternSnap s, int x, int y, int width, int height)
-	{
-		MemoryUsage.NotifySongChanged();
-
-		s.Channels = width;
-		s.Rows = height;
-
-		s.Data = new SongNote[s.Channels * s.Rows];
-
-		s.Position = new Point(x, y);
-
-		for (int row = 0; (row < s.Rows) && (row < pattern.Rows.Count); row++)
-			Array.Copy(pattern.Rows[row + y].Notes, x, s.Data, row * s.Channels, s.Channels);
-	}
-
-	void SnapCopy(PatternSnap s, int x, int y, int width, int height)
-	{
-		if (Song.CurrentSong?.GetPattern(CurrentPattern) is Pattern pattern)
-			SnapCopyFromPattern(pattern, s, x, y, width, height);
-	}
-
-	bool SnapHonourMute(PatternSnap s, int baseChannel)
-	{
-		var currentSong = Song.CurrentSong;
-
-		if (currentSong == null)
-			return false;
-
-		bool didAny = false;
-
-		bool[] mute = new bool[s.Channels];
-
-		for (int i = 0; i < s.Channels; i++)
-			mute[i] = currentSong.GetChannel(i + baseChannel)!.Flags.HasFlag(ChannelFlags.Mute);
-
-		for (int row = 0; row < s.Rows; row++)
-		{
-			for (int channel = 0; channel < s.Channels; channel++)
-			{
-				if (mute[channel])
-				{
-					s.Data[row * s.Channels + channel] = SongNote.Empty;
-					didAny = true;
-				}
-			}
-		}
-
-		return didAny;
 	}
 
 	/* --------------------------------------------------------------------------------------------------------- */
@@ -1112,15 +959,9 @@ public class PatternEditorPage : Page
 
 	/* --------------------------------------------------------------------------------------------------------- */
 	/* vary depth */
-	enum VaryMode
-	{
-		ChannelVolume,
-		PanbrelloParameter,
-	}
+	Effects _currentVary;
 
-	VaryMode _currentVary;
-
-	void VaryCommand(VaryMode how)
+	void VaryCommand(Effects how)
 	{
 		_currentVary = how;
 
@@ -1130,7 +971,7 @@ public class PatternEditorPage : Page
 			newVaryDepth =>
 			{
 				_varyDepth = newVaryDepth;
-				SelectionVary(0, _varyDepth, _currentVary);
+				SelectionVary(false, _varyDepth, _currentVary);
 			};
 	}
 
@@ -1248,7 +1089,7 @@ public class PatternEditorPage : Page
 		for (int n = 0; n < Constants.MaxChannels; n++)
 			_channelMulti[n] = char.IsLetter(channelData[n]);
 
-		RecalculateVisibleArea;
+		RecalculateVisibleArea();
 		Reposition();
 
 		if (Status.CurrentPage is PatternEditorPage)
@@ -1346,7 +1187,7 @@ public class PatternEditorPage : Page
 		int destRow = destEnd - 1;
 
 		HistoryAdd("Undo block length double       (Alt-F)",
-			offset, _selection.FirstRow, width, height);
+			new Point(offset, _selection.FirstRow), new Size(width, height));
 
 		while (destRow > srcRow
 		{
@@ -1393,7 +1234,7 @@ public class PatternEditorPage : Page
 		int destRow = srcRow;
 
 		HistoryAdd("Undo block length halve        (Alt-G)",
-			offset, _selection.FirstRow, width, height);
+			new Point(offset, _selection.FirstRow), new Size(width, height));
 
 		for (int row = 0; row < height / 2; row++)
 		{
@@ -1421,10 +1262,10 @@ public class PatternEditorPage : Page
 		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
 
 		HistoryAdd("Undo block cut                 (Alt-Z)",
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			(_selection.LastChannel - _selection.FirstChannel) + 1,
-			(_selection.LastRow - _selection.FirstRow) + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				(_selection.LastChannel - _selection.FirstChannel) + 1,
+				(_selection.LastRow - _selection.FirstRow) + 1));
 
 		for (int row = _selection.FirstRow; row <= _selection.LastRow; row++)
 		{
@@ -1450,10 +1291,10 @@ public class PatternEditorPage : Page
 		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
 
 		HistoryAdd("Undo set sample/instrument     (Alt-S)",
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			(_selection.LastChannel - _selection.FirstChannel) + 1,
-			(_selection.LastRow - _selection.FirstRow) + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				(_selection.LastChannel - _selection.FirstChannel) + 1,
+				(_selection.LastRow - _selection.FirstRow) + 1));
 
 		byte currentInstrument = (byte)CurrentInstrument;
 
@@ -1485,7 +1326,7 @@ public class PatternEditorPage : Page
 	{
 		if (!SelectionExists())
 		{
-			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			ShowNoSelectionError();
 			return;
 		}
 
@@ -1524,9 +1365,10 @@ public class PatternEditorPage : Page
 		}
 
 		HistoryAdd("Undo swap block                (Alt-Y)",
-			Math.Min(_selection.FirstRow, _currentRow),
-			Math.Min(_selection.FirstChannel, _currentChannel) - 1,
-			affectedWidth, affectedHeight);
+			new Point(
+				Math.Min(_selection.FirstRow, _currentRow),
+				Math.Min(_selection.FirstChannel, _currentChannel) - 1),
+			new Size(affectedWidth, affectedHeight));
 
 		for (int row = 0; row <= selectedRows; row++)
 		{
@@ -1544,7 +1386,7 @@ public class PatternEditorPage : Page
 	{
 		if (!SelectionExists())
 		{
-			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			ShowNoSelectionError();
 			return;
 		}
 
@@ -1559,10 +1401,10 @@ public class PatternEditorPage : Page
 		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
 
 		HistoryAdd("Undo set volume/panning        (Alt-V)",
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			(_selection.LastChannel - _selection.FirstChannel) + 1,
-			(_selection.LastRow - _selection.FirstRow) + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				(_selection.LastChannel - _selection.FirstChannel) + 1,
+				(_selection.LastRow - _selection.FirstRow) + 1));
 
 		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
 		{
@@ -1587,7 +1429,7 @@ public class PatternEditorPage : Page
 		/* Impulse Tracker displays a box "No block is marked" */
 		if (!SelectionExists())
 		{
-			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			ShowNoSelectionError();
 			return;
 		}
 
@@ -1609,10 +1451,10 @@ public class PatternEditorPage : Page
 		Status.Flags |= StatusFlags.SongNeedsSave;
 
 		HistoryAdd("Undo volume or panning slide   (Alt-K)",
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			_selection.LastChannel - _selection.FirstChannel + 1,
-			_selection.LastRow - _selection.FirstRow + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				_selection.LastChannel - _selection.FirstChannel + 1,
+				_selection.LastRow - _selection.FirstRow + 1));
 
 		/* the channel loop has to go on the outside for this one */
 		for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
@@ -1641,7 +1483,7 @@ public class PatternEditorPage : Page
 			pattern and use the last sample number in that channel (if there is one). */
 			if (ve == VolumeEffects.None)
 			{
-				if (note.instrument == 0)
+				if (note.Instrument == 0)
 					continue;
 
 				ve = VolumeEffects.Volume;
@@ -1656,7 +1498,7 @@ public class PatternEditorPage : Page
 					continue;
 
 				lve = VolumeEffects.Volume;
-				last = (Song.CurrentSong.GetSample(lastNote.Instrument)?.Valuem ?? 0) >> 2;
+				last = (Song.CurrentSong.GetSample(lastNote.Instrument)?.Volume ?? 0) >> 2;
 			}
 
 			if (!(ve == lve && (ve == VolumeEffects.Volume || ve == VolumeEffects.Panning)))
@@ -1681,7 +1523,7 @@ public class PatternEditorPage : Page
 	{
 		if (!SelectionExists())
 		{
-			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			ShowNoSelectionError();
 			return;
 		}
 
@@ -1701,10 +1543,10 @@ public class PatternEditorPage : Page
 		HistoryAdd((reckless
 					? "Recover volumes/pannings     (2*Alt-K)"
 					: "Replace extra volumes/pannings (Alt-W)"),
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			_selection.LastChannel - _selection.FirstChannel + 1,
-			_selection.LastRow - _selection.FirstRow + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				_selection.LastChannel - _selection.FirstChannel + 1,
+				_selection.LastRow - _selection.FirstRow + 1));
 
 		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
 		{
@@ -1783,7 +1625,7 @@ public class PatternEditorPage : Page
 
 		if (!SelectionExists())
 		{
-			MessageBox.Show(DialogTypes.OK, "    No block is marked    ");
+			ShowNoSelectionError();
 			return;
 		}
 
@@ -1823,10 +1665,10 @@ public class PatternEditorPage : Page
 		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
 
 		HistoryAdd(varyHow,
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			_selection.LastChannel - _selection.FirstChannel + 1,
-			_selection.LastRow - _selection.FirstRow + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				_selection.LastChannel - _selection.FirstChannel + 1,
+				_selection.LastRow - _selection.FirstRow + 1));
 
 		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
 		{
@@ -1928,11 +1770,12 @@ public class PatternEditorPage : Page
 		if (_selection.FirstRow > _selection.LastRow) _selection.FirstRow = _selection.LastRow;
 
 		/* it says Alt-J even when Alt-I was used */
-		HistoryAdd("Undo volume amplification      (Alt-J)",
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			_selection.LastChannel - _selection.FirstChannel + 1,
-			_selection.LastRow - _selection.FirstRow + 1);
+		HistoryAdd(
+			"Undo volume amplification      (Alt-J)",
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				_selection.LastChannel - _selection.FirstChannel + 1,
+				_selection.LastRow - _selection.FirstRow + 1));
 
 		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
 		{
@@ -1995,10 +1838,10 @@ public class PatternEditorPage : Page
 		Status.Flags |= StatusFlags.SongNeedsSave;
 
 		HistoryAdd("Undo effect data slide         (Alt-X)",
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			_selection.LastChannel - _selection.FirstChannel + 1,
-			_selection.LastRow - _selection.FirstRow + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				_selection.LastChannel - _selection.FirstChannel + 1,
+				_selection.LastRow - _selection.FirstRow + 1));
 
 		/* the channel loop has to go on the outside for this one */
 		for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
@@ -2041,14 +1884,14 @@ public class PatternEditorPage : Page
 		Status.Flags |= StatusFlags.SongNeedsSave;
 
 		HistoryAdd("Recover effects/effect data  (2*Alt-X)",
-			_selection.FirstChannel - 1,
-			_selection.FirstRow,
-			_selection.LastChannel - _selection.FirstChannel + 1,
-			_selection.LastRow - _selection.FirstRow + 1);
+			new Point(_selection.FirstChannel - 1, _selection.FirstRow),
+			new Size(
+				_selection.LastChannel - _selection.FirstChannel + 1,
+				_selection.LastRow - _selection.FirstRow + 1));
 
 		for (int rowNumber = _selection.FirstRow; rowNumber <= _selection.LastRow; rowNumber++)
 		{
-			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++, note++)
+			for (int channelNumber = _selection.FirstChannel; channelNumber <= _selection.LastChannel; channelNumber++)
 			{
 				ref var note = ref pattern.Rows[rowNumber][channelNumber];
 
@@ -2177,7 +2020,7 @@ public class PatternEditorPage : Page
 			numRows = pattern.Rows.Count - whatRow;
 
 		/* shift the area up */
-		for (int row = whatRow; row <= totalRows - numRows - 1; row++)
+		for (int row = whatRow; row <= pattern.Rows.Count - numRows - 1; row++)
 		{
 			for (int column = 0; column < channelWidth; column++)
 			{
@@ -2201,195 +2044,181 @@ public class PatternEditorPage : Page
 		PatternSelectionSystemCopyOut();
 	}
 
-#if false
-/* --------------------------------------------------------------------------------------------------------- */
-/* history/undo */
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* history/undo */
 
-static void pated_history_clear(void)
-{
-	// clear undo history
-	int i;
-	for (i = 0; i < 10; i++) {
-		if (undo_history[i].snap_op_allocated)
-			free((void *) undo_history[i].snap_op);
-		free(undo_history[i].data);
-
-		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = "Empty";
-		undo_history[i].snap_op_allocated = 0;
+	void HistoryClear()
+	{
+		// clear undo history
+		_undoHistory.Clear();
 	}
 
-}
+	void SnapPaste(PatternSnap s, int x, int y, int xlate)
+	{
+		Status.Flags |= StatusFlags.SongNeedsSave;
 
-static void snap_paste(struct pattern_snap *s, int x, int y, int xlate)
-{
-	song_note_t *pattern, *p_note;
-	int row, num_rows, chan_width;
-	int chan;
+		if (x < 0)
+			x = s.Position.X;
+		if (y < 0)
+			y = s.Position.Y;
 
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
 
-	status.flags |= SONG_NEEDS_SAVE;
-	if (x < 0) x = s->x;
-	if (y < 0) y = s->y;
+		if (pattern == null)
+			return;
 
-	num_rows = song_get_pattern(current_pattern, &pattern);
-	num_rows -= y;
-	if (s->rows < num_rows)
-		num_rows = s->rows;
-	if (num_rows <= 0) return;
+		int numRows = pattern.Rows.Count - y;
 
-	chan_width = s->channels;
-	if (chan_width + x >= 64)
-		chan_width = 64 - x;
+		if (numRows > s.Rows)
+			numRows = s.Rows;
+		if (numRows <= 0)
+			return;
 
-	for (row = 0; row < num_rows; row++) {
-		p_note = pattern + 64 * (y + row) + x;
-		memcpy(pattern + 64 * (y + row) + x,
-		       s->data + s->channels * row, chan_width * sizeof(song_note_t));
-		if (!xlate) continue;
-		for (chan = 0; chan < chan_width; chan++) {
-			if (chan + x > 64) break; /* defensive */
-			set_note_note(p_note+chan,
-					p_note[chan].note,
-					xlate);
-		}
-	}
-	pattern_selection_system_copyout();
-}
+		int chanWidth = s.Channels;
 
-static void snap_copy_from_pattern(song_note_t *pattern, int total_rows,
-	struct pattern_snap *s, int x, int y, int width, int height)
-{
-	int row, len;
+		if (chanWidth + x >= Constants.MaxChannels)
+			chanWidth = Constants.MaxChannels - x;
 
-	memused_songchanged();
-	s->channels = width;
-	s->rows = height;
+		for (int row = 0; row < numRows; row++)
+		{
+			for (int chan = 0; chan < chanWidth; chan++)
+			{
+				if (chan + x >= Constants.MaxChannels) /* defensive */
+					break;
 
-	s->data = mem_alloc(len = (sizeof(song_note_t) * s->channels * s->rows));
+				ref var pNote = ref pattern.Rows[y + row][x + chan];
 
-	if (s->rows > total_rows)
-		memset(s->data, 0, len);
+				pNote = s[row, chan];
 
-	s->x = x; s->y = y;
-	if (x == 0 && width == 64) {
-		if (height >total_rows) height = total_rows;
-		memcpy(s->data, pattern + 64 * y, (width*height*sizeof(song_note_t)));
-	} else {
-		for (row = 0; row < s->rows && row < total_rows; row++) {
-			memcpy(s->data + s->channels * row,
-			       pattern + 64 * (row + s->y) + s->x,
-			       s->channels * sizeof(song_note_t));
-		}
-	}
-}
-
-static void snap_copy(struct pattern_snap *s, int x, int y, int width, int height)
-{
-	song_note_t *pattern;
-	int total_rows;
-
-	total_rows = song_get_pattern(current_pattern, &pattern);
-
-	/* forward */
-	snap_copy_from_pattern(pattern, total_rows, s, x, y, width, height);
-}
-
-static int snap_honor_mute(struct pattern_snap *s, int base_channel)
-{
-	int i,j;
-	song_note_t *n;
-	int mute[64];
-	int did_any;
-
-	for (i = 0; i < s->channels; i++) {
-		mute[i] = (song_get_channel(i+base_channel)->flags & CHN_MUTE);
-	}
-
-	n = s->data;
-	did_any = 0;
-	for (j = 0; j < s->rows; j++) {
-		for (i = 0; i < s->channels; i++) {
-			if (mute[i]) {
-				memset(n, 0, sizeof(song_note_t));
-				did_any = 1;
+				if (xlate != 0)
+					pNote.SetNoteNote(pNote.Note, xlate);
 			}
-			n++;
+		}
+
+		PatternSelectionSystemCopyOut();
+	}
+
+	void SnapCopyFromPattern(Pattern pattern, PatternSnap s, Point position, Size size)
+	{
+		MemoryUsage.NotifySongChanged();
+
+		s.Channels = size.Width;
+		s.Rows = size.Height;
+
+		s.AllocateData();
+
+		s.Position = position;
+
+		for (int row = 0; row < size.Height && row < pattern.Rows.Count; row++)
+			for (int chan = 0; chan < size.Width; chan++)
+				s[row, chan] = pattern.Rows[row + position.Y][chan + position.X];
+	}
+
+	void SnapCopy(PatternSnap s, Point position, Size size)
+	{
+		if (Song.CurrentSong?.GetPattern(CurrentPattern) is Pattern pattern)
+			SnapCopyFromPattern(pattern, s, position, size);
+	}
+
+	bool SnapHonourMute(PatternSnap s, int baseChannel)
+	{
+		var currentSong = Song.CurrentSong;
+
+		if (currentSong == null)
+			return false;
+
+		bool didAny = false;
+
+		bool[] mute = new bool[s.Channels];
+
+		for (int i = 0; i < s.Channels; i++)
+			mute[i] = currentSong.GetChannel(i + baseChannel)!.Flags.HasFlag(ChannelFlags.Mute);
+
+		for (int row = 0; row < s.Rows; row++)
+		{
+			for (int channel = 0; channel < s.Channels; channel++)
+			{
+				if (mute[channel])
+				{
+					s.Data[row * s.Channels + channel] = SongNote.Empty;
+					didAny = true;
+				}
+			}
+		}
+
+		return didAny;
+	}
+
+	void HistoryRestore(int n)
+	{
+		if (n < 0 || n > 9) return;
+
+		SnapPaste(_undoHistory[n], new Point(-1, -1), 0);
+	}
+
+	void Save(string descr)
+	{
+		if (Song.CurrentSong?.GetPattern(_currentPattern) is Pattern pattern)
+			HistoryAdd(descr, new Point(0, 0), new Size(64, pattern.Rows.Count));
+	}
+
+	void HistoryAdd(string descr, Point position, Size size)
+	{
+		HistoryAdd(false, descr, position, size);
+	}
+
+	void HistoryAddGrouped(string descr, Point position, Size size)
+	{
+		HistoryAdd(true, descr, position, size);
+	}
+
+	void HistoryAdd(bool groupedF, string descr, Point position, Size size)
+	{
+		if (groupedF && (_undoHistory.Count > 0))
+		{
+			var top = _undoHistory[_undoHistory.Count - 1];
+
+			if ((top.PatternNumber == _currentPattern)
+			&& (top.Position == position)
+			&& (top.Channels == size.Width)
+			&& (top.Rows == size.Height)
+			&& (top.SnapOp == descr))
+			{
+				/* do nothing; use the previous bit of history */
+			}
+			else
+			{
+				var newTop = new PatternSnap();
+
+				SnapCopy(newTop, position, size);
+
+				newTop.SnapOp = descr;
+				newTop.PatternNumber = _currentPattern;
+
+				_undoHistory.Add(newTop);
+			}
 		}
 	}
 
-	return did_any;
-}
+	void FastSaveUpdate()
+	{
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
 
-static void pated_history_restore(int n)
-{
-	if (n < 0 || n > 9) return;
-	snap_paste(&undo_history[n], -1, -1, 0);
-
-}
-
-void PatEdSave(string descr)
-{
-	if (Song.CurrentSong?.GetPattern(_currentPattern) is Pattern pattern)
-		PatEdHistoryAdd(descr, new Point(0, 0), new Size(64, pattern.Rows.Count));
-}
-static void pated_history_add(const char *descr, int x, int y, int width, int height)
-{
-	pated_history_add2(0, descr, x, y, width, height);
-}
-static void pated_history_add_grouped(const char *descr, int x, int y, int width, int height)
-{
-	pated_history_add2(1, descr, x, y, width, height);
-}
-static void pated_history_add2(int groupedf, const char *descr, int x, int y, int width, int height)
-{
-	int j;
-
-	j = undo_history_top;
-	if (groupedf
-	&& undo_history[j].patternno == current_pattern
-	&& undo_history[j].x == x && undo_history[j].y == y
-	&& undo_history[j].channels == width
-	&& undo_history[j].rows == height
-	&& undo_history[j].snap_op
-	&& strcmp(undo_history[j].snap_op, descr) == 0) {
-
-		/* do nothing; use the previous bit of history */
-
-	} else {
-		j = (undo_history_top + 1) % 10;
-		free(undo_history[j].data);
-		snap_copy(&undo_history[j], x, y, width, height);
-		undo_history[j].snap_op = str_dup(descr);
-		undo_history[j].snap_op_allocated = 1;
-		undo_history[j].patternno = current_pattern;
-		undo_history_top = j;
+		if (pattern != null)
+			SnapCopy(_fastSave, new Point(0, 0), new Size(Constants.MaxChannels, pattern.Rows.Count));
 	}
-}
-static void fast_save_update(void)
-{
-	int total_rows;
 
-	free(fast_save.data);
-	fast_save.data = NULL;
+	/* clipboard */
+	void ClipboardFree()
+	{
+		_clipboard.Data = Array.Empty<SongNote>();
+	}
 
-	total_rows = song_get_pattern(current_pattern, NULL);
-
-	snap_copy(&fast_save, 0, 0, 64, total_rows);
-}
-
-/* clipboard */
-static void clipboard_free(void)
-{
-	free(clipboard.data);
-	clipboard.data = NULL;
-}
-
-/* clipboard_copy is fundementally the same as selection_erase
- * except it uses memcpy instead of memset :) */
-static void clipboard_copy(int honor_mute)
-{
-	int flag;
+	/* ClipboardCopy is fundementally the same as SelectionErase
+	* except it uses memcpy instead of memset :) */
+	void ClipboardCopy(bool honourMute)
+	{
+		bool flag;
 
 		if (!SelectionExists())
 		{
@@ -2397,322 +2226,199 @@ static void clipboard_copy(int honor_mute)
 			return;
 		}
 
-	clipboard_free();
+		ClipboardFree();
 
-	snap_copy(&clipboard,
-		selection.FirstChannel - 1,
-		selection.FirstRow,
-		(selection.LastChannel - LastRow.FirstChannel) + totalRows,
-		(selection.last_row - selection.FirstRow) + 1);
-LastRow = 0;
-	totalRows (honor_mute) {
-		flag = snap_honor_mute(&clipboard, selection.FirstChannel-1);
+		SnapCopy(
+			_clipboard,
+			_selection.FirstChannel - 1,
+			_selection.FirstRow,
+			(_selection.LastChannel - _selection.FirstChannel) + 1,
+			(_selection.LastRow - _selection.FirstRow) + 1);
+
+		flag = false;
+		if (honourMute)
+			flag = SnapHonourMute(_clipboard, _selection.FirstChannel - 1);
+
+		/* transfer to system where appropriate */
+		Clippy.Yank();
+
+		if (flag)
+			Status.FlashText("Selection honours current mute settings");
 	}
 
-	/* transfer to system where appropriate */
-	clippy_yank();
-
-	if (flag) {
-		Status.FlashText("Selection honors current mute settings");
-	}
-}
-
-static void clipboard_paste_overwrite(int suppress, int grow)
-{
-	song_note_t *pattern;
-	int num_rows, chan_width;
-
-	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
-		return;
-	}
-
-	num_rows = song_get_pattern(current_pattern, &pattern);
-	num_rows -= current_row;
-	if (clipboard.rows < num_rows)
-		num_rows = clipboard.rows;
-
-	if (clipboard.rows > num_rows && grow) {
-		if (current_row+clipboard.rows > 200) {
-			status_text_flash("Resized pattern %d, but clipped to 200 rows", current_pattern);
-			song_pattern_resize(current_pattern, 200);
-		} else {
-			status_text_flash("Resized pattern %d to %d rows", current_pattern,
-					  current_row + clipboard.rows);
-			song_pattern_resize(current_pattern, current_row+clipboard.rows);
+	void ClipboardPasteOverwrite(bool suppress, bool grow)
+	{
+		if (_clipboard.Data == null)
+		{
+			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+			return;
 		}
-	}
 
-	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
 
-	if (!suppress) {
-		pated_history_add_grouped("Replace overwritten data       (Alt-O)",
-					current_channel-1, current_row,
-					chan_width, num_rows);
-	}
-	snap_paste(&clipboard, current_channel-1, current_row, 0);
-}
-static void clipboard_paste_insert(void)
-{
-	int num_rows, total_rows, chan_width;
-	song_note_t *pattern;
+		if (pattern == null)
+			return;
 
-	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
-		return;
-	}
+		int numRows = pattern.Rows.Count - _currentRow;
 
-	total_rows = song_get_pattern(current_pattern, &pattern);
+		if (_clipboard.Rows < numRows)
+			numRows = _clipboard.Rows;
 
-	PatEdSave("Undo paste data                (Alt-P)");
+		if (_clipboard.Rows > numRows && grow)
+		{
+			if (_currentRow + _clipboard.Rows > 200)
+			{
+				Status.FlashText($"Resized pattern {_currentPattern}, but clipped to 200 rows");
+				pattern.Resize(200);
+			}
+			else
+			{
+				int newSize = _currentRow + _clipboard.Rows;
 
-	num_rows = total_rows - current_row;
-	if (clipboard.rows < num_rows)
-		num_rows = clipboard.rows;
-
-	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
-
-	pattern_insert_rows(current_row, clipboard.rows, current_channel, chan_width);
-	clipboard_paste_overwrite(1, 0);
-	pattern_selection_system_copyout();
-}
-
-static void clipboard_paste_mix_notes(int clip, int xlate)
-{
-	int row, chan, num_rows, chan_width;
-	song_note_t *pattern, *p_note, *c_note;
-
-	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
-		return;
-	}
-
-	status.flags |= SONG_NEEDS_SAVE;
-	num_rows = song_get_pattern(current_pattern, &pattern);
-	num_rows -= current_row;
-	if (clipboard.rows < num_rows)
-		num_rows = clipboard.rows;
-
-	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
-
-
-/* note that IT doesn't do this for "fields" either... */
-	pated_history_add_grouped("Replace mixed data             (Alt-M)",
-				current_channel-1, current_row,
-				chan_width, num_rows);
-
-	p_note = pattern + 64 * current_row + current_channel - 1;
-	c_note = clipboard.data;
-	for (row = 0; row < num_rows; row++) {
-		for (chan = 0; chan < chan_width; chan++) {
-			if (memcmp(p_note + chan, blank_note, sizeof(song_note_t)) == 0) {
-
-				p_note[chan] = c_note[chan];
-				set_note_note(p_note+chan,
-						c_note[chan].note,
-						xlate);
-				if (clip) {
-					p_note[chan].instrument = song_get_current_instrument();
-					if (_editCopyMask.HasFlag(PatternEditorMask.Volume) {
-						p_note[chan].voleffect = mask_note.voleffect;
-						p_note[chan].volparam = mask_note.volparam;
-					} else {
-						p_note[chan].voleffect = 0;
-						p_note[chan].volparam = 0;
-					}
-					if (_editCopyMask.HasFlag(PatternEditorMask.Effect) {
-						p_note[chan].effect = mask_note.effect;
-						p_note[chan].param = mask_note.param;
-					}
-				}
+				Status.FlashText($"Resized pattern {_currentPattern} to {newSize} rows");
+				pattern.Resize(newSize);
 			}
 		}
-		p_note += 64;
-		c_note += clipboard.channels;
-	}
-}
 
-/* Same code as above. Maybe I should generalize it. */
-static void clipboard_paste_mix_fields(int prec, int xlate)
-{
-	int row, chan, num_rows, chan_width;
-	song_note_t *pattern, *p_note, *c_note;
+		int chanWidth = _clipboard.Channels;
 
-	if (clipboard.data == NULL) {
-		dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
-		return;
-	}
+		if (_currentChannel + chanWidth > 64)
+			chanWidth = 64 - _currentChannel + 1;
 
-	status.flags |= SONG_NEEDS_SAVE;
-	num_rows = song_get_pattern(current_pattern, &pattern);
-	num_rows -= current_row;
-	if (clipboard.rows < num_rows)
-		num_rows = clipboard.rows;
-
-	chan_width = clipboard.channels;
-	if (chan_width + current_channel > 64)
-		chan_width = 64 - current_channel + 1;
-
-	p_note = pattern + 64 * current_row + current_channel - 1;
-	c_note = clipboard.data;
-	for (row = 0; row < num_rows; row++) {
-		for (chan = 0; chan < chan_width; chan++) {
-			/* Ick. There ought to be a "conditional move" operator. */
-			if (prec) {
-				/* clipboard precedence */
-				if (c_note[chan].note != 0) {
-					set_note_note(p_note+chan,
-							c_note[chan].note,
-							xlate);
-				}
-				if (c_note[chan].instrument != 0)
-					p_note[chan].instrument = c_note[chan].instrument;
-				if (c_note[chan].voleffect != VOLFX_NONE) {
-					p_note[chan].voleffect = c_note[chan].voleffect;
-					p_note[chan].volparam = c_note[chan].volparam;
-				}
-				if (c_note[chan].effect != 0) {
-					p_note[chan].effect = c_note[chan].effect;
-				}
-				if (c_note[chan].param != 0)
-					p_note[chan].param = c_note[chan].param;
-			} else {
-				if (p_note[chan].note == 0) {
-					set_note_note(p_note+chan,
-							c_note[chan].note,
-							xlate);
-				}
-				if (p_note[chan].instrument == 0)
-					p_note[chan].instrument = c_note[chan].instrument;
-				if (p_note[chan].voleffect == VOLFX_NONE) {
-					p_note[chan].voleffect = c_note[chan].voleffect;
-					p_note[chan].volparam = c_note[chan].volparam;
-				}
-				if (p_note[chan].effect == 0) {
-					p_note[chan].effect = c_note[chan].effect;
-				}
-				if (p_note[chan].param == 0)
-					p_note[chan].param = c_note[chan].param;
-			}
+		if (!suppress)
+		{
+			HistoryAddGrouped(
+				"Replace overwritten data       (Alt-O)",
+				new Point(_currentChannel - 1, _currentRow),
+				new Size(chanWidth, numRows));
 		}
-		p_note += 64;
-		c_note += clipboard.channels;
+
+		SnapPaste(_clipboard, _currentChannel - 1, _currentRow, 0);
 	}
-}
 
-/* --------------------------------------------------------------------- */
+	void ClipboardPasteInsert()
+	{
+		if (_clipboard.Data == null)
+		{
+			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+			return;
+		}
 
-static void pattern_editor_reposition(void)
-{
-	int total_rows = song_get_rows_in_pattern(current_pattern);
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
 
-	if (current_channel < top_display_channel)
-		top_display_channel = current_channel;
-	else if (current_channel >= top_display_channel + visible_channels)
-		top_display_channel = current_channel - visible_channels + 1;
+		if (pattern == null)
+			return;
 
-	if (centralise_cursor) {
-		if (current_row <= 16)
-			top_display_row = 0;
-		else if (current_row + 15 > total_rows)
-			top_display_row = total_rows - 31;
+		Save("Undo paste data                (Alt-P)");
+
+		int numRows = pattern.Rows.Count - _currentRow;
+		if (_clipboard.Rows < numRows)
+			numRows = _clipboard.Rows;
+
+		int chanWidth = _clipboard.Channels;
+		if (chanWidth + _currentChannel > 64)
+			chanWidth = 64 - _currentChannel + 1;
+
+		PatternInsertRows(_currentRow, _clipboard.Rows, _currentChannel, chanWidth);
+		ClipboardPasteOverwrite(true, false);
+		PatternSelectionSystemCopyOut();
+	}
+
+	/* --------------------------------------------------------------------- */
+
+	void Reposition()
+	{
+		var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return;
+
+		if (_currentChannel < _topDisplayChannel)
+			_topDisplayChannel = _currentChannel;
+		else if (_currentChannel >= _topDisplayChannel + _visibleChannels)
+			_topDisplayChannel = _currentChannel - _visibleChannels + 1;
+
+		if (_centraliseCursor)
+		{
+			if (_currentRow <= 16)
+				_topDisplayRow = 0;
+			else if (_currentRow + 15 > pattern.Rows.Count)
+				_topDisplayRow = pattern.Rows.Count - 31;
+			else
+				_topDisplayRow = _currentRow - 16;
+		}
 		else
-			top_display_row = current_row - 16;
-	} else {
-		/* This could be written better. */
-		if (current_row < top_display_row)
-			top_display_row = current_row;
-		else if (current_row > top_display_row + 31)
-			top_display_row = current_row - 31;
-		if (top_display_row + 31 > total_rows)
-			top_display_row = total_rows - 31;
-	}
-	if (top_display_row < 0)
-		top_display_row = 0;
-}
-
-static void advance_cursor(int next_row, int multichannel)
-{
-	int total_rows;
-
-	if (next_row && !(SONG_PLAYING && playback_tracing)) {
-		total_rows = song_get_rows_in_pattern(current_pattern);
-
-		if (skip_value) {
-			if (current_row + skip_value <= total_rows) {
-				current_row += skip_value;
-				pattern_editor_reposition();
-			}
-		} else {
-			if (current_channel < 64) {
-				current_channel++;
-			} else {
-				current_channel = 1;
-				if (current_row < total_rows)
-					current_row++;
-			}
-			pattern_editor_reposition();
+		{
+			/* This could be written better. */
+			if (_currentRow < _topDisplayRow)
+				_topDisplayRow = _currentRow;
+			else if (_currentRow > _topDisplayRow + 31)
+				_topDisplayRow = _currentRow - 31;
+			if (_topDisplayRow + 31 > pattern.Rows.Count)
+				_topDisplayRow = pattern.Rows.Count - 31;
 		}
+
+		if (_topDisplayRow < 0)
+			_topDisplayRow = 0;
 	}
-	if (multichannel) {
-		current_channel = multichannel_get_next(current_channel);
+
+	void AdvanceCursor(bool nextRow, bool multichannel)
+	{
+		if (nextRow && !(Song.IsPlaying && _playbackTracing))
+		{
+			var pattern = Song.CurrentSong?.GetPattern(_currentPattern);
+
+			if (pattern == null)
+				return;
+
+			if (_skipValue > 0)
+			{
+				if (_currentRow + _skipValue <= pattern.Rows.Count)
+				{
+					_currentRow += _skipValue;
+					Reposition();
+				}
+			}
+			else
+			{
+				if (_currentChannel < 64)
+				{
+					_currentChannel++;
+				}
+				else
+				{
+					_currentChannel = 1;
+					if (_currentRow < pattern.Rows.Count)
+						_currentRow++;
+				}
+				Reposition();
+			}
+		}
+
+		if (multichannel)
+			_currentChannel = MultiChannelGetNext(_currentChannel);
 	}
-}
 
+	/* --------------------------------------------------------------------- */
+
+	public void UpdateCurrentRow(VGAMem vgaMem)
+	{
+		var numRows = Song.CurrentSong?.GetPatternLength(_currentPattern) ?? 64;
+
+		vgaMem.DrawText(_currentRow.ToString("d3"), new Point(12, 7), 5, 0);
+		vgaMem.DrawText(numRows.ToString("d3"), new Point(16, 7), 5, 0);
+	}
+
+	public void UpdateCurrentPattern(VGAMem vgaMem)
+	{
+		int numPatterns = Song.CurrentSong?.Patterns.Count ?? 0;
+
+		vgaMem.DrawText(_currentPattern.ToString("d3"), new Point(12, 6), 5, 0);
+		vgaMem.DrawText(numPatterns.ToString("d3"), new Point(16, 6), 5, 0);
+	}
+
+#if false
 /* --------------------------------------------------------------------- */
-
-void update_current_row(void)
-{
-	char buf[4];
-
-	draw_text(str_from_num(3, current_row, buf), 12, 7, 5, 0);
-	draw_text(str_from_num(3, song_get_rows_in_pattern(current_pattern), buf), 16, 7, 5, 0);
-}
-
-int get_current_channel(void)
-{
-	return current_channel;
-}
-
-void set_current_channel(int channel)
-{
-	current_channel = CLAMP(channel, 0, 64);
-}
-
-int get_current_row(void)
-{
-	return current_row;
-}
-
-void set_current_row(int row)
-{
-	int total_rows = song_get_rows_in_pattern(current_pattern);
-
-	current_row = CLAMP(row, 0, total_rows);
-	pattern_editor_reposition();
-	status.flags |= NEED_UPDATE;
-}
-
-/* --------------------------------------------------------------------- */
-
-void update_current_pattern(void)
-{
-	char buf[4];
-
-	draw_text(str_from_num(3, current_pattern, buf), 12, 6, 5, 0);
-	draw_text(str_from_num(3, csf_get_num_patterns(current_song) - 1, buf), 16, 6, 5, 0);
-}
-
-int get_current_pattern(void)
-{
-	return current_pattern;
-}
 
 static void _pattern_update_magic(void)
 {
@@ -2754,10 +2460,10 @@ void set_current_pattern(int n)
 
 	/* save pattern */
 	sprintf(undostr, "Pattern %d", current_pattern);
-	PatEdSave(undostr);
+	Save(undostr);
 	fast_save_update();
 
-	pattern_editor_reposition();
+	Reposition();
 	pattern_selection_system_copyout();
 
 	status.flags |= NEED_UPDATE;
@@ -2840,11 +2546,11 @@ static void recalculate_visible_area(void)
 		/* a division after the last channel would look pretty dopey :) */
 		visible_width--;
 	}
-	visible_channels = n;
+	_visibleChannels = n;
 
 	/* don't allow anything past channel 64 */
-	if (top_display_channel > 64 - visible_channels + 1)
-		top_display_channel = 64 - visible_channels + 1;
+	if (_topDisplayChannel > 64 - _visibleChannels + 1)
+		_topDisplayChannel = 64 - _visibleChannels + 1;
 }
 
 static void set_view_scheme(int scheme)
@@ -2883,7 +2589,7 @@ static void pattern_editor_redraw(void)
 	/* how many rows are there? */
 	total_rows = song_get_pattern(current_pattern, &pattern);
 
-	for (chan = top_display_channel, chan_pos = 0; chan_pos < visible_channels; chan++, chan_pos++) {
+	for (chan = _topDisplayChannel, chan_pos = 0; chan_pos < _visibleChannels; chan++, chan_pos++) {
 		track_view = track_views + track_view_scheme[chan_pos];
 		/* maybe i'm retarded but the pattern editor should be dealing
 		   with the same concept of "channel" as the rest of the
@@ -2894,8 +2600,8 @@ static void pattern_editor_redraw(void)
 		track_view->draw_channel_header(chan, chan_drawpos, 14,
 						((song_get_channel(chan - 1)->flags & CHN_MUTE) ? 0 : 3));
 
-		note = pattern + 64 * top_display_row + chan - 1;
-		for (row = top_display_row, row_pos = 0; row_pos < 32 && row < total_rows; row++, row_pos++) {
+		note = pattern + 64 * _topDisplayRow + chan - 1;
+		for (row = _topDisplayRow, row_pos = 0; row_pos < 32 && row < total_rows; row++, row_pos++) {
 			if (chan_pos == 0) {
 				fg = pattern_is_playing && row == playing_row ? 3 : 0;
 				bg = (current_pattern == marked_pattern && row == marked_row) ? 11 : 2;
@@ -2943,7 +2649,7 @@ static void pattern_editor_redraw(void)
 			}
 			track_view->draw_note(chan_drawpos, 15 + row_pos, note, cpos, fg, bg);
 
-			if (draw_divisions && chan_pos < visible_channels - 1) {
+			if (draw_divisions && chan_pos < _visibleChannels - 1) {
 				if (is_in_selection(chan, row))
 					bg = 0;
 				draw_char(168, chan_drawpos + track_view->width, 15 + row_pos, 2, bg);
@@ -2961,7 +2667,7 @@ static void pattern_editor_redraw(void)
 			else
 				bg = 0;
 			track_view->draw_note(chan_drawpos, 15 + row_pos, blank_note, -1, 6, bg);
-			if (draw_divisions && chan_pos < visible_channels - 1) {
+			if (draw_divisions && chan_pos < _visibleChannels - 1) {
 				draw_char(168, chan_drawpos + track_view->width, 15 + row_pos, 2, bg);
 			}
 		}
@@ -3549,7 +3255,7 @@ static int pattern_editor_insert(struct key_event *k)
 			if (current_channel < 64) {
 				shift_chord_channels++;
 				current_channel++;
-				pattern_editor_reposition();
+				Reposition();
 			}
 		} else {
 			advance_cursor(1, 1);
@@ -3747,8 +3453,8 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	if (n > -1 && n <= 9) {
 		if (k->state == KEY_RELEASE)
 			return 1;
-		skip_value = (n == 9) ? 16 : n;
-		status_text_flash("Cursor step set to %d", skip_value);
+		_skipValue = (n == 9) ? 16 : n;
+		status_text_flash("Cursor step set to %d", _skipValue);
 		return 1;
 	}
 
@@ -3762,7 +3468,7 @@ static int pattern_editor_handle_alt_key(struct key_event * k)
 	case SCHISM_KEYSYM_BACKSPACE:
 		if (k->state == KEY_PRESS)
 			return 1;
-		PatEdSave("Undo revert pattern data (Alt-BkSpace)");
+		Save("Undo revert pattern data (Alt-BkSpace)");
 		snap_paste(&fast_save, 0, 0, 0);
 		return 1;
 
@@ -3953,7 +3659,7 @@ LastRow;
 			return 1;
 		draw_divisions = !draw_divisions;
 		recalculate_visible_area();
-		pattern_editor_reposition();
+		Reposition();
 		break;
 	case SCHISM_KEYSYM_q:
 		if (k->state == KEY_RELEASE)
@@ -3992,28 +3698,28 @@ LastRow;
 	case SCHISM_KEYSYM_t:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		n = current_channel - top_display_channel;
+		n = current_channel - _topDisplayChannel;
 		track_view_scheme[n] = ((track_view_scheme[n] + 1) % NUM_TRACK_VIEWS);
 		recalculate_visible_area();
-		pattern_editor_reposition();
+		Reposition();
 		break;
 	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (top_display_row > 0) {
-			top_display_row--;
-			if (current_row > top_display_row + 31)
-				current_row = top_display_row + 31;
+		if (_topDisplayRow > 0) {
+			_topDisplayRow--;
+			if (current_row > _topDisplayRow + 31)
+				current_row = _topDisplayRow + 31;
 			return -1;
 		}
 		return 1;
 	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (top_display_row + 31 < total_rows) {
-			top_display_row++;
-			if (current_row < top_display_row)
-				current_row = top_display_row;
+		if (_topDisplayRow + 31 < total_rows) {
+			_topDisplayRow++;
+			if (current_row < _topDisplayRow)
+				current_row = _topDisplayRow;
 			return -1;
 		}
 		return 1;
@@ -4030,13 +3736,13 @@ LastRow;
 	case SCHISM_KEYSYM_INSERT:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		PatEdSave("Remove inserted row(s)    (Alt-Insert)");
+		Save("Remove inserted row(s)    (Alt-Insert)");
 		pattern_insert_rows(current_row, 1, 1, 64);
 		break;
 	case SCHISM_KEYSYM_DELETE:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		PatEdSave("Replace deleted row(s)    (Alt-Delete)");
+		Save("Replace deleted row(s)    (Alt-Delete)");
 		pattern_delete_rows(current_row, 1, 1, 64);
 		break;
 	case SCHISM_KEYSYM_F9:
@@ -4075,10 +3781,10 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		if (k->mod & SCHISM_KEYMOD_SHIFT) {
 			set_view_scheme(n);
 		} else {
-			track_view_scheme[current_channel - top_display_channel] = n;
+			track_view_scheme[current_channel - _topDisplayChannel] = n;
 			recalculate_visible_area();
 		}
-		pattern_editor_reposition();
+		Reposition();
 		status.flags |= NEED_UPDATE;
 		return 1;
 	}
@@ -4088,13 +3794,13 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SCHISM_KEYSYM_LEFT:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (current_channel > top_display_channel)
+		if (current_channel > _topDisplayChannel)
 			current_channel--;
 		return -1;
 	case SCHISM_KEYSYM_RIGHT:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		if (current_channel < top_display_channel + visible_channels - 1)
+		if (current_channel < _topDisplayChannel + _visibleChannels - 1)
 			current_channel++;
 		return -1;
 	case SCHISM_KEYSYM_F6:
@@ -4172,8 +3878,8 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SCHISM_KEYSYM_c:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		centralise_cursor = !centralise_cursor;
-		status_text_flash("Centralise cursor %s", (centralise_cursor ? "enabled" : "disabled"));
+		_centraliseCursor = !_centraliseCursor;
+		status_text_flash("Centralise cursor %s", (_centraliseCursor ? "enabled" : "disabled"));
 		return -1;
 	case SCHISM_KEYSYM_h:
 		if (k->state == KEY_RELEASE)
@@ -4334,19 +4040,19 @@ static int pattern_editor_handle_key(struct key_event * k)
 			if (k->state == KEY_RELEASE)
 				return 0;
 			if (k->mouse == MOUSE_SCROLL_UP) {
-				if (top_display_row > 0) {
-					top_display_row = MAX(top_display_row - MOUSE_SCROLL_LINES, 0);
-					if (current_row > top_display_row + 31)
-						current_row = top_display_row + 31;
+				if (_topDisplayRow > 0) {
+					_topDisplayRow = MAX(_topDisplayRow - MOUSE_SCROLL_LINES, 0);
+					if (current_row > _topDisplayRow + 31)
+						current_row = _topDisplayRow + 31;
 					if (current_row < 0)
 						current_row = 0;
 					return -1;
 				}
 			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-				if (top_display_row + 31 < total_rows) {
-					top_display_row = MIN(top_display_row + MOUSE_SCROLL_LINES, total_rows);
-					if (current_row < top_display_row)
-						current_row = top_display_row;
+				if (_topDisplayRow + 31 < total_rows) {
+					_topDisplayRow = MIN(_topDisplayRow + MOUSE_SCROLL_LINES, total_rows);
+					if (current_row < _topDisplayRow)
+						current_row = _topDisplayRow;
 					return -1;
 				}
 			}
@@ -4360,11 +4066,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (current_row < 0) current_row = 0;
 		if (current_row >= total_rows) current_row = total_rows;
 		np = current_position; nc = current_channel; nr = current_row;
-		for (n = top_display_channel, nx = 0; nx <= visible_channels; n++, nx++) {
+		for (n = _topDisplayChannel, nx = 0; nx <= _visibleChannels; n++, nx++) {
 			track_view = track_views+track_view_scheme[nx];
-			if (((n == top_display_channel && shift_selection.in_progress)
+			if (((n == _topDisplayChannel && shift_selection.in_progress)
 			     || k->x >= basex)
-			    && ((n == visible_channels && shift_selection.in_progress)
+			    && ((n == _visibleChannels && shift_selection.in_progress)
 				|| k->x < basex + track_view->width)) {
 				if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
 					if (k->state == KEY_PRESS) {
@@ -4378,10 +4084,10 @@ static int pattern_editor_handle_key(struct key_event * k)
 				}
 
 				nc = n;
-				nr = (k->y - 15) + top_display_row;
+				nr = (k->y - 15) + _topDisplayRow;
 
-				if (k->y < 15 && top_display_row > 0) {
-					top_display_row--;
+				if (k->y < 15 && _topDisplayRow > 0) {
+					_topDisplayRow--;
 				}
 
 
@@ -4474,9 +4180,9 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_UP:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (skip_value) {
-			if (current_row - skip_value >= 0)
-				current_row -= skip_value;
+		if (_skipValue) {
+			if (current_row - _skipValue >= 0)
+				current_row -= _skipValue;
 		} else {
 			current_row--;
 		}
@@ -4484,9 +4190,9 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_DOWN:
 		if (k->state == KEY_RELEASE)
 			return 0;
-		if (skip_value) {
-			if (current_row + skip_value <= total_rows)
-				current_row += skip_value;
+		if (_skipValue) {
+			if (current_row + _skipValue <= total_rows)
+				current_row += _skipValue;
 		} else {
 			current_row++;
 		}
@@ -4647,8 +4353,8 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (k->state == KEY_RELEASE)
 			return 0;
 		current_channel = multichannel_get_previous (current_channel);
-		if (skip_value)
-			current_row -= skip_value;
+		if (_skipValue)
+			current_row -= _skipValue;
 		else
 			current_row--;
 		return -1;
@@ -4776,7 +4482,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 	}
 
 	current_channel = CLAMP(current_channel, 1, 64);
-	pattern_editor_reposition();
+	Reposition();
 	if (k->mod & SCHISM_KEYMOD_SHIFT)
 		shift_selection_update();
 
@@ -4804,7 +4510,7 @@ static void pattern_editor_playback_update(void)
 			set_current_order(song_get_current_order());
 			set_current_pattern(playing_pattern);
 			current_row = playing_row;
-			pattern_editor_reposition();
+			Reposition();
 			status.flags |= NEED_UPDATE;
 		} else if (current_pattern == playing_pattern) {
 			status.flags |= NEED_UPDATE;

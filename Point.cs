@@ -40,4 +40,9 @@ public struct Point
 
 		return Math.Sqrt(dx * dx + dy * dy);
 	}
+
+	public static bool operator ==(Point a, Point b)
+		=> (a.X == b.X) && (a.Y == b.Y);
+	public static bool operator !=(Point a, Point b)
+		=> (a.X != b.X) || (a.Y != b.Y);
 }

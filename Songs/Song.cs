@@ -8,6 +8,8 @@ public class Song
 
 	public static SongMode Mode;
 
+	public static bool IsPlaying => Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop);
+
 	public static int CurrentSpeed;
 	public static int CurrentTempo;
 
