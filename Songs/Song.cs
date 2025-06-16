@@ -55,6 +55,37 @@ public class Song
 		return Instruments[n];
 	}
 
+	// ------------------------------------------------------------------------
+
+	// calculates row of offset from passed row.
+	// sets actual pattern number, row and optional pattern buffer.
+	// returns length of selected patter, or 0 on error.
+	// if song mode is pattern loop (MODE_PATTERN_LOOP), offset is mod calculated
+	// in current pattern.
+	public Pattern? GetPatternOffset(ref int patternNumber, ref int rowNumber, int offset)
+	{
+		if (Mode.HasFlag(SongMode.PatternLoop))
+		{
+			// just wrap around current rows
+			rowNumber = (rowNumber + offset) % GetPatternLength(patternNumber);
+			return GetPattern(patternNumber);
+		}
+
+		int tot = GetPatternLength(patternNumber);
+		while (offset + rowNumber > tot)
+		{
+			offset -= tot;
+			patternNumber++;
+			tot = GetPatternLength(patternNumber);
+			if (tot == 0)
+				return null;
+		}
+
+		rowNumber += offset;
+
+		return GetPattern(patternNumber);
+	}
+
 	public Pattern? GetPattern(int n, bool create = true)
 	{
 		if (n >= Patterns.Count)

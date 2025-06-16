@@ -9,6 +9,7 @@ using ChasmTracker.Clipboard;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
 using ChasmTracker.Memory;
+using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Pages.TrackViews;
 using ChasmTracker.Songs;
@@ -51,7 +52,7 @@ public class PatternEditorPage : Page
 	/* --------------------------------------------------------------------- */
 	/* The (way too many) static variables */
 
-	//static int midi_start_record = 0;
+	int _midiStartRecord = 0;
 
 	enum TemplateMode
 	{
@@ -2477,7 +2478,7 @@ public class PatternEditorPage : Page
 		}
 
 		newOrder = AllPages.OrderList.CurrentOrder;
-		
+
 		while (newOrder < Song.CurrentSong.OrderList.Count)
 		{
 			if (Song.CurrentSong.OrderList[newOrder] == _currentPattern)
@@ -2491,7 +2492,7 @@ public class PatternEditorPage : Page
 		}
 
 		newOrder = 0;
-		
+
 		while (newOrder < Song.CurrentSong.OrderList.Count)
 		{
 			if (Song.CurrentSong.OrderList[newOrder] == _currentPattern)
@@ -2685,7 +2686,7 @@ public class PatternEditorPage : Page
 					bg = 0;
 
 				trackView.DrawNote(vgaMem, new Point(chanDrawPos, 15 + rowPos), SongNote.Empty, -1, 6, bg);
-				
+
 				if (_drawDivisions && chanPos < _visibleChannels - 1)
 				{
 					vgaMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), 2, bg);
@@ -2694,7 +2695,7 @@ public class PatternEditorPage : Page
 
 			if (chan == _currentChannel)
 				trackView.DrawMask(vgaMem, new Point(chanDrawPos, 47), _editCopyMask, _currentPosition, maskColour, 2);
-				
+
 			/* blah */
 			if (_channelMulti[chan - 1])
 			{
@@ -2944,7 +2945,7 @@ public class PatternEditorPage : Page
 		bool success = true;
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
-		
+
 		if (SongNote.IsNote(note))
 		{
 			if (_templateMode != TemplateMode.Off)
@@ -3007,13 +3008,13 @@ public class PatternEditorPage : Page
 				curNote.Note = (byte)note;
 				if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
 					curNote.Instrument = 0;
-					
+
 				if (_editCopyMask.HasFlag(PatternEditorMask.Volume))
 				{
 					curNote.VolumeEffect = 0;
 					curNote.VolumeParameter = 0;
 				}
-				
+
 				if (_editCopyMask.HasFlag(PatternEditorMask.Effect))
 				{
 					curNote.Effect = 0;
@@ -3027,164 +3028,210 @@ public class PatternEditorPage : Page
 		return success;
 	}
 
+	bool? InsertMIDI(KeyEvent k)
+	{
+		int r = _currentRow, c = _currentChannel, p = _currentPattern;
+		bool quantizeNextRow = false;
+		int ins = KeyJazz.NoInstrument, smp = KeyJazz.NoInstrument;
+		bool songWasPlaying = Song.IsPlaying;
+
+		if (Song.CurrentSong.Flags.HasFlag(SongFlags.InstrumentMode))
+			ins = AllPages.InstrumentList.CurrentInstrument;
+		else
+			smp = AllPages.SampleList.CurrentSample;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		int speed = Song.CurrentSpeed;
+		int tick = Song.CurrentTick;
+
+		if ((_midiStartRecord != 0) && !Song.IsPlaying)
+		{
+			switch (_midiStartRecord)
+			{
+				case 1: /* pattern loop */
+					Song.LoopPattern(p, r);
+					_midiPlaybackTracing = _playbackTracing;
+					_playbackTracing = true;
+					break;
+				case 2: /* song play */
+					Song.StartAtPattern(p, r);
+					_midiPlaybackTracing = _playbackTracing;
+					_playbackTracing = true;
+					break;
+			}
+		}
+
+		int offset = 0;
+
+		// this is a long one
+		if (MIDIEngine.Flags.HasFlag(MIDIFlags.TickQuantize) // if quantize is on
+				&& songWasPlaying                       // and the song was playing
+				&& _playbackTracing                     // and we are following the song
+				&& tick > 0 && tick <= speed / 2 + 1)   // and the note is too late
+		{
+			/* correct late notes to the next row */
+			/* tick + 1 because processing the keydown itself takes another tick */
+			offset++;
+			quantizeNextRow = true;
+		}
+
+		var pattern = Song.CurrentSong.GetPatternOffset(ref p, ref r, offset);
+
+		if (pattern == null)
+			return false;
+
+		int v = -1;
+		int n = -1;
+
+		if (k.MIDINote == -1)
+		{
+			/* nada */
+		}
+		else if (k.State == KeyState.Release)
+		{
+			c = Song.KeyUp(KeyJazz.NoInstrument, KeyJazz.NoInstrument, k.MIDINote);
+
+			/* song_keyup didn't find find note off channel, abort */
+			if (c <= 0)
+				return false;
+
+			/* don't record noteoffs for no good reason... */
+			if (!(MIDIEngine.Flags.HasFlag(MIDIFlags.RecordNoteOff)
+					&& Song.IsPlaying
+					&& _playbackTracing))
+				return false;
+		}
+		else
+		{
+			if (k.MIDIVolume > -1)
+				v = k.MIDIVolume / 2;
+			else
+				v = 0;
+
+			if (!(Song.IsPlaying && _playbackTracing))
+				tick = 0;
+
+			n = k.MIDINote;
+
+			if (!quantizeNextRow)
+				c = Song.KeyDown(smp, ins, n, v, c);
+		}
+
+		ref var curNote = ref pattern[r][c];
+
+		if (k.MIDINote == -1)
+		{
+			/* nada */
+		}
+		else if (k.State == KeyState.Release)
+		{
+			/* never "overwrite" a note off */
+			RecordNote(pattern, r, c, SpecialNotes.NoteOff, false);
+		}
+		else
+		{
+			RecordNote(pattern, r, c, n, false);
+
+			if (_templateMode == TemplateMode.Off)
+			{
+				curNote.Instrument = (byte)CurrentInstrument;
+
+				if (MIDIEngine.Flags.HasFlag(MIDIFlags.RecordVelocity))
+				{
+					curNote.VolumeEffect = VolumeEffects.Volume;
+					curNote.VolumeParameter = (byte)v;
+				}
+
+				tick %= speed;
+
+				if (!MIDIEngine.Flags.HasFlag(MIDIFlags.TickQuantize)
+				 && (curNote.Effect == 0)
+				 && tick != 0)
+				{
+					curNote.Effect = (byte)Effects.Special;
+					curNote.Parameter = (byte)(0xD0 | tick.Clamp(0, 15));
+				}
+			}
+		}
+
+		if (!MIDIEngine.Flags.HasFlag(MIDIFlags.PitchBend)
+		 || MIDIEngine.PitchDepth == 0
+		 || k.MIDIBend == 0)
+		{
+			if (k.State == KeyState.Release
+			 && k.MIDINote > -1
+			 && curNote.instrument > 0)
+			{
+				Song.KeyRecord(curNote.Instrument, curNote.Instrument, curNote.Note, v, c + 1,
+					curNote.Effect, curNote.Parameter);
+				PatternSelectionSystemCopyOut();
+			}
+
+			return null;
+		}
+
+		/* pitch bend */
+		for (c = 0; c < 64; c++)
+		{
+			/* Dead code?? */
+			// if ((_channelMulti[c] & 1) && (channel_multi[c] & (~1)))
+			if (_channelMulti[c] && !_channelMulti[c])
+			{
+				ref var curNote2 = ref pattern[r][c];
+
+				int pd = MIDIEngine.LastBendHit[c];
+
+				if (curNote2.Effect)
+				{
+					/* don't overwrite old effects */
+					if ((Effects)curNote2.Effect != Effects.PortamentoUp
+					 && (Effects)curNote2.Effect != Effects.PortamentoDown)
+						continue;
+
+				}
+				else
+				{
+					MIDIEngine.LastBendHit[c] = k.MIDIBend;
+				}
+
+				pd = (k.MIDIBend - pd) * MIDIEngine.PitchDepth / 8192;
+				pd = pd * speed / 2;
+
+				pd = pd.Clamp(-0x7F, +0x7F);
+
+				if (pd < 0)
+				{
+					curNote2.Effect = (byte)Effects.PortamentoDown; /* Exx */
+					curNote2.Parameter = unchecked((byte)-pd);
+				}
+				else if (pd > 0)
+				{
+					curNote2.Effect = (byte)Effects.PortamentoUp; /* Fxx */
+					curNote2.Parameter = unchecked((byte)pd);
+				}
+
+				if (k.MIDINote == -1 || k.State == KeyState.Release)
+					continue;
+				if (curNote2.Instrument < 1)
+					continue;
+
+				if (curNote2.VolumeEffect == VolumeEffects.Volume)
+					v = curNote2.VolumeParameter;
+				else
+					v = -1;
+
+				Song.KeyRecord(curNote2.Instrument, curNote2.Instrument, curNote2.Note,
+					v, c + 1, curNote2.Effect, curNote2.Parameter);
+			}
+		}
+
+		PatternSelectionSystemCopyOut();
+
+		return null;
+	}
 
 #if false
-static int pattern_editor_insert_midi(struct key_event *k)
-{
-	song_note_t *pattern, *cur_note = NULL;
-	int n, v = 0, pd, speed, tick, offset = 0;
-	int r = _currentRow, c = _currentChannel, p = _currentPattern;
-	int quantize_next_row = 0;
-	int ins = KEYJAZZ_NOINST, smp = KEYJAZZ_NOINST;
-	int song_was_playing = SONG_PLAYING;
-
-	if (song_is_instrument_mode()) {
-		ins = instrument_get_current();
-	} else {
-		smp = sample_get_current();
-	}
-
-	Status.Flags |= StatusFlags.SongNeedsSave;
-
-	speed = song_get_current_speed();
-	tick = song_get_current_tick();
-
-	if (midi_start_record && !SONG_PLAYING) {
-		switch (midi_start_record) {
-		case 1: /* pattern loop */
-			song_loop_pattern(p, r);
-			midi_playback_tracing = playback_tracing;
-			playback_tracing = 1;
-			break;
-		case 2: /* song play */
-			Song.StartAtPattern(p, r);
-			midi_playback_tracing = playback_tracing;
-			playback_tracing = 1;
-			break;
-		};
-	}
-
-	// this is a long one
-	if (midi_flags & MIDI_TICK_QUANTIZE             // if quantize is on
-			&& song_was_playing                     // and the song was playing
-			&& playback_tracing                     // and we are following the song
-			&& tick > 0 && tick <= speed / 2 + 1) { // and the note is too late
-		/* correct late notes to the next row */
-		/* tick + 1 because processing the keydown itself takes another tick */
-		offset++;
-		quantize_next_row = 1;
-	}
-
-	song_get_pattern_offset(&p, &pattern, &r, offset);
-
-	if (k->midi_note == -1) {
-		/* nada */
-	} else if (k->state == KEY_RELEASE) {
-		c = song_keyup(KEYJAZZ_NOINST, KEYJAZZ_NOINST, k->midi_note);
-		if (c <= 0) {
-			/* song_keyup didn't find find note off channel, abort */
-			return 0;
-		}
-
-		/* don't record noteoffs for no good reason... */
-		if (!((midi_flags & MIDI_RECORD_NOTEOFF)
-				&& (song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP))
-				&& playback_tracing)) {
-			return 0;
-		}
-
-		cur_note = pattern + 64 * r + (c-1);
-		/* never "overwrite" a note off */
-		patedit_record_note(cur_note, c, r, NOTE_OFF, 0);
-
-
-	} else {
-		if (k->midi_volume > -1) {
-			v = k->midi_volume / 2;
-		} else {
-			v = 0;
-		}
-		if (!((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) && playback_tracing)) {
-			tick = 0;
-		}
-		n = k->midi_note;
-
-		if (!quantize_next_row) {
-			c = song_keydown(smp, ins, n, v, c);
-		}
-
-		cur_note = pattern + 64 * r + (c-1);
-		patedit_record_note(cur_note, c, r, n, 0);
-
-		if (!_templateMode) {
-			cur_note->instrument = song_get_current_instrument();
-
-			if (midi_flags & MIDI_RECORD_VELOCITY) {
-				cur_note->voleffect = VOLFX_VOLUME;
-				cur_note->volparam = v;
-			}
-			tick %= speed;
-			if (!(midi_flags & MIDI_TICK_QUANTIZE) && !cur_note->effect && tick != 0) {
-				cur_note->effect = FX_SPECIAL;
-				cur_note->param = 0xD0 | MIN(tick, 15);
-			}
-		}
-	}
-
-	if (!(midi_flags & MIDI_PITCHBEND) || midi_pitch_depth == 0 || k->midi_bend == 0) {
-		if (k->state == KEY_RELEASE && k->midi_note > -1 && cur_note->instrument > 0) {
-			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note, v, c+1,
-				cur_note->effect, cur_note->param);
-			pattern_selection_system_copyout();
-		}
-		return -1;
-	}
-
-	/* pitch bend */
-	for (c = 0; c < 64; c++) {
-		if ((channel_multi[c] & 1) && (channel_multi[c] & (~1))) {
-			cur_note = pattern + 64 * r + c;
-
-			if (cur_note->effect) {
-				if (cur_note->effect != FX_PORTAMENTOUP
-				    && cur_note->effect != FX_PORTAMENTODOWN) {
-					/* don't overwrite old effects */
-					continue;
-				}
-				pd = midi_last_bend_hit[c];
-			} else {
-				pd = midi_last_bend_hit[c];
-				midi_last_bend_hit[c] = k->midi_bend;
-			}
-
-
-			pd = (((k->midi_bend - pd) * midi_pitch_depth
-					/ 8192) * speed) / 2;
-			if (pd < -0x7F) pd = -0x7F;
-			else if (pd > 0x7F) pd = 0x7F;
-			if (pd < 0) {
-				cur_note->effect = FX_PORTAMENTODOWN; /* Exx */
-				cur_note->param = -pd;
-			} else if (pd > 0) {
-				cur_note->effect = FX_PORTAMENTOUP; /* Fxx */
-				cur_note->param = pd;
-			}
-			if (k->midi_note == -1 || k->state == KEY_RELEASE)
-				continue;
-			if (cur_note->instrument < 1)
-				continue;
-			if (cur_note->voleffect == VOLFX_VOLUME)
-				v = cur_note->volparam;
-			else
-				v = -1;
-			song_keyrecord(cur_note->instrument, cur_note->instrument, cur_note->note,
-				v, c+1, cur_note->effect, cur_note->param);
-		}
-	}
-	pattern_selection_system_copyout();
-
-	return -1;
-}
 
 
 /* return 1 => handled key, 0 => no way */
@@ -4027,9 +4074,9 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	case SCHISM_KEYSYM_z:
 		if (k->state == KEY_RELEASE)
 			return 1;
-		midi_start_record++;
-		if (midi_start_record > 2) midi_start_record = 0;
-		switch (midi_start_record) {
+		_midiStartRecord++;
+		if (_midiStartRecord > 2) _midiStartRecord = 0;
+		switch (_midiStartRecord) {
 		case 0:
 			status_text_flash("No MIDI Trigger");
 			break;
