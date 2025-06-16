@@ -1,4 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 
 namespace ChasmTracker.Songs;
 
@@ -10,15 +15,48 @@ public class Song
 
 	public static bool IsPlaying => Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop);
 
+	public static int PanSeparation;
+	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
+	public static int MixStat; // number of channels being mixed (not really used)
+	public static int BufferCount; // number of samples to mix per tick
+	public static int TickCount;
+	public static int FrameDelay;
+	public static int RowCount; /* IMPORTANT needs to be signed */
 	public static int CurrentSpeed;
 	public static int CurrentTempo;
+	public static int ProcessRow;
+	public static int Row; // no analogue in pm.h? should be either renamed or factored out.
+	public static int BreakRow;
+	public static int CurrentPattern;
+	public static int CurrentOrder;
+	public static int ProcessOrder;
+	public static int CurrentGlobalVolume;
+	public static int MixingVolume;
+	public static int FreqFactor; // not used -- for tweaking the song speed LP-style (interesting!)
+	public static int TempoFactor; // ditto
+	public static int RepeatCount; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
 
-	static bool[] s_savedChannelMutedStates = new bool[Constants.MaxChannels];
+	public static int CurrentTick => TickCount % CurrentSpeed;
 
-	public static void SaveChannelMuteStates()
+	bool[] _savedChannelMutedStates = new bool[Constants.MaxChannels];
+
+	public void SaveChannelMuteState(int channel)
 	{
-		for (int i = 0; i < s_savedChannelMutedStates.Length; i++)
-			s_savedChannelMutedStates[i] = CurrentSong.Voices[i].HasFlag(ChannelFlags.Mute);
+		_savedChannelMutedStates[channel] = Voices[channel].IsMuted;
+	}
+
+	public void SaveChannelMuteStates()
+	{
+		for (int i = 0; i < _savedChannelMutedStates.Length; i++)
+			_savedChannelMutedStates[i] = Voices[i].IsMuted;
+	}
+
+	// I don't think this is useful besides undoing a channel solo (a few lines
+	// below), but I'm making it public anyway for symmetry.
+	public void RestoreChannelMuteStates()
+	{
+		for (int n = 0; n < 64; n++)
+			SetChannelMute(n, _savedChannelMutedStates[n]);
 	}
 
 	public int InitialSpeed;
@@ -32,6 +70,7 @@ public class Song
 	public readonly List<SongInstrument?> Instruments = new List<SongInstrument?>();
 	public readonly List<int> OrderList = new List<int>();
 	public readonly SongChannel[] Channels = new SongChannel[Constants.MaxChannels];
+	public readonly SongVoice[] Voices = new SongVoice[Constants.MaxVoices];
 
 	public SongFlags Flags;
 
@@ -117,222 +156,550 @@ public class Song
 
 	// ------------------------------------------------------------------------------------------------------------
 
-	// this should be called with the audio LOCKED
-	static void ResetPlayState()
+	public void FixMutesLike(int chan)
 	{
-		// TODO
+		for (int i = 0; i < Voices.Length; i++)
+		{
+			if (i == chan)
+				continue;
 
-		/*
-		memset(midi_bend_hit, 0, sizeof(midi_bend_hit));
-		memset(midi_last_bend_hit, 0, sizeof(midi_last_bend_hit));
-		memset(keyjazz_note_to_chan, 0, sizeof(keyjazz_note_to_chan));
-		memset(keyjazz_chan_to_note, 0, sizeof(keyjazz_chan_to_note));
+			if (Voices[i].MasterChannel != chan + 1)
+				continue;
 
-		// turn this crap off
-		current_song->mix_flags &= ~(SNDMIX_NOBACKWARDJUMPS | SNDMIX_DIRECTTODISK);
-
-		OPL_Reset(current_song); // gruh?
-
-		csf_set_current_order(current_song, 0);
-
-		current_song->repeat_count = 0;
-		current_song->buffer_count = 0;
-		current_song->flags &= ~(SONG_PAUSED | SONG_PATTERNLOOP | SONG_ENDREACHED);
-
-		current_song->stop_at_order = -1;
-		current_song->stop_at_row = -1;
-		samples_played = 0;
-		*/
-	}
-
-	public static void StartOnce()
-	{
-		// TODO
-		/*
-		song_lock_audio();
-
-		song_reset_play_state();
-		current_song->mix_flags |= SNDMIX_NOBACKWARDJUMPS;
-		max_channels_used = 0;
-		current_song->repeat_count = -1; // FIXME do this right
-
-		GM_SendSongStartCode(current_song);
-		song_unlock_audio();
-		main_song_mode_changed_cb();
-
-		csf_reset_playmarks(current_song);
-		*/
-	}
-
-	public static void Start()
-	{
-		// TODO
-		/*
-		song_lock_audio();
-
-		song_reset_play_state();
-		max_channels_used = 0;
-
-		GM_SendSongStartCode(current_song);
-		song_unlock_audio();
-		main_song_mode_changed_cb();
-
-		csf_reset_playmarks(current_song);
-		*/
-	}
-
-	public static void Pause()
-	{
-		// TODO
-		/*
-		song_lock_audio();
-		// Highly unintuitive, but SONG_PAUSED has nothing to do with pause.
-		if (!(current_song->flags & SONG_PAUSED))
-			current_song->flags ^= SONG_ENDREACHED;
-		song_unlock_audio();
-		main_song_mode_changed_cb();
-		*/
-	}
-
-	public static void Stop()
-	{
-		// TODO
-		/*
-		song_lock_audio();
-		song_stop_unlocked(0);
-		song_unlock_audio();
-		main_song_mode_changed_cb();
-		*/
-	}
-
-	public static void StopUnlocked(bool quitting)
-	{
-		// TODO
-		/*
-		if (!current_song) return;
-
-		if (current_song->midi_playing) {
-			unsigned char moff[4];
-
-			// shut off everything; not IT like, but less annoying
-		for (int chan = 0; chan < 64; chan++) {
-			if (current_song->midi_note_tracker[chan] != 0) {
-				for (int j = 0; j < MAX_MIDI_CHANNELS; j++) {
-					csf_process_midi_macro(current_song, chan,
-						current_song->midi_config.note_off,
-						0, current_song->midi_note_tracker[chan], 0, j);
-				}
-				moff[0] = 0x80 + chan;
-				moff[1] = current_song->midi_note_tracker[chan];
-				csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
-				}
-			}
-			for (int j = 0; j < MAX_MIDI_CHANNELS; j++) {
-				moff[0] = 0xe0 + j;
-				moff[1] = 0;
-				csf_midi_send(current_song, (unsigned char *) moff, 2, 0, 0);
-
-				moff[0] = 0xb0 + j;	// channel mode message
-				moff[1] = 0x78;		// all sound off
-				moff[2] = 0;
-				csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
-
-				moff[1] = 0x79;		// reset all controllers
-				csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
-
-				moff[1] = 0x7b;		// all notes off
-				csf_midi_send(current_song, (unsigned char *) moff, 3, 0, 0);
-			}
-
-			csf_process_midi_macro(current_song, 0, current_song->midi_config.stop, 0, 0, 0, 0); // STOP!
-			midi_send_flush(); // NOW!
-
-			current_song->midi_playing = 0;
+			Voices[i].IsMuted = Voices[chan].IsMuted;
 		}
-
-		OPL_Reset(current_song); // Also stop all OPL sounds
-		GM_Reset(current_song, quitting);
-		GM_SendSongStopCode(current_song);
-
-		memset(current_song->midi_last_row,0,sizeof(current_song->midi_last_row));
-		current_song->midi_last_row_number = -1;
-
-		memset(current_song->midi_note_tracker,0,sizeof(current_song->midi_note_tracker));
-		memset(current_song->midi_vol_tracker,0,sizeof(current_song->midi_vol_tracker));
-		memset(current_song->midi_ins_tracker,0,sizeof(current_song->midi_ins_tracker));
-		memset(current_song->midi_was_program,0,sizeof(current_song->midi_was_program));
-		memset(current_song->midi_was_banklo,0,sizeof(current_song->midi_was_banklo));
-		memset(current_song->midi_was_bankhi,0,sizeof(current_song->midi_was_bankhi));
-
-		playback_tracing = midi_playback_tracing;
-
-		song_reset_play_state();
-		// Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, csf_read just returns.
-		current_song->flags |= SONG_PAUSED | SONG_ENDREACHED;
-
-		current_song->vu_left = 0;
-		current_song->vu_right = 0;
-		memset(audio_buffer, 0, audio_buffer_samples * audio_sample_size);
-		*/
 	}
 
-	public static void LoopPattern(int pattern, int row)
+	public void SetChannelMute(int channel, bool muted)
 	{
-		// TODO
-		/*
-		song_lock_audio();
+		Channels[channel].IsMuted = muted;
+		Voices[channel].IsMuted = muted;
 
-		song_reset_play_state();
+		if (!muted)
+			SaveChannelMuteState(channel);
 
-		max_channels_used = 0;
-		csf_loop_pattern(current_song, pattern, row);
-
-		GM_SendSongStartCode(current_song);
-
-		song_unlock_audio();
-		main_song_mode_changed_cb();
-
-		csf_reset_playmarks(current_song);
-		*/
+		FixMutesLike(channel);
 	}
 
-	public static void StartAtOrder(int order, int row)
+	public void ToggleChannelMute(int channel)
 	{
-		// TODO
-		/*
-		song_lock_audio();
-
-		song_reset_play_state();
-
-		csf_set_current_order(current_song, order);
-		current_song->break_row = row;
-		max_channels_used = 0;
-
-		GM_SendSongStartCode(current_song);
-		// TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes)
-		song_unlock_audio();
-		main_song_mode_changed_cb();
-
-		csf_reset_playmarks(current_song);
-		*/
-	}
-
-	public static void StartAtPattern(int pattern, int row)
-	{
-		// TODO
-		/*
-		if (pattern < 0 || pattern > 199)
+		if ((channel < 0) || (channel >= Channels.Length))
 			return;
 
-		int n = song_next_order_for_pattern(pattern);
+		// i'm just going by the playing channel's state...
+		// if the actual channel is muted but not the playing one,
+		// tough luck :)
 
-		if (n > -1) {
-			song_start_at_order(n, row);
+		Channels[channel].IsMuted = !Voices[channel].IsMuted;
+	}
+
+	bool IsSoloed(int channel)
+	{
+		for (int i = 0; i < Channels.Length; i++)
+			if (Voices[i].IsMuted != (i != channel))
+				return false;
+
+		return true;
+	}
+
+	// if channel is the current soloed channel, undo the solo (reset the
+	// channel state); otherwise, save the state and solo the channel.
+	public void HandleChannelSolo(int channel)
+	{
+		if ((channel < 0) || (channel >= Channels.Length))
+			return;
+
+		if (IsSoloed(channel))
+			RestoreChannelMuteStates();
+		else
+		{
+			for (int n = 0; n < Channels.Length; n++)
+				SetChannelMute(n, n != channel);
+		}
+	}
+
+	public int FindLastChannel()
+	{
+		for (int n = 63; n > 0; n--)
+			if (!_savedChannelMutedStates[n])
+				return n;
+
+		return 63;
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
+
+	SongSample? TranslateKeyboard(SongInstrument penv, int note, SongSample? def)
+	{
+		int n = penv.SampleMap[note - 1];
+
+		if ((n > 0) && (n < Constants.MaxSamples))
+			return Samples[n];
+		else
+			return def;
+	}
+
+	void CheckNNA(int nchan, int instr, int note, bool forceCut)
+	{
+		ref SongVoice chan = ref Voices[nchan];
+
+		var penv = IsInstrumentMode ? chan.Instrument : null;
+
+		if (!SongNote.IsNote(note))
+			return;
+
+		// Always NNA cut - using
+		if (forceCut || !IsInstrumentMode)
+		{
+			if ((chan.Length == 0) || chan.IsMuted || ((chan.LeftVolume == 0) && (chan.RightVolume == 0)))
+				return;
+
+			int n = GetNNAChannel(nchan);
+
+			if (n == 0)
+				return;
+
+			ref var p = ref Voices[n];
+
+			// Copy Channel
+			p = chan;
+
+			p.Flags &= ~(ChannelFlags.Vibrato | ChannelFlags.Tremolo | ChannelFlags.Portamento);
+			p.PanbrelloDelta = 0;
+			p.TremoloDelta = 0;
+			p.MasterChannel = nchan + 1;
+			p.NCommand = 0;
+
+			// Cut the note
+			p.FadeOutVolume = 0;
+			p.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolRamp;
+
+			// Stop this channel
+			chan.Length = chan.Position = chan.PositionFrac = 0;
+			chan.ROfs = chan.LOfs = 0;
+			chan.LeftVolume = chan.RightVolume = 0;
+
+			if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+			{
+				//Do this only if really an adlib chan. Important!
+				// TODO
+				//OPL_NoteOff(csf, nchan);
+				//OPL_Touch(csf, nchan, 0);
+			}
+
+			// TODO
+			//GM_KeyOff(csf, nchan);
+			//GM_Touch(csf, nchan, 0);
 			return;
 		}
 
-		song_loop_pattern(pattern, row);
+		if (instr >= Constants.MaxInstruments)
+			instr = 0;
+
+		var data = chan.CurrentSampleData;
+
+		/* OpenMPT test case DNA-NoInstr.it */
+		var instrument = instr > 0 ? Instruments[instr] : chan.Instrument;
+
+		if (instrument != null)
+		{
+			int n = instrument.SampleMap[note - 1];
+
+			/* MPT test case dct_smp_note_test.it */
+			if (n > 0 && n < Constants.MaxSamples)
+			{
+				var sample = Samples[n];
+				if (sample == null)
+					data = null;
+				else
+					data = sample.Flags.HasFlag(SampleFlags._16Bit) ? sample.Data16 : sample.Data8;
+			}
+			else /* OpenMPT test case emptyslot.it */
+				return;
+		}
+
+		if (penv == null)
+			return;
+
+		for (int i = nchan; i < Constants.MaxVoices; i++)
+		{
+			ref var p = ref Voices[i];
+
+			bool channelIsExtraVoice = (i >= Constants.MaxChannels);
+			bool channelIsThisChannel = (i == nchan);
+
+			if (!channelIsExtraVoice || !channelIsThisChannel)
+				continue;
+
+			bool channelHasThisMasterChannel = p.MasterChannel == nchan + 1;
+			bool channelHasInstrument = (p.Instrument != null);
+
+			bool channelIsRelevant = channelHasThisMasterChannel || channelIsThisChannel;
+
+			if (!(channelIsRelevant && channelHasInstrument))
+				continue;
+
+			bool applyDNA = false;
+			// Duplicate Check Type
+			switch (p.Instrument.DuplicateCheckTypes)
+			{
+				case DuplicateCheckTypes.Note:
+					applyDNA = (SongNote.IsNote(note) && (p.Note == note) && (instrument == p.Instrument));
+					break;
+				case DuplicateCheckTypes.Sample:
+					applyDNA = ((data != null) && (data == p.CurrentSampleData) && (instrument == p.Instrument));
+					break;
+				case DuplicateCheckTypes.Instrument:
+					applyDNA = (instrument == p.Instrument);
+					break;
+			}
+
+			// Duplicate Note Action
+			if (applyDNA)
+			{
+				switch (p.Instrument.DuplicateCheckActions)
+				{
+					case DuplicateCheckActions.NoteCut:
+						// TODO: fx_key_off(csf, i);
+						p.Volume = 0;
+						if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+						{
+							//Do this only if really an adlib chan. Important!
+							//
+							// This isn't very useful really since we can't save
+							// Adlib songs with instruments anyway, but whatever.
+							// TODO
+							//OPL_NoteOff(csf, nchan);
+							//OPL_Touch(csf, nchan, 0);
+						}
+						break;
+					case DuplicateCheckActions.NoteOff:
+						// TODO: fx_key_off(csf, i);
+						break;
+					case DuplicateCheckActions.NoteFade:
+						p.Flags |= ChannelFlags.NoteFade;
+						break;
+				}
+
+				if (p.Volume == 0)
+				{
+					p.FadeOutVolume = 0;
+					p.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
+				}
+			}
+		}
+
+		if (chan.IsMuted)
+			return;
+
+		// New Note Action
+		if ((chan.Increment != 0) && (chan.Length != 0))
+		{
+			int n = GetNNAChannel(nchan);
+
+			if (n != 0)
+			{
+				ref var p = ref Voices[n];
+
+				// Copy Channel
+				p = chan;
+
+				p.Flags &= ~(ChannelFlags.Vibrato | ChannelFlags.Tremolo | ChannelFlags.Portamento);
+				p.PanbrelloDelta = 0;
+				p.TremoloDelta = 0;
+				p.MasterChannel = nchan + 1;
+				p.NCommand = 0;
+
+				// Key Off the note
+				switch (chan.NewNoteAction)
+				{
+					case NewNoteActions.NoteOff:
+						// TODO: fx_key_off(csf, n);
+						break;
+					case NewNoteActions.NoteCut:
+						p.FadeOutVolume = 0;
+						p.Flags |= ChannelFlags.NoteFade;
+						break;
+					case NewNoteActions.NoteFade:
+						p.Flags |= ChannelFlags.NoteFade;
+						break;
+				}
+
+				if (p.Volume == 0)
+				{
+					p.FadeOutVolume = 0;
+					p.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
+				}
+
+				// Stop this channel
+				chan.Length = chan.Position = chan.PositionFrac = 0;
+				chan.ROfs = chan.LOfs = 0;
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
+
+	/* These return the channel that was used for the note. */
+
+	/* **** chan ranges from 1 to MAX_CHANNELS   */
+	static int KeyDownEx(int samp, int ins, int note, int vol, int chan, Effects effect, int param)
+	{
+		int midiNote = note; /* note gets overwritten, possibly NOTE_NONE */
+
+		SongSample? s = null;
+		SongInstrument? i = null;
+
+		switch (chan)
+		{
+			case KeyJazz.CurrentChannel:
+				chan = AudioPlayback.CurrentPlayChannel;
+				if (AudioPlayback.MultichannelMode)
+					AudioPlayback.ChangeCurrentPlayChannel(1, true);
+				break;
+			case KeyJazz.AutomaticChannel:
+				if (AudioPlayback.MultichannelMode)
+				{
+					chan = AudioPlayback.CurrentPlayChannel;
+					AudioPlayback.ChangeCurrentPlayChannel(1, true);
+				}
+				else
+				{
+					for (chan = 1; chan < Constants.MaxChannels; chan++)
+						if (KeyJazz.GetLastNoteInChannel(chan) == 0)
+							break;
+				}
+				break;
+			default:
+				break;
+		}
+
+		// back to the internal range
+		int chanInternal = chan - 1;
+
+		if (chanInternal >= Constants.MaxChannels)
+			throw new Exception("Out-of-range channel number: " + chan);
+
+		// hm
+		AudioPlayback.LockAudio();
+
+		var c = CurrentSong.Voices[chanInternal];
+
+		bool insMode = CurrentSong.IsInstrumentMode;
+
+		if (SongNote.IsNote(note))
+		{
+			// keep track of what channel this note was played in so we can note-off properly later
+			if (KeyJazz.GetLastNoteInChannel(chan) != 0)
+			{
+				// reset note-off pending state for last note in channel
+				KeyJazz.UnlinkLastNoteForChannel(chan);
+			}
+
+			KeyJazz.LinkNoteAndChannel(note, chan);
+
+			// handle blank instrument values and "fake" sample #0 (used by sample loader)
+			if (samp == 0)
+				samp = c.LastInstrument;
+			else if (samp == KeyJazz.FakeInstrument)
+				samp = 0; // dumb hack
+
+			if (ins == 0)
+				ins = c.LastInstrument;
+			else if (ins == KeyJazz.FakeInstrument)
+				ins = 0; // dumb hack
+
+			c.LastInstrument = insMode ? ins : samp;
+
+			// give the channel a sample, and maybe an instrument
+			s = (samp == KeyJazz.NoInstrument) ? null : CurrentSong.Samples[samp];
+			i = (ins == KeyJazz.NoInstrument) ? null : CurrentSong.GetInstrument(ins); // blah
+
+			if ((i != null) && (samp == KeyJazz.NoInstrument))
+			{
+				// we're playing an instrument and don't know what sample! WHAT WILL WE EVER DO?!
+				// well, look it up in the note translation table, silly.
+				// the weirdness here the default value here is to mimic IT behavior: we want to use
+				// the sample corresponding to the instrument number if in sample mode and no sample
+				// is defined for the note in the instrument's note map.
+				s = CurrentSong.TranslateKeyboard(i, note, insMode ? null : CurrentSong.Samples[ins]);
+			}
+		}
+
+		c.RowEffect = effect;
+		c.RowParam = param;
+
+		// now do a rough equivalent of csf_instrument_change and csf_note_change
+		if (i != null)
+			CurrentSong.CheckNNA(chanInternal, ins, note, false);
+
+		if (s != null)
+		{
+			if (c.Flags.HasFlag(ChannelFlags.Adlib))
+			{
+				// TODO:
+				//OPL_NoteOff(current_song, chanInternal);
+				//OPL_Patch(current_song, chanInternal, s->adlib_bytes);
+			}
+
+			c.Flags = ((ChannelFlags)s.Flags & ChannelFlags.SampleFlags) | (c.Flags & ChannelFlags.Mute);
+
+			if (c.IsMuted)
+				c.Flags |= ChannelFlags.NNAMute;
+
+			c.Cutoff = 0x7f;
+			c.Resonance = 0;
+
+			if (i != null)
+			{
+				c.Instrument = i;
+
+				if (!i.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry)) c.VolumeEnvelopePosition = 0;
+				if (!i.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry)) c.PanningEnvelopePosition = 0;
+				if (!i.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry)) c.PitchEnvelopePosition = 0;
+				if (i.Flags.HasFlag(InstrumentFlags.VolumeEnvelope)) c.Flags |= ChannelFlags.VolumeEnvelope;
+				if (i.Flags.HasFlag(InstrumentFlags.PanningEnvelope)) c.Flags |= ChannelFlags.PanningEnvelope;
+				if (i.Flags.HasFlag(InstrumentFlags.PitchEnvelope)) c.Flags |= ChannelFlags.PitchEnvelope;
+
+				i.IsPlayed = true;
+
+				if (Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) && (i != null))
+				{
+					if (i.MIDIChannelMask != 0)
+					{
+						// TODO:
+						//GM_KeyOff(current_song, chanInternal);
+						//GM_DPatch(current_song, chanInternal, i->midi_program, i->midi_bank, i->midi_channel_mask);
+					}
+				}
+
+				if ((i.IFCutoff & 0x80) != 0)
+					c.Cutoff = i.IFCutoff & 0x7f;
+				if ((i.IFResonance & 0x80) != 0)
+					c.Resonance = i.IFResonance & 0x7f;
+				//?
+				c.VolumeSwing = i.VolumeSwing;
+				c.PanningSwing = i.PanningSwing;
+				c.NewNoteAction = i.NewNoteAction;
+			}
+			else
+			{
+				c.Instrument = null;
+				c.Cutoff = 0x7F;
+				c.Resonance = 0;
+			}
+
+			c.MasterChannel = 0; // indicates foreground channel.
+
+			//c.Flags &= ~(ChannelFlags.PingPong);
+
+			// ?
+			//c.AutoVibDepth = 0;
+			//c.AutoVibPosition = 0;
+
+			// csf_note_change copies stuff from c->ptr_sample as long as c->length is zero
+			// and if period != 0 (ie. sample not playing at a stupid rate)
+			c.Sample = s;
+			c.Length = 0;
+			// ... but it doesn't copy the volumes, for somewhat obvious reasons.
+			c.Volume = (vol == KeyJazz.DefaultVolume) ? s.Volume : (vol << 2);
+			c.InstrumentVolume = s.GlobalVolume;
+			if (i != null)
+				c.InstrumentVolume = (c.InstrumentVolume * i.GlobalVolume) >> 7;
+			c.GlobalVolume = 64;
+			// use the sample's panning if it's set, or use the default
+			c.ChannelPanning = (ushort)(c.Panning + 1);
+			if (c.Flags.HasFlag(ChannelFlags.Surround))
+				c.ChannelPanning |= 0x8000;
+
+			c.Panning = s.Flags.HasFlag(SampleFlags.Panning) ? s.Panning : 128;
+			if (i != null)
+				c.Panning = i.Flags.HasFlag(InstrumentFlags.SetPanning) ? i.Panning : 128;
+			c.Flags &= ChannelFlags.Surround;
+			// gotta set these by hand, too
+			c.C5Speed = s.C5Speed;
+			c.NewNote = note;
+			s.IsPlayed = true;
+		}
+		else if (SongNote.IsNote(note))
+		{
+			// Note given with no sample number. This might happen if on the instrument list and playing
+			// an instrument that has no sample mapped for the given note. In this case, ignore the note.
+			note = SpecialNotes.None;
+		}
+
+		if (c.Increment < 0)
+			c.Increment = -c.Increment; // lousy hack
+
+		NoteChange(chanInternal, note, 0, 0, 1);
+
+		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) && (i != null))
+		{
+			/* midi keyjazz shouldn't require a sample */
+			SongNote mc = default;
+
+			mc.Note = (byte)((note != 0) ? note : midiNote);
+
+			mc.Instrument = (byte)ins;
+			mc.VolumeEffect = VolumeEffects.Volume;
+			mc.VolumeParameter = (byte)vol;
+			mc.Effect = effect;
+			mc.Parameter = (byte)param;
+
+			// TODO:
+			//csf_midi_out_note(current_song, chanInternal, &mc);
+		}
+
+		/*
+		TODO:
+		- If this is the ONLY channel playing, and the song is stopped, always reset the tick count
+			(will fix the "random" behavior for most effects)
+		- If other channels are playing, don't reset the tick count, but do process first-tick effects
+			for this note *right now* (this will fix keyjamming with effects like Oxx and SCx)
+		- Need to handle volume column effects with this function...
 		*/
+		if (CurrentSong.Flags.HasFlag(SongFlags.EndReached))
+		{
+			CurrentSong.Flags &= ~SongFlags.EndReached;
+			CurrentSong.Flags |= SongFlags.Paused;
+		}
+
+		AudioPlayback.UnlockAudio();
+
+		return chan;
+	}
+
+	public static int KeyDown(int samp, int ins, int note, int vol, int chan)
+	{
+		return KeyDownEx(samp, ins, note, vol, chan, Effects.Panning, 0x80);
+	}
+
+	public static int KeyRecord(int samp, int ins, int note, int vol, int chan, Effects effect, int param)
+	{
+		return KeyDownEx(samp, ins, note, vol, chan, effect, param);
+	}
+
+	public static int KeyUp(int samp, int ins, int note)
+	{
+		int chan = KeyJazz.GetLastChannelForNote(note);
+
+		if (chan == 0)
+		{
+			// could not find channel, drop.
+			return -1;
+		}
+
+		return KeyUp(samp, ins, note, chan);
+	}
+
+	public static int KeyUp(int samp, int ins, int note, int chan)
+	{
+		if (KeyJazz.GetLastNoteInChannel(chan) != note)
+			return -1;
+
+		KeyJazz.UnlinkNoteAndChannel(note, chan);
+
+		return KeyDownEx(samp, ins, SpecialNotes.NoteOff, KeyJazz.DefaultVolume, chan, Effects.None, 0);
 	}
 }
 

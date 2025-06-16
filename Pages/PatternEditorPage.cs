@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Text;
 
 namespace ChasmTracker;
@@ -425,7 +426,7 @@ public class PatternEditorPage : Page
 				default: n.Note = 0; break;
 			}
 
-			if (n.Note != 0)
+			if (n.HasNote)
 			{
 				/* handle sharp/flat */
 				if (str[x + 1] == '#') n.Note++;
@@ -704,7 +705,7 @@ public class PatternEditorPage : Page
 				if (clipboardPrecedence)
 				{
 					/* clipboard precedence */
-					if (cNote.Note != 0)
+					if (cNote.HasNote)
 						pNote.SetNoteNote(cNote.Note, xlate);
 
 					if (cNote.Instrument != 0)
@@ -945,7 +946,7 @@ public class PatternEditorPage : Page
 		}
 		else
 		{
-			var dialog = new PatternEditorFastVolumeDialog(_fastVolumePercent);
+			var dialog = Dialog.Show(new PatternEditorFastVolumeDialog(_fastVolumePercent));
 
 			dialog.AcceptDialog +=
 				newFastVolumePercent =>
@@ -979,7 +980,7 @@ public class PatternEditorPage : Page
 			return;
 		}
 
-		var dialog = new PatternEditorVolumeAmplifyDialog(_volumePercent);
+		var dialog = Dialog.Show(new PatternEditorVolumeAmplifyDialog(_volumePercent));
 
 		dialog.AcceptDialog +=
 			newVolumePercent =>
@@ -997,7 +998,7 @@ public class PatternEditorPage : Page
 	{
 		_currentVary = how;
 
-		var dialog = new PatternEditorVaryCommandDialog(_varyDepth);
+		var dialog = Dialog.Show(new PatternEditorVaryCommandDialog(_varyDepth));
 
 		dialog.AcceptDialog +=
 			newVaryDepth =>
@@ -1553,7 +1554,7 @@ public class PatternEditorPage : Page
 		PatternSelectionSystemCopyOut();
 	}
 
-	void selection_wipe_volume(bool reckless)
+	public void SelectionWipeVolume(bool reckless)
 	{
 		if (!SelectionExists())
 		{
@@ -1973,7 +1974,7 @@ public class PatternEditorPage : Page
 	/* Row shifting operations */
 
 	/* A couple of the param names here might seem a bit confusing, so:
-	*     what_row = what row to start the insert (generally this would be current_row)
+	*     what_row = what row to start the insert (generally this would be _currentRow)
 	*     num_rows = the number of rows to insert */
 	void PatternInsertRows(int whatRow, int numRows, int firstChannel, int channelWidth)
 	{
@@ -2920,10 +2921,10 @@ public class PatternEditorPage : Page
 		{
 			case 0:
 			case 1:
-				return note.Note != 0;
+				return note.HasNote;
 			case 2:
 			case 3:
-				return note.Instrument != 0;
+				return note.HasInstrument;
 			case 4:
 			case 5:
 				return (note.VolumeEffect != VolumeEffects.None) || (note.VolumeParameter != 0);
@@ -3002,7 +3003,7 @@ public class PatternEditorPage : Page
 				ref var curNote = ref pattern[row][channel + i];
 
 				/* I don't know what this whole 'force' thing is about, but okay */
-				if (!force && curNote.Note)
+				if (!force && curNote.HasNote)
 					continue;
 
 				curNote.Note = (byte)note;
@@ -3245,6 +3246,9 @@ public class PatternEditorPage : Page
 
 		ref var curNote = ref pattern[_currentRow][_currentChannel];
 
+		int note;
+		int vol;
+
 		if (_currentPosition == 0) /* note */
 		{
 			// FIXME: this is actually quite wrong; instrument numbers should be independent for each
@@ -3263,15 +3267,15 @@ public class PatternEditorPage : Page
 				if (k.State == KeyState.Release)
 					return false;
 
-				int vol;
+				int newVol;
 
 				if (curNote.VolumeEffect == VolumeEffects.Volume)
-					vol = curNote.VolumeParameter;
+					newVol = curNote.VolumeParameter;
 				else
-					vol = KeyJazz.DefaultVolume;
+					newVol = KeyJazz.DefaultVolume;
 
 				Song.KeyRecord(smp, ins, curNote.Note,
-					vol, _currentChannel, curNote.Effect, curNote.Parameter);
+					newVol, _currentChannel, curNote.Effect, curNote.Parameter);
 
 				AdvanceCursor(!k.Modifiers.HasAnyFlag(KeyMod.Shift), true);
 
@@ -3290,7 +3294,7 @@ public class PatternEditorPage : Page
 				return true;
 			}
 
-			if (Song.CurrentSong.IsInstrumentMode))
+			if (Song.CurrentSong.IsInstrumentMode)
 			{
 				if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
 					ins = AllPages.InstrumentList.CurrentInstrument;
@@ -3301,13 +3305,10 @@ public class PatternEditorPage : Page
 					smp = AllPages.SampleList.CurrentSample;
 			}
 
-			int n;
-			int vol;
-
 			if (k.Sym == KeySym.Space)
 			{
 				/* copy mask to note */
-				n = _maskNote.Note;
+				note = _maskNote.Note;
 
 				vol = (_editCopyMask.HasFlag(PatternEditorMask.Volume) && curNote.VolumeEffect == VolumeEffects.Volume)
 					? _maskNote.VolumeParameter
@@ -3315,12 +3316,12 @@ public class PatternEditorPage : Page
 			}
 			else
 			{
-				n = k.NoteValue;
+				note = k.NoteValue;
 
-				if (n < 0)
+				if (note < 0)
 					return false;
 
-				if ((_editCopyMask.HasFlag(PatternEditorMask.Volume) && _maskNote.VolumeEffect == VolumeEffects.Volume)
+				if (_editCopyMask.HasFlag(PatternEditorMask.Volume) && _maskNote.VolumeEffect == VolumeEffects.Volume)
 					vol = _maskNote.VolumeParameter;
 				else if (curNote.VolumeEffect == VolumeEffects.Volume)
 					vol = curNote.VolumeParameter;
@@ -3330,19 +3331,19 @@ public class PatternEditorPage : Page
 
 			if (k.State == KeyState.Release)
 			{
-				if (_keyjazzNoteOff && SongNote.IsNote(n))
+				if (_keyjazzNoteOff && SongNote.IsNote(note))
 				{
 					/* coda mode */
-					Song.KeyUp(smp, ins, n);
+					Song.KeyUp(smp, ins, note);
 				}
 
 				/* it would be weird to have this enabled and keyjazz_noteoff
 				* disabled, but it's possible, so handle it separately. */
-				if (_keyjazzWriteNoteOff && _playbackTracing && SongNote.IsNote(n))
+				if (_keyjazzWriteNoteOff && _playbackTracing && SongNote.IsNote(note))
 				{
 					/* go to the next row if a note off would overwrite a note
 					* you (likely) just entered */
-					if (curNote.Note != 0)
+					if (curNote.HasNote)
 					{
 						if (++_currentRow >= Song.CurrentSong.GetPatternLength(_currentPattern))
 							return true;
@@ -3350,11 +3351,11 @@ public class PatternEditorPage : Page
 						ref var nextNote = ref pattern[_currentRow][_currentChannel];
 
 						/* give up if the next row has a note too */
-						if (nextNote.Note != 0)
+						if (nextNote.HasNote)
 							return true;
 					}
 
-					n = SpecialNotes.NoteOff;
+					note = SpecialNotes.NoteOff;
 				}
 				else
 					return true;
@@ -3370,82 +3371,84 @@ public class PatternEditorPage : Page
 		{
 			bool writeNote = _keyjazzCapsLock ? !k.Modifiers.HasFlag(KeyMod.Caps) : !k.Modifiers.HasFlag(KeyMod.CapsPressed);
 
-			if (writeNote && !RecordNote(pattern, _currentRow, _currentChannel, n, true))
+			if (writeNote && !RecordNote(pattern, _currentRow, _currentChannel, note, true))
 			{
 				// there was a template error, don't advance the cursor and so on
 				writeNote = false;
-				n = SpecialNotes.None;
+				note = SpecialNotes.None;
 			}
 
 			/* Be quiet when pasting templates.
 			It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
 			so as to hear the chords being inserted etc., but that's a little complicated to do. */
-			if (SongNote.IsNote(n) && !((_templateMode != TemplateMode.Off) && writeNote))
-				Song.KeyDown(smp, ins, n, vol, _currentChannel);
+			if (SongNote.IsNote(note) && !((_templateMode != TemplateMode.Off) && writeNote))
+				Song.KeyDown(smp, ins, note, vol, _currentChannel);
 
-			if (!writeNote)
-				break;
-
-			/* Never copy the instrument etc. from the mask when inserting control notes or when
-			erasing a note -- but DO write it when inserting a blank note with the space key. */
-			if (!(SongNote.IsControl(n) || (k.Sym != KeySym.Space && n == SpecialNotes.None)) && (_templateMode == TemplateMode.Off))
+			if (writeNote)
 			{
-				if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
+				/* Never copy the instrument etc. from the mask when inserting control notes or when
+				erasing a note -- but DO write it when inserting a blank note with the space key. */
+				if (!(SongNote.IsControl(note) || (k.Sym != KeySym.Space && note == SpecialNotes.None)) && (_templateMode == TemplateMode.Off))
 				{
-					if (Song.CurrentSong.IsInstrumentMode)
-						curNote2.Instrument = (byte)AllPages.InstrumentList.CurrentInstrument;
-					else
-						curNote2.Instrument = (byte)AllPages.SampleList.CurrentSample;
+					if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
+					{
+						if (Song.CurrentSong.IsInstrumentMode)
+							curNote2.Instrument = (byte)AllPages.InstrumentList.CurrentInstrument;
+						else
+							curNote2.Instrument = (byte)AllPages.SampleList.CurrentSample;
+					}
+
+					if (_editCopyMask.HasFlag(PatternEditorMask.Volume))
+					{
+						curNote2.VolumeEffect = _maskNote.VolumeEffect;
+						curNote2.VolumeParameter = _maskNote.VolumeParameter;
+					}
+
+					if (_editCopyMask.HasFlag(PatternEditorMask.Effect))
+					{
+						curNote2.Effect = _maskNote.Effect;
+						curNote2.Parameter = _maskNote.Parameter;
+					}
 				}
 
-				if (_editCopyMask.HasFlag(PatternEditorMask.Volume))
-				{
-					curNote2.VolumeEffect = _maskNote.VolumeEffect;
-					curNote2.VolumeParameter = _maskNote.VolumeParameter;
-				}
+				/* try again, now that we have the effect (this is a dumb way to do this...) */
+				if (SongNote.IsNote(note) && (_templateMode == TemplateMode.Off))
+					Song.KeyRecord(smp, ins, note, vol, _currentChannel, curNote2.Effect, curNote2.Parameter);
 
-				if (_editCopyMask.HasFlag(PatternEditorMask.Effect))
+				/* copy the note back to the mask */
+				_maskNote.Note = (byte)note;
+				PatternSelectionSystemCopyOut();
+
+				note = curNote2.Note;
+				if (SongNote.IsNote(note) && curNote2.VolumeEffect == VolumeEffects.Volume)
+					vol = curNote2.VolumeParameter;
+
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					curNote2.Effect = _maskNote.Effect;
-					curNote2.Parameter = _maskNote.Parameter;
+					// advance horizontally, stopping at channel 64
+					// (I have no idea how IT does this, it might wrap)
+					if (_currentChannel < 64)
+					{
+						_shiftChordChannels++;
+						_currentChannel++;
+						Reposition();
+					}
 				}
+				else
+					AdvanceCursor(true, true);
 			}
-
-			/* try again, now that we have the effect (this is a dumb way to do this...) */
-			if (SongNote.IsNote(n) && (_templateMode == TemplateMode.Off))
-				Song.KeyRecord(smp, ins, n, vol, _currentChannel, curNote2.Effect, curNote2.Parameter);
-
-			/* copy the note back to the mask */
-			_maskNote.Note = (byte)n;
-			PatternSelectionSystemCopyOut();
-
-			n = curNote2.Note;
-			if (SongNote.IsNote(n) && curNote2.VolumeEffect == VolumeEffects.Volume)
-				vol = curNote2.VolumeParameter;
-
-			if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-			{
-				// advance horizontally, stopping at channel 64
-				// (I have no idea how IT does this, it might wrap)
-				if (_currentChannel < 64)
-				{
-					_shiftChordChannels++;
-					_currentChannel++;
-					Reposition();
-				}
-			}
-			else
-				AdvanceCursor(true, true);
 		}
 
 		switch (_currentPosition)
 		{
 			case 1:                 /* octave */
+			{
 				int j = k.HexValue;
 				if (j < 0 || j > 9)
 					return false;
 				int n = curNote2.Note;
-				if (n > 0 && n <= 120) {
+				if (n > 0 && n <= 120)
+				{
 					/* Hehe... this was originally 7 lines :) */
 					n = ((n - 1) % 12) + (12 * j) + 1;
 					curNote2.Note = (byte)n;
@@ -3454,8 +3457,12 @@ public class PatternEditorPage : Page
 				Status.Flags |= StatusFlags.SongNeedsSave;
 				PatternSelectionSystemCopyOut();
 				break;
+			}
 			case 2:                 /* instrument, first digit */
 			case 3:                 /* instrument, second digit */
+			{
+				int n;
+
 				if (k.Sym == KeySym.Space)
 				{
 					if (Song.CurrentSong.IsInstrumentMode)
@@ -3469,7 +3476,7 @@ public class PatternEditorPage : Page
 					Status.Flags |= StatusFlags.SongNeedsSave;
 					break;
 				}
-				
+
 				if (k.NoteValue == 0)
 				{
 					curNote2.Instrument = 0;
@@ -3510,7 +3517,7 @@ public class PatternEditorPage : Page
 				/* this is kind of ugly... */
 				if (Song.CurrentSong.IsInstrumentMode)
 				{
-					j = AllPages.InstrumentList.CurrentInstrument;
+					int j = AllPages.InstrumentList.CurrentInstrument;
 
 					AllPages.InstrumentList.CurrentInstrument = n;
 
@@ -3521,7 +3528,7 @@ public class PatternEditorPage : Page
 				}
 				else
 				{
-					j = AllPages.SampleList.CurrentSample;
+					int j = AllPages.SampleList.CurrentSample;
 
 					AllPages.SampleList.CurrentSample = n;
 
@@ -3543,8 +3550,10 @@ public class PatternEditorPage : Page
 				Status.Flags |= StatusFlags.SongNeedsSave;
 				PatternSelectionSystemCopyOut();
 				break;
+			}
 			case 4:
 			case 5:                 /* volume */
+			{
 				if (k.Sym == KeySym.Space)
 				{
 					curNote2.VolumeParameter = _maskNote.VolumeParameter;
@@ -3553,7 +3562,7 @@ public class PatternEditorPage : Page
 					Status.Flags |= StatusFlags.SongNeedsSave;
 					break;
 				}
-				
+
 				if (k.NoteValue == 0)
 				{
 					curNote2.VolumeParameter = _maskNote.VolumeParameter = 0;
@@ -3575,7 +3584,7 @@ public class PatternEditorPage : Page
 
 				_maskNote.VolumeParameter = curNote2.VolumeParameter;
 				_maskNote.VolumeEffect = curNote2.VolumeEffect;
-				
+
 				if (_currentPosition == 4)
 					_currentPosition++;
 				else
@@ -3587,12 +3596,14 @@ public class PatternEditorPage : Page
 				Status.Flags |= StatusFlags.SongNeedsSave;
 				PatternSelectionSystemCopyOut();
 				break;
+			}
 			case 6:                 /* effect */
+			{
 				if (k.Sym == KeySym.Space)
 					curNote2.Effect = _maskNote.Effect;
 				else
 				{
-					Effects f = k.EffectValue;
+					Effects f = k.EffectValue ?? Effects.None;
 					if (f == Effects.None)
 						return false;
 					curNote2.Effect = _maskNote.Effect = f;
@@ -3604,16 +3615,21 @@ public class PatternEditorPage : Page
 					AdvanceCursor(true, false);
 				PatternSelectionSystemCopyOut();
 				break;
+			}
 			case 7:                 /* param, high nibble */
 			case 8:                 /* param, low nibble */
-				if (k.Sym == KeySym.Space) {
+			{
+				if (k.Sym == KeySym.Space)
+				{
 					curNote2.Parameter = _maskNote.Parameter;
 					_currentPosition = _linkEffectColumn ? 6 : 7;
 					AdvanceCursor(true, false);
 					Status.Flags |= StatusFlags.SongNeedsSave;
 					PatternSelectionSystemCopyOut();
 					break;
-				} else if (k.NoteValue == 0) {
+				}
+				else if (k.NoteValue == 0)
+				{
 					curNote2.Parameter = _maskNote.Parameter = 0;
 					_currentPosition = _linkEffectColumn ? 6 : 7;
 					AdvanceCursor(true, false);
@@ -3624,7 +3640,7 @@ public class PatternEditorPage : Page
 
 				/* FIXME: honey roasted peanuts */
 
-				n = k.HexValue;
+				int n = k.HexValue;
 				if (n < 0)
 					return false;
 
@@ -3643,345 +3659,356 @@ public class PatternEditorPage : Page
 				_maskNote.Parameter = curNote2.Parameter;
 				PatternSelectionSystemCopyOut();
 				break;
+			}
 		}
 
 		return true;
 	}
 
+	/* return values:
+	* true = handled key completely. don't do anything else
+	* null = partly done, but need to recalculate cursor stuff
+	*         (for keys that move the cursor)
+	* false = didn't handle the key. */
+
+	bool? HandleAltKey(KeyEvent k)
+	{
+		int maxRowNumber = Song.CurrentSong.GetPatternLength(_currentPattern) - 1;
+
+		/* hack to render this useful :) */
+		if (k.Sym == KeySym.KP_9)
+			k.Sym = KeySym.F9;
+		else if (k.Sym == KeySym.KP_0)
+			k.Sym = KeySym.F10;
+
+		int n = k.NumericValue(false);
+
+		if (n > -1)
+		{
+			if (k.State == KeyState.Release)
+				return true;
+			_skipValue = (n == 9) ? 16 : n;
+			Status.FlashText("Cursor step set to " + _skipValue);
+			return true;
+		}
+
+		switch (k.Sym) {
+			case KeySym.Return:
+				if (k.State == KeyState.Press)
+					return true;
+				FastSaveUpdate();
+				return true;
+
+			case KeySym.Backspace:
+				if (k.State == KeyState.Press)
+					return true;
+				Save("Undo revert pattern data (Alt-BkSpace)");
+				SnapPaste(_fastSave, 0, 0, 0);
+				return true;
+
+			case KeySym.b:
+				if (k.State == KeyState.Release)
+					return true;
+
+				if (!SelectionExists())
+				{
+					_selection.LastChannel = _currentChannel;
+					_selection.LastRow = _currentRow;
+				}
+
+				_selection.FirstChannel = _currentChannel;
+				_selection.FirstRow = _currentRow;
+
+				NormaliseBlockSelection();
+
+				break;
+
+			case KeySym.e:
+				if (k.State == KeyState.Release)
+					return true;
+
+				if (!SelectionExists())
+				{
+					_selection.FirstChannel = _currentChannel;
+					_selection.FirstRow = _currentRow;
+				}
+
+				_selection.LastChannel = _currentChannel;
+				_selection.LastRow = _currentRow;
+
+				NormaliseBlockSelection();
+
+				break;
+			case KeySym.d:
+				if (k.State == KeyState.Release)
+					return true;
+
+				if (Status.LastKeySym == KeySym.d)
+				{
+					if (maxRowNumber - (_currentRow - 1) > _blockDoubleSize)
+						_blockDoubleSize <<= 1;
+				}
+				else
+				{
+					// emulate some weird impulse tracker behavior here:
+					// with row highlight set to zero, alt-d selects the whole channel
+					// if the cursor is at the top, and clears the selection otherwise
+					_blockDoubleSize = (Song.CurrentSong.RowHighlightMajor > 0)
+						? Song.CurrentSong.RowHighlightMajor
+						: ((_currentRow > 0) ? 0 : 65536);
+					_selection.FirstChannel = _selection.LastChannel = _currentChannel;
+					_selection.FirstRow = _currentRow;
+				}
+				n = _blockDoubleSize + _currentRow - 1;
+				_selection.LastRow = Math.Min(n, maxRowNumber);
+				break;
+			case KeySym.l:
+				if (k.State == KeyState.Release)
+					return true;
+				if (Status.LastKeySym == KeySym.l) {
+					/* 3x alt-l re-selects the current channel */
+					if (_selection.FirstChannel == _selection.LastChannel) {
+						_selection.FirstChannel = 1;
+						_selection.LastChannel = 64;
+					} else {
+						_selection.FirstChannel = _selection.LastChannel = _currentChannel;
+					}
+				} else {
+					_selection.FirstChannel = _selection.LastChannel = _currentChannel;
+					_selection.FirstRow = 0;
+					_selection.LastRow = maxRowNumber;
+				}
+				PatternSelectionSystemCopyOut();
+				break;
+			case KeySym.r:
+				if (k.State == KeyState.Release)
+					return true;
+				_drawDivisions = true;
+				SetViewScheme(0);
+				break;
+			case KeySym.s:
+				if (k.State == KeyState.Release)
+					return true;
+				SelectionSetSample();
+				break;
+			case KeySym.u:
+				if (k.State == KeyState.Release)
+					return true;
+				if (SelectionExists())
+					SelectionClear();
+				else if (_clipboard.Data != null)
+				{
+					ClipboardFree();
+
+					Clippy.Select(null, null, 0);
+					Clippy.Yank();
+				}
+				else
+					MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+
+				break;
+			case KeySym.c:
+				if (k.State == KeyState.Release)
+					return true;
+				ClipboardCopy(false);
+				break;
+			case KeySym.o:
+				if (k.State == KeyState.Release)
+					return true;
+
+				if (Status.LastKeySym == KeySym.o)
+					_patternCopyInBehaviour = PatternCopyInBehaviour.OverwriteGrow;
+				else
+					_patternCopyInBehaviour = PatternCopyInBehaviour.Overwrite;
+
+				Status.Flags |= StatusFlags.ClippyPasteBuffer;
+				break;
+			case KeySym.p:
+				if (k.State == KeyState.Release)
+					return true;
+				_patternCopyInBehaviour = PatternCopyInBehaviour.Insert;
+				Status.Flags |= StatusFlags.ClippyPasteBuffer;
+				break;
+			case KeySym.m:
+				if (k.State == KeyState.Release)
+					return true;
+				if (Status.LastKeySym == KeySym.m)
+					_patternCopyInBehaviour = PatternCopyInBehaviour.MixFields;
+				else
+					_patternCopyInBehaviour = PatternCopyInBehaviour.MixNotes;
+				Status.Flags |= StatusFlags.ClippyPasteBuffer;
+				break;
+			case KeySym.f:
+				if (k.State == KeyState.Release)
+					return true;
+				BlockLengthDouble();
+				break;
+			case KeySym.g:
+				if (k.State == KeyState.Release)
+					return true;
+				BlockLengthHalve();
+				break;
+			case KeySym.n:
+				if (k.State == KeyState.Release)
+					return true;
+				_channelMulti[_currentChannel - 1] ^= true;
+				if (_channelMulti[_currentChannel - 1])
+					_channelMultiEnabled = true;
+				else
+					_channelMultiEnabled = _channelMulti.Any(v => v);
+
+				if (Status.LastKeySym == KeySym.n)
+					Dialog.Show(new PatternEditorMultiChannelDialog());
+				break;
+			case KeySym.z:
+				if (k.State == KeyState.Release)
+					return true;
+				ClipboardCopy(false);
+				SelectionErase();
+				break;
+			case KeySym.y:
+				if (k.State == KeyState.Release)
+					return true;
+				SelectionSwap();
+				break;
+			case KeySym.v:
+				if (k.State == KeyState.Release)
+					return true;
+				SelectionSetVolume();
+				break;
+			case KeySym.w:
+				if (k.State == KeyState.Release)
+					return true;
+				SelectionWipeVolume(false);
+				break;
+			case KeySym.k:
+				if (k.State == KeyState.Release)
+					return true;
+				if (Status.LastKeySym == KeySym.k)
+					SelectionWipeVolume(true);
+				else
+					SelectionSlideVolume();
+				break;
+			case KeySym.x:
+				if (k.State == KeyState.Release)
+					return true;
+				if (Status.LastKeySym == KeySym.x)
+					SelectionWipeEffect();
+				else
+					SelectionSlideEffect();
+				break;
+			case KeySym.h:
+				if (k.State == KeyState.Release)
+					return true;
+				_drawDivisions = !_drawDivisions;
+				RecalculateVisibleArea();
+				Reposition();
+				break;
+			case KeySym.q:
+				if (k.State == KeyState.Release)
+					return true;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					TransposeNotes(12);
+				else
+					TransposeNotes(1);
+				break;
+			case KeySym.a:
+				if (k.State == KeyState.Release)
+					return true;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					TransposeNotes(-12);
+				else
+					TransposeNotes(-1);
+				break;
+			case KeySym.i:
+				if (k.State == KeyState.Release)
+					return true;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					_templateMode = TemplateMode.Off;
+				else if (_fastVolumeMode)
+					FastVolumeAmplify();
+				else
+					_templateMode = _templateMode.Cycle();
+				break;
+			case KeySym.j:
+				if (k.State == KeyState.Release)
+					return true;
+				if (_fastVolumeMode)
+					FastVolumeAttenuate();
+				else
+					VolumeAmplify();
+				break;
+			case KeySym.t:
+				if (k.State == KeyState.Release)
+					return true;
+				n = _currentChannel - _topDisplayChannel;
+				_trackViewScheme[n] = _trackViewScheme[n].Cycle(TrackViews.Length);
+				RecalculateVisibleArea();
+				Reposition();
+				break;
+			case KeySym.Up:
+				if (k.State == KeyState.Release)
+					return true;
+				if (_topDisplayRow > 0)
+				{
+					_topDisplayRow--;
+					if (_currentRow > _topDisplayRow + 31)
+						_currentRow = _topDisplayRow + 31;
+					return null;
+				}
+				return true;
+			case KeySym.Down:
+				if (k.State == KeyState.Release)
+					return true;
+				if (_topDisplayRow + 31 < maxRowNumber)
+				{
+					_topDisplayRow++;
+					if (_currentRow < _topDisplayRow)
+						_currentRow = _topDisplayRow;
+					return null;
+				}
+				return true;
+			case KeySym.Left:
+				if (k.State == KeyState.Release)
+					return true;
+				_currentChannel--;
+				return null;
+			case KeySym.Right:
+				if (k.State == KeyState.Release)
+					return true;
+				_currentChannel++;
+				return null;
+			case KeySym.Insert:
+				if (k.State == KeyState.Release)
+					return true;
+				Save("Remove inserted row(s)    (Alt-Insert)");
+				PatternInsertRows(_currentRow, 1, 1, 64);
+				break;
+			case KeySym.Delete:
+				if (k.State == KeyState.Release)
+					return true;
+				Save("Replace deleted row(s)    (Alt-Delete)");
+				PatternDeleteRows(_currentRow, 1, 1, 64);
+				break;
+			case KeySym.F9:
+				if (k.State == KeyState.Release)
+					return true;
+				Song.CurrentSong.ToggleChannelMute(_currentChannel - 1);
+				break;
+			case KeySym.F10:
+				if (k.State == KeyState.Release)
+					return true;
+				Song.CurrentSong.HandleChannelSolo(_currentChannel - 1);
+				break;
+			default:
+				return false;
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+		return true;
+	}
 
 #if false
-
-/* --------------------------------------------------------------------- */
-/* return values:
- * 1 = handled key completely. don't do anything else
- * -1 = partly done, but need to recalculate cursor stuff
- *         (for keys that move the cursor)
- * 0 = didn't handle the key. */
-
-static int pattern_editor_handle_alt_key(struct key_event * k)
-{
-	int n;
-	int total_rows = song_get_rows_in_pattern(_currentPattern);
-
-	/* hack to render this useful :) */
-	if (k.Sym == SCHISM_KEYSYM_KP_9) {
-		k.Sym = SCHISM_KEYSYM_F9;
-	} else if (k.Sym == SCHISM_KEYSYM_KP_0) {
-		k.Sym = SCHISM_KEYSYM_F10;
-	}
-
-	n = numeric_key_event(k, 0);
-	if (n > -1 && n <= 9) {
-		if (k.State == KeyState.Release)
-			return 1;
-		_skipValue = (n == 9) ? 16 : n;
-		Status.FlashText("Cursor step set to %d", _skipValue);
-		return 1;
-	}
-
-	switch (k.Sym) {
-	case SCHISM_KEYSYM_RETURN:
-		if (k.State == KEY_PRESS)
-			return 1;
-		fast_save_update();
-		return 1;
-
-	case SCHISM_KEYSYM_BACKSPACE:
-		if (k.State == KEY_PRESS)
-			return 1;
-		Save("Undo revert pattern data (Alt-BkSpace)");
-		snap_paste(&fast_save, 0, 0, 0);
-		return 1;
-
-	case SCHISM_KEYSYM_b:
-		if (k.State == KeyState.Release)
-			return 1;
-		if (!SELECTION_EXISTS) {
-			selection.LastChannel = _currentChannel;
-			selection.LastRow = _currentRow;
-		}
-		selection.FirstChannel = _currentChannel;
-		selection.FirstRow = _currentRow;
-		normalise_block_selection();
-LastRow;
-	case SCHISM_KEYSYM_e:
-	totalRows (k->state == KeyState.Release)
-			return 1;
-		if (!SELECTION_EXISTS) {
-			selection.FirstChannel = _currentChannel;
-			selection.FirstRow = _currentRow;
-		}
-		selection.LastRow = _currentChannel;
-	totalRows.LastRow = _currentRow;
-		normalise_block_selection();
-		break;
-	case SCHISM_KEYSYM_d:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_d) {
-			if (total_rows - (_currentRow - 1) > block_double_size)
-				block_double_size <<= 1;
-		} else {
-			// emulate some weird impulse tracker behavior here:
-			// with row highlight set to zero, alt-d selects the whole channel
-			block_double_size = Song.CurrentSong->row_highlight_major ? Song.CurrentSong->row_highlight_major : (_currentRow ? 0 : 65536);
-			selection.FirstChannel = selection.LastChannel = _currentChannel;
-			selection.FirstRow = _currentRow;
-		}
-		n LastRow block_double_size + cutotalRows - 1;
-		selection.LastRow = MIN(n, total_rows);
-		break;
-	case SCHISM_KEYSYM_l:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_l) {
-			/* 3x alt-l re-selects the current channel */
-			if (selection.FirstChannel == selection.LastChannel) {
-				selection.FirstChannel = 1;
-				selection.LastChannel = 64;
-			} else {
-				selection.FirstChannel = selection.LastChannel = _currentChannel;
-			}
-		} else {
-			selection.FirstChannel = selection.LastChannel = _currentChannel;
-			selection.FirstRow = 0;
-			selection.LastRow LastRow total_rows;
-		totalRows
-		PatternSelectionSystemCopyOut();
-		break;
-	case SCHISM_KEYSYM_r:
-		if (k->state == KeyState.Release)
-			return 1;
-		_drawDivisions = 1;
-		set_view_scheme(0);
-		break;
-	case SCHISM_KEYSYM_s:
-		if (k->state == KeyState.Release)
-			return 1;
-		selection_set_sample();
-		break;
-	case SCHISM_KEYSYM_u:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (SELECTION_EXISTS) {
-			selection_clear();
-		} else if (clipboard.data) {
-			clipboard_free();
-
-			clippy_select(NULL, NULL, 0);
-			clippy_yank();
-		} else {
-			dialog_create(DIALOG_OK, "No data in clipboard", NULL, NULL, 0, NULL);
-		}
-		break;
-	case SCHISM_KEYSYM_c:
-		if (k->state == KeyState.Release)
-			return 1;
-		clipboard_copy(0);
-		break;
-	case SCHISM_KEYSYM_o:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_o) {
-			_patternCopyInBehaviour = PATTERN_COPYIN_OVERWRITE_GROW;
-		} else {
-			_patternCopyInBehaviour = PATTERN_COPYIN_OVERWRITE;
-		}
-		Status.Flags |= CLIPPY_PASTE_BUFFER;
-		break;
-	case SCHISM_KEYSYM_p:
-		if (k->state == KeyState.Release)
-			return 1;
-		_patternCopyInBehaviour = PATTERN_COPYIN_INSERT;
-		Status.Flags |= CLIPPY_PASTE_BUFFER;
-		break;
-	case SCHISM_KEYSYM_m:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_m) {
-			_patternCopyInBehaviour = PATTERN_COPYIN_MIX_FIELDS;
-		} else {
-			_patternCopyInBehaviour = PATTERN_COPYIN_MIX_NOTES;
-		}
-		Status.Flags |= CLIPPY_PASTE_BUFFER;
-		break;
-	case SCHISM_KEYSYM_f:
-		if (k->state == KeyState.Release)
-			return 1;
-		block_length_double();
-		break;
-	case SCHISM_KEYSYM_g:
-		if (k->state == KeyState.Release)
-			return 1;
-		block_length_halve();
-		break;
-	case SCHISM_KEYSYM_n:
-		if (k->state == KeyState.Release)
-			return 1;
-		channel_multi[_currentChannel - 1] ^= 1;
-		if (channel_multi[_currentChannel - 1]) {
-			channel_multi_enabled = 1;
-		} else {
-			channel_multi_enabled = 0;
-			for (n = 0; n < 64; n++) {
-				if (channel_multi[n]) {
-					channel_multi_enabled = 1;
-					break;
-				}
-			}
-		}
-
-		if (status.last_keysym == SCHISM_KEYSYM_n) {
-			pattern_editor_display_multichannel();
-		}
-		break;
-	case SCHISM_KEYSYM_z:
-		if (k->state == KeyState.Release)
-			return 1;
-		clipboard_copy(0);
-		selection_erase();
-		break;
-	case SCHISM_KEYSYM_y:
-		if (k->state == KeyState.Release)
-			return 1;
-		selection_swap();
-		break;
-	case SCHISM_KEYSYM_v:
-		if (k->state == KeyState.Release)
-			return 1;
-		selection_set_volume();
-		break;
-	case SCHISM_KEYSYM_w:
-		if (k->state == KeyState.Release)
-			return 1;
-		selection_wipe_volume(0);
-		break;
-	case SCHISM_KEYSYM_k:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_k) {
-			selection_wipe_volume(1);
-		} else {
-			selection_slide_volume();
-		}
-		break;
-	case SCHISM_KEYSYM_x:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (status.last_keysym == SCHISM_KEYSYM_x) {
-			selection_wipe_effect();
-		} else {
-			selection_slide_effect();
-		}
-		break;
-	case SCHISM_KEYSYM_h:
-		if (k->state == KeyState.Release)
-			return 1;
-		_drawDivisions = !_drawDivisions;
-		recalculate_visible_area();
-		Reposition();
-		break;
-	case SCHISM_KEYSYM_q:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-			transpose_notes(12);
-		else
-			transpose_notes(1);
-		break;
-	case SCHISM_KEYSYM_a:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-			transpose_notes(-12);
-		else
-			transpose_notes(-1);
-		break;
-	case SCHISM_KEYSYM_i:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-			_templateMode = TemplateMode.Off;
-		else if (_fastVolumeMode)
-			fast_volume_amplify();
-		else
-			_templateMode = (_templateMode + 1) % TEMPLATE_MODE_MAX; /* cycle */
-		break;
-	case SCHISM_KEYSYM_j:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (_fastVolumeMode)
-			fast_volume_attenuate();
-		else
-			volume_amplify();
-		break;
-	case SCHISM_KEYSYM_t:
-		if (k->state == KeyState.Release)
-			return 1;
-		n = _currentChannel - _topDisplayChannel;
-		_trackViewScheme[n] = ((_trackViewScheme[n] + 1) % TrackViews.Length);
-		recalculate_visible_area();
-		Reposition();
-		break;
-	case SCHISM_KEYSYM_UP:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (_topDisplayRow > 0) {
-			_topDisplayRow--;
-			if (_currentRow > _topDisplayRow + 31)
-				_currentRow = _topDisplayRow + 31;
-			return -1;
-		}
-		return 1;
-	case SCHISM_KEYSYM_DOWN:
-		if (k->state == KeyState.Release)
-			return 1;
-		if (_topDisplayRow + 31 < total_rows) {
-			_topDisplayRow++;
-			if (_currentRow < _topDisplayRow)
-				_currentRow = _topDisplayRow;
-			return -1;
-		}
-		return 1;
-	case SCHISM_KEYSYM_LEFT:
-		if (k->state == KeyState.Release)
-			return 1;
-		_currentChannel--;
-		return -1;
-	case SCHISM_KEYSYM_RIGHT:
-		if (k->state == KeyState.Release)
-			return 1;
-		_currentChannel++;
-		return -1;
-	case SCHISM_KEYSYM_INSERT:
-		if (k->state == KeyState.Release)
-			return 1;
-		Save("Remove inserted row(s)    (Alt-Insert)");
-		pattern_insert_rows(_currentRow, 1, 1, 64);
-		break;
-	case SCHISM_KEYSYM_DELETE:
-		if (k->state == KeyState.Release)
-			return 1;
-		Save("Replace deleted row(s)    (Alt-Delete)");
-		pattern_delete_rows(_currentRow, 1, 1, 64);
-		break;
-	case SCHISM_KEYSYM_F9:
-		if (k->state == KeyState.Release)
-			return 1;
-		song_toggle_channel_mute(_currentChannel - 1);
-		break;
-	case SCHISM_KEYSYM_F10:
-		if (k->state == KeyState.Release)
-			return 1;
-		song_handle_channel_solo(_currentChannel - 1);
-		break;
-	default:
-		return 0;
-	}
-
-	Status.Flags |= StatusFlags.NeedUpdate;
-	return 1;
-}
 
 /* Two atoms are walking down the street, and one of them stops abruptly
  *     and says, "Oh my God, I just lost an electron!"
@@ -3996,7 +4023,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 	if (n > -1) {
 		if (n < 0 || n >= TrackViews.Length)
 			return 0;
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
 			set_view_scheme(n);
@@ -4012,73 +4039,73 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 
 	switch (k.Sym) {
 	case SCHISM_KEYSYM_LEFT:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (_currentChannel > _topDisplayChannel)
 			_currentChannel--;
 		return -1;
 	case SCHISM_KEYSYM_RIGHT:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (_currentChannel < _topDisplayChannel + _visibleChannels - 1)
 			_currentChannel++;
 		return -1;
 	case SCHISM_KEYSYM_F6:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		song_loop_pattern(_currentPattern, _currentRow);
 		return 1;
 	case SCHISM_KEYSYM_F7:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		set_playback_mark();
 		return -1;
 	case SCHISM_KEYSYM_UP:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		set_previous_instrument();
 		Status.Flags |= StatusFlags.NeedUpdate;
 		return 1;
 	case SCHISM_KEYSYM_DOWN:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		set_next_instrument();
 		Status.Flags |= StatusFlags.NeedUpdate;
 		return 1;
 	case SCHISM_KEYSYM_PAGEUP:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		_currentRow = 0;
 		return -1;
 	case SCHISM_KEYSYM_PAGEDOWN:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		_currentRow = total_rows;
 		return -1;
 	case SCHISM_KEYSYM_HOME:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		_currentRow--;
 		return -1;
 	case SCHISM_KEYSYM_END:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		_currentRow++;
 		return -1;
 	case SCHISM_KEYSYM_INSERT:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		selection_roll(ROLL_DOWN);
 		Status.Flags |= StatusFlags.NeedUpdate;
 		return 1;
 	case SCHISM_KEYSYM_DELETE:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		selection_roll(ROLL_UP);
 		Status.Flags |= StatusFlags.NeedUpdate;
 		return 1;
 	case SCHISM_KEYSYM_MINUS:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 			return 1;
@@ -4089,32 +4116,32 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			return 0;
 		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_PLUS:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing)
 			return 1;
 		next_order_pattern();
 		return 1;
 	case SCHISM_KEYSYM_c:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		_centraliseCursor = !_centraliseCursor;
 		Status.FlashText("Centralise cursor %s", (_centraliseCursor ? "enabled" : "disabled"));
 		return -1;
 	case SCHISM_KEYSYM_h:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		_highlightCurrentRow = !_highlightCurrentRow;
 		Status.FlashText("Row hilight %s", (_highlightCurrentRow ? "enabled" : "disabled"));
 		Status.Flags |= StatusFlags.NeedUpdate;
 		return 1;
 	case SCHISM_KEYSYM_j:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		fast_volume_toggle();
 		return 1;
 	case SCHISM_KEYSYM_u:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (_fastVolumeMode)
 			selection_vary(1, 100-_fastVolumePercent, FX_CHANNELVOLUME);
@@ -4123,7 +4150,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		Status.Flags |= StatusFlags.NeedUpdate;
 		return 1;
 	case SCHISM_KEYSYM_y:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (_fastVolumeMode)
 			selection_vary(1, 100-_fastVolumePercent, FX_PANBRELLO);
@@ -4132,7 +4159,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		Status.Flags |= StatusFlags.NeedUpdate;
 		return 1;
 	case SCHISM_KEYSYM_k:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		if (_fastVolumeMode)
 			selection_vary(1, 100-_fastVolumePercent, current_effect());
@@ -4146,20 +4173,20 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 			return 0;
 		/* fall through */
 	case SCHISM_KEYSYM_o:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		song_pattern_to_sample(_currentPattern, !!(k.Modifiers.HasAnyFlag(KeyMod.Shift)), !!(k.Sym == SCHISM_KEYSYM_b));
 		return 1;
 
 	case SCHISM_KEYSYM_v:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		show_default_volumes = !show_default_volumes;
 		Status.FlashText("Default volumes %s", (show_default_volumes ? "enabled" : "disabled"));
 		return 1;
 	case SCHISM_KEYSYM_x:
 	case SCHISM_KEYSYM_z:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		_midiStartRecord++;
 		if (_midiStartRecord > 2) _midiStartRecord = 0;
@@ -4176,7 +4203,7 @@ static int pattern_editor_handle_ctrl_key(struct key_event * k)
 		};
 		return 1;
 	case SCHISM_KEYSYM_BACKSPACE:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		pattern_editor_display_history();
 		return 1;
@@ -4195,7 +4222,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 	/* stupid hack; if we have a note, that's definitely more important than this stuff */
 	if (n < 0 || _currentPosition > 0) {
 		if (k.Sym == SCHISM_KEYSYM_LESS || k.Sym == SCHISM_KEYSYM_COLON || k.Sym == SCHISM_KEYSYM_SEMICOLON) {
-			if (k->state == KeyState.Release)
+			if (k.State == KeyState.Release)
 				return 0;
 			if ((Status.Flags & CLASSIC_MODE) || _currentPosition != 4) {
 				set_previous_instrument();
@@ -4203,7 +4230,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 				return 1;
 			}
 		} else if (k.Sym == SCHISM_KEYSYM_GREATER || k.Sym == SCHISM_KEYSYM_QUOTE || k.Sym == SCHISM_KEYSYM_QUOTEDBL) {
-			if (k->state == KeyState.Release)
+			if (k.State == KeyState.Release)
 				return 0;
 			if ((Status.Flags & CLASSIC_MODE) || _currentPosition != 4) {
 				set_next_instrument();
@@ -4211,7 +4238,7 @@ static int pattern_editor_handle_key_default(struct key_event * k)
 				return 1;
 			}
 		} else if (k.Sym == SCHISM_KEYSYM_COMMA) {
-			if (k->state == KeyState.Release)
+			if (k.State == KeyState.Release)
 				return 0;
 			switch (_currentPosition) {
 			case 2: case 3:
@@ -4245,19 +4272,19 @@ static int pattern_editor_handle_key(struct key_event * k)
 	unsigned int basex;
 
 	if (k->mouse != MOUSE_NONE) {
-		if (k->state == KeyState.Release) {
+		if (k.State == KeyState.Release) {
 			/* mouseup */
 			memset(mute_toggle_hack, 0, sizeof(mute_toggle_hack));
 		}
 
-		if ((k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) && k->state == KeyState.Release) {
+		if ((k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) && k.State == KeyState.Release) {
 			shift_selection_end();
 		}
 
 		if (k->y < 13 && !shift_selection.in_progress) return 0;
 
 		if (k->y >= 15 && k->mouse != MOUSE_CLICK && k->mouse != MOUSE_DBLCLICK) {
-			if (k->state == KeyState.Release)
+			if (k.State == KeyState.Release)
 				return 0;
 			if (k->mouse == MOUSE_SCROLL_UP) {
 				if (_topDisplayRow > 0) {
@@ -4293,7 +4320,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			    && ((n == _visibleChannels && shift_selection.in_progress)
 				|| k->x < basex + track_view->width)) {
 				if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
-					if (k->state == KEY_PRESS) {
+					if (k.State == KeyState.Press) {
 						if (!mute_toggle_hack[n-1]) {
 							song_toggle_channel_mute(n-1);
 							Status.Flags |= StatusFlags.NeedUpdate;
@@ -4380,7 +4407,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		if (nr < 0) nr = 0;
 		_currentPosition = np; _currentChannel = nc; _currentRow = nr;
 
-		if (k->state == KEY_PRESS && k->sy > 14) {
+		if (k.State == KeyState.Press && k->sy > 14) {
 			if (!shift_selection.in_progress) {
 				shift_selection_begin();
 			} else {
@@ -4398,7 +4425,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 
 	switch (k.Sym) {
 	case SCHISM_KEYSYM_UP:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if (_skipValue) {
 			if (_currentRow - _skipValue >= 0)
@@ -4408,7 +4435,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return -1;
 	case SCHISM_KEYSYM_DOWN:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if (_skipValue) {
 			if (_currentRow + _skipValue <= total_rows)
@@ -4418,7 +4445,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return -1;
 	case SCHISM_KEYSYM_LEFT:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
 			_currentChannel--;
@@ -4430,7 +4457,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return -1;
 	case SCHISM_KEYSYM_RIGHT:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
 			_currentChannel++;
@@ -4441,7 +4468,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return -1;
 	case SCHISM_KEYSYM_TAB:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if ((k.Modifiers.HasAnyFlag(KeyMod.Shift)) == 0)
 			_currentChannel++;
@@ -4451,11 +4478,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 
 		/* hack to keep shift-tab from changing the selection */
 		k.Modifiers &= ~KeyMod.Shift;
-		shift_selection_end();
+		ShiftSelectionEnd();
 
 		return -1;
 	case SCHISM_KEYSYM_PAGEUP:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 			int rh = Song.CurrentSong->row_highlight_major ? Song.CurrentSong->row_highlight_major : 16;
 			if (_currentRow == total_rows)
@@ -4465,11 +4492,11 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return -1;
 	case SCHISM_KEYSYM_PAGEDOWN:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 		_currentRow += Song.CurrentSong->row_highlight_major ? Song.CurrentSong->row_highlight_major : 16;
 		return -1;
 	case SCHISM_KEYSYM_HOME:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if (_currentPosition == 0) {
 			if (invert_home_end ? (_currentRow != 0) : (_currentChannel == 1)) {
@@ -4482,9 +4509,9 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return -1;
 	case SCHISM_KEYSYM_END:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
-		n = song_find_LastChannel();
+		n = Song.CurrentSong.FindLastChannel() + 1;
 		if (_currentPosition == 8) {
 			if (invert_home_end ? (_currentRow != total_rows) : (_currentChannel == n)) {
 				_currentRow = total_rows;
@@ -4496,7 +4523,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		return -1;
 	case SCHISM_KEYSYM_INSERT:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
@@ -4509,7 +4536,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_DELETE:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		if (template_mode && clipboard.rows == 1) {
 			n = clipboard.channels;
@@ -4522,7 +4549,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		}
 		break;
 	case SCHISM_KEYSYM_MINUS:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 
 		if (playback_tracing) {
@@ -4547,7 +4574,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			return 0;
 		SCHISM_FALLTHROUGH;
 	case SCHISM_KEYSYM_PLUS:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 
 		if (playback_tracing) {
@@ -4568,7 +4595,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			set_current_pattern(current_pattern + 1);
 		return 1;
 	case SCHISM_KEYSYM_BACKSPACE:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		_currentChannel = multichannel_get_previous (_currentChannel);
 		if (_skipValue)
@@ -4577,7 +4604,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 			_currentRow--;
 		return -1;
 	case SCHISM_KEYSYM_RETURN:
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 0;
 		copy_note_to_mask();
 		if (template_mode != TEMPLATE_NOTES_ONLY)
@@ -4586,7 +4613,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 	case SCHISM_KEYSYM_l:
 		if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
 			if (Status.Flags & CLASSIC_MODE) return 0;
-			if (k->state == KeyState.Release)
+			if (k.State == KeyState.Release)
 				return 1;
 			clipboard_copy(1);
 			break;
@@ -4594,7 +4621,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		return pattern_editor_handle_key_default(k);
 	case SCHISM_KEYSYM_a:
 		if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !(Status.Flags & CLASSIC_MODE)) {
-			if (k->state == KeyState.Release) {
+			if (k.State == KeyState.Release) {
 				return 0;
 			}
 			if (_currentRow == 0) {
@@ -4608,7 +4635,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 		return pattern_editor_handle_key_default(k);
 	case SCHISM_KEYSYM_f:
 		if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !(Status.Flags & CLASSIC_MODE)) {
-			if (k->state == KeyState.Release) {
+			if (k.State == KeyState.Release) {
 				return 0;
 			}
 			if (_currentRow == total_rows) {
@@ -4623,7 +4650,7 @@ static int pattern_editor_handle_key(struct key_event * k)
 
 	case SCHISM_KEYSYM_LSHIFT:
 	case SCHISM_KEYSYM_RSHIFT:
-		if (k->state == KEY_PRESS) {
+		if (k.State == KeyState.Press) {
 			if (shift_selection.in_progress)
 				shift_selection_end();
 		} else if (shift_chord_channels) {
@@ -4663,7 +4690,7 @@ static int pattern_editor_handle_key_cb(struct key_event * k)
 		case SCHISM_KEYSYM_END:
 		case SCHISM_KEYSYM_PAGEUP:
 		case SCHISM_KEYSYM_PAGEDOWN:
-			if (k->state == KeyState.Release)
+			if (k.State == KeyState.Release)
 				return 0;
 			if (!shift_selection.in_progress)
 				shift_selection_begin();
@@ -4751,7 +4778,7 @@ static int _fix_f7(struct key_event *k)
 {
 	if (k.Sym == SCHISM_KEYSYM_F7) {
 		if (!NO_MODIFIER(k.Modifiers)) return 0;
-		if (k->state == KeyState.Release)
+		if (k.State == KeyState.Release)
 			return 1;
 		play_song_from_mark();
 		return 1;

@@ -7,6 +7,7 @@ public class Constants
 	public const int MouseScrollLines = 3;
 	public const int MaxPatterns = 240;
 	public const int MaxChannels = 64;
+	public const int MaxVoices = 256;
 	public const int MaxSamples = 236;
 	public const int MaxInstruments = 236;
 	public const int DefaultPatternLength = 64;

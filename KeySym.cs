@@ -126,7 +126,7 @@ public enum KeySym
 	KP_8 = ScanCodeMask | ScanCode.KP_8,
 	KP_9 = ScanCodeMask | ScanCode.KP_9,
 	KP_0 = ScanCodeMask | ScanCode.KP_0,
-	KP_period = ScanCodeMask | ScanCode.KP_Period,
+	KP_Period = ScanCodeMask | ScanCode.KP_Period,
 
 	Application = ScanCodeMask | ScanCode.Application,
 	Power = ScanCodeMask | ScanCode.Power,

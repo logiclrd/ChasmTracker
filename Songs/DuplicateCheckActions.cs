@@ -1,6 +1,6 @@
 namespace ChasmTracker.Songs;
 
-public enum DulpicateCheckActions
+public enum DuplicateCheckActions
 {
 	NoteCut = 0,
 	NoteOff = 1,

@@ -121,7 +121,7 @@ public abstract class Page
 
 	public PageMiniPopSlideDialog ShowMiniPop(int currentValue, string name, int min, int max, Point mid)
 	{
-		var miniPopDialog = new PageMiniPopSlideDialog(currentValue, name, min, max, mid);
+		var miniPopDialog = Dialog.Show(new PageMiniPopSlideDialog(currentValue, name, min, max, mid));
 
 		miniPopDialog.MiniPopUsed +=
 			() => { MiniPopActive = MiniPopState.ActiveUsed; };
@@ -879,7 +879,7 @@ public abstract class Page
 			if (k.State == KeyState.Release)
 				return true;
 
-			Song.CurrentSong?.ToggleChannelMute(i);
+			Song.CurrentSong.ToggleChannelMute(i);
 			Status.Flags |= StatusFlags.NeedUpdate;
 			return true;
 		}

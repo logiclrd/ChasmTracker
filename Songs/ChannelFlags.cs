@@ -18,8 +18,8 @@ public enum ChannelFlags
 	NoteFade            = 0x400, // fade note (~~~ or end of instrument envelope)
 	Surround            = 0x800, // use surround channel (S91)
 	// XXX What does IDO stand for??
-	NoIDO               = 0x1000 // near enough to an exact multiple of c5speed that interpolation
-	                             // won't be noticeable (or interpolation is disabled completely)
+	NoIDO               = 0x1000, // near enough to an exact multiple of c5speed that interpolation
+	                              // won't be noticeable (or interpolation is disabled completely)
 	HQSource            = 0x2000, // ???
 	Filter              = 0x4000, // filtered output (i.e., Zxx)
 	VolumeRamp          = 0x8000, // ramp volume
@@ -29,7 +29,7 @@ public enum ChannelFlags
 	Portamento          = 0x80000, // apply portamento
 	Glissando           = 0x100000, // glissando mode ("stepped" pitch slides)
 	VolumeEnvelope      = 0x200000, // volume envelope is active
-	PanEnvelope         = 0x400000, // pan envelope is active
+	PanningEnvelope     = 0x400000, // pan envelope is active
 	PitchEnvelope       = 0x800000, // pitch/filter envelope is active
 	FastVolumeRamp      = 0x1000000, // ramp volume very fast (XXX this is a dumb flag)
 	NewNote             = 0x2000000, // note was triggered, reset filter

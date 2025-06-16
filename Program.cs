@@ -490,9 +490,9 @@ public class Program
 			*/
 		}
 
-		Song.LockAudio();
+		AudioPlayback.LockAudio();
 		Song.StopUnlocked(true);
-		Song.UnlockAudio();
+		AudioPlayback.UnlockAudio();
 
 		MIDIEngine.Stop();
 

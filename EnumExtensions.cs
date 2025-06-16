@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.ComponentModel;
-using System.Net.Http.Headers;
+using System.Linq;
 using System.Reflection;
 
 public static class EnumExtensions
@@ -23,5 +24,32 @@ public static class EnumExtensions
 		}
 
 		return value.ToString();
+	}
+
+	static ConcurrentDictionary<Type, object> s_loopBackAtValues = new ConcurrentDictionary<Type, object>();
+
+	static T FindLoopBackAtValue<T>()
+		where T : struct, Enum
+	{
+		return (T)(object)(1 + Enum.GetValuesAsUnderlyingType<T>().OfType<int>().Max());
+	}
+
+	public static T Cycle<T>(this T value)
+		where T : struct, Enum
+	{
+		var loopBackAtValue = (T)s_loopBackAtValues.GetOrAdd(typeof(T), FindLoopBackAtValue<T>());
+
+		return Cycle(value, loopBackAtValue);
+	}
+
+	public static T Cycle<T>(this T value, T loopBackAtValue)
+		where T : struct, Enum
+	{
+		int iValue = (int)(object)value;
+		int iLoopBackAt = (int)(object)loopBackAtValue;
+
+		iValue = (iValue + 1) % iLoopBackAt;
+
+		return (T)(object)iValue;
 	}
 }

@@ -90,7 +90,7 @@ public struct KeyEvent
 			if (!Modifiers.HasAnyFlag(KeyMod.ControlAlt))
 				return -1;
 
-			if (Sym == KeySym.KP_1 || k->sym == KeySym.KP_period)
+			if (Sym == KeySym.KP_1 || k->sym == KeySym.KP_Period)
 			{
 				if (!Modifiers.HasFlag(KeyMod.Num))
 					return -1;
@@ -154,6 +154,87 @@ public struct KeyEvent
 
 			return note.Clamp(1, 120);
 		}
+	}
+
+	Effects? EffectValue
+	{
+		get
+		{
+			if (Modifiers.HasAnyFlag(KeyMod.ControlAlt))
+				return null;
+
+			switch (Sym)
+			{
+				case KeySym.b: return Keyboard.GetEffectByCharacter('b');
+				case KeySym.a: return Keyboard.GetEffectByCharacter('a');
+				case KeySym.c: return Keyboard.GetEffectByCharacter('c');
+				case KeySym.d: return Keyboard.GetEffectByCharacter('d');
+				case KeySym.e: return Keyboard.GetEffectByCharacter('e');
+				case KeySym.f: return Keyboard.GetEffectByCharacter('f');
+				case KeySym.g: return Keyboard.GetEffectByCharacter('g');
+				case KeySym.h: return Keyboard.GetEffectByCharacter('h');
+				case KeySym.i: return Keyboard.GetEffectByCharacter('i');
+				case KeySym.j: return Keyboard.GetEffectByCharacter('j');
+				case KeySym.k: return Keyboard.GetEffectByCharacter('k');
+				case KeySym.l: return Keyboard.GetEffectByCharacter('l');
+				case KeySym.m: return Keyboard.GetEffectByCharacter('m');
+				case KeySym.n: return Keyboard.GetEffectByCharacter('n');
+				case KeySym.o: return Keyboard.GetEffectByCharacter('o');
+				case KeySym.p: return Keyboard.GetEffectByCharacter('p');
+				case KeySym.q: return Keyboard.GetEffectByCharacter('q');
+				case KeySym.r: return Keyboard.GetEffectByCharacter('r');
+				case KeySym.s: return Keyboard.GetEffectByCharacter('s');
+				case KeySym.t: return Keyboard.GetEffectByCharacter('t');
+				case KeySym.u: return Keyboard.GetEffectByCharacter('u');
+				case KeySym.v: return Keyboard.GetEffectByCharacter('v');
+				case KeySym.w: return Keyboard.GetEffectByCharacter('w');
+				case KeySym.x: return Keyboard.GetEffectByCharacter('x');
+				case KeySym.y: return Keyboard.GetEffectByCharacter('y');
+				case KeySym.z: return Keyboard.GetEffectByCharacter('z');
+
+				case KeySym.Period:
+				case KeySym.KP_Period:
+					return Keyboard.GetEffectByCharacter('.');
+				case KeySym._1:
+					if (!Modifiers.HasAnyFlag(KeyMod.Shift))
+						return null;
+					goto case KeySym.Exclaim;
+				case KeySym.Exclaim:
+					return Keyboard.GetEffectByCharacter('!');
+				case KeySym._4:
+					if (!Modifiers.HasAnyFlag(KeyMod.Shift))
+						return null;
+					goto case KeySym.Dollar;
+				case KeySym.Dollar:
+					return Keyboard.GetEffectByCharacter('$');
+				case KeySym._7:
+					if (!Modifiers.HasAnyFlag(KeyMod.Shift))
+						return null;
+					goto case KeySym.Ampersand;
+				case KeySym.Ampersand:
+					return Keyboard.GetEffectByCharacter('&');
+
+				default:
+					return null;
+			}
+		}
+	}
+
+	public int NumericValue(bool kpOnly)
+	{
+		if (Sym == KeySym.KP_0)
+			return 0;
+
+		if ((Sym >= KeySym.KP_1) && (Sym <= KeySym.KP_9))
+			return Sym - KeySym.KP_1 + 1;
+
+		if (!kpOnly)
+		{
+			if ((Sym >= KeySym._0) && (Sym <= KeySym._9))
+				return Sym - KeySym._0;
+		}
+
+		return -1;
 	}
 
 	public void Reset(Point startPosition)

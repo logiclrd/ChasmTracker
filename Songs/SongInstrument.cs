@@ -5,7 +5,7 @@ namespace ChasmTracker.Songs;
 public class SongInstrument
 {
 	public int FadeOut;
-	public SampleFlags Flags;
+	public InstrumentFlags Flags;
 	public int GlobalVolume;
 	public int Panning;
 	public byte[] SampleMap = new byte[128];
@@ -15,8 +15,8 @@ public class SongInstrument
 	public Envelope? PitchEnvelope;
 	public NewNoteActions NewNoteAction;
 	public DuplicateCheckTypes DuplicateCheckTypes;
-	public DulpicateCheckActions DulpicateCheckActions;
-	public int PanSwing;
+	public DuplicateCheckActions DuplicateCheckActions;
+	public int PanningSwing;
 	public int VolumeSwing;
 	public int IFCutoff;
 	public int IFResonance;

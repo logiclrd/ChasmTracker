@@ -2,6 +2,8 @@ using System;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Songs;
+
 public class Keyboard
 {
 	/* emulate SDL 1.2 style key repeat */
@@ -83,6 +85,16 @@ public class Keyboard
 
 		return unchecked((byte)PTMEffects.IndexOf(effect));
 	}
+
+	public static Effects? GetPTMEffectByCharacter(char effect)
+	{
+		var number = GetPTMEffectNumber(effect);
+
+		if ((number == byte.MaxValue) || (effect == '?'))
+			return Songs.Effects.None;
+		else
+			return (Effects)number;
+	}
 	
 	const string Effects = ".JFEGHLKRXODB!CQATI?SMNVW$UY?P&Z()?";
 
@@ -102,5 +114,15 @@ public class Keyboard
 		}
 
 		return unchecked((byte)Effects.IndexOf(effect));
+	}
+
+	public static Effects? GetEffectByCharacter(char effect)
+	{
+		var number = GetEffectNumber(effect);
+
+		if ((number == byte.MaxValue) || (effect == '?'))
+			return Songs.Effects.None;
+		else
+			return (Effects)number;
 	}
 }
