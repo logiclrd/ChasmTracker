@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.Metrics;
 using System.Net.NetworkInformation;
 
@@ -13,7 +14,7 @@ public struct SongNote
 	public byte Parameter;
 
 	public bool IsBlank
-		=> (Note | Instrument | VolumeEffectByte | VolumeParameter | Effect | Parameter) == 0;
+		=> (Note | Instrument | VolumeEffectByte | VolumeParameter | EffectByte | Parameter) == 0;
 
 	public void SetNoteNote(int a, int b)
 	{
@@ -178,7 +179,7 @@ public struct SongNote
 		{
 			const string Commands = "...CDAB$H<>GFE";
 
-			if (VolumeEffect > 13)
+			if (VolumeEffectByte > 13)
 			{
 				Log.Append(4, "get_volume_string: volume effect {0} out of range", VolumeEffect);
 				return "??";
@@ -210,13 +211,13 @@ public struct SongNote
 	{
 		get
 		{
-			if (Effect > 34)
+			if (EffectByte > 34)
 			{
 				Log.Append(4, "get_effect_char: effect {0} out of range", Effect);
 				return '?';
 			}
 
-			return EffectChars[Effect];
+			return EffectChars[EffectByte];
 		}
 	}
 
@@ -257,5 +258,65 @@ public struct SongNote
 	public static bool IsInvalid(int note)
 	{
 		return (note > SpecialNotes.Last) && (note < SpecialNotes.NoteCut) && (note != SpecialNotes.NoteFade); // ???
+	}
+
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* note/freq conversion functions */
+
+	public static int NoteFromFrequency(int frequency, int c5speed = 8363)
+	{
+		int n;
+
+		if (frequency == 0)
+			return 0;
+
+		n = 1;
+
+		int cFrequency = FrequencyFromNote(n, c5speed);
+
+		while (cFrequency + cFrequency < frequency)
+		{
+			cFrequency += cFrequency;
+			n += 12;
+		}
+
+		for (; n <= 120; n++)
+		{
+			/* Essentially, this is just doing a note_to_frequency(n, 8363), but with less
+			computation since there's no c5speed to deal with. */
+			if (frequency <= FrequencyFromNote(n + 1, c5speed))
+				return n + 1;
+		}
+
+		return 120;
+	}
+
+	public static int FrequencyFromNote(int note, int c5speed = 8363)
+	{
+		if ((note == 0) || (note > 0xF0))
+			return 0;
+
+		note--;
+
+		long product = c5speed * (long)Tables.LinearSlideUpTable[(note % 12) * 16];
+
+		product <<= note / 12;
+
+		return (int)(product >> 21);
+	}
+
+	public static int TransposeToFrequency(int transp, int ftune)
+	{
+		return (int)(8363.0 * Math.Pow(2.0, (transp * 128.0 + ftune) / 1536.0));
+	}
+
+	public static int FrequencyToTranspose(int freq)
+	{
+		return (int)(1536.0 * (Math.Log(freq / 8363.0) / Math.Log(2)));
+	}
+
+	public static int CalculateHalfTone(int hz, int rel)
+	{
+		return (int)Math.Round(Math.Pow(2.0, rel / 12.0) * hz);
 	}
 }

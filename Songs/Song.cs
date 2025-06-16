@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using System.Reflection;
+using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 
@@ -229,14 +230,76 @@ public class Song
 
 	// ------------------------------------------------------------------------------------------------------------
 
-	SongSample? TranslateKeyboard(SongInstrument penv, int note, SongSample? def)
+	SongSample? TranslateKeyboard(SongInstrument pEnv, int note, SongSample? def)
 	{
-		int n = penv.SampleMap[note - 1];
+		int n = pEnv.SampleMap[note - 1];
 
 		if ((n > 0) && (n < Constants.MaxSamples))
 			return Samples[n];
 		else
 			return def;
+	}
+
+	public int GetNNAChannel(int nchan)
+	{
+		ref var chan = ref Voices[nchan];
+
+		// Check for empty channel
+		for (int i = Constants.MaxChannels; i < Constants.MaxVoices; i++)
+		{
+			ref var pi = ref Voices[i];
+
+			if (pi.Length == 0)
+			{
+				if (pi.IsMuted)
+				{
+					if (pi.Flags.HasFlag(ChannelFlags.NNAMute))
+						pi.Flags &= ~(ChannelFlags.NNAMute | ChannelFlags.Mute);
+					else
+						continue; /* this channel is muted; skip */
+				}
+
+				return i;
+			}
+		}
+
+		if (chan.FadeOutVolume == 0)
+			return 0;
+
+		// All channels are used: check for lowest volume
+		int result = 0;
+		int vol = 64 * 655356; // 25%
+		int envPos = 0xFFFFFF;
+
+		for (int j = Constants.MaxChannels; j < Constants.MaxVoices; j++)
+		{
+			ref var pj = ref Voices[j];
+
+			if (pj.FadeOutVolume == 0)
+				return j;
+
+			int v = pj.Volume;
+
+			if (pj.Flags.HasFlag(ChannelFlags.NoteFade))
+				v = v * pj.FadeOutVolume;
+			else
+				v <<= 16;
+
+			if (pj.Flags.HasFlag(ChannelFlags.Loop))
+				v >>= 1;
+
+			if ((v < vol) || (v == vol && pj.VolumeEnvelopePosition > envPos))
+			{
+				envPos = pj.VolumeEnvelopePosition;
+				vol = v;
+				result = j;
+			}
+		}
+
+		if (result != 0) /* unmute new nna channel */
+			Voices[result].Flags &= ~(ChannelFlags.Mute | ChannelFlags.NNAMute);
+
+		return result;
 	}
 
 	void CheckNNA(int nchan, int instr, int note, bool forceCut)
@@ -272,7 +335,7 @@ public class Song
 
 			// Cut the note
 			p.FadeOutVolume = 0;
-			p.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolRamp;
+			p.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
 
 			// Stop this channel
 			chan.Length = chan.Position = chan.PositionFrac = 0;
@@ -340,8 +403,9 @@ public class Song
 				continue;
 
 			bool applyDNA = false;
+
 			// Duplicate Check Type
-			switch (p.Instrument.DuplicateCheckTypes)
+			switch (p.Instrument?.DuplicateCheckTypes)
 			{
 				case DuplicateCheckTypes.Note:
 					applyDNA = (SongNote.IsNote(note) && (p.Note == note) && (instrument == p.Instrument));
@@ -357,7 +421,7 @@ public class Song
 			// Duplicate Note Action
 			if (applyDNA)
 			{
-				switch (p.Instrument.DuplicateCheckActions)
+				switch (p.Instrument?.DuplicateCheckActions)
 				{
 					case DuplicateCheckActions.NoteCut:
 						// TODO: fx_key_off(csf, i);
@@ -435,6 +499,177 @@ public class Song
 				chan.Length = chan.Position = chan.PositionFrac = 0;
 				chan.ROfs = chan.LOfs = 0;
 			}
+		}
+	}
+
+	// have_inst is a hack to ignore the note-sample map when no instrument number is present
+	public void NoteChange(int nchan, int note, bool porta, bool retrigger, bool haveInstrument)
+	{
+		// why would NoteChange ever get a negative value for 'note'?
+		if (note == SpecialNotes.None || note < 0)
+			return;
+
+		// save the note that's actually used, as it's necessary to properly calculate PPS and stuff
+		// (and also needed for correct display of note dots)
+		int trueNote = note;
+
+		ref var chan = ref Voices[nchan];
+
+		var pIns = chan.Sample;
+
+		var pEnv = IsInstrumentMode ? chan.Instrument : null;
+
+		if ((pEnv != null) && SongNote.IsNote(note))
+		{
+			if (pEnv.SampleMap[note - 1] == 0)
+				return;
+
+			if (!(haveInstrument && porta && (pIns != null)))
+				pIns = TranslateKeyboard(pEnv, note, pIns);
+
+			note = pEnv.NoteMap[note - 1];
+		}
+
+		if (SongNote.IsControl(note))
+		{
+			// hax: keep random sample numbers from triggering notes (see csf_instrument_change)
+			// NOTE_OFF is a completely arbitrary choice - this could be anything above NOTE_LAST
+			chan.NewNote = SpecialNotes.NoteOff;
+
+			switch (note)
+			{
+				case SpecialNotes.NoteOff:
+					// TODO: fx_key_off(csf, nchan);
+					if (!porta && Flags.HasFlag(SongFlags.ITOldEffects) && (chan.RowInstrumentNumber != 0))
+						chan.Flags &= ~(ChannelFlags.NoteFade | ChannelFlags.KeyOff);
+					break;
+				case SpecialNotes.NoteCut:
+					// TODO: fx_note_cut(csf, nchan, 1);
+					break;
+				case SpecialNotes.NoteFade:
+				default: // Impulse Tracker handles all unknown notes as fade internally
+					if (IsInstrumentMode)
+						chan.Flags |= ChannelFlags.NoteFade;
+					break;
+			}
+
+			return;
+		}
+
+		if (pIns == null)
+			return;
+
+		if (!porta)
+			chan.C5Speed = pIns.C5Speed;
+
+		if (porta && (chan.Increment == 0))
+			porta = false;
+
+		note = note.Clamp(SpecialNotes.First, SpecialNotes.Last);
+		chan.Note = trueNote.Clamp(SpecialNotes.First, SpecialNotes.Last);
+		chan.NewInstrumentNumber = 0;
+		int frequency = SongNote.FrequencyFromNote(note, chan.C5Speed);
+		chan.PanbrelloDelta = 0;
+
+		if (frequency != 0)
+		{
+			if (porta && (chan.Frequency != 0))
+				chan.PortamentoTarget = frequency;
+			else
+			{
+				chan.PortamentoTarget = 0;
+				chan.Frequency = frequency;
+			}
+
+			if (!porta || (chan.Length == 0))
+			{
+				chan.Sample = pIns;
+				chan.CurrentSampleData = pIns.Data;
+				chan.Length = pIns.Length;
+				chan.LoopEnd = pIns.Length;
+				chan.LoopStart = 0;
+				chan.Flags = (chan.Flags & ~ChannelFlags.SampleFlags) | (pIns.Flags & ChannelFlags.SampleFlags);
+
+				if (chan.Flags.HasFlag(ChannelFlags.SustainLoop))
+				{
+					chan.LoopStart = pIns.SustainStart;
+					chan.LoopEnd = pIns.SustainEnd;
+					chan.Flags &= ~ChannelFlags.PingPongFlag;
+					chan.Flags |= ChannelFlags.Loop;
+
+					if (chan.Flags.HasFlag(ChannelFlags.PingPongSustain)) chan.Flags |= ChannelFlags.PingPongLoop;
+					if (chan.Length > chan.LoopEnd) chan.Length = chan.LoopEnd;
+				}
+				else if (chan.Flags.HasFlag(ChannelFlags.Loop))
+				{
+					chan.LoopStart = pIns.LoopStart;
+					chan.LoopEnd = pIns.LoopEnd;
+					if (chan.Length > chan.LoopEnd) chan.Length = chan.LoopEnd;
+				}
+				chan.Position = chan.PositionFrac = 0;
+			}
+
+			if (chan.Position >= chan.Length)
+				chan.Position = chan.LoopStart;
+		}
+		else
+			porta = false;
+
+		if ((pEnv != null) && pEnv.Flags.HasFlag(InstrumentFlags.SetPanning))
+			SetInstrumentPanning(chan, pEnv!.Panning);
+		else if (pIns.Flags.HasFlag(SampleFlags.Panning))
+			SetInstrumentPanning(chan, pIns.Panning);
+
+		// Pitch/Pan separation
+		if ((pEnv != null) && (pEnv.PitchPanSeparation != 0))
+		{
+			if (chan.ChannelPanning == 0)
+				chan.ChannelPanning = (short)(chan.Panning + 1);
+
+			// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
+			// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
+			int delta = (int)(chan.Note - pEnv.PitchPanCenter - SpecialNotes.First) * pEnv.PitchPanSeparation / 2;
+			chan.Panning = (chan.Panning + delta).Clamp(0, 256);
+		}
+
+		if ((pEnv != null) && porta)
+			chan.NewNoteAction = pEnv.NewNoteAction;
+
+		if (!porta)
+		{
+			if (pEnv != null) chan.NewNoteAction = pEnv.NewNoteAction;
+			Envelope.Reset(chan, 0);
+		}
+
+		/* OpenMPT test cases Off-Porta.it, Off-Porta-CompatGxx.it */
+		if (!(porta && (!Flags.HasFlag(SongFlags.CompatibleGXX) || (chan.RowInstrumentNumber == 0))))
+			chan.Flags &= ~ChannelFlags.KeyOff;
+
+		// Enable Ramping
+		if (!porta) {
+			//chan.VUMeter = 0x0;
+			chan.Strike = 4; /* this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows) */
+			chan.Flags &= ~ChannelFlags.Filter;
+			chan.Flags |= ChannelFlags.FastVolumeRamp | ChannelFlags.NewNote;
+			if (!retrigger)
+			{
+				chan.AutoVibratoDepth = 0;
+				chan.AutoVibratoPosition = 0;
+				chan.VibratoPosition = 0;
+			}
+
+			chan.LeftVolume = chan.RightVolume = 0;
+
+			// Setup Initial Filter for this note
+			if (pEnv != null)
+			{
+				if ((pEnv.IFResonance & 0x80) != 0)
+					chan.Resonance = pEnv.IFResonance & 0x7F;
+				if ((pEnv.IFCutoff & 0x80) != 0)
+					chan.Cutoff = pEnv.IFCutoff & 0x7F;
+			}
+			else
+				chan.VolumeSwing = chan.PanningSwing = 0;
 		}
 	}
 
@@ -563,7 +798,7 @@ public class Song
 
 				i.IsPlayed = true;
 
-				if (Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) && (i != null))
+				if (Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
 				{
 					if (i.MIDIChannelMask != 0)
 					{
@@ -608,9 +843,9 @@ public class Song
 				c.InstrumentVolume = (c.InstrumentVolume * i.GlobalVolume) >> 7;
 			c.GlobalVolume = 64;
 			// use the sample's panning if it's set, or use the default
-			c.ChannelPanning = (ushort)(c.Panning + 1);
+			c.ChannelPanning = (short)(c.Panning + 1);
 			if (c.Flags.HasFlag(ChannelFlags.Surround))
-				c.ChannelPanning |= 0x8000;
+				c.ChannelPanning = (short)(c.ChannelPanning | 0x8000);
 
 			c.Panning = s.Flags.HasFlag(SampleFlags.Panning) ? s.Panning : 128;
 			if (i != null)
@@ -631,7 +866,7 @@ public class Song
 		if (c.Increment < 0)
 			c.Increment = -c.Increment; // lousy hack
 
-		NoteChange(chanInternal, note, 0, 0, 1);
+		CurrentSong.NoteChange(chanInternal, note, false, false, true);
 
 		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) && (i != null))
 		{

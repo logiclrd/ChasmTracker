@@ -1,3 +1,5 @@
+using System;
+
 namespace ChasmTracker.Songs;
 
 public class SongSample
@@ -26,4 +28,6 @@ public class SongSample
 	public int SavedGlobalVolume; // for muting individual samples
 
 	public byte[]? AdlibBytes;
+
+	public Array? Data => Flags.HasFlag(SampleFlags._16Bit) ? Data16 : Data8;
 }

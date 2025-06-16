@@ -9,20 +9,20 @@ namespace ChasmTracker.Songs;
 public struct SongVoice
 {
 	// First 32-bytes: Most used mixing information: don't change it
-	public Array CurrentSampleData;
-	public uint Position; // sample position, fixed-point -- integer part
-	public uint PositionFrac; // fractional part
+	public Array? CurrentSampleData;
+	public int Position; // sample position, fixed-point -- integer part
+	public int PositionFrac; // fractional part
 	public int Increment; // 16.16 fixed point, how much to add to position per sample-frame of output
 	public int RightVolume; // volume of the left channel
 	public int LeftVolume; // volume of the right channel
 	public int RightRamp; // amount to ramp the left channel
 	public int LeftRamp; // amount to ramp the right channel
 											 // 2nd cache line
-	public uint Length; // only to the end of the loop
+	public int Length; // only to the end of the loop
 	public ChannelFlags Flags;
 	public ChannelFlags OldFlags;
-	public uint LoopStart; // loop or sustain, whichever is active
-	public uint LoopEnd;
+	public int LoopStart; // loop or sustain, whichever is active
+	public int LoopEnd;
 	public int RightRampVolume; // ?
 	public int LeftRampVolume; // ?
 	public int Strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)
@@ -58,19 +58,19 @@ public struct SongVoice
 	// FIXME: Here instrumentVolume means the value calculated from sample global volume and instrument global volume.
 	//  And we miss a value for "running envelope volume" for the pageInfo
 	public int InstrumentVolume;
-	public int AutoVibDepth;
-	public uint AutoVibPosition, VibratoPosition, TremoloPosition, PanbrelloPosition;
+	public int AutoVibratoDepth;
+	public uint AutoVibratoPosition, VibratoPosition, TremoloPosition, PanbrelloPosition;
 	// 16-bit members
 
 	// these were `int', so I'm keeping them as `int'.
 	//   - paper
 	public int VolumeSwing, PanningSwing;
-	public ushort ChannelPanning;
+	public short ChannelPanning;
 
 	// formally 8-bit members
-	public uint Note; // the note that's playing
+	public int Note; // the note that's playing
 	public NewNoteActions NewNoteAction;
-	public int NewNote, NewInstrument; // ?
+	public int NewNote, NewInstrumentNumber; // ?
 																			// Effect memory and handling
 	public uint NCommand; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
 	public uint MemVcVolslide; // Ax Bx Cx Dx (volume column)
@@ -101,8 +101,9 @@ public struct SongVoice
 	public uint PatloopRow; // row number that SB0 was on
 	public uint CountdownPatloop; // countdown: pattern loops back when this hits zero
 
-	public uint RowNote, RowInstr;
-	public uint RowVoleffect, RowVolparam;
+	public uint RowNote, RowInstrumentNumber;
+	public VolumeEffects RowVolumeEffect;
+	public int RowVolparam;
 	public Effects RowEffect;
 	public int RowParam;
 	public int ActiveMacro, LastInstrument;
