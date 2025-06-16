@@ -224,7 +224,7 @@ public abstract class Page
 					&& (Status.CurrentPage is OrderListPage)))
 					instrumentMode = false;
 				else
-					instrumentMode = Song.CurrentSong?.Flags.HasFlag(SongFlags.InstrumentMode) ?? false;
+					instrumentMode = Song.CurrentSong.IsInstrumentMode;
 
 				if (instrumentMode)
 				{

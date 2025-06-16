@@ -9,7 +9,7 @@ public struct SongNote
 	public byte Instrument;
 	public byte VolumeEffectByte;
 	public byte VolumeParameter;
-	public byte Effect;
+	public byte EffectByte;
 	public byte Parameter;
 
 	public bool IsBlank
@@ -26,6 +26,11 @@ public struct SongNote
 		Note = unchecked((byte)a);
 	}
 
+	public Effects Effect
+	{
+		get => (Effects)EffectByte;
+		set => EffectByte = (byte)value;
+	}
 
 	public VolumeEffects VolumeEffect
 	{

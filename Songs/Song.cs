@@ -35,6 +35,8 @@ public class Song
 
 	public SongFlags Flags;
 
+	public bool IsInstrumentMode => Flags.HasFlag(SongFlags.InstrumentMode);
+
 	public SongSample? GetSample(int n)
 	{
 		if (n > Constants.MaxSamples)

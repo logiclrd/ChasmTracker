@@ -25,5 +25,6 @@ public enum KeyMod
 	Alt = LeftAlt | RightAlt,
 	GUI = LeftGUI | RightGUI,
 
+	ControlAlt = Control | Alt,
 	ControlAltShift = Control | Alt | Shift,
 }
