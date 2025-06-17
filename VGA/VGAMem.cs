@@ -1,3 +1,5 @@
+using System;
+
 namespace ChasmTracker.VGA;
 
 public class VGAMem
@@ -60,6 +62,21 @@ public class VGAMem
 	}
 
 	public void ApplyOverlay(Overlay overlay)
+	{
+		// TODO
+	}
+
+	public void Scan8(int y, IntPtr pixels, ref ChannelData tpal, int[] mouseLine, int[] mouseLineMask)
+	{
+		// TODO
+	}
+
+	public void Scan16(int y, IntPtr pixels, ref ChannelData tpal, int[] mouseLine, int[] mouseLineMask)
+	{
+		// TODO
+	}
+
+	public void Scan32(int y, IntPtr pixels, ref ChannelData tpal, int[] mouseLine, int[] mouseLineMask)
 	{
 		// TODO
 	}

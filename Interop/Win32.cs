@@ -1,5 +1,8 @@
 using System;
+using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
+using ChasmTracker.Configurations;
+using ChasmTracker.Menus;
 
 namespace ChasmTracker.Interop;
 
@@ -46,4 +49,44 @@ public static class Win32
 
 	[DllImport("user32", CharSet = CharSet.Unicode)]
 	public static extern short GetKeyState(int nVirtKey);
+
+	[DllImport("user32")]
+	public static extern bool SetMenu(IntPtr hWnd, IntPtr hMenu);
+	[DllImport("user32")]
+	public static extern bool DrawMenuBar(IntPtr hWnd);
+
+	static IntPtr s_menu; // HMENU
+	static bool s_init;
+
+	public static bool NTVerAtLeast(int major, int minor, int build)
+	{
+		var ntver = Environment.OSVersion.Version;
+
+		return (ntver.Major > major)
+			|| ((ntver.Major == major) && (ntver.Minor > minor))
+			|| ((ntver.Major == major) && (ntver.Minor == minor) && (ntver.Build >= build));
+	}
+
+	public static void ToggleMenu(IntPtr window, bool on)
+	{
+		SetMenu(
+			window,
+			(Configuration.Video.WantMenuBar && on) ? s_menu : IntPtr.Zero);
+
+		DrawMenuBar(window);
+
+		if (!s_init)
+		{
+			s_init = true;
+
+			// This is where we would Enable Dark Mode support on Windows 10 >= 1809
+			// if (NTVerAtLeast(10, 0, 17763))
+			// {
+			//   ToggleDarkTitleBar(window, true);
+			//   SetWindowLongPtrW(window, GWLP_WNDPROC, win32_wndproc);
+			// }
+			// else
+			//   ToggleDarkTitleBar(window, false);
+		}
+	}
 }

@@ -28,6 +28,24 @@ public struct Point
 		return new Point(X + size.Width, Y + size.Height);
 	}
 
+	public void Clamp(int w, int h)
+	{
+		if (X > w)
+			X = w;
+		if (Y > h)
+			Y = h;
+	}
+
+	public static Point operator *(Point num, Size scale)
+	{
+		return new Point(num.X * scale.Width, num.Y * scale.Height);
+	}
+
+	public static Point operator /(Point num, Size den)
+	{
+		return new Point(num.X / den.Width, num.Y / den.Height);
+	}
+
 	public static Point operator /(Point num, Point den)
 	{
 		return new Point(num.X / den.X, num.Y / den.Y);

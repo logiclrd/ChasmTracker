@@ -80,7 +80,7 @@ public class PageMiniPopSlideDialog : Dialog
 	{
 		SetValue?.Invoke(thumbBarValue.Value);
 
-		if (!Song.Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop))
+		if (!Song.IsPlaying)
 			SetValueNoPlay?.Invoke(thumbBarValue.Value);
 
 		MiniPopUsed?.Invoke();

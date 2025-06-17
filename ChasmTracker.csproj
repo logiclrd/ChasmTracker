@@ -16,6 +16,7 @@
 	<ItemGroup>
 		<EmbeddedResource Include="LogoBanner.png" />
 		<EmbeddedResource Include="ImpulseTrackerLogo.png" />
+		<EmbeddedResource Include="Icon128.png" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">

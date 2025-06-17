@@ -1,3 +1,4 @@
+using System;
 using ChasmTracker.Events;
 
 namespace ChasmTracker.MIDI;
@@ -12,9 +13,11 @@ public class MIDIEngine
 		MIDIFlags.RecordAftertouch |
 		MIDIFlags.PitchBend;
 
-	public int PitchDepth = 12;
-	public int Amplification = 100;
-	public int C5Note = 60;
+	public static int PitchDepth = 12;
+	public static int Amplification = 100;
+	public static int C5Note = 60;
+
+	public static int[] LastBendHit = new int[Constants.MaxChannels];
 
 	public static bool HandleEvent(Event @event)
 	{

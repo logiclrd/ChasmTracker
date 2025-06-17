@@ -21,13 +21,11 @@ public class PatternEditorHistoryDialog : Dialog
 
 		ActionYes = _ => { };
 		ActionCancel = _ => { };
-		DrawConst = HistoryDrawConst;
-		HandleKey = HistoryHandleKey;
 	}
 
 	public Action<int>? RestoreHistory;
 
-	void HistoryDrawConst(VGAMem vgaMem)
+	public override void DrawConst(VGAMem vgaMem)
 	{
 		vgaMem.DrawText("Undo", new Point(38, 22), 3, 2);
 		vgaMem.DrawBox(new Point(19, 23), new Point(60, 34), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
@@ -55,7 +53,7 @@ public class PatternEditorHistoryDialog : Dialog
 		}
 	}
 
-	bool HistoryHandleKey(KeyEvent k)
+	public override bool HandleKey(KeyEvent k)
 	{
 		if (k.Modifiers != KeyMod.None)
 			return false;

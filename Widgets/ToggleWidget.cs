@@ -8,10 +8,9 @@ public class ToggleWidget : Widget
 
 	public override bool AcceptsText => false;
 
-	public ToggleWidget(Point position, WidgetNext next)
-		: base(position, next)
+	public ToggleWidget(Point position)
+		: base(position, width: 3 /* "Off" */)
 	{
-		Size = new Size(3); /* "Off" */
 	}
 
 	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)

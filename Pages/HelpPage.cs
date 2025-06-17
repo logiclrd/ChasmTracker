@@ -60,7 +60,6 @@ public class HelpPage : Page
 		Widgets.Add(new ButtonWidget(
 			new Point(35, 47),
 			8,
-			WidgetNext.Empty,
 			() => SetPage(Status.PreviousPageNumber),
 			"Done",
 			padding: 3));

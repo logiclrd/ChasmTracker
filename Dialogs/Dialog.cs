@@ -37,6 +37,36 @@ public class Dialog
 		return dialog;
 	}
 
+	public Widget ActiveWidget
+	{
+		get
+		{
+			if ((SelectedWidget >= 0) && (SelectedWidget < Widgets.Count))
+				return Widgets[SelectedWidget];
+
+			return Widgets[0];
+		}
+	}
+
+	public void ChangeFocusTo(int newWidgetIndex)
+	{
+		if ((newWidgetIndex == SelectedWidget)
+		 || (newWidgetIndex < 0)
+		 || (newWidgetIndex >= Widgets.Count))
+			return;
+
+		ActiveWidget.IsDepressed = false;
+
+		SelectedWidget.Value = newWidgetIndex;
+
+		ActiveWidget.IsDepressed = false;
+
+		if (ActiveWidget is TextEntryWidget textEntry)
+			textEntry.CursorPosition = textEntry.Text.Length;
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
 	public static void Destroy()
 	{
 		if (!s_activeDialogs.Any())

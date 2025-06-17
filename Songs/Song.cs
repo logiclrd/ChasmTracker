@@ -1,10 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
-using System.Reflection;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 
 namespace ChasmTracker.Songs;
 
@@ -15,6 +10,8 @@ public class Song
 	public static SongMode Mode;
 
 	public static bool IsPlaying => Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop);
+
+	static int s_currentOrder;
 
 	public static int PanSeparation;
 	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
@@ -29,7 +26,6 @@ public class Song
 	public static int Row; // no analogue in pm.h? should be either renamed or factored out.
 	public static int BreakRow;
 	public static int CurrentPattern;
-	public static int CurrentOrder;
 	public static int ProcessOrder;
 	public static int CurrentGlobalVolume;
 	public static int MixingVolume;
@@ -37,7 +33,19 @@ public class Song
 	public static int TempoFactor; // ditto
 	public static int RepeatCount; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
 
+	// Nothing innately special about this -- just needs to be above the max pattern length.
+	// process row is set to this in order to get the player to jump to the end of the pattern.
+	// (See ITTECH.TXT)
+	const int ProcessNextOrder = 0xFFFE; // special value for ProcessRow
+
 	public static int CurrentTick => TickCount % CurrentSpeed;
+
+	public static void SetCurrentOrder(int newValue)
+	{
+		AudioPlayback.LockAudio();
+		CurrentSong.CurrentOrder = newValue;
+		AudioPlayback.UnlockAudio();
+	}
 
 	bool[] _savedChannelMutedStates = new bool[Constants.MaxChannels];
 
@@ -60,6 +68,7 @@ public class Song
 			SetChannelMute(n, _savedChannelMutedStates[n]);
 	}
 
+	public int InitialGlobalVolume;
 	public int InitialSpeed;
 	public int InitialTempo;
 
@@ -76,6 +85,76 @@ public class Song
 	public SongFlags Flags;
 
 	public bool IsInstrumentMode => Flags.HasFlag(SongFlags.InstrumentMode);
+
+	int _currentOrder;
+
+	public int CurrentOrder
+	{
+		get => _currentOrder;
+		set
+		{
+			for (int j = 0; j < Constants.MaxVoices; j++)
+			{
+				ref var v = ref Voices[j];
+
+				v.Frequency = 0;
+				v.Note = v.NewNote = 1;
+				v.NewInstrumentNumber = 0;
+				v.PortamentoTarget = 0;
+				v.NCommand = 0;
+				v.CountdownPatloop = 0;
+				v.PatloopRow = 0;
+				v.CountdownTremor = 0;
+				// modplug sets vib pos to 16 in old effects mode for some reason *shrug*
+				v.VibratoPosition = Flags.HasFlag(SongFlags.ITOldEffects) ? 0x10 : 0;
+				v.TremoloPosition = 0;
+			}
+
+			int position = value;
+
+			if (position > Constants.MaxOrders)
+				position = 0;
+
+			if (position == 0)
+			{
+				for (int i = 0; i < Constants.MaxVoices; i++)
+				{
+					ref var v = ref Voices[i];
+
+					v = default;
+					v.Note = v.NewNote = 1;
+					v.Cutoff = 0x7F;
+					v.Volume = 256;
+
+					if (i < Constants.MaxChannels)
+					{
+						v.Panning = Channels[i].Panning;
+						v.GlobalVolume = Channels[i].Volume;
+						v.Flags = Channels[i].Flags;
+					}
+					else
+					{
+						v.Panning = 128;
+						v.GlobalVolume = 64;
+					}
+				}
+
+				CurrentGlobalVolume = InitialGlobalVolume;
+				CurrentSpeed = InitialSpeed;
+				CurrentTempo = InitialTempo;
+			}
+
+			ProcessOrder = position - 1;
+			ProcessRow = ProcessNextOrder;
+			Row = 0;
+			BreakRow = 0; /* set this to whatever row to jump to */
+			TickCount = 1;
+			RowCount = 0;
+			BufferCount = 0;
+
+			Flags &= ~(SongFlags.PatternLoop | SongFlags.EndReached);
+		}
+	}
 
 	public SongSample? GetSample(int n)
 	{

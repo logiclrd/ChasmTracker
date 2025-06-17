@@ -60,7 +60,7 @@ public abstract class Page
 		AllPages.PatternEditor.CurrentPattern = n;
 		AllPages.PatternEditor.CurrentRow = 0;
 
-		Song.SaveChannelMuteStates();
+		Song.CurrentSong?.SaveChannelMuteStates();
 
 		foreach (var page in AllPages.EnumeratePages())
 			page.NotifySongChanged();
@@ -107,7 +107,7 @@ public abstract class Page
 	public virtual void NotifySongModeChanged() { }
 
 	/* called by the clipboard manager */
-	public virtual bool ClipboardPaste(int cb, string cptr) { return false; }
+	public virtual bool ClipboardPaste(int cb, byte[] cptr) { return false; }
 
 	public readonly List<Widget> Widgets = new List<Widget>();
 
@@ -323,7 +323,7 @@ public abstract class Page
 				{
 					if (k.State == KeyState.Release)
 						return true;
-					Video.SetMouseCursor(MouseCursors.CycleState);
+					Video.SetMouseCursorState(MouseCursorState.CycleState);
 					return true;
 				}
 				break;
@@ -333,7 +333,7 @@ public abstract class Page
 				{
 					if (k.State == KeyState.Release)
 						return true; /* argh */
-					const int grabbed = !Video.IsInputGrabbed();
+					bool grabbed = !Video.IsInputGrabbed();
 					Video.SetInputGrabbed(grabbed);
 					Status.FlashText(grabbed
 						? "Mouse and keyboard grabbed, press Ctrl+D to release"
@@ -348,7 +348,7 @@ public abstract class Page
 				{
 					if (k.State == KeyState.Release)
 						return true;
-					AudioBufferFilledEvent.Reinitialize(null);
+					Audio.Reinitialize(null);
 					return true;
 				}
 				break;

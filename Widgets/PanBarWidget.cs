@@ -13,9 +13,8 @@ public class PanBarWidget : Widget
 	public bool IsSurround;
 
 	public PanBarWidget(Point position, WidgetNext next, int channel)
-		: base(position, next)
+		: base(position, width: 24)
 	{
-		Size = new Size(24);
 		Minimum = 0;
 		Maximum = 64;
 		Channel = channel;
@@ -26,7 +25,7 @@ public class PanBarWidget : Widget
 		string buf = "        " + Channel.ToString("d2");
 
 		vgaMem.DrawText(buf, Position, isSelected ? 3 : 0, 2);
-		
+
 		if (IsMuted)
 			vgaMem.DrawText("  Muted  ", Position.Advance(11), isSelected ? 3 : 5, 0);
 		else if (IsSurround)

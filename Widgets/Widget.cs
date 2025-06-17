@@ -10,7 +10,6 @@ public abstract class Widget
 
 	/* for redrawing */
 	public Point Position;
-	public int Width;
 	public Size Size;
 	public bool IsDepressed;
 	public int ClipStart, ClipEnd;
@@ -21,7 +20,13 @@ public abstract class Widget
 	public Widget(Point position, int width)
 	{
 		Position = position;
-		Width = width;
+		Size = new Size(width);
+	}
+
+	public Widget(Point position, Size size)
+	{
+		Position = position;
+		Size = size;
 	}
 
 	public event Action? Changed;
@@ -41,7 +46,7 @@ public abstract class Widget
 
 	protected void OnChanged()
 	{
-		Changed?.Invoke(this, EventArgs.Empty);
+		Changed?.Invoke();
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 

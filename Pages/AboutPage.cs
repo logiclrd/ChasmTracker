@@ -50,11 +50,10 @@ public class AboutPage : Page
 		}
 
 		var widgets = new List<Widget>();
-		
+
 		widgets.Add(new ButtonWidget(
 			position: new Point(32, 32),
 			width: 12,
-			WidgetNext.Empty,
 			Dialog.DialogButtonYes,
 			"Continue",
 			padding: 3));

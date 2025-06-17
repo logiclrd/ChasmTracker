@@ -28,8 +28,9 @@ public class ToggleButtonWidget : Widget
 	{
 		if (state)
 		{
-			foreach (var toggleButton in Group.Widgets.OfType<ToggleButtonWidget>())
-				toggleButton._state = false;
+			if (Group != null)
+				foreach (var toggleButton in Group.Widgets.OfType<ToggleButtonWidget>())
+					toggleButton._state = false;
 
 			_state = true;
 		}
@@ -39,10 +40,9 @@ public class ToggleButtonWidget : Widget
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
-	public ToggleButtonWidget(Point position, int width, string text, int padding, int groupNumber)
-		: base(position)
+	public ToggleButtonWidget(Point position, string text, int padding, int groupNumber)
+		: base(position, width: 3 /* "Off" */)
 	{
-		Size = new Size(width);
 		Text = text;
 		Padding = padding;
 		GroupNumber = groupNumber;

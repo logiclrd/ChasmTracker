@@ -10,11 +10,8 @@ public class MenuToggleWidget : Widget
 	public MenuToggleWidgetChoice[] Choices;
 
 	public MenuToggleWidget(Point position, WidgetNext next, string[] choices)
-		: base(position, next)
+		: base(position, width: choices.Max(choice => choice.Length))
 	{
-		Size.Width = choices.Max(choice => choice.Length);
-		Size.Height = 1;
-
 		Choices = choices.Select(choice => new MenuToggleWidgetChoice(choice)).ToArray();
 	}
 

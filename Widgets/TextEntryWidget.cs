@@ -30,7 +30,6 @@ public class TextEntryWidget : Widget
 	public TextEntryWidget(Point position, int width, string text, int maxLength)
 		: base(position, width)
 	{
-		Size = new Size(width);
 		TextCharacters = new char[maxLength];
 		MaxLength = maxLength;
 		FirstCharacter = 0;

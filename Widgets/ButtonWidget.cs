@@ -12,9 +12,8 @@ public class ButtonWidget : Widget
 	public event Action? Clicked;
 
 	public ButtonWidget(Point position, int width, string text, int padding)
-		: base(position)
+		: base(position, width)
 	{
-		Size = new Size(width);
 		Text = text;
 		Padding = padding;
 

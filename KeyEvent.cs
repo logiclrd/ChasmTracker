@@ -90,7 +90,7 @@ public struct KeyEvent
 			if (!Modifiers.HasAnyFlag(KeyMod.ControlAlt))
 				return -1;
 
-			if (Sym == KeySym.KP_1 || k->sym == KeySym.KP_Period)
+			if (Sym == KeySym.KP_1 || Sym == KeySym.KP_Period)
 			{
 				if (!Modifiers.HasFlag(KeyMod.Num))
 					return -1;
@@ -156,7 +156,7 @@ public struct KeyEvent
 		}
 	}
 
-	Effects? EffectValue
+	public Effects? EffectValue
 	{
 		get
 		{

@@ -1,7 +1,12 @@
 namespace ChasmTracker;
 
+using ChasmTracker.VGA;
+
 public abstract class VideoBackend
 {
+	public abstract bool Initialize();
+	public abstract bool Startup(VGAMem vgaMem);
+
 	public abstract bool IsFocused();
 	public abstract bool IsVisible();
 	public abstract bool IsWindowManagerAvailable();
@@ -17,7 +22,7 @@ public abstract class VideoBackend
 	public abstract Point GetMouseCoordinates();
 	public abstract bool HaveMenu();
 	public abstract void ToggleMenu(bool on);
-	public abstract void Blit();
-	public abstract WMData GetWMData();
+	public abstract void Blit(VGAMem vgaMem);
+	public abstract WMData? GetWMData();
 	public abstract void ShowCursor(bool enabled);
 }

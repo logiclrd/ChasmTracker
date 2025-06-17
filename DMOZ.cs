@@ -28,9 +28,14 @@ public static class DMOZ
 	{
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 		 || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+		{
+			yield return "Chasm Tracker";
 			yield return "Schism Tracker";
+		}
 		else
 		{
+			yield return ".config/chasm";
+			yield return ".chasm";
 			yield return ".config/schism";
 			yield return ".schism";
 		}

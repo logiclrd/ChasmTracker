@@ -23,10 +23,9 @@ public class NumberEntryWidget : Widget
 		}
 	}
 
-	public NumberEntryWidget(Point position, WidgetNext next, int width, int min, int max, SharedInt cursorPosition)
-		: base(position, next)
+	public NumberEntryWidget(Point position, int width, int min, int max, SharedInt cursorPosition)
+		: base(position, width)
 	{
-		Size = new Size(width);
 		Minimum = min;
 		Maximum = max;
 		Value = min;
@@ -82,7 +81,7 @@ public class NumberEntryWidget : Widget
 			vgaMem.DrawTextLen("", Size.Width, Position, 2, 0);
 
 			vgaMem.DrawText(str, Position.Advance(Size.Width - str.Length), 2, 0);
-			
+
 			if (isSelected)
 			{
 				if (str == "")

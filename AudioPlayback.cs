@@ -1,3 +1,5 @@
+using ChasmTracker.Songs;
+
 namespace ChasmTracker;
 
 public class AudioPlayback
@@ -7,6 +9,9 @@ public class AudioPlayback
 
 	public static int CurrentPlayChannel => s_currentPlayChannel;
 	public static bool MultichannelMode => s_multichannelMode;
+
+	public static int CurrentRow;
+	public static int PlayingPattern;
 
 	public static void ChangeCurrentPlayChannel(int relative, bool wraparound)
 	{
@@ -42,6 +47,51 @@ public class AudioPlayback
 	public static void UnlockAudio()
 	{
 		// TODO
+	}
+
+	public static void SingleStep(int patno, int row)
+	{
+		var pattern = Song.CurrentSong.GetPattern(patno);
+
+		if ((pattern == null) || (row >= pattern.Rows.Count))
+			return;
+
+		for (int i = 1; i <= 64; i++)
+		{
+			ref var curNote = ref pattern[row][i];
+			ref var cx = ref Song.CurrentSong.Voices[i - 1];
+
+			if (cx.Flags.HasFlag(ChannelFlags.Mute))
+				continue; /* ick */
+
+			int vol;
+
+			if (curNote.VolumeEffect == VolumeEffects.Volume)
+				vol = curNote.VolumeParameter;
+			else
+				vol = KeyJazz.DefaultVolume;
+
+			// look familiar? this is modified slightly from pattern_editor_insert
+			// (and it is wrong for the same reason as described there)
+			int smp = curNote.Instrument;
+			int ins = curNote.Instrument;
+
+			if (Song.CurrentSong.IsInstrumentMode)
+			{
+				if (ins < 1)
+					ins = KeyJazz.NoInstrument;
+				smp = -1;
+			}
+			else
+			{
+				if (smp < 1)
+					smp = KeyJazz.NoInstrument;
+				ins = -1;
+			}
+
+			Song.KeyRecord(smp, ins, curNote.Note,
+				vol, i, curNote.Effect, curNote.Parameter);
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------

@@ -15,6 +15,7 @@ using ChasmTracker.Pages;
 using ChasmTracker.Pages.TrackViews;
 using ChasmTracker.Songs;
 using ChasmTracker.VGA;
+using ChasmTracker.Widgets;
 
 /* The all-important pattern editor. The code here is a general mess, so
  * don't look at it directly or, uh, you'll go blind or something. */
@@ -32,13 +33,14 @@ public class PatternEditorPage : Page
 			{
 				PatternSelectionSystemPasteModPlug
 			};
+
+		for (int i = 0; i < 10; i++)
+			_undoHistory.Add(new PatternSnap() { SnapOp = "Empty" });
 	}
 
 	bool RowIsMajor(int r) => (Song.CurrentSong.RowHighlightMajor != 0) && ((r % Song.CurrentSong.RowHighlightMajor) == 0);
 	bool RowIsMinor(int r) => (Song.CurrentSong.RowHighlightMinor != 0) && ((r % Song.CurrentSong.RowHighlightMinor) == 0);
 	bool RowIsHighlight(int r) => RowIsMinor(r) || RowIsMajor(r);
-
-	bool SongPlaying() => Song.Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop);
 
 	/* this is actually used by pattern-view.c */
 	bool _showDefaultVolumes = false;
@@ -182,7 +184,7 @@ public class PatternEditorPage : Page
 	bool _playbackTracing = false;     /* scroll lock */
 	bool _midiPlaybackTracing = false;
 
-	bool _panningMode = 0;
+	bool _panningMode = false;
 	int[] _midiBendHit = new int[64];
 	int[] _midiLastBendHit = new int[64];
 
@@ -384,11 +386,10 @@ public class PatternEditorPage : Page
 		fxMaps[" XM"] = Keyboard.GetPTMEffectNumber;
 		fxMaps["MOD"] = Keyboard.GetPTMEffectNumber;
 
-		int copyInX, copyInY;
+		int copyInX;
 		int copyInW, copyInH;
 		Func<char, byte>? fxMap;
-		int x, i;
-		int scantmp;
+		int x;
 		var ds = new List<SongNote>();
 
 		/* WTF */
@@ -415,7 +416,7 @@ public class PatternEditorPage : Page
 
 		str = str.Substring(x + 2);
 		copyInW = copyInH = 0;
-		copyInX = copyInY = 0;
+		copyInX = 0;
 
 		/* okay, let's start parsing */
 		x = 0;
@@ -548,7 +549,7 @@ public class PatternEditorPage : Page
 	/* this is here so that we could possibly handle other clipboard formats. */
 	readonly Func<string, PatternSnap, bool>[] PasteHandlers;
 
-	int PatternSelectionSystemPaste(int cb, byte[] data)
+	bool PatternSelectionSystemPaste(int cb, byte[] data)
 	{
 		/* this is a bug */
 		if (_patternCopyInBehaviour != PatternCopyInBehaviour.Invalid)
@@ -592,7 +593,7 @@ public class PatternEditorPage : Page
 		/* reset */
 		_patternCopyInBehaviour = PatternCopyInBehaviour.Invalid;
 
-		return 1;
+		return true;
 	}
 
 	void ClipboardPasteMixNotes(bool clip, int xlate)
@@ -624,8 +625,6 @@ public class PatternEditorPage : Page
 			"Replace mixed data             (Alt-M)",
 			new Point(_currentChannel - 1, _currentRow),
 			new Size(chanWidth, numRows));
-
-		int c = 0;
 
 		for (int row = 0; row < numRows; row++)
 		{
@@ -1016,7 +1015,12 @@ public class PatternEditorPage : Page
 	Effects? GetCurrentEffect()
 	{
 		if (Song.CurrentSong.GetPattern(_currentPattern) is Pattern pattern)
-			return pattern[_currentRow][_currentChannel].Effect;
+		{
+			var effect = pattern[_currentRow][_currentChannel].Effect;
+
+			if (effect != Effects.None)
+				return effect;
+		}
 
 		return null;
 	}
@@ -1111,12 +1115,12 @@ public class PatternEditorPage : Page
 			else
 				_trackViewScheme[n] = -1;
 
-			if ((_trackViewScheme[n] < 0) || (_trackViewScheme[n] >= _trackViews.Length))
+			if ((_trackViewScheme[n] < 0) || (_trackViewScheme[n] >= TrackViews.Length))
 			{
 				Log.Append(4, "Track view scheme corrupted; using default");
 
 				for (n = 0; n < Constants.MaxChannels; n++)
-					_trackViewScheme[n] = _trackViews.Length - 1;
+					_trackViewScheme[n] = TrackViews.Length - 1;
 
 				break;
 			}
@@ -2341,6 +2345,11 @@ public class PatternEditorPage : Page
 		PatternSelectionSystemCopyOut();
 	}
 
+	public override bool ClipboardPaste(int cb, byte[] cptr)
+	{
+		return PatternSelectionSystemPaste(cb, cptr);
+	}
+
 	/* --------------------------------------------------------------------- */
 
 	void Reposition()
@@ -2468,9 +2477,9 @@ public class PatternEditorPage : Page
 	void PlaySongFromMarkOrderPan()
 	{
 		if (_markedPattern == -1)
-			Song.StartAtOrder(AllPages.OrderList.CurrentOrder, _currentRow);
+			AudioPlayback.StartAtOrder(AllPages.OrderList.CurrentOrder, _currentRow);
 		else
-			Song.StartAtPattern(_markedPattern, _markedRow);
+			AudioPlayback.StartAtPattern(_markedPattern, _markedRow);
 	}
 
 	void PlaySongFromMark()
@@ -2479,7 +2488,7 @@ public class PatternEditorPage : Page
 
 		if (_markedPattern != -1)
 		{
-			Song.StartAtPattern(_markedPattern, _markedRow);
+			AudioPlayback.StartAtPattern(_markedPattern, _markedRow);
 			return;
 		}
 
@@ -2490,7 +2499,7 @@ public class PatternEditorPage : Page
 			if (Song.CurrentSong.OrderList[newOrder] == _currentPattern)
 			{
 				AllPages.OrderList.CurrentOrder = newOrder;
-				Song.StartAtOrder(newOrder, _currentRow);
+				AudioPlayback.StartAtOrder(newOrder, _currentRow);
 				return;
 			}
 
@@ -2504,14 +2513,14 @@ public class PatternEditorPage : Page
 			if (Song.CurrentSong.OrderList[newOrder] == _currentPattern)
 			{
 				AllPages.OrderList.CurrentOrder = newOrder;
-				Song.StartAtOrder(newOrder, _currentRow);
+				AudioPlayback.StartAtOrder(newOrder, _currentRow);
 				return;
 			}
 
 			newOrder++;
 		}
 
-		Song.StartAtPattern(_currentPattern, _currentRow);
+		AudioPlayback.StartAtPattern(_currentPattern, _currentRow);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -2571,7 +2580,7 @@ public class PatternEditorPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	void Redraw(VGAMem vgaMem)
+	public override void Redraw(VGAMem vgaMem)
 	{
 		int chanDrawPos = 5;
 
@@ -3063,12 +3072,12 @@ public class PatternEditorPage : Page
 			switch (_midiStartRecord)
 			{
 				case 1: /* pattern loop */
-					Song.LoopPattern(p, r);
+					AudioPlayback.LoopPattern(p, r);
 					_midiPlaybackTracing = _playbackTracing;
 					_playbackTracing = true;
 					break;
 				case 2: /* song play */
-					Song.StartAtPattern(p, r);
+					AudioPlayback.StartAtPattern(p, r);
 					_midiPlaybackTracing = _playbackTracing;
 					_playbackTracing = true;
 					break;
@@ -3185,7 +3194,7 @@ public class PatternEditorPage : Page
 		}
 
 		/* pitch bend */
-		for (c = 0; c < 64; c++)
+		for (c = 0; c < Constants.MaxChannels; c++)
 		{
 			/* Dead code?? */
 			// if ((_channelMulti[c] & 1) && (channel_multi[c] & (~1)))
@@ -3258,16 +3267,18 @@ public class PatternEditorPage : Page
 
 		ref var curNote = ref pattern[_currentRow][_currentChannel];
 
-		int note;
-		int vol;
+		int note = -1;
+		int vol = -1;
+		int smp = -1;
+		int ins = -1;
 
 		if (_currentPosition == 0) /* note */
 		{
 			// FIXME: this is actually quite wrong; instrument numbers should be independent for each
 			// channel and take effect when the instrument is played (e.g. with 4/8 or keyjazz input)
 			// also, this is fully idiotic
-			int smp = curNote.Instrument;
-			int ins = curNote.Instrument;
+			smp = curNote.Instrument;
+			ins = curNote.Instrument;
 
 			if (Song.CurrentSong.IsInstrumentMode)
 				smp = KeyJazz.NoInstrument;
@@ -3299,7 +3310,7 @@ public class PatternEditorPage : Page
 				if (k.State == KeyState.Release)
 					return false;
 
-				Song.SingleStep(_currentPattern, _currentRow);
+				AudioPlayback.SingleStep(_currentPattern, _currentRow);
 
 				AdvanceCursor(!k.Modifiers.HasAnyFlag(KeyMod.Shift), false);
 
@@ -3504,7 +3515,7 @@ public class PatternEditorPage : Page
 
 				if (_currentPosition == 2)
 				{
-					j = k.Character99Value;
+					int j = k.Character99Value;
 
 					if (j < 0)
 						return false;
@@ -3515,7 +3526,7 @@ public class PatternEditorPage : Page
 				}
 				else
 				{
-					j = k.HexValue;
+					int j = k.HexValue;
 					if (j < 0 || j > 9)
 						return false;
 
@@ -3538,6 +3549,7 @@ public class PatternEditorPage : Page
 
 					AllPages.InstrumentList.CurrentInstrument = j;
 				}
+
 				else
 				{
 					int j = AllPages.SampleList.CurrentSample;
@@ -3552,7 +3564,7 @@ public class PatternEditorPage : Page
 
 				Song.CurrentSong.Voices[_currentChannel - 1].LastInstrument = n;
 
-				curNote2.Instrument = n;
+				curNote2.Instrument = (byte)n;
 
 				if (Song.CurrentSong.IsInstrumentMode)
 					AllPages.InstrumentList.CurrentInstrument = n;
@@ -3877,7 +3889,29 @@ public class PatternEditorPage : Page
 					_channelMultiEnabled = _channelMulti.Any(v => v);
 
 				if (Status.LastKeySym == KeySym.n)
-					Dialog.Show(new PatternEditorMultiChannelDialog());
+				{
+					var dialog = Dialog.Show(new PatternEditorMultiChannelDialog(_channelMulti));
+
+					dialog.ActionYes = MultiChannelClose;
+					dialog.ActionCancel = MultiChannelClose;
+
+					void MultiChannelClose(object? data)
+					{
+						bool m = false;
+
+						for (int i = 0; i < Constants.MaxChannels; i++)
+						{
+							_channelMulti[i] = dialog.IsMultiChannelEnabledForChannel(i);
+
+							if (_channelMulti[i])
+								m = true;
+						}
+
+						if (m)
+							_channelMultiEnabled = true;
+					}
+
+				}
 				break;
 			case KeySym.z:
 				if (k.State == KeyState.Release)
@@ -4132,19 +4166,19 @@ public class PatternEditorPage : Page
 			case KeySym.Minus:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Song.Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop) && _playbackTracing)
+				if (Song.IsPlaying && _playbackTracing)
 					return true;
 
 				AllPages.OrderList.PreviousOrderPattern();
 				return true;
 			case KeySym.Equals:
-				if (!(k.Modifiers.HasAnyFlag(KeyMod.Shift)))
+				if (!k.Modifiers.HasAnyFlag(KeyMod.Shift))
 					return false;
 				goto case KeySym.Plus;
 			case KeySym.Plus:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Song.Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop) && _playbackTracing)
+				if (Song.IsPlaying && _playbackTracing)
 					return true;
 				AllPages.OrderList.NextOrderPattern();
 				return true;
@@ -4233,608 +4267,712 @@ public class PatternEditorPage : Page
 				}
 				return true;
 			case KeySym.Backspace:
+			{
 				if (k.State == KeyState.Release)
 					return true;
-				DisplayHistory();
+
+				Dialog.Show(new PatternEditorHistoryDialog(_undoHistory));
+
 				return true;
+			}
 		}
 
 		return false;
 	}
 
+	bool[] _muteToggleHack = new bool[Constants.MaxChannels]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
 
-#if false
-static int mute_toggle_hack[MAX_CHANNELS]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
-static int pattern_editor_handle_key_default(struct key_event * k)
-{
-	int n = kbd_get_note(k);
+	bool? HandleKeyDefault(KeyEvent k)
+	{
+		int n = k.NoteValue;
 
-	/* stupid hack; if we have a note, that's definitely more important than this stuff */
-	if (n < 0 || _currentPosition > 0) {
-		if (k.Sym == SCHISM_KEYSYM_LESS || k.Sym == SCHISM_KEYSYM_COLON || k.Sym == SCHISM_KEYSYM_SEMICOLON) {
-			if (k.State == KeyState.Release)
-				return 0;
-			if ((Status.Flags & CLASSIC_MODE) || _currentPosition != 4) {
-				set_previous_instrument();
+		/* stupid hack; if we have a note, that's definitely more important than this stuff */
+		if (n < 0 || _currentPosition > 0)
+		{
+			if (k.Sym == KeySym.Less || k.Sym == KeySym.Colon || k.Sym == KeySym.Semicolon)
+			{
+				if (k.State == KeyState.Release)
+					return false;
+				if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || _currentPosition != 4)
+				{
+					CurrentInstrument--;
+					Status.Flags |= StatusFlags.NeedUpdate;
+					return true;
+				}
+			}
+			else if (k.Sym == KeySym.Greater || k.Sym == KeySym.Quote || k.Sym == KeySym.QuoteDbl)
+			{
+				if (k.State == KeyState.Release)
+					return false;
+				if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || _currentPosition != 4)
+				{
+					CurrentInstrument++;
+					Status.Flags |= StatusFlags.NeedUpdate;
+					return true;
+				}
+			}
+			else if (k.Sym == KeySym.Comma)
+			{
+				if (k.State == KeyState.Release)
+					return false;
+				switch (_currentPosition)
+				{
+					case 2:
+					case 3:
+						_editCopyMask ^= PatternEditorMask.Instrument;
+						break;
+					case 4:
+					case 5:
+						_editCopyMask ^= PatternEditorMask.Volume;
+						break;
+					case 6:
+					case 7:
+					case 8:
+						_editCopyMask ^= PatternEditorMask.Effect;
+						break;
+				}
 				Status.Flags |= StatusFlags.NeedUpdate;
-				return 1;
+				return true;
 			}
-		} else if (k.Sym == SCHISM_KEYSYM_GREATER || k.Sym == SCHISM_KEYSYM_QUOTE || k.Sym == SCHISM_KEYSYM_QUOTEDBL) {
-			if (k.State == KeyState.Release)
-				return 0;
-			if ((Status.Flags & CLASSIC_MODE) || _currentPosition != 4) {
-				set_next_instrument();
-				Status.Flags |= StatusFlags.NeedUpdate;
-				return 1;
-			}
-		} else if (k.Sym == SCHISM_KEYSYM_COMMA) {
-			if (k.State == KeyState.Release)
-				return 0;
-			switch (_currentPosition) {
-			case 2: case 3:
-				_editCopyMask ^= MASK_INSTRUMENT;
-				break;
-			case 4: case 5:
-				_editCopyMask ^= MASK_VOLUME;
-				break;
-			case 6: case 7: case 8:
-				_editCopyMask ^= MASK_EFFECT;
-				break;
-			}
-			Status.Flags |= StatusFlags.NeedUpdate;
-			return 1;
 		}
+
+		if (Song.IsPlaying && _playbackTracing && k.IsRepeat)
+			return false;
+
+		if (!Insert(k))
+			return false;
+		return null;
 	}
 
-	if (song_get_mode() & (MODE_PLAYING|MODE_PATTERN_LOOP) && playback_tracing && k->is_repeat)
-		return 0;
+	bool? HandleKey(KeyEvent k)
+	{
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
 
-	if (!pattern_editor_insert(k))
-		return 0;
-	return null;
-}
-static int pattern_editor_handle_key(struct key_event * k)
-{
-	int n, nx, v;
-	int total_rows = song_get_rows_in_pattern(_currentPattern);
-	const struct track_view *track_view;
-	int np, nr, nc;
-	unsigned int basex;
+		if (pattern == null)
+			return false;
 
-	if (k->mouse != MOUSE_NONE) {
-		if (k.State == KeyState.Release) {
+		if (k.Mouse != MouseState.None)
+		{
 			/* mouseup */
-			memset(mute_toggle_hack, 0, sizeof(mute_toggle_hack));
-		}
-
-		if ((k->mouse == MOUSE_CLICK || k->mouse == MOUSE_DBLCLICK) && k.State == KeyState.Release) {
-			shift_selection_end();
-		}
-
-		if (k->y < 13 && !shift_selection.in_progress) return 0;
-
-		if (k->y >= 15 && k->mouse != MOUSE_CLICK && k->mouse != MOUSE_DBLCLICK) {
 			if (k.State == KeyState.Release)
-				return 0;
-			if (k->mouse == MOUSE_SCROLL_UP) {
-				if (_topDisplayRow > 0) {
-					_topDisplayRow = MAX(_topDisplayRow - MOUSE_SCROLL_LINES, 0);
-					if (_currentRow > _topDisplayRow + 31)
-						_currentRow = _topDisplayRow + 31;
-					if (_currentRow < 0)
-						_currentRow = 0;
-					return -1;
-				}
-			} else if (k->mouse == MOUSE_SCROLL_DOWN) {
-				if (_topDisplayRow + 31 < total_rows) {
-					_topDisplayRow = MIN(_topDisplayRow + MOUSE_SCROLL_LINES, total_rows);
-					if (_currentRow < _topDisplayRow)
-						_currentRow = _topDisplayRow;
-					return -1;
-				}
-			}
-			return 1;
-		}
+				Array.Clear(_muteToggleHack);
 
-		if (k->mouse != MOUSE_CLICK && k->mouse != MOUSE_DBLCLICK)
-			return 1;
+			if ((k.Mouse == MouseState.Click || k.Mouse == MouseState.DoubleClick) && k.State == KeyState.Release)
+				ShiftSelectionEnd();
 
-		basex = 5;
-		if (_currentRow < 0) _currentRow = 0;
-		if (_currentRow >= total_rows) _currentRow = total_rows;
-		np = _currentPosition; nc = _currentChannel; nr = _currentRow;
-		for (n = _topDisplayChannel, nx = 0; nx <= _visibleChannels; n++, nx++) {
-			track_view = track_views+_trackViewScheme[nx];
-			if (((n == _topDisplayChannel && shift_selection.in_progress)
-			     || k->x >= basex)
-			    && ((n == _visibleChannels && shift_selection.in_progress)
-				|| k->x < basex + track_view->width)) {
-				if (!shift_selection.in_progress && (k->y == 14 || k->y == 13)) {
-					if (k.State == KeyState.Press) {
-						if (!mute_toggle_hack[n-1]) {
-							song_toggle_channel_mute(n-1);
-							Status.Flags |= StatusFlags.NeedUpdate;
-							mute_toggle_hack[n-1]=1;
-						}
+			if (k.MousePosition.Y < 13 && !_shiftSelection.InProgress) return false;
+
+			if (k.MousePosition.Y >= 15 && k.Mouse != MouseState.Click && k.Mouse != MouseState.DoubleClick)
+			{
+				if (k.State == KeyState.Release)
+					return false;
+
+				if (k.Mouse == MouseState.ScrollUp)
+				{
+					if (_topDisplayRow > 0)
+					{
+						_topDisplayRow = Math.Max(_topDisplayRow - Constants.MouseScrollLines, 0);
+						if (_currentRow > _topDisplayRow + 31)
+							_currentRow = _topDisplayRow + 31;
+						if (_currentRow < 0)
+							_currentRow = 0;
+
+						return null;
 					}
+				}
+				else if (k.Mouse == MouseState.ScrollDown)
+				{
+					if (_topDisplayRow + 31 < pattern.Rows.Count - 1)
+					{
+						_topDisplayRow = Math.Min(_topDisplayRow + Constants.MouseScrollLines, pattern.Rows.Count - 1);
+						if (_currentRow < _topDisplayRow)
+							_currentRow = _topDisplayRow;
+						return null;
+					}
+				}
+				return true;
+			}
+
+			if (k.Mouse != MouseState.Click && k.Mouse != MouseState.DoubleClick)
+				return true;
+
+			int baseX = 5;
+
+			if (_currentRow < 0) _currentRow = 0;
+			if (_currentRow >= pattern.Rows.Count - 1) _currentRow = pattern.Rows.Count - 1;
+
+			int np = _currentPosition;
+			int nc = _currentChannel;
+			int nr = _currentRow;
+
+			for (int n = _topDisplayChannel, nx = 0; nx <= _visibleChannels; n++, nx++)
+			{
+				var trackView = TrackViews[_trackViewScheme[nx]];
+
+				if (((n == _topDisplayChannel && _shiftSelection.InProgress)
+						|| k.MousePosition.X >= baseX)
+						&& ((n == _visibleChannels && _shiftSelection.InProgress)
+					|| k.MousePosition.X < baseX + trackView.Width))
+				{
+					if (!_shiftSelection.InProgress && (k.MousePosition.Y == 14 || k.MousePosition.Y == 13))
+					{
+						if (k.State == KeyState.Press)
+						{
+							if (!_muteToggleHack[n - 1])
+							{
+								Song.CurrentSong.ToggleChannelMute(n - 1);
+								Status.Flags |= StatusFlags.NeedUpdate;
+								_muteToggleHack[n - 1] = true;
+							}
+						}
+
+						break;
+					}
+
+					nc = n;
+					nr = (k.MousePosition.Y - 15) + _topDisplayRow;
+
+					if (k.MousePosition.Y < 15 && _topDisplayRow > 0)
+						_topDisplayRow--;
+
+					if (_shiftSelection.InProgress) break;
+
+					int v = k.MousePosition.X - baseX;
+
+					switch (_trackViewScheme[nx])
+					{
+						case 0: /* 5 channel view */
+							switch (v)
+							{
+								case 0: np = 0; break;
+								case 2: np = 1; break;
+								case 4: np = 2; break;
+								case 5: np = 3; break;
+								case 7: np = 4; break;
+								case 8: np = 5; break;
+								case 10: np = 6; break;
+								case 11: np = 7; break;
+								case 12: np = 8; break;
+							}
+
+							break;
+						case 1: /* 6/7 channels */
+							switch (v)
+							{
+								case 0: np = 0; break;
+								case 2: np = 1; break;
+								case 3: np = 2; break;
+								case 4: np = 3; break;
+								case 5: np = 4; break;
+								case 6: np = 5; break;
+								case 7: np = 6; break;
+								case 8: np = 7; break;
+								case 9: np = 8; break;
+							}
+
+							break;
+						case 2: /* 9/10 channels */
+							switch (v)
+							{
+								case 0: np = 0; break;
+								case 2: np = 1; break;
+								case 3: np = 2 + k.MouseXHalfCharacter; break;
+								case 4: np = 4 + k.MouseXHalfCharacter; break;
+								case 5: np = 6; break;
+								case 6: np = 7 + k.MouseXHalfCharacter; break;
+							}
+
+							break;
+						case 3: /* 18/24 channels */
+							switch (v)
+							{
+								case 0: np = 0; break;
+								case 1: np = 1; break;
+								case 2: np = 2 + k.MouseXHalfCharacter; break;
+								case 3: np = 4 + k.MouseXHalfCharacter; break;
+								case 4: np = 6; break;
+								case 5: np = 7 + k.MouseXHalfCharacter; break;
+							}
+
+							break;
+						case 4: /* now things get weird: 24/36 channels */
+						case 5: /* now things get weird: 36/64 channels */
+						case 6: /* no point doing anything here; reset */
+							np = 0;
+							break;
+					}
+
 					break;
 				}
 
-				nc = n;
-				nr = (k->y - 15) + _topDisplayRow;
+				baseX += trackView.Width;
 
-				if (k->y < 15 && _topDisplayRow > 0) {
-					_topDisplayRow--;
+				if (_drawDivisions) baseX++;
+			}
+
+			if (np == _currentPosition && nc == _currentChannel && nr == _currentRow)
+				return true;
+
+			if (nr >= pattern.Rows.Count - 1) nr = pattern.Rows.Count - 1;
+			if (nr < 0) nr = 0;
+
+			_currentPosition = np; _currentChannel = nc; _currentRow = nr;
+
+			if (k.State == KeyState.Press && k.StartPosition.Y > 14)
+			{
+				if (!_shiftSelection.InProgress)
+					ShiftSelectionBegin();
+				else
+					ShiftSelectionUpdate();
+			}
+
+			return null;
+		}
+
+		if (k.MIDINote > -1 || k.MIDIBend != 0)
+			return InsertMIDI(k);
+
+		switch (k.Sym)
+		{
+			case KeySym.Up:
+				if (k.State == KeyState.Release)
+					return false;
+
+				if (_skipValue > 0)
+				{
+					if (_currentRow - _skipValue >= 0)
+						_currentRow -= _skipValue;
 				}
+				else
+					_currentRow--;
 
+				return null;
+			case KeySym.Down:
+				if (k.State == KeyState.Release)
+					return false;
 
-				if (shift_selection.in_progress) break;
+				if (_skipValue > 0)
+				{
+					if (_currentRow + _skipValue <= pattern.Rows.Count - 1)
+						_currentRow += _skipValue;
+				}
+				else
+					_currentRow++;
 
-				v = k->x - basex;
-				switch (_trackViewScheme[nx]) {
-				case 0: /* 5 channel view */
-					switch (v) {
-					case 0: np = 0; break;
-					case 2: np = 1; break;
-					case 4: np = 2; break;
-					case 5: np = 3; break;
-					case 7: np = 4; break;
-					case 8: np = 5; break;
-					case 10: np = 6; break;
-					case 11: np = 7; break;
-					case 12: np = 8; break;
-					};
-					break;
-				case 1: /* 6/7 channels */
-					switch (v) {
-					case 0: np = 0; break;
-					case 2: np = 1; break;
-					case 3: np = 2; break;
-					case 4: np = 3; break;
-					case 5: np = 4; break;
-					case 6: np = 5; break;
-					case 7: np = 6; break;
-					case 8: np = 7; break;
-					case 9: np = 8; break;
-					};
-					break;
-				case 2: /* 9/10 channels */
-					switch (v) {
-					case 0: np = 0; break;
-					case 2: np = 1; break;
-					case 3: np = 2 + k->hx; break;
-					case 4: np = 4 + k->hx; break;
-					case 5: np = 6; break;
-					case 6: np = 7 + k->hx; break;
-					};
-					break;
-				case 3: /* 18/24 channels */
-					switch (v) {
-					case 0: np = 0; break;
-					case 1: np = 1; break;
-					case 2: np = 2 + k->hx; break;
-					case 3: np = 4 + k->hx; break;
-					case 4: np = 6; break;
-					case 5: np = 7 + k->hx; break;
-					};
-					break;
-				case 4: /* now things get weird: 24/36 channels */
-				case 5: /* now things get weird: 36/64 channels */
-				case 6: /* no point doing anything here; reset */
-					np = 0;
-					break;
-				};
+				return null;
+			case KeySym.Left:
+				if (k.State == KeyState.Release)
+					return false;
+
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					_currentChannel--;
+				else if (_linkEffectColumn && _currentPosition == 0 && _currentChannel > 1)
+				{
+					_currentChannel--;
+					_currentPosition = (GetCurrentEffect() != null) ? 8 : 6;
+				}
+				else
+					_currentPosition--;
+
+				return null;
+			case KeySym.Right:
+				if (k.State == KeyState.Release)
+					return false;
+
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					_currentChannel++;
+				else if (_linkEffectColumn && _currentPosition == 6 && _currentChannel < 64)
+					_currentPosition = (GetCurrentEffect() != null) ? 7 : 10;
+				else
+					_currentPosition++;
+
+				return null;
+			case KeySym.Tab:
+				if (k.State == KeyState.Release)
+					return false;
+
+				if (!k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					_currentChannel++;
+				else if (_currentPosition == 0)
+					_currentChannel--;
+
+				_currentPosition = 0;
+
+				/* hack to keep shift-tab from changing the selection */
+				k.Modifiers &= ~KeyMod.Shift;
+				ShiftSelectionEnd();
+
+				return null;
+			case KeySym.PageUp:
+			{
+				if (k.State == KeyState.Release)
+					return false;
+
+				int rh = (Song.CurrentSong.RowHighlightMajor != 0) ? Song.CurrentSong.RowHighlightMajor : 16;
+
+				if (_currentRow == pattern.Rows.Count - 1)
+					_currentRow -= (_currentRow % rh != 0) ? (_currentRow % rh) : rh;
+				else
+					_currentRow -= rh;
+
+				return null;
+			}
+			case KeySym.PageDown:
+				if (k.State == KeyState.Release)
+					return false;
+
+				_currentRow += (Song.CurrentSong.RowHighlightMajor != 0) ? Song.CurrentSong.RowHighlightMajor : 16;
+
+				return null;
+			case KeySym.Home:
+				if (k.State == KeyState.Release)
+					return false;
+
+				if (_currentPosition == 0)
+				{
+					if (_invertHomeEnd ? (_currentRow != 0) : (_currentChannel == 1))
+						_currentRow = 0;
+					else
+						_currentChannel = 1;
+				}
+				else
+					_currentPosition = 0;
+
+				return null;
+			case KeySym.End:
+			{
+				if (k.State == KeyState.Release)
+					return false;
+
+				int n = Song.CurrentSong.FindLastChannel() + 1;
+				if (_currentPosition == 8)
+				{
+					if (_invertHomeEnd ? (_currentRow != pattern.Rows.Count - 1) : (_currentChannel == n))
+						_currentRow = pattern.Rows.Count - 1;
+					else
+						_currentChannel = n;
+				}
+				else
+					_currentPosition = 8;
+
+				return null;
+			}
+			case KeySym.Insert:
+				if (k.State == KeyState.Release)
+					return false;
+
+				if ((_templateMode != TemplateMode.Off) && _clipboard.Rows == 1)
+				{
+					int n = _clipboard.Channels;
+
+					if (n + _currentChannel > 64)
+						n = 64 - _currentChannel;
+
+					PatternInsertRows(_currentRow, 1, _currentChannel, n);
+				}
+				else
+					PatternInsertRows(_currentRow, 1, _currentChannel, 1);
+
 				break;
-			}
-			basex += track_view->width;
-			if (_drawDivisions) basex++;
-		}
-		if (np == _currentPosition && nc == _currentChannel && nr == _currentRow) {
-			return 1;
-		}
+			case KeySym.Delete:
+				if (k.State == KeyState.Release)
+					return false;
 
-		if (nr >= total_rows) nr = total_rows;
-		if (nr < 0) nr = 0;
-		_currentPosition = np; _currentChannel = nc; _currentRow = nr;
+				if ((_templateMode != TemplateMode.Off) && _clipboard.Rows == 1)
+				{
+					int n = _clipboard.Channels;
 
-		if (k.State == KeyState.Press && k->sy > 14) {
-			if (!shift_selection.in_progress) {
-				shift_selection_begin();
-			} else {
-				shift_selection_update();
-			}
-		}
+					if (n + _currentChannel > 64)
+						n = 64 - _currentChannel;
 
-		return -1;
-	}
+					PatternDeleteRows(_currentRow, 1, _currentChannel, n);
+				}
+				else
+					PatternDeleteRows(_currentRow, 1, _currentChannel, 1);
 
+				break;
+			case KeySym.Minus:
+				if (k.State == KeyState.Release)
+					return false;
 
-	if (k->midi_note > -1 || k->midi_bend != 0) {
-		return pattern_editor_insert_midi(k);
-	}
+				if (_playbackTracing)
+				{
+					switch (Song.Mode)
+					{
+						case SongMode.PatternLoop:
+							return true;
+						case SongMode.Playing:
+							Song.SetCurrentOrder(Song.CurrentSong.CurrentOrder - 1);
+							return true;
+						default:
+							break;
+					}
+				}
 
-	switch (k.Sym) {
-	case SCHISM_KEYSYM_UP:
-		if (k.State == KeyState.Release)
-			return 0;
-		if (_skipValue) {
-			if (_currentRow - _skipValue >= 0)
-				_currentRow -= _skipValue;
-		} else {
-			_currentRow--;
-		}
-		return -1;
-	case SCHISM_KEYSYM_DOWN:
-		if (k.State == KeyState.Release)
-			return 0;
-		if (_skipValue) {
-			if (_currentRow + _skipValue <= total_rows)
-				_currentRow += _skipValue;
-		} else {
-			_currentRow++;
-		}
-		return -1;
-	case SCHISM_KEYSYM_LEFT:
-		if (k.State == KeyState.Release)
-			return 0;
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
-			_currentChannel--;
-		} else if (_linkEffectColumn && _currentPosition == 0 && _currentChannel > 1) {
-			_currentChannel--;
-			_currentPosition = current_effect() ? 8 : 6;
-		} else {
-			_currentPosition--;
-		}
-		return -1;
-	case SCHISM_KEYSYM_RIGHT:
-		if (k.State == KeyState.Release)
-			return 0;
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
-			_currentChannel++;
-		} else if (_linkEffectColumn && _currentPosition == 6 && _currentChannel < 64) {
-			_currentPosition = current_effect() ? 7 : 10;
-		} else {
-			_currentPosition++;
-		}
-		return -1;
-	case SCHISM_KEYSYM_TAB:
-		if (k.State == KeyState.Release)
-			return 0;
-		if ((k.Modifiers.HasAnyFlag(KeyMod.Shift)) == 0)
-			_currentChannel++;
-		else if (_currentPosition == 0)
-			_currentChannel--;
-		_currentPosition = 0;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					CurrentPattern -= 4;
+				else
+					CurrentPattern--;
 
-		/* hack to keep shift-tab from changing the selection */
-		k.Modifiers &= ~KeyMod.Shift;
-		ShiftSelectionEnd();
+				return true;
+			case KeySym.Equals:
+				if (!k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					return false;
 
-		return -1;
-	case SCHISM_KEYSYM_PAGEUP:
-		if (k.State == KeyState.Release)
-			return 0;
-			int rh = Song.CurrentSong->row_highlight_major ? Song.CurrentSong->row_highlight_major : 16;
-			if (_currentRow == total_rows)
-				_currentRow -= (_currentRow % rh) ? (_currentRow % rh) : rh;
-			else
-				_currentRow -= rh;
-		}
-		return -1;
-	case SCHISM_KEYSYM_PAGEDOWN:
-		if (k.State == KeyState.Release)
-		_currentRow += Song.CurrentSong->row_highlight_major ? Song.CurrentSong->row_highlight_major : 16;
-		return -1;
-	case SCHISM_KEYSYM_HOME:
-		if (k.State == KeyState.Release)
-			return 0;
-		if (_currentPosition == 0) {
-			if (invert_home_end ? (_currentRow != 0) : (_currentChannel == 1)) {
-				_currentRow = 0;
-			} else {
-				_currentChannel = 1;
-			}
-		} else {
-			_currentPosition = 0;
-		}
-		return -1;
-	case SCHISM_KEYSYM_END:
-		if (k.State == KeyState.Release)
-			return 0;
-		n = Song.CurrentSong.FindLastChannel() + 1;
-		if (_currentPosition == 8) {
-			if (invert_home_end ? (_currentRow != total_rows) : (_currentChannel == n)) {
-				_currentRow = total_rows;
-			} else {
-				_currentChannel = n;
-			}
-		} else {
-			_currentPosition = 8;
-		}
-		return -1;
-	case SCHISM_KEYSYM_INSERT:
-		if (k.State == KeyState.Release)
-			return 0;
-		if (template_mode && clipboard.rows == 1) {
-			n = clipboard.channels;
-			if (n + _currentChannel > 64) {
-				n = 64 - _currentChannel;
-			}
-			pattern_insert_rows(_currentRow, 1, _currentChannel, n);
-		} else {
-			pattern_insert_rows(_currentRow, 1, _currentChannel, 1);
-		}
-		break;
-	case SCHISM_KEYSYM_DELETE:
-		if (k.State == KeyState.Release)
-			return 0;
-		if (template_mode && clipboard.rows == 1) {
-			n = clipboard.channels;
-			if (n + _currentChannel > 64) {
-				n = 64 - _currentChannel;
-			}
-			pattern_delete_rows(_currentRow, 1, _currentChannel, n);
-		} else {
-			pattern_delete_rows(_currentRow, 1, _currentChannel, 1);
-		}
-		break;
-	case SCHISM_KEYSYM_MINUS:
-		if (k.State == KeyState.Release)
-			return 0;
+				goto case KeySym.Plus;
+			case KeySym.Plus:
+				if (k.State == KeyState.Release)
+					return false;
 
-		if (playback_tracing) {
-			switch (song_get_mode()) {
-			case MODE_PATTERN_LOOP:
-				return 1;
-			case MODE_PLAYING:
-				song_set_current_order(song_get_current_order() - 1);
-				return 1;
+				if (_playbackTracing)
+				{
+					switch (Song.Mode)
+					{
+						case SongMode.PatternLoop:
+							return true;
+						case SongMode.Playing:
+							Song.SetCurrentOrder(Song.CurrentSong.CurrentOrder + 1);
+							return true;
+						default:
+							break;
+					}
+				}
+
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift)
+				 && k.Sym == KeySym.KP_Plus)
+					CurrentPattern += 4;
+				else
+					CurrentPattern++;
+
+				return true;
+			case KeySym.Backspace:
+				if (k.State == KeyState.Release)
+					return false;
+
+				_currentChannel = MultiChannelGetPrevious(_currentChannel);
+
+				if (_skipValue != 0)
+					_currentRow -= _skipValue;
+				else
+					_currentRow--;
+
+				return null;
+			case KeySym.Return:
+				if (k.State == KeyState.Release)
+					return false;
+
+				CopyNoteToMask();
+
+				if (_templateMode != TemplateMode.NotesOnly)
+					_templateMode = TemplateMode.Off;
+
+				return true;
+			case KeySym.l:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+						return false;
+
+					if (k.State == KeyState.Release)
+						return true;
+
+					ClipboardCopy(honourMute: true);
+
+					break;
+				}
+
+				return HandleKeyDefault(k);
+			case KeySym.a:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				{
+					if (k.State == KeyState.Release)
+						return false;
+
+					if (_currentRow == 0)
+						return true;
+
+					do
+					{
+						_currentRow--;
+					} while (!SeekDone() && _currentRow != 0);
+
+					return null;
+				}
+
+				return HandleKeyDefault(k);
+			case KeySym.f:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				{
+					if (k.State == KeyState.Release)
+						return false;
+
+					if (_currentRow == pattern.Rows.Count - 1)
+						return true;
+
+					do
+					{
+						_currentRow++;
+					} while (!SeekDone() && _currentRow != pattern.Rows.Count - 1);
+
+					return null;
+				}
+
+				return HandleKeyDefault(k);
+
+			case KeySym.LeftShift:
+			case KeySym.RightShift:
+				if (k.State == KeyState.Press)
+				{
+					if (_shiftSelection.InProgress)
+						ShiftSelectionEnd();
+				}
+				else if (_shiftChordChannels != 0)
+				{
+					_currentChannel -= _shiftChordChannels;
+					while (_currentChannel < 1)
+						_currentChannel += 64;
+					AdvanceCursor(nextRow: true, multichannel: true);
+					_shiftChordChannels = 0;
+				}
+				return true;
+
 			default:
-				break;
-			};
+				return HandleKeyDefault(k);
 		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+		return true;
+	}
+
+	/* --------------------------------------------------------------------- */
+	/* this function name's a bit confusing, but this is just what gets
+	* called from the main key handler.
+	* pattern_editor_handle_*_key above do the actual work. */
+
+	bool HandleKeyCB(KeyEvent k)
+	{
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return false;
 
 		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-			set_current_pattern(current_pattern - 4);
-		else
-			set_current_pattern(current_pattern - 1);
-		return 1;
-	case SCHISM_KEYSYM_EQUALS:
-		if (!(k.Modifiers.HasAnyFlag(KeyMod.Shift)))
-			return 0;
-		SCHISM_FALLTHROUGH;
-	case SCHISM_KEYSYM_PLUS:
-		if (k.State == KeyState.Release)
-			return 0;
-
-		if (playback_tracing) {
-			switch (song_get_mode()) {
-			case MODE_PATTERN_LOOP:
-				return 1;
-			case MODE_PLAYING:
-				song_set_current_order(song_get_current_order() + 1);
-				return 1;
-			default:
-				break;
-			};
+		{
+			switch (k.Sym)
+			{
+				case KeySym.Left:
+				case KeySym.Right:
+				case KeySym.Up:
+				case KeySym.Down:
+				case KeySym.Home:
+				case KeySym.End:
+				case KeySym.PageUp:
+				case KeySym.PageDown:
+					if (k.State == KeyState.Release)
+						return false;
+					if (!_shiftSelection.InProgress)
+						ShiftSelectionBegin();
+					break;
+			}
 		}
 
-		if ((k.Modifiers.HasAnyFlag(KeyMod.Shift)) && k.Sym == SCHISM_KEYSYM_KP_PLUS)
-			set_current_pattern(current_pattern + 4);
+		bool? ret;
+
+		if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
+			ret = HandleAltKey(k);
+		else if (k.Modifiers.HasAnyFlag(KeyMod.Control))
+			ret = HandleControlKey(k);
 		else
-			set_current_pattern(current_pattern + 1);
-		return 1;
-	case SCHISM_KEYSYM_BACKSPACE:
-		if (k.State == KeyState.Release)
-			return 0;
-		_currentChannel = multichannel_get_previous (_currentChannel);
-		if (_skipValue)
-			_currentRow -= _skipValue;
-		else
-			_currentRow--;
-		return -1;
-	case SCHISM_KEYSYM_RETURN:
-		if (k.State == KeyState.Release)
-			return 0;
-		copy_note_to_mask();
-		if (template_mode != TEMPLATE_NOTES_ONLY)
-			template_mode = TemplateMode.Off;
-		return 1;
-	case SCHISM_KEYSYM_l:
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
-			if (Status.Flags & CLASSIC_MODE) return 0;
+			ret = HandleKey(k);
+
+		if (ret != null)
+			return ret.Value;
+
+		_currentRow = _currentRow.Clamp(0, pattern.Rows.Count - 1);
+
+		if (_currentPosition > 8)
+		{
+			if (_currentChannel < Constants.MaxChannels)
+			{
+				_currentPosition = 0;
+				_currentChannel++;
+			}
+			else
+				_currentPosition = 8;
+		}
+		else if (_currentPosition < 0)
+		{
+			if (_currentChannel > 1)
+			{
+				_currentPosition = 8;
+				_currentChannel--;
+			}
+			else
+				_currentPosition = 0;
+		}
+
+		_currentChannel = _currentChannel.Clamp(1, Constants.MaxChannels);
+		Reposition();
+		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+			ShiftSelectionUpdate();
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+		return true;
+	}
+
+	/* --------------------------------------------------------------------- */
+
+	int _prevRow = -1;
+	int _prevPattern = -1;
+
+	public override void PlaybackUpdate()
+	{
+		_playingRow = AudioPlayback.CurrentRow;
+		_playingPattern = AudioPlayback.PlayingPattern;
+
+		if (Song.IsPlaying && (_playingRow != _prevRow || _playingPattern != _prevPattern))
+		{
+			_prevRow = _playingRow;
+			_prevPattern = _playingPattern;
+
+			if (_playbackTracing)
+			{
+				AllPages.OrderList.CurrentOrder = Song.CurrentSong.CurrentOrder;
+				CurrentPattern = _playingPattern;
+				_currentRow = _playingRow;
+				Reposition();
+				Status.Flags |= StatusFlags.NeedUpdate;
+			}
+			else if (_currentPattern == _playingPattern)
+				Status.Flags |= StatusFlags.NeedUpdate;
+		}
+	}
+
+	public override void NotifySongChanged()
+	{
+		HistoryClear();
+
+		// reset ctrl-f7
+		_markedPattern = -1;
+		_markedRow = 0;
+	}
+
+	public override bool PreHandleKey(KeyEvent k)
+	{
+		// _fix_f7
+
+		if (k.Sym == KeySym.F7)
+		{
+			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+				return false;
 			if (k.State == KeyState.Release)
-				return 1;
-			clipboard_copy(1);
-			break;
-		}
-		return pattern_editor_handle_key_default(k);
-	case SCHISM_KEYSYM_a:
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !(Status.Flags & CLASSIC_MODE)) {
-			if (k.State == KeyState.Release) {
-				return 0;
-			}
-			if (_currentRow == 0) {
-				return 1;
-			}
-			do {
-				_currentRow--;
-			} while (!seek_done() && _currentRow != 0);
-			return -1;
-		}
-		return pattern_editor_handle_key_default(k);
-	case SCHISM_KEYSYM_f:
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !(Status.Flags & CLASSIC_MODE)) {
-			if (k.State == KeyState.Release) {
-				return 0;
-			}
-			if (_currentRow == total_rows) {
-				return 1;
-			}
-			do {
-				_currentRow++;
-			} while (!seek_done() && _currentRow != total_rows);
-			return -1;
-		}
-		return pattern_editor_handle_key_default(k);
+				return true;
 
-	case SCHISM_KEYSYM_LSHIFT:
-	case SCHISM_KEYSYM_RSHIFT:
-		if (k.State == KeyState.Press) {
-			if (shift_selection.in_progress)
-				shift_selection_end();
-		} else if (shift_chord_channels) {
-			_currentChannel -= shift_chord_channels;
-			while (_currentChannel < 1)
-				_currentChannel += 64;
-			AdvanceCursor(1, 1);
-			shift_chord_channels = 0;
-		}
-		return 1;
+			PlaySongFromMark();
 
-	default:
-		return pattern_editor_handle_key_default(k);
+			return true;
+		}
+
+		return false;
 	}
-
-	Status.Flags |= StatusFlags.NeedUpdate;
-	return 1;
-}
-
-/* --------------------------------------------------------------------- */
-/* this function name's a bit confusing, but this is just what gets
- * called from the main key handler.
- * pattern_editor_handle_*_key above do the actual work. */
-
-static int pattern_editor_handle_key_cb(struct key_event * k)
-{
-	int ret;
-	int total_rows = song_get_rows_in_pattern(current_pattern);
-
-	if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
-		switch (k.Sym) {
-		case SCHISM_KEYSYM_LEFT:
-		case SCHISM_KEYSYM_RIGHT:
-		case SCHISM_KEYSYM_UP:
-		case SCHISM_KEYSYM_DOWN:
-		case SCHISM_KEYSYM_HOME:
-		case SCHISM_KEYSYM_END:
-		case SCHISM_KEYSYM_PAGEUP:
-		case SCHISM_KEYSYM_PAGEDOWN:
-			if (k.State == KeyState.Release)
-				return 0;
-			if (!shift_selection.in_progress)
-				shift_selection_begin();
-		default:
-			break;
-		};
-	}
-
-	if (k.Modifiers & SCHISM_KEYMOD_ALT)
-		ret = pattern_editor_handle_alt_key(k);
-	else if (k.Modifiers & SCHISM_KEYMOD_CTRL)
-		ret = pattern_editor_handle_ctrl_key(k);
-	else
-		ret = pattern_editor_handle_key(k);
-
-	if (ret != -1)
-		return ret;
-
-	_currentRow = CLAMP(_currentRow, 0, total_rows);
-	if (_currentPosition > 8) {
-		if (_currentChannel < 64) {
-			_currentPosition = 0;
-			_currentChannel++;
-		} else {
-			_currentPosition = 8;
-		}
-	} else if (_currentPosition < 0) {
-		if (_currentChannel > 1) {
-			_currentPosition = 8;
-			_currentChannel--;
-		} else {
-			_currentPosition = 0;
-		}
-	}
-
-	_currentChannel = CLAMP(_currentChannel, 1, 64);
-	Reposition();
-	if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-		shift_selection_update();
-
-	Status.Flags |= StatusFlags.NeedUpdate;
-	return 1;
-}
-
-/* --------------------------------------------------------------------- */
-
-static void pattern_editor_playback_update(void)
-{
-	static int prev_row = -1;
-	static int prev_pattern = -1;
-
-	_playingRow = song_get__currentRow();
-	playing_pattern = song_get_playing_pattern();
-
-	if ((song_get_mode() & (MODE_PLAYING | MODE_PATTERN_LOOP)) != 0
-	    && (_playingRow != prev_row || playing_pattern != prev_pattern)) {
-
-		prev_row = _playingRow;
-		prev_pattern = playing_pattern;
-
-		if (playback_tracing) {
-			set_current_order(song_get_current_order());
-			set_current_pattern(playing_pattern);
-			_currentRow = _playingRow;
-			Reposition();
-			Status.Flags |= StatusFlags.NeedUpdate;
-		} else if (current_pattern == playing_pattern) {
-			Status.Flags |= StatusFlags.NeedUpdate;
-		}
-	}
-}
-
-static void pated_song_changed(void)
-{
-	pated_history_clear();
-
-	// reset ctrl-f7
-	_markedPattern = -1;
-	_markedRow = 0;
-}
-
-/* --------------------------------------------------------------------- */
-
-static int _fix_f7(struct key_event *k)
-{
-	if (k.Sym == SCHISM_KEYSYM_F7) {
-		if (!NO_MODIFIER(k.Modifiers)) return 0;
-		if (k.State == KeyState.Release)
-			return 1;
-		play_song_from_mark();
-		return 1;
-	}
-	return 0;
-}
-
-void pattern_editor_load_page(struct page *page)
-{
-	int i;
-	for (i = 0; i < 10; i++) {
-		memset(&undo_history[i],0,sizeof(struct pattern_snap));
-		undo_history[i].snap_op = "Empty";
-		undo_history[i].snap_op_allocated = 0;
-	}
-	page->title = "Pattern Editor (F2)";
-	page->playback_update = pattern_editor_playback_update;
-	page->song_changed_cb = pated_song_changed;
-	page->pre_handle_key = _fix_f7;
-	page->total_widgets = 1;
-	page->clipboard_paste = pattern_selection_system_paste;
-	page->widgets = widgets_pattern;
-	page->help_index = HELP_PATTERN_EDITOR;
-
-	widget_create_other(widgets_pattern + 0, 0, pattern_editor_handle_key_cb, NULL, pattern_editor_redraw);
-}
-
-#endif
 }

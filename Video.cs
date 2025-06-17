@@ -1,5 +1,5 @@
 using System;
-
+using ChasmTracker.VGA;
 using SDL3;
 
 namespace ChasmTracker;
@@ -7,7 +7,7 @@ namespace ChasmTracker;
 public class Video
 {
 	static DateTime s_nextUpdate;
-	static VideoBackend s_backend;
+	static VideoBackend s_backend = new SDLVideoBackend();
 	static IntPtr s_window; // SDL_Window *
 	static IntPtr s_renderer; // SDL_Renderer *
 	static IntPtr s_texture; // SDL_Texture *
@@ -15,13 +15,18 @@ public class Video
 	public static int Width => 640; // TODO
 	public static int Height => 400;
 
-	class MouseFields
+	public class MouseFields
 	{
 		public MouseCursorState Visible;
 		public MouseCursorShapes Shape;
 	}
 
-	static MouseFields s_mouse = new MouseFields();
+	public static readonly MouseFields Mouse = new MouseFields();
+
+	public static bool Startup(VGAMem vgaMem)
+	{
+		return s_backend.Initialize() && s_backend.Startup(vgaMem);
+	}
 
 	public static void ToggleScreenSaver(bool enabled)
 	{
@@ -39,18 +44,28 @@ public class Video
 		s_backend.Fullscreen(newFSFlag);
 	}
 
+	public static bool IsInputGrabbed()
+	{
+		return s_backend.IsInputGrabbed();
+	}
+
+	public static void SetInputGrabbed(bool newValue)
+	{
+		s_backend.SetInputGrabbed(newValue);
+	}
+
 	public static void SetMouseCursorState(MouseCursorState vis)
 	{
 		switch (vis)
 		{
 			case MouseCursorState.CycleState:
-				vis = (MouseCursorState)((((int)s_mouse.Visible) + 1) % (int)MouseCursorState.CycleState);
+				vis = (MouseCursorState)((((int)Mouse.Visible) + 1) % (int)MouseCursorState.CycleState);
 
 				goto case MouseCursorState.Disabled;
 			case MouseCursorState.Disabled:
 			case MouseCursorState.System:
 			case MouseCursorState.Emulated:
-				s_mouse.Visible = vis;
+				Mouse.Visible = vis;
 
 				switch (vis)
 				{
@@ -63,14 +78,14 @@ public class Video
 			case MouseCursorState.ResetState:
 				break;
 			default:
-				s_mouse.Visible = MouseCursorState.Emulated;
+				Mouse.Visible = MouseCursorState.Emulated;
 				break;
 		}
 
 		s_backend.NotifyMouseCursorChanged();
 	}
 
-	public static void CheckUpdate()
+	public static void CheckUpdate(VGAMem vgaMem)
 	{
 		var now = DateTime.UtcNow;
 
@@ -95,11 +110,11 @@ public class Video
 
 			RedrawScreen();
 			PublishFramebuffer();
-			s_backend.Blit();
+			s_backend.Blit(vgaMem);
 		}
 		else if (Status.Flags.HasFlag(StatusFlags.SoftwareMouseMoved))
 		{
-			s_backend.Blit();
+			s_backend.Blit(vgaMem);
 			Status.Flags &= ~StatusFlags.SoftwareMouseMoved;
 		}
 	}

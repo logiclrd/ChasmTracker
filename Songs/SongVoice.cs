@@ -59,7 +59,7 @@ public struct SongVoice
 	//  And we miss a value for "running envelope volume" for the pageInfo
 	public int InstrumentVolume;
 	public int AutoVibratoDepth;
-	public uint AutoVibratoPosition, VibratoPosition, TremoloPosition, PanbrelloPosition;
+	public int AutoVibratoPosition, VibratoPosition, TremoloPosition, PanbrelloPosition;
 	// 16-bit members
 
 	// these were `int', so I'm keeping them as `int'.

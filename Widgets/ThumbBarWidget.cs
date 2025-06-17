@@ -16,9 +16,8 @@ public class ThumbBarWidget : Widget
 	public string? TextAtMaximum;
 
 	public ThumbBarWidget(Point position, int width, int min, int max)
-		: base(position)
+		: base(position, width)
 	{
-		Size = new Size(width);
 		Minimum = min;
 		Maximum = max;
 	}

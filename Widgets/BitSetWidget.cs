@@ -11,8 +11,8 @@ public class BitSetWidget : Widget
 	public string[] BitsOff;
 	public char[] ActivationKeys;
 
-	public BitSetWidget(Point position, WidgetNext next, int nbits, string[] bitsOn, string[] bitsOff, SharedInt cursorPos)
-		: base(position, next)
+	public BitSetWidget(Point position, int width, int nbits, string[] bitsOn, string[] bitsOff, SharedInt cursorPos)
+		: base(position, width)
 	{
 		NumberOfBits = nbits;
 		CursorPosition = cursorPos;
