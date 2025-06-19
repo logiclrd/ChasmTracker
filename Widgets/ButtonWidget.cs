@@ -26,13 +26,13 @@ public class ButtonWidget : Widget
 		Clicked += clickedAction;
 	}
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
-		vgaMem.DrawBox(
+		VGAMem.DrawBox(
 			Position.Advance(-1, -1),
 			Position.Advance(Size.Width + 2, 1),
 			BoxTypes.Thin | BoxTypes.Inner | (IsDepressed ? BoxTypes.Inset : BoxTypes.Outset));
 
-		vgaMem.DrawText(Text, Position.Advance(Padding), isSelected ? 3 : 0, 2);
+		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? 3 : 0, 2);
 	}
 }

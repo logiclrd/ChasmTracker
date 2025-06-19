@@ -64,14 +64,14 @@ public abstract class Widget
 	should "override" this... */
 	public virtual bool ClipboardPaste(int cb, string cptr) { return false; }
 
-	protected virtual void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg) { }
+	protected virtual void DrawWidget(bool isSelected, int tfg, int tbg) { }
 
-	public void DrawWidget(VGAMem vgaMem, bool isSelected)
+	public void DrawWidget(bool isSelected)
 	{
 		int tfg = isSelected ? 0 : 2;
 		int tbg = isSelected ? 3 : 0;
 
-		DrawWidget(vgaMem, isSelected, tfg, tbg);
+		DrawWidget(isSelected, tfg, tbg);
 	}
 
 	/* true if the widget accepts "text"- used for digraphs and unicode

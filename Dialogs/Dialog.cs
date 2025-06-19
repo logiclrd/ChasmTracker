@@ -10,7 +10,7 @@ using ChasmTracker.Widgets;
 
 public class Dialog
 {
-	public DialogTypes Type;
+	public MessageBoxTypes Type;
 	public Point Position;
 	public Size Size;
 	public List<Widget> Widgets = new List<Widget>();
@@ -79,12 +79,12 @@ public class Dialog
 			var dialog = s_activeDialogs.Peek();
 
 			Page.ActiveWidgets = dialog.Widgets;
-			Status.DialogType = dialog.Type;
+			Status.MessageBoxType = dialog.Type;
 		}
 		else
 		{
 			Page.ActiveWidgets = Status.CurrentPage.Widgets;
-			Status.DialogType = DialogTypes.None;
+			Status.MessageBoxType = MessageBoxTypes.None;
 		}
 
 		/* it's up to the calling function to redraw the page */
@@ -96,33 +96,33 @@ public class Dialog
 			Destroy();
 	}
 
-	public static void DrawActiveDialogs(VGAMem vgaMem)
+	public static void DrawActiveDialogs()
 	{
 		foreach (var dialog in s_activeDialogs)
 		{
 			/* draw the border and background */
-			vgaMem.DrawBox(
+			VGAMem.DrawBox(
 				dialog.Position,
 				dialog.Position.Advance(dialog.Size).Advance(-1, -1),
 				BoxTypes.Thick | BoxTypes.Outer | BoxTypes.FlatLight);
 
-			vgaMem.DrawFillChars(
+			VGAMem.DrawFillCharacters(
 				dialog.Position.Advance(1, 1),
 				dialog.Position.Advance(dialog.Size).Advance(-2, -2),
-				VGAMem.DefaultForeground, 2);
+				(VGAMem.DefaultForeground, 2));
 
 			/* then the rest of the stuff */
-			dialog.DrawConst(vgaMem);
+			dialog.DrawConst();
 
 			if (!string.IsNullOrWhiteSpace(dialog.Text))
-				vgaMem.DrawText(dialog.Text, new Point(dialog.TextX, 27), 0, 2);
+				VGAMem.DrawText(dialog.Text, new Point(dialog.TextX, 27), (0, 2));
 
 			for (int i = 0; i < dialog.Widgets.Count; i++)
 			{
 				var widget = dialog.Widgets[i];
 				bool isSelected = (i == dialog.SelectedWidget);
 
-				widget.DrawWidget(vgaMem, isSelected);
+				widget.DrawWidget(isSelected);
 			}
 		}
 	}
@@ -146,18 +146,18 @@ public class Dialog
 			switch (k.Sym)
 			{
 				case KeySym.y:
-					switch (Status.DialogType)
+					switch (Status.MessageBoxType)
 					{
-						case DialogTypes.YesNo:
-						case DialogTypes.OKCancel:
+						case MessageBoxTypes.YesNo:
+						case MessageBoxTypes.OKCancel:
 							DialogButtonYes(dialog.Data);
 							return true;
 					}
 					break;
 				case KeySym.n:
-					switch (Status.DialogType)
+					switch (Status.MessageBoxType)
 					{
-						case DialogTypes.YesNo:
+						case MessageBoxTypes.YesNo:
 							/* in Impulse Tracker, 'n' means cancel, not "no"!
 							(results in different behavior on sample quality convert dialog) */
 							if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
@@ -165,18 +165,18 @@ public class Dialog
 								DialogButtonNo(dialog.Data);
 								return true;
 							}
-							goto case DialogTypes.OKCancel;
-						case DialogTypes.OKCancel:
+							goto case MessageBoxTypes.OKCancel;
+						case MessageBoxTypes.OKCancel:
 							DialogButtonCancel(dialog.Data);
 							return true;
 					}
 
 					break;
 				case KeySym.c:
-					switch (Status.DialogType)
+					switch (Status.MessageBoxType)
 					{
-						case DialogTypes.YesNo:
-						case DialogTypes.OKCancel:
+						case MessageBoxTypes.YesNo:
+						case MessageBoxTypes.OKCancel:
 							break;
 						default:
 							return false;
@@ -187,10 +187,10 @@ public class Dialog
 					DialogButtonCancel(dialog.Data);
 					return true;
 				case KeySym.o:
-					switch (Status.DialogType)
+					switch (Status.MessageBoxType)
 					{
-						case DialogTypes.YesNo:
-						case DialogTypes.OKCancel:
+						case MessageBoxTypes.YesNo:
+						case MessageBoxTypes.OKCancel:
 							break;
 						default:
 							return false;
@@ -208,7 +208,7 @@ public class Dialog
 		return false;
 	}
 
-	public virtual void DrawConst(VGAMem vgaMem)
+	public virtual void DrawConst()
 	{
 	}
 
@@ -309,17 +309,17 @@ public class Dialog
 	/* --------------------------------------------------------------------- */
 	/* type can be DialogTypes.OK, DialogTypes.Cancel, or DialogTypes.YesNo
 	 * default_widget: 0 = ok/yes, 1 = cancel/no */
-	protected Dialog(DialogTypes type, string text, Action<object?>? actionYes,
+	protected Dialog(MessageBoxTypes type, string text, Action<object?>? actionYes,
 		Action<object?>? actionNo, int defaultWidget, object? data)
 	{
-		if (!type.HasFlag(DialogTypes.Box))
+		if (!type.HasFlag(MessageBoxTypes.Box))
 		{
 			Console.Error.WriteLine("dialog_create called with bogus dialog type {0}", type);
 			throw new ArgumentException(nameof(type));
 		}
 
 		/* FIXME | hmm... a menu should probably be hiding itself when a widget gets selected. */
-		if (Status.DialogType.HasFlag(DialogTypes.Menu))
+		if (Status.MessageBoxType.HasFlag(MessageBoxTypes.Menu))
 			Menu.Hide();
 
 		Text = text;
@@ -331,19 +331,19 @@ public class Dialog
 
 		switch (type)
 		{
-			case DialogTypes.OK:
+			case MessageBoxTypes.OK:
 				DialogCreateOK();
 				break;
-			case DialogTypes.OKCancel:
+			case MessageBoxTypes.OKCancel:
 				DialogCreateOKCancel();
 				break;
-			case DialogTypes.YesNo:
+			case MessageBoxTypes.YesNo:
 				DialogCreateYesNo();
 				break;
 			default:
 				Console.Error.WriteLine("this man should not be seen");
-				type = DialogTypes.OKCancel;
-				goto case DialogTypes.OKCancel;
+				type = MessageBoxTypes.OKCancel;
+				goto case MessageBoxTypes.OKCancel;
 		}
 
 		s_activeDialogs.Push(this);
@@ -351,13 +351,13 @@ public class Dialog
 		Page.ActiveWidgets = Widgets;
 		Page.SelectedActiveWidget = SelectedWidget;
 
-		Status.DialogType = type;
+		Status.MessageBoxType = type;
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	protected Dialog(Point position, Size size)
 	{
-		Type = DialogTypes.Custom;
+		Type = MessageBoxTypes.Custom;
 
 		Position = position;
 		Size = size;

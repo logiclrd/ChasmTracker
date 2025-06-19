@@ -53,21 +53,21 @@ public class PatternEditorMultiChannelDialog : Dialog
 		ChangeFocusTo(SelectedWidget + 1);
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
 		for (int i = 0; i < 64; i++)
 		{
-			vgaMem.DrawText(
+			VGAMem.DrawText(
 				"Channel " + (i + 1).ToString("d2"),
 				new Point(
 					9 + ((i / 16) * 16), /* X */
 					22 + (i % 16)),  /* Y */
-				0, 2);
+				(0, 2));
 		}
 
 		for (int i = 0; i < 64; i += 16)
 		{
-			vgaMem.DrawBox(
+			VGAMem.DrawBox(
 				new Point(
 					19 + ((i / 16) * 16), /* X */
 					21),
@@ -77,7 +77,7 @@ public class PatternEditorMultiChannelDialog : Dialog
 				BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
 		}
 
-		vgaMem.DrawText("Multichannel Selection", new Point(29, 19), 3, 2);
+		VGAMem.DrawText("Multichannel Selection", new Point(29, 19), (3, 2));
 	}
 
 	public override bool HandleKey(KeyEvent k)

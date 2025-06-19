@@ -7,15 +7,15 @@ public class TrackView3 : TrackView
 {
 	public override int Width => 3;
 
-	public override void DrawChannelHeader(VGAMem vgaMem, int chan, Point position, int fg)
+	public override void DrawChannelHeader(int chan, Point position, byte fg)
 	{
-		vgaMem.DrawText($" {chan:d2}", position, fg, 1);
+		VGAMem.DrawText($" {chan:d2}", position, (fg, 1));
 	}
 
-	public override void DrawNote(VGAMem vgaMem, Point position, SongNote note, int cursorPos, int fg, int bg)
+	public override void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours)
 	{
 		string buf;
-		int vfg = 6;
+		byte vfg = 6;
 
 		switch (note.VolumeEffect)
 		{
@@ -31,64 +31,64 @@ public class TrackView3 : TrackView
 		switch (cursorPos)
 		{
 			case 0:
-				vfg = fg = 0;
-				bg = 3;
+				vfg = 0;
+				colours = (0, 3);
 				break;
 			case 1:
 				buf = note.NoteString;
-				vgaMem.DrawText(buf, position, 6, bg);
-				vgaMem.DrawCharacter(buf[2], position.Advance(2), 0, 3);
+				VGAMem.DrawText(buf, position, (6, colours.BG));
+				VGAMem.DrawCharacter(buf[2], position.Advance(2), (0, 3));
 				return;
 			case 2:
 			case 3:
 				cursorPos -= 1;
 				buf = " " + note.InstrumentString;
-				vgaMem.DrawText(buf, position, 6, bg);
-				vgaMem.DrawCharacter(buf[cursorPos], position.Advance(cursorPos), 0, 3);
+				VGAMem.DrawText(buf, position, (6, colours.BG));
+				VGAMem.DrawCharacter(buf[cursorPos], position.Advance(cursorPos), (0, 3));
 				return;
 			case 4:
 			case 5:
 				cursorPos -= 3;
 				buf = " " + note.VolumeString;
-				vgaMem.DrawText(buf, position, 2, bg);
-				vgaMem.DrawCharacter(buf[cursorPos], position.Advance(cursorPos), 0, 3);
+				VGAMem.DrawText(buf, position, (2, colours.BG));
+				VGAMem.DrawCharacter(buf[cursorPos], position.Advance(cursorPos), (0, 3));
 				return;
 			case 6:
 			case 7:
 			case 8:
 				cursorPos -= 6;
 				buf = note.EffectString;
-				vgaMem.DrawText(buf, position, 2, bg);
-				vgaMem.DrawCharacter(buf[cursorPos], position.Advance(cursorPos), 0, 3);
+				VGAMem.DrawText(buf, position, (2, colours.BG));
+				VGAMem.DrawCharacter(buf[cursorPos], position.Advance(cursorPos), (0, 3));
 				return;
 			case 9:
 				buf = note.EffectString;
-				vgaMem.DrawText(buf, position, 0, 3);
+				VGAMem.DrawText(buf, position, (0, 3));
 				return;
 			default:
 				/* bleh */
-				fg = 6;
+				colours.FG = 6;
 				break;
 		}
 
 		if (note.HasNote)
-			vgaMem.DrawText(note.NoteString, position, fg, bg);
+			VGAMem.DrawText(note.NoteString, position, colours);
 		else if (note.HasInstrument)
-			vgaMem.DrawText(" " + note.InstrumentString, position, fg, bg);
+			VGAMem.DrawText(" " + note.InstrumentString, position, colours);
 		else if (note.VolumeEffect != VolumeEffects.None)
-			vgaMem.DrawText(" " + note.VolumeString, position, vfg, bg);
+			VGAMem.DrawText(" " + note.VolumeString, position, (vfg, colours.BG));
 		else if ((note.Effect != 0) || (note.Parameter != 0))
 		{
 			if (cursorPos != 0)
-				fg = 2;
+				colours.FG = 2;
 
-			vgaMem.DrawText(note.EffectString, position, fg, bg);
+			VGAMem.DrawText(note.EffectString, position, colours);
 		}
 		else
-			vgaMem.DrawText("\xAD\xAD\xAD", position, fg, bg);
+			VGAMem.DrawText("\xAD\xAD\xAD", position, colours);
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(Point position, PatternEditorMask mask, int cursorPos, VGAMemColours colours)
 	{
 		var buf = new char[] { '\x8F', '\x8F', '\x8F' };
 
@@ -113,6 +113,6 @@ public class TrackView3 : TrackView
 				break;
 		}
 
-		vgaMem.DrawText(new string(buf), position, fg, bg);
+		VGAMem.DrawText(new string(buf), position, colours);
 	}
 }

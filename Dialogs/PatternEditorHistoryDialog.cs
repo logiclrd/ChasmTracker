@@ -25,14 +25,14 @@ public class PatternEditorHistoryDialog : Dialog
 
 	public Action<int>? RestoreHistory;
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawText("Undo", new Point(38, 22), 3, 2);
-		vgaMem.DrawBox(new Point(19, 23), new Point(60, 34), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawText("Undo", new Point(38, 22), (3, 2));
+		VGAMem.DrawBox(new Point(19, 23), new Point(60, 34), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
 
 		for (int i = 0; i < 10; i++)
 		{
-			int fg, bg;
+			byte fg, bg;
 
 			if (i == s_undoSelection)
 			{
@@ -45,11 +45,11 @@ public class PatternEditorHistoryDialog : Dialog
 				bg = 0;
 			}
 
-			vgaMem.DrawCharacter(' ', new Point(20, 24 + i), fg, bg);
+			VGAMem.DrawCharacter(' ', new Point(20, 24 + i), (fg, bg));
 
 			if ((i < _undoHistory.Count)
 			 && (_undoHistory[_undoHistory.Count - i - 1].SnapOp is string snapOp))
-				vgaMem.DrawTextLen(snapOp, 39, new Point(21, 24 + i), fg, bg);
+				VGAMem.DrawTextLen(snapOp, 39, new Point(21, 24 + i), (fg, bg));
 		}
 	}
 

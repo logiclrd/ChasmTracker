@@ -34,10 +34,10 @@ public class ThumbBarWidget : Widget
 		TextAtMaximum = textAtMax;
 	}
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
 		if ((TextAtMinimum != null) && (Value == Minimum))
-			vgaMem.DrawTextLen(TextAtMinimum, Size.Width, Position, isSelected ? 3 : 2, 0);
+			VGAMem.DrawTextLen(TextAtMinimum, Size.Width, Position, isSelected ? 3 : 2, 0);
 		else if ((TextAtMaximum != null) && (Value == Maximum))
 		{
 			int len = TextAtMaximum.Length;
@@ -49,16 +49,16 @@ public class ThumbBarWidget : Widget
 				len = Size.Width;
 			}
 
-			vgaMem.DrawFillChars(Position, Position.Advance(len - 1), VGAMem.DefaultForeground, 0);
-			vgaMem.DrawTextLen(TextAtMaximum, Size.Width, Position.Advance(offset), isSelected ? 3 : 2, 0);
+			VGAMem.DrawFillChars(Position, Position.Advance(len - 1), VGAMem.DefaultForeground, 0);
+			VGAMem.DrawTextLen(TextAtMaximum, Size.Width, Position.Advance(offset), isSelected ? 3 : 2, 0);
 		}
 		else
 		{
-			vgaMem.DrawThumbBar(Position, Size.Width, Minimum, Maximum, Value, isSelected);
+			VGAMem.DrawThumbBar(Position, Size.Width, Minimum, Maximum, Value, isSelected);
 		}
 
 		string buf = Value.ToString("d3");
 
-		vgaMem.DrawText(buf, Position.Advance(Size.Width + 1), 1, 2);
+		VGAMem.DrawText(buf, Position.Advance(Size.Width + 1), 1, 2);
 	}
 }

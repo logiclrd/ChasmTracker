@@ -23,7 +23,7 @@ Expression: {x.Body}
 
 Chasm Tracker will now terminate.";
 
-			OS.ShowMessageBox("Assertion triggered!", message, MessageBoxTypes.Error);
+			OS.ShowMessageBox("Assertion triggered!", message, OSMessageBoxTypes.Error);
 
 			/* XXX should this use Program.Exit ?
 			 * I mean, it's not like it's totally necessary to exit everything.

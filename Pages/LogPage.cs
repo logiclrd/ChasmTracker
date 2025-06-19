@@ -14,10 +14,10 @@ public class LogPage : Page
 	{
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawBox(new Point(1, 12), new Point(78, 48), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
-		vgaMem.DrawFillChars(new Point(2, 13), new Point(77, 47), VGAMem.DefaultForeground, 0);
+		VGAMem.DrawBox(new Point(1, 12), new Point(78, 48), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawFillChars(new Point(2, 13), new Point(77, 47), VGAMem.DefaultForeground, 0);
 	}
 
 	public override bool HandleKey(KeyEvent k)
@@ -81,16 +81,16 @@ public class LogPage : Page
 		return true;
 	}
 
-	public override void Redraw(VGAMem vgaMem)
+	public override void Redraw()
 	{
 		for (int n = 0, i = _topLine; i < Log.Lines.Count && n < 33; n++)
 		{
 			var line = Log.Lines[i];
 
 			if (line.BIOSFont)
-				vgaMem.DrawTextBIOSLen(line.Text, 74, new Point(3, 14 + n), line.Colour, 0);
+				VGAMem.DrawTextBIOSLen(line.Text, 74, new Point(3, 14 + n), line.Colour, 0);
 			else
-				vgaMem.DrawTextLen(line.Text, 74, new Point(3, 14 + n), line.Colour, 0);
+				VGAMem.DrawTextLen(line.Text, 74, new Point(3, 14 + n), line.Colour, 0);
 		}
 	}
 }

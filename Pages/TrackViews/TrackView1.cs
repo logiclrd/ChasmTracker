@@ -8,66 +8,63 @@ public class TrackView1 : TrackView
 {
 	public override int Width => 1;
 
-	public override void DrawChannelHeader(VGAMem vgaMem, int chan, Point position, int fg)
+	public override void DrawChannelHeader(int chan, Point position, byte fg)
 	{
 		char ch1 = unchecked((char)('0' + chan / 10));
 		char ch2 = unchecked((char)('0' + chan % 10));
 
-		vgaMem.DrawHalfWidthCharacters(ch1, ch2, position, fg, 1, fg, 1);
+		VGAMem.DrawHalfWidthCharacters(ch1, ch2, position, (fg, 1), (fg, 1));
 	}
 
-	void DrawEffect(VGAMem vgaMem, Point position, SongNote note, int cursorPos, int fg, int bg)
+	void DrawEffect(Point position, SongNote note, int cursorPos, VGAMemColours colours)
 	{
-		int fg1 = fg, fg2 = fg, bg1 = bg, bg2 = bg;
+		var colours1 = colours;
+		var colours2 = colours;
 
 		switch (cursorPos)
 		{
 			case 0:
 				break;
 			case 6:
-				fg = 0;
-				bg = 3;
+				colours = (0, 3);
 				break;
 			case 7:
-				fg1 = 0;
-				bg1 = 3;
+				colours1 = (0, 3);
 				break;
 			case 8:
-				fg2 = 0;
-				bg2 = 3;
+				colours2 = (0, 3);
 				break;
 			default:
-				fg = 2;
+				colours.FG = 2;
 				break;
 		}
 
 		if ((cursorPos == 7) || (cursorPos == 8) || ((note.Effect == 0) && (note.Parameter != 0)))
-			vgaMem.DrawHalfWidthCharacters(HexDigit(note.Parameter >> 4),
+			VGAMem.DrawHalfWidthCharacters(HexDigit(note.Parameter >> 4),
 				HexDigit(note.Parameter & 0xF),
-				position.Advance(1), fg1, bg1, fg2, bg2);
+				position.Advance(1), colours1, colours2);
 		else
-			vgaMem.DrawCharacter(note.EffectChar, position, fg, bg);
+			VGAMem.DrawCharacter(note.EffectChar, position, colours);
 	}
 
-	public override void DrawNote(VGAMem vgaMem, Point position, SongNote note, int cursorPos, int fg, int bg)
+	public override void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours)
 	{
 		string buf;
 
 		switch (cursorPos)
 		{
 			case 0:
-				fg = 0;
-				bg = 3;
+				colours = (0, 3);
 				if (note.NoteIsNote)
 				{
 					buf = note.NoteStringShort;
-					vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, fg, bg, fg, bg);
+					VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, colours, colours);
 					return;
 				}
 				break;
 			case 1:
 				buf = note.NoteStringShort;
-				vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, fg, bg, 0, 3);
+				VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, colours, (0, 3));
 				return;
 			case 2:
 			case 3:
@@ -76,9 +73,9 @@ public class TrackView1 : TrackView
 				buf = note.HasInstrument ? note.NoteString : "\xAD\xAD";
 
 				if (cursorPos == 0)
-					vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, 0, 3, fg, bg);
+					VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, (0, 3), colours);
 				else
-					vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, fg, bg, 0, 3);
+					VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, colours, (0, 3));
 				return;
 			case 4:
 			case 5:
@@ -86,12 +83,12 @@ public class TrackView1 : TrackView
 
 				buf = note.VolumeString;
 
-				fg = (note.VolumeEffect == VolumeEffects.Panning) ? 1 : 2;
+				colours.FG = (note.VolumeEffect == VolumeEffects.Panning) ? (byte)1 : (byte)2;
 
 				if (cursorPos == 0)
-					vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, 0, 3, fg, bg);
+					VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, (0, 3), colours);
 				else
-					vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, fg, bg, 0, 3);
+					VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, colours, (0, 3));
 				return;
 			case 9:
 				cursorPos = 6;
@@ -100,33 +97,33 @@ public class TrackView1 : TrackView
 			case 6:
 			case 7:
 			case 8:
-				DrawEffect(vgaMem, position, note, cursorPos, fg, bg);
+				DrawEffect(position, note, cursorPos, colours);
 				return;
 		}
 
 		if (note.HasNote)
-			vgaMem.DrawCharacter(note.NoteStringShort[0], position, fg, bg);
+			VGAMem.DrawCharacter(note.NoteStringShort[0], position, colours);
 		else if (note.HasInstrument)
 		{
 			buf = note.InstrumentString;
-			vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, fg, bg, fg, bg);
+			VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, colours, colours);
 		}
 		else if (note.VolumeEffect != VolumeEffects.None)
 		{
 			if (cursorPos != 0)
-				fg = (note.VolumeEffect == VolumeEffects.Panning) ? 1 : 2;
+				colours.FG = (note.VolumeEffect == VolumeEffects.Panning) ? (byte)1 : (byte)2;
 
 			buf = note.VolumeString;
 
-			vgaMem.DrawHalfWidthCharacters(buf[0], buf[1], position, fg, bg, fg, bg);
+			VGAMem.DrawHalfWidthCharacters(buf[0], buf[1], position, colours, colours);
 		}
 		else if ((note.Effect != 0) || (note.Parameter != 0))
-			DrawEffect(vgaMem, position, note, cursorPos, fg, bg);
+			DrawEffect(position, note, cursorPos, colours);
 		else
-			vgaMem.DrawCharacter('\xAD', position, fg, bg);
+			VGAMem.DrawCharacter('\xAD', position, colours);
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(Point position, PatternEditorMask mask, int cursorPos, VGAMemColours colours)
 	{
 		char c = '\x8F';
 
@@ -149,6 +146,6 @@ public class TrackView1 : TrackView
 				break;
 		}
 
-		vgaMem.DrawCharacter(c, position, fg, bg);
+		VGAMem.DrawCharacter(c, position, colours);
 	}
 }

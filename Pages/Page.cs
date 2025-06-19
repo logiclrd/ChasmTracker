@@ -7,7 +7,6 @@ using System.Linq;
 namespace ChasmTracker;
 
 using ChasmTracker.Dialogs;
-using ChasmTracker.Events;
 using ChasmTracker.Memory;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
@@ -76,12 +75,12 @@ public abstract class Page
 	public virtual void SynchronizeWith(Page other) { }
 
 	/* font editor takes over full screen */
-	public virtual void DrawFull(VGAMem vgaMem) { }
+	public virtual void DrawFull() { }
 
 	/* draw the labels, etc. that don't change */
-	public virtual void DrawConst(VGAMem vgaMem) { }
+	public virtual void DrawConst() { }
 	/* redraw the page */
-	public virtual void Redraw(VGAMem vgaMem) { }
+	public virtual void Redraw() { }
 	/* called after the song is changed. this is to copy the new
 	 * values from the song to the widgets on the page. */
 	public virtual void NotifySongChanged() { }
@@ -101,7 +100,7 @@ public abstract class Page
 	public virtual void HandleTextInput(string textInput) { }
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
-	public virtual void SetPage(VGAMem vgaMem) { }
+	public virtual void SetPage() { }
 
 	/* called when the song-mode changes */
 	public virtual void NotifySongModeChanged() { }
@@ -137,6 +136,54 @@ public abstract class Page
 		{
 			Dialog.DestroyAll();
 			MiniPopActive = MiniPopState.Inactive;
+		}
+	}
+
+	/* --------------------------------------------------------------------------------------------------------- */
+
+	static PageNumbers s_fontEditReturnPage;
+
+	public static void SaveCheck(Action<object?> ok, Action<object?>? cancel = null, object? data = null)
+	{
+		if (Status.Flags.HasFlag(StatusFlags.SongNeedsSave))
+			MessageBox.Show(MessageBoxTypes.OKCancel, "Current module not saved. Proceed?", ok, cancel, data);
+		else
+			ok(data);
+	}
+
+	public static void ShowExitPrompt()
+	{
+		/* This used to kill all open dialogs, but that doesn't seem to be necessary.
+		Do keep in mind though, a dialog *might* exist when this function is called
+		(for example, if the WM sends a close request). */
+
+		if (Status.CurrentPage is AboutPage)
+		{
+			/* haven't even started up yet; don't bother confirming */
+			Program.Exit(0);
+		}
+		else if (Status.CurrentPage is FontEditorPage)
+		{
+			if (Status.Flags.HasFlag(StatusFlags.StartupFontEdit))
+			{
+				MessageBox.Show(MessageBoxTypes.OKCancel, "Exit Font Editor?", _ => Program.Exit(0));
+			}
+			else
+			{
+				/* don't ask, just go away */
+				Dialog.DestroyAll();
+				SetPage(s_fontEditReturnPage);
+			}
+		}
+		else if (Status.MessageBoxType != MessageBoxTypes.OKCancel)
+		{
+			/* don't draw an exit prompt on top of an existing one */
+			MessageBox.Show(
+				MessageBoxTypes.OKCancel,
+				Status.Flags.HasFlag(StatusFlags.ClassicMode)
+				? "Exit Impulse Tracker?"
+				: "Exit Schism Tracker?",
+				_ => SaveCheck(_ => Program.Exit(0)));
 		}
 	}
 
@@ -348,7 +395,7 @@ public abstract class Page
 				{
 					if (k.State == KeyState.Release)
 						return true;
-					Audio.Reinitialize(null);
+					AudioPlayback.Reinitialize(null);
 					return true;
 				}
 				break;
@@ -367,14 +414,14 @@ public abstract class Page
 				if (!(k.Modifiers.HasAnyFlag(KeyMod.Alt))) break;
 				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) break;
 				if (k.State == KeyState.Release)
-					return 0;
+					return false;
 				Keyboard.CurrentOctave--;
 				return true;
 			case KeySym.End:
 				if (!(k.Modifiers.HasAnyFlag(KeyMod.Alt))) break;
 				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) break;
 				if (k.State == KeyState.Release)
-					return 0;
+					return false;
 				Keyboard.CurrentOctave++;
 				return true;
 			default:
@@ -388,7 +435,7 @@ public abstract class Page
 		switch (k.Sym)
 		{
 			case KeySym.q:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -403,7 +450,7 @@ public abstract class Page
 				}
 				break;
 			case KeySym.n:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -414,7 +461,7 @@ public abstract class Page
 				}
 				break;
 			case KeySym.g:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -425,7 +472,7 @@ public abstract class Page
 				}
 				break;
 			case KeySym.p:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -436,7 +483,7 @@ public abstract class Page
 				}
 				break;
 			case KeySym.F1:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -467,11 +514,11 @@ public abstract class Page
 					if (Status.CurrentPageNumber == PageNumbers.PatternEditor)
 					{
 						FinishMiniPop();
-						if (k.State == KeyState.Press && Status.DialogType == DialogTypes.None)
+						if (k.State == KeyState.Press && Status.MessageBoxType == MessageBoxTypes.None)
 							PatternEditorLengthEdit();
 						return true;
 					}
-					if (Status.DialogType != DialogTypes.None)
+					if (Status.MessageBoxType != MessageBoxTypes.None)
 						return false;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
@@ -480,11 +527,11 @@ public abstract class Page
 					{
 						if (k.State == KeyState.Press)
 						{
-							if (Status.DialogType.HasFlag(DialogTypes.Menu))
+							if (Status.MessageBoxType.HasFlag(MessageBoxTypes.Menu))
 							{
 								return false;
 							}
-							else if (Status.DialogType != DialogTypes.None)
+							else if (Status.MessageBoxType != MessageBoxTypes.None)
 							{
 								Dialog.DialogButtonYes(null);
 								Status.Flags |= StatusFlags.NeedUpdate;
@@ -498,7 +545,7 @@ public abstract class Page
 					}
 					else
 					{
-						if (Status.DialogType != DialogTypes.None)
+						if (Status.MessageBoxType != MessageBoxTypes.None)
 							return false;
 						FinishMiniPop();
 						if (k.State == KeyState.Press)
@@ -508,7 +555,7 @@ public abstract class Page
 				}
 				break;
 			case KeySym.F3:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
@@ -524,7 +571,7 @@ public abstract class Page
 				}
 				return true;
 			case KeySym.F4:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
@@ -546,11 +593,11 @@ public abstract class Page
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						song_start();
+						AudioPlayback.Start();
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					if (Status.DialogType != DialogTypes.None)
+					if (Status.MessageBoxType != MessageBoxTypes.None)
 						return false;
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
@@ -558,16 +605,16 @@ public abstract class Page
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					if ((Song.Mode == SongMode.Stopped)
-					 || (Song.Mode == SongMode.SingleStep && Status.CurrentPageNumber == PageNumbers.Info))
+					if ((AudioPlayback.Mode == AudioPlaybackMode.Stopped)
+					 || (AudioPlayback.Mode == AudioPlaybackMode.SingleStep && Status.CurrentPageNumber == PageNumbers.Info))
 					{
 						FinishMiniPop();
 						if (k.State == KeyState.Press)
-							Song.Start();
+							AudioPlayback.Start();
 					}
 					if (k.State == KeyState.Press)
 					{
-						if (Status.DialogType != DialogTypes.None)
+						if (Status.MessageBoxType != MessageBoxTypes.None)
 							return false;
 						FinishMiniPop();
 						SetPage(PageNumbers.Info);
@@ -627,7 +674,7 @@ public abstract class Page
 				}
 				return true;
 			case KeySym.F9:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
@@ -648,7 +695,7 @@ public abstract class Page
 				return true;
 			case KeySym.l:
 			case KeySym.r:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -662,7 +709,7 @@ public abstract class Page
 				}
 				return true;
 			case KeySym.s:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -677,7 +724,7 @@ public abstract class Page
 				return true;
 			case KeySym.w:
 				/* Ctrl-W _IS_ in IT, and hands don't leave home row :) */
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
@@ -691,7 +738,7 @@ public abstract class Page
 				}
 				return true;
 			case KeySym.F10:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) break;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control)) break;
@@ -709,7 +756,7 @@ public abstract class Page
 				}
 				return true;
 			case KeySym.F11:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
@@ -759,7 +806,7 @@ public abstract class Page
 				}
 				return true;
 			case KeySym.F12:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				if ((k.Modifiers.HasAnyFlag(KeyMod.Alt)) && Status.CurrentPageNumber == PageNumbers.Info)
 				{
@@ -800,7 +847,7 @@ public abstract class Page
 				/* fall through */
 				goto case KeySym.ScrollLock;
 			case KeySym.ScrollLock:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				FinishMiniPop();
 				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
@@ -852,7 +899,7 @@ public abstract class Page
 				}
 				return false;
 			default:
-				if (Status.DialogType != DialogTypes.None)
+				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
 				break;
 		}

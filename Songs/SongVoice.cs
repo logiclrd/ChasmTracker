@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Channels;
 
 namespace ChasmTracker.Songs;
 
@@ -53,13 +54,16 @@ public struct SongVoice
 	public int PitchEnvelopePosition;
 
 	public int MasterChannel; // nonzero = background/NNA voice, indicates what channel it "came from"
-														 // TODO: As noted elsewhere, this means current channel volume.
+
+	// TODO: As noted elsewhere, this means current channel volume.
 	public int GlobalVolume;
+
 	// FIXME: Here instrumentVolume means the value calculated from sample global volume and instrument global volume.
 	//  And we miss a value for "running envelope volume" for the pageInfo
 	public int InstrumentVolume;
 	public int AutoVibratoDepth;
 	public int AutoVibratoPosition, VibratoPosition, TremoloPosition, PanbrelloPosition;
+
 	// 16-bit members
 
 	// these were `int', so I'm keeping them as `int'.
@@ -71,7 +75,7 @@ public struct SongVoice
 	public int Note; // the note that's playing
 	public NewNoteActions NewNoteAction;
 	public int NewNote, NewInstrumentNumber; // ?
-																			// Effect memory and handling
+																					 // Effect memory and handling
 	public uint NCommand; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
 	public uint MemVcVolslide; // Ax Bx Cx Dx (volume column)
 	public uint MemArpeggio; // Axx
@@ -118,5 +122,45 @@ public struct SongVoice
 			else
 				Flags &= ~ChannelFlags.Mute;
 		}
+	}
+
+	public void Reset(bool always)
+	{
+		if (Instrument != null)
+		{
+			Flags |= ChannelFlags.FastVolumeRamp;
+
+			if (always)
+			{
+				VolumeEnvelopePosition = 0;
+				PanningEnvelopePosition = 0;
+				PitchEnvelopePosition = 0;
+			}
+			else
+			{
+				/* only reset envelopes with carry off */
+				if (!Instrument.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry))
+					VolumeEnvelopePosition = 0;
+				if (!Instrument.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry))
+					PanningEnvelopePosition = 0;
+				if (!Instrument.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry))
+					PitchEnvelopePosition = 0;
+			}
+		}
+
+
+		// this was migrated from csf_note_change, should it be here?
+		FadeOutVolume = 65536;
+	}
+
+	public void SetInstrumentPanning(int panning)
+	{
+		ChannelPanning = (short)(Panning + 1);
+
+		if (Flags.HasFlag(ChannelFlags.Surround))
+			ChannelPanning |= -0x8000;
+
+		Panning = panning;
+		Flags &= ~ChannelFlags.Surround;
 	}
 }

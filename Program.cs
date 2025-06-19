@@ -220,13 +220,13 @@ public class Program
 							else
 								kk.Mouse = MouseState.Click;
 
-							if (Status.DialogType == DialogTypes.None)
+							if (Status.MessageBoxType == MessageBoxTypes.None)
 							{
 								if (kk.MousePosition.Y <= 9 && (Status.CurrentPage is not FontEditPage))
 								{
 									if ((kk.State == KeyState.Release) && (kk.MouseButton == MouseButton.Right))
 									{
-										menu_show();
+										Menu.Show();
 										break;
 									}
 
@@ -267,7 +267,7 @@ public class Program
 
 							case WindowEventType.FocusLost:
 								keyboard_focus = false;
-								goto WindowEventType.Leave;
+								goto case WindowEventType.Leave;
 
 							case WindowEventType.Leave:
 								video_show_cursor(1);
@@ -389,7 +389,7 @@ public class Program
 			/* now we can do whatever we need to do */
 			Status.Now = DateTime.UtcNow;
 
-			if ((Status.DialogType == DialogTypes.None)
+			if ((Status.MessageBoxType == MessageBoxTypes.None)
 			 && (startDown != default)
 			 && (Status.Now - startDown > TimeSpan.FromSeconds(1)))
 			{
@@ -407,9 +407,9 @@ public class Program
 
 			Video.CheckUpdate();
 
-			switch (Song.Mode) {
-				case SongMode.Playing:
-				case SongMode.PatternLoop:
+			switch (AudioPlayback.Mode) {
+				case AudioPlaybackMode.Playing:
+				case AudioPlaybackMode.PatternLoop:
 					if (screensaver)
 					{
 						s_video.ToggleScreenSaver(false);

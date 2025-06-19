@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 using SDL3;
@@ -18,7 +19,7 @@ public class SDLVideoBackend : VideoBackend
 	IntPtr _renderer;
 	IntPtr _texture;
 
-	SDL.PixelFormatDetails _pixelFormat;
+	IntPtr _pixelFormat;
 	SDL.PixelFormat _format;
 	int _bpp; // BYTES per pixel
 
@@ -36,6 +37,34 @@ public class SDLVideoBackend : VideoBackend
 	ChannelData _palV;
 
 	ChannelData _pal;
+
+	static readonly List<(SDL.PixelFormat Format, string Name)> NativeFormats =
+		new List<(SDL.PixelFormat Format, string Name)>()
+		{
+			// RGB
+			// ----------------
+			(SDL.PixelFormat.XRGB8888, "RGB888"),
+			(SDL.PixelFormat.ARGB8888, "ARGB8888"),
+			(SDL.PixelFormat.RGB24, "RGB24"),
+			(SDL.PixelFormat.RGB565, "RGB565"),
+			(SDL.PixelFormat.XRGB1555, "RGB555"),
+			(SDL.PixelFormat.ARGB1555, "ARGB1555"),
+			(SDL.PixelFormat.XRGB4444, "RGB444"),
+			(SDL.PixelFormat.ARGB4444, "ARGB4444"),
+			(SDL.PixelFormat.RGB332, "RGB332"),
+			// ----------------
+
+			// YUV
+			// ----------------
+			(SDL.PixelFormat.IYUV, "IYUV"),
+			(SDL.PixelFormat.YV12, "YV12"),
+			// {SDL.PixelFormat.UYVY, "UYVY"},
+			// {SDL.PixelFormat.YVYU, "YVYU"},
+			// {SDL.PixelFormat.YUY2, "YUY2"},
+			// {SDL.PixelFormat.NV12, "NV12"},
+			// {SDL.PixelFormat.NV21, "NV21"},
+			// ----------------
+		};
 
 	public override bool Initialize()
 	{
@@ -59,18 +88,24 @@ public class SDLVideoBackend : VideoBackend
 		return true;
 	}
 
-	public override bool Startup(VGAMem vgaMem)
+	public override void Quit()
 	{
-		vgaMem.Clear();
-		vgaMem.Flip();
+		SDL.QuitSubSystem(SDL.InitFlags.Video);
+		SDLLifetime.Quit();
+	}
+
+	public override bool Startup()
+	{
+		VGAMem.Clear();
+		VGAMem.Flip();
 
 		SDL.SetHint(SDL.Hints.VideoX11NetWMBypassCompositor, "0");
 		SDL.SetHint("SDL_WINDOWS_DPI_AWARENESS", "unaware");
 
 		_size = Configuration.Video.Size;
 
-		_savedPosition.X = (int)SDL.WindowPosCentered;
-		_savedPosition.Y = (int)SDL.WindowPosCentered;
+		_savedPosition.X = (int)SDL.WindowPosCentered();
+		_savedPosition.Y = (int)SDL.WindowPosCentered();
 
 		_window = SDL.CreateWindow(Constants.WindowTitle, _size.Width, _size.Height, SDL.WindowFlags.Resizable);
 
@@ -97,6 +132,161 @@ public class SDLVideoBackend : VideoBackend
 		SetIcon();
 
 		return true;
+	}
+
+	class ReportYUVLayout
+	{
+		public SDL.PixelFormat Num;
+		public string Type;
+
+		public ReportYUVLayout(SDL.PixelFormat num, string type)
+		{
+			Num = num;
+			Type = type;
+		}
+	}
+
+	static readonly ReportYUVLayout[] YUVLayouts =
+		[
+			new ReportYUVLayout(SDL.PixelFormat.YV12, "planar+tv"),
+			new ReportYUVLayout(SDL.PixelFormat.IYUV, "planar+tv"),
+			new ReportYUVLayout(SDL.PixelFormat.YVYU, "packed"),
+			new ReportYUVLayout(SDL.PixelFormat.UYVY, "packed"),
+			new ReportYUVLayout(SDL.PixelFormat.YUY2, "packed"),
+			new ReportYUVLayout(SDL.PixelFormat.NV12, "planar"),
+			new ReportYUVLayout(SDL.PixelFormat.NV21, "planar"),
+		];
+
+	public override void Report()
+	{
+		string name = SDL.GetRendererName(_renderer) ?? "<null>";
+
+		Log.Append(5, " Using driver '{0}'", SDL.GetCurrentVideoDriver() ?? "<null>");
+		Log.Append(5, " {0} renderer '{0}'",
+			(name == SoftwareRendererName) ? "Software" : "Hardware-accelerated",
+			name);
+
+		switch (_format)
+		{
+			case SDL.PixelFormat.IYUV:
+			case SDL.PixelFormat.YV12:
+			case SDL.PixelFormat.YVYU:
+			case SDL.PixelFormat.UYVY:
+			case SDL.PixelFormat.YUY2:
+			case SDL.PixelFormat.NV12:
+			case SDL.PixelFormat.NV21:
+			{
+				ReportYUVLayout? layout = null;
+
+				for (int i = 0; i < YUVLayouts.Length; i++)
+					if (_format == YUVLayouts[i].Num)
+					{
+						layout = YUVLayouts[i];
+						break;
+					}
+
+				if (layout != null)
+					Log.Append(5, " Display format: {0} ({0})", layout.Num, layout.Type);
+				else
+					Log.Append(5, " Display format: {0}", _format);
+				break;
+			}
+			default:
+				Log.Append(5, " Display format: {0} bits/pixel", SDL.BitsPerPixel(_format));
+				break;
+		}
+
+		if (_fullscreen)
+		{
+			var id = SDL.GetDisplayForWindow(_window);
+
+			if (id != 0)
+			{
+				var display = SDL.GetCurrentDisplayMode(id);
+
+				if (display != null)
+					Log.Append(5, " Display dimensions: {0}x{0}", display.Value.W, display.Value.H);
+			}
+		}
+	}
+
+	public override string? DriverName => SDL.GetCurrentVideoDriver();
+
+	void RedrawTexture()
+	{
+		var format = SDL.PixelFormat.XRGB8888;
+
+		if (_texture != IntPtr.Zero)
+			SDL.DestroyTexture(_texture);
+
+		if (!string.IsNullOrWhiteSpace(Configuration.Video.Format))
+		{
+			foreach (var mapping in NativeFormats)
+			{
+				if (mapping.Name == Configuration.Video.Format)
+				{
+					format = mapping.Format;
+					goto GotFormat;
+				}
+			}
+		}
+
+		// We want to find the best format we can natively
+		// output to. If we can't, then we fall back to
+		// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
+		// conversion.
+		var rprop = SDL.GetRendererProperties(_renderer);
+
+		if (rprop != 0)
+		{
+			IntPtr formats = SDL.GetPointerProperty(rprop, SDL.Props.RendererTextureFormatsPointer, default);
+
+			int prefLast = NativeFormats.Count;
+
+			if (formats != IntPtr.Zero)
+			{
+				for (int i = 0; Marshal.ReadInt32(formats, i * 4) != (int)SDL.PixelFormat.Unknown; i++)
+					for (int j = 0; j < NativeFormats.Count; j++)
+						if (Marshal.ReadInt32(formats, i * 4) == (int)NativeFormats[j].Format && j < prefLast)
+						{
+							prefLast = j;
+							format = NativeFormats[prefLast].Format;
+						}
+			}
+		}
+
+	GotFormat:
+		_texture = SDL.CreateTexture(_renderer, format, SDL.TextureAccess.Streaming, Constants.NativeScreenWidth, Constants.NativeScreenHeight);
+		_format = format;
+
+		_pixelFormat = SDL.GetPixelFormatDetails(_format);
+
+		// ok
+		_bpp = (int)SDL.BytesPerPixel(_format);
+
+		Setup(Configuration.Video.Interpolation); // ew
+	}
+
+	public void SetHardware(bool hardware)
+	{
+		SDL.DestroyTexture(_texture);
+
+		SDL.DestroyRenderer(_renderer);
+
+		_renderer = SDL.CreateRenderer(_window, hardware ? null : SoftwareRendererName);
+
+		// hope that all worked!
+
+		RedrawTexture();
+
+		Video.Report();
+	}
+
+	public override void Shutdown()
+	{
+		SDL.DestroyTexture(_texture);
+		SDL.DestroyRenderer(_renderer);
+		SDL.DestroyWindow(_window);
 	}
 
 	/* -------------------------------------------------- */
@@ -248,14 +438,16 @@ public class SDLVideoBackend : VideoBackend
 
 		// draw the parts of the cursor sticking out to the left
 		int temp = (cursor.Centre.X < v) ? 0 : ((cursor.Centre.X - v) / 8) + ((cursor.Centre.X - v) % 8 != 0 ? 1 : 0);
-		for (int i = 1; i <= temp && x >= i; i++) {
+		for (int i = 1; i <= temp && x >= i; i++)
+		{
 			mouseLine[x - i] = z >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 			mouseLineMask[x - i] = zm >> (8 * (swidth - scenter + 1 + i)) & 0xFF;
 		}
 
 		// and to the right
 		temp = swidth - scenter + 1;
-		for (int i = 1; (i <= temp) && (x + i < 80); i++) {
+		for (int i = 1; (i <= temp) && (x + i < 80); i++)
+		{
 			mouseLine[x + i] = z >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 			mouseLineMask[x + i] = zm >> (8 * (swidth - scenter + 1 - i)) & 0xff;
 		}
@@ -325,7 +517,7 @@ public class SDLVideoBackend : VideoBackend
 	/* --------------------------------------------------------------- */
 	/* blitters */
 
-	void video_blitUV(VGAMem vgaMem, IntPtr pixels, int pitch, ref ChannelData tpal)
+	void video_blitUV(IntPtr pixels, int pitch, ref ChannelData tpal)
 	{
 		var mouse = GetMouseCoordinates();
 
@@ -338,13 +530,13 @@ public class SDLVideoBackend : VideoBackend
 		for (int y = 0; y < Constants.NativeScreenHeight; y++)
 		{
 			MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
-			vgaMem.Scan8(y, pixels, ref tpal, mouseLine, mouseLineMask);
+			VGAMem.Scan8(y, pixels, ref tpal, mouseLine, mouseLineMask);
 
 			pixels += pitch;
 		}
 	}
 
-	void video_blitTV(VGAMem vgaMem, IntPtr pixels, int pitch, ref ChannelData tpal)
+	void video_blitTV(IntPtr pixels, int pitch, ref ChannelData tpal)
 	{
 		var mouse = GetMouseCoordinates();
 
@@ -362,7 +554,7 @@ public class SDLVideoBackend : VideoBackend
 			for (int y = 0; y < Constants.NativeScreenHeight; y += 2)
 			{
 				MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
-				vgaMem.Scan8(y, cv8BackingPin.AddrOfPinnedObject(), ref tpal, mouseLine, mouseLineMask);
+				VGAMem.Scan8(y, cv8BackingPin.AddrOfPinnedObject(), ref tpal, mouseLine, mouseLineMask);
 
 				for (int x = 0; x < pitch; x += 2)
 				{
@@ -377,7 +569,7 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
-	void video_blit11(VGAMem vgaMem, int bpp, IntPtr pixels, int pitch, ref ChannelData tpal)
+	void video_blit11(int bpp, IntPtr pixels, int pitch, ref ChannelData tpal)
 	{
 		uint[] cv32Backing = new uint[Constants.NativeScreenWidth];
 
@@ -400,13 +592,13 @@ public class SDLVideoBackend : VideoBackend
 				switch (bpp)
 				{
 					case 1:
-						vgaMem.Scan8(y, pixels, ref tpal, mouseLine, mouseLineMask);
+						VGAMem.Scan8(y, pixels, ref tpal, mouseLine, mouseLineMask);
 						break;
 					case 2:
-						vgaMem.Scan16(y, pixels, ref tpal, mouseLine, mouseLineMask);
+						VGAMem.Scan16(y, pixels, ref tpal, mouseLine, mouseLineMask);
 						break;
 					case 3:
-						vgaMem.Scan32(y, cv32BackingPin.AddrOfPinnedObject(), ref tpal, mouseLine, mouseLineMask);
+						VGAMem.Scan32(y, cv32BackingPin.AddrOfPinnedObject(), ref tpal, mouseLine, mouseLineMask);
 
 						for (int x = 0; x < Constants.NativeScreenWidth; x++)
 						{
@@ -416,7 +608,7 @@ public class SDLVideoBackend : VideoBackend
 						}
 						break;
 					case 4:
-						vgaMem.Scan32(y, pixels, ref tpal, mouseLine, mouseLineMask);
+						VGAMem.Scan32(y, pixels, ref tpal, mouseLine, mouseLineMask);
 						break;
 				}
 
@@ -426,6 +618,82 @@ public class SDLVideoBackend : VideoBackend
 		finally
 		{
 			cv32BackingPin.Free();
+		}
+	}
+
+	/* --------------------------------------------------------------- */
+
+	readonly int[] LastMap = { 0, 1, 2, 3, 5 };
+
+	void YUVPal(int i, Colour rgb)
+	{
+		rgb.ToYUV(out int y, out int u, out int v);
+
+		switch (_format)
+		{
+			case SDL.PixelFormat.IYUV:
+			case SDL.PixelFormat.YV12:
+				_palY[i] = (byte)y;
+				_palU[i] = (byte)((u >> 4) & 0xF);
+				_palV[i] = (byte)((v >> 4) & 0xF);
+				break;
+		}
+	}
+
+	void SDLPal(int i, Colour rgb)
+	{
+		_pal[i] = SDL.MapRGB(_pixelFormat, IntPtr.Zero, rgb.R, rgb.G, rgb.B);
+	}
+
+	/* calls back to a function receiving all the colors :) */
+	void IterateColours(Colour[] palette /* [16] */, Action<int, Colour> fun)
+	{
+		/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
+
+		/* make our "base" space */
+		for (int i = 0; i < 16; i++)
+			fun(i, palette[i]);
+
+		/* make our "gradient" space; this is used exclusively for the waterfall page (Alt-F12) */
+		for (int i = 0; i < 128; i++)
+		{
+			Colour rgb;
+
+			int p = LastMap[i>>5];
+
+			rgb.R = (byte)(palette[p].R + (palette[p + 1].R - palette[p].R) * (i & 0x1F) / 0x20);
+			rgb.B = (byte)(palette[p].G + (palette[p + 1].G - palette[p].G) * (i & 0x1F) / 0x20);
+			rgb.G = (byte)(palette[p].B + (palette[p + 1].B - palette[p].B) * (i & 0x1F) / 0x20);
+
+			fun(i + 128, rgb);
+		}
+	}
+
+	public void Colours(Colour[] palette)
+	{
+		switch (_format)
+		{
+			case SDL.PixelFormat.IYUV:
+			case SDL.PixelFormat.YV12:
+				IterateColours(palette, YUVPal);
+				break;
+			default:
+				IterateColours(palette, SDLPal);
+				break;
+		}
+	}
+
+	public override void Setup(VideoInterpolationMode interpolation)
+	{
+		switch (interpolation)
+		{
+			case VideoInterpolationMode.NearestNeighbour:
+				SDL.SetTextureScaleMode(_texture, SDL.ScaleMode.Nearest);
+				break;
+			case VideoInterpolationMode.Linear:
+			case VideoInterpolationMode.Best:
+				SDL.SetTextureScaleMode(_texture, SDL.ScaleMode.Linear);
+				break;
 		}
 	}
 
@@ -568,7 +836,7 @@ public class SDLVideoBackend : VideoBackend
 			DoTheToggle();
 	}
 
-	public override void Blit(VGAMem vgaMem)
+	public override void Blit()
 	{
 		SDL.FRect dstRect = default;
 
@@ -588,21 +856,21 @@ public class SDLVideoBackend : VideoBackend
 		switch (_format)
 		{
 			case SDL.PixelFormat.IYUV:
-				video_blitUV(vgaMem, pixels, pitch, ref _palY);
+				video_blitUV(pixels, pitch, ref _palY);
 				pixels += (Constants.NativeScreenHeight * pitch);
-				video_blitTV(vgaMem, pixels, pitch, ref _palU);
+				video_blitTV(pixels, pitch, ref _palU);
 				pixels += (Constants.NativeScreenHeight * pitch) / 4;
-				video_blitTV(vgaMem, pixels, pitch, ref _palV);
+				video_blitTV(pixels, pitch, ref _palV);
 				break;
 			case SDL.PixelFormat.YV12:
-				video_blitUV(vgaMem, pixels, pitch, ref _palY);
+				video_blitUV(pixels, pitch, ref _palY);
 				pixels += (Constants.NativeScreenHeight * pitch);
-				video_blitTV(vgaMem, pixels, pitch, ref _palV);
+				video_blitTV(pixels, pitch, ref _palV);
 				pixels += (Constants.NativeScreenHeight * pitch) / 4;
-				video_blitTV(vgaMem, pixels, pitch, ref _palU);
+				video_blitTV(pixels, pitch, ref _palU);
 				break;
 			default:
-				video_blit11(vgaMem, _bpp, pixels, pitch, ref _pal);
+				video_blit11(_bpp, pixels, pitch, ref _pal);
 				break;
 		}
 
@@ -676,5 +944,22 @@ public class SDLVideoBackend : VideoBackend
 			SDL.ShowCursor();
 		else
 			SDL.HideCursor();
+	}
+
+	public override void NotifyMouseCursorChanged()
+	{
+		var vis = Video.Mouse.Visible;
+
+		ShowCursor(vis == MouseCursorState.System);
+
+		// Totally turn off mouse event sending when the mouse is disabled
+		bool evstate = !(vis == MouseCursorState.Disabled);
+
+		if (evstate != SDL.EventEnabled((uint)SDL.EventType.MouseMotion))
+		{
+			SDL.SetEventEnabled((uint)SDL.EventType.MouseMotion, evstate);
+			SDL.SetEventEnabled((uint)SDL.EventType.MouseButtonDown, evstate);
+			SDL.SetEventEnabled((uint)SDL.EventType.MouseButtonUp, evstate);
+		}
 	}
 }

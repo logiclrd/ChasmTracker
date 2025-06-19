@@ -7,14 +7,14 @@ public class TrackView13 : TrackView
 {
 	public override int Width => 13;
 
-	public override void DrawChannelHeader(VGAMem vgaMem, int chan, Point position, int fg)
+	public override void DrawChannelHeader(int chan, Point position, byte fg)
 	{
-		vgaMem.DrawText($" Channel {chan:d2} ", position, fg, 1);
+		VGAMem.DrawText($" Channel {chan:d2} ", position, (fg, 1));
 	}
 
 	readonly int[] CursorPosMap = { 0, 2, 4, 5, 7, 8, 10, 11, 12 };
 
-	public override void DrawNote(VGAMem vgaMem, Point position, SongNote note, int cursorPos, int fg, int bg)
+	public override void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours)
 	{
 		string noteText = $"{note.NoteString} {note.InstrumentString} {note.VolumeString} {note.EffectString}";
 
@@ -42,23 +42,23 @@ public class TrackView13 : TrackView
 			}
 		}
 
-		vgaMem.DrawText(noteText, position, fg, bg);
+		VGAMem.DrawText(noteText, position, colours);
 
 		/* lazy coding here: the panning is written twice, or if the
 		* cursor's on it, *three* times. */
 		if (note.VolumeEffect == VolumeEffects.Panning)
-			vgaMem.DrawText(note.VolumeString, position.Advance(7), 2, bg);
+			VGAMem.DrawText(note.VolumeString, position.Advance(7), (2, colours.BG));
 
 		if (cursorPos == 9)
-			vgaMem.DrawText(noteText.Substring(10), position.Advance(10), 0, 3);
+			VGAMem.DrawText(noteText.Substring(10), position.Advance(10), (0, 3));
 		else if (cursorPos >= 0)
 		{
 			cursorPos = CursorPosMap[cursorPos];
-			vgaMem.DrawCharacter(noteText[cursorPos], position.Advance(cursorPos), 0, 3);
+			VGAMem.DrawCharacter(noteText[cursorPos], position.Advance(cursorPos), (0, 3));
 		}
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(Point position, PatternEditorMask mask, int cursorPos, VGAMemColours colours)
 	{
 		var buf = new string(
 			new char[]
@@ -78,6 +78,6 @@ public class TrackView13 : TrackView
 				MASK_CHAR(PatternEditorMask.Effect, 8, -1, mask, cursorPos),
 			});
 
-		vgaMem.DrawText(buf, position, fg, bg);
+		VGAMem.DrawText(buf, position, colours);
 	}
 }

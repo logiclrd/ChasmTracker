@@ -51,15 +51,15 @@ public class PatternEditorLengthDialog : Dialog
 		ActionYes = Close;
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawBox(new Point(33, 23), new Point(56, 25), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
-		vgaMem.DrawBox(new Point(33, 26), new Point(60, 29), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(33, 23), new Point(56, 25), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(33, 26), new Point(60, 29), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
 
-		vgaMem.DrawText("Set Pattern Length", new Point(31, 21), 0, 2);
-		vgaMem.DrawText("Pattern Length", new Point(19, 24), 0, 2);
-		vgaMem.DrawText("Start Pattern", new Point(20, 27), 0, 2);
-		vgaMem.DrawText("End Pattern", new Point(22, 28), 0, 2);
+		VGAMem.DrawText("Set Pattern Length", new Point(31, 21), (0, 2));
+		VGAMem.DrawText("Pattern Length", new Point(19, 24), (0, 2));
+		VGAMem.DrawText("Start Pattern", new Point(20, 27), (0, 2));
+		VGAMem.DrawText("End Pattern", new Point(22, 28), (0, 2));
 	}
 
 	void Close(object? data)

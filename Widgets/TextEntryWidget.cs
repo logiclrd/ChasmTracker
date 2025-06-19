@@ -78,7 +78,7 @@ public class TextEntryWidget : Widget
 		textInput.IsHandled = true;
 	}
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
 		int len = TextLength;
 
@@ -89,13 +89,13 @@ public class TextEntryWidget : Widget
 		else if (CursorPosition > FirstCharacter + Size.Width - 1)
 			FirstCharacter = Math.Max(0, CursorPosition - Size.Width + 1);
 
-		vgaMem.DrawTextLen(Text, FirstCharacter, Size.Width, Position, 2, 0);
+		VGAMem.DrawTextLen(Text, FirstCharacter, Size.Width, Position, 2, 0);
 
 		if (isSelected)
 		{
 			int cursorOffset = CursorPosition - FirstCharacter;
 
-			vgaMem.DrawCharacter(
+			VGAMem.DrawCharacter(
 				(cursorOffset < TextLength) ? TextCharacters[cursorOffset] : ' ',
 				Position.Advance(cursorOffset),
 				0, 3);

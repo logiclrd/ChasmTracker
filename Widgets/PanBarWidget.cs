@@ -20,20 +20,20 @@ public class PanBarWidget : Widget
 		Channel = channel;
 	}
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
 		string buf = "        " + Channel.ToString("d2");
 
-		vgaMem.DrawText(buf, Position, isSelected ? 3 : 0, 2);
+		VGAMem.DrawText(buf, Position, isSelected ? 3 : 0, 2);
 
 		if (IsMuted)
-			vgaMem.DrawText("  Muted  ", Position.Advance(11), isSelected ? 3 : 5, 0);
+			VGAMem.DrawText("  Muted  ", Position.Advance(11), isSelected ? 3 : 5, 0);
 		else if (IsSurround)
-			vgaMem.DrawText("Surround ", Position.Advance(11), isSelected ? 3 : 5, 0);
+			VGAMem.DrawText("Surround ", Position.Advance(11), isSelected ? 3 : 5, 0);
 		else
 		{
-			vgaMem.DrawThumbBar(Position.Advance(11), 9, 0, 64, Value, isSelected);
-			vgaMem.DrawText(Value.ToString("d3"), Position.Advance(21), 1, 2);
+			VGAMem.DrawThumbBar(Position.Advance(11), 9, 0, 64, Value, isSelected);
+			VGAMem.DrawText(Value.ToString("d3"), Position.Advance(21), 1, 2);
 		}
 	}
 }

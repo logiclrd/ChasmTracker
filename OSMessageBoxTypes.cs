@@ -1,6 +1,6 @@
 namespace ChasmTracker;
 
-public enum MessageBoxTypes
+public enum OSMessageBoxTypes
 {
 	Info,
 	Error,

@@ -1,14 +1,13 @@
 using System;
 
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Songs;
 
-namespace ChasmTracker.Pages;
-
 public abstract class OrderListPage : Page
 {
-	public OrderListPage(PageNumbers number, string title, HelpTexts helpText)
-		: base(number, title, helpText)
+	public OrderListPage(PageNumbers number, HelpTexts helpText)
+		: base(number, "Order List and Panning (F11)", helpText)
 	{
 	}
 

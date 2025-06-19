@@ -48,14 +48,22 @@ public class ToggleButtonWidget : Widget
 		GroupNumber = groupNumber;
 	}
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	public ToggleButtonWidget(Point position, int width, string text, int padding, int groupNumber)
+		: base(position, width)
 	{
-		vgaMem.DrawBox(
+		Text = text;
+		Padding = padding;
+		GroupNumber = groupNumber;
+	}
+
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
+	{
+		VGAMem.DrawBox(
 			Position.Advance(-1, -1),
 			Position.Advance(Size.Width + 2, 1),
 			BoxTypes.Thin | BoxTypes.Inner |
 			(State || IsDepressed ? BoxTypes.Inset : BoxTypes.Outset));
 
-		vgaMem.DrawText(Text, Position.Advance(Padding), isSelected ? 3 : 0, 2);
+		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? 3 : 0, 2);
 	}
 }

@@ -15,9 +15,9 @@ public class MenuToggleWidget : Widget
 		Choices = choices.Select(choice => new MenuToggleWidgetChoice(choice)).ToArray();
 	}
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
-		vgaMem.DrawFillChars(Position, Position.Advance(Size.Width - 1), VGAMem.DefaultForeground, 0);
+		VGAMem.DrawFillChars(Position, Position.Advance(Size.Width - 1), VGAMem.DefaultForeground, 0);
 
 		string choice = Choices[State].Label;
 
@@ -25,10 +25,10 @@ public class MenuToggleWidget : Widget
 
 		if (n >= 0)
 		{
-			vgaMem.DrawTextLen(choice, n, Position, tfg, tbg);
-			vgaMem.DrawText(choice, n, Position.Advance(n), 2, 0);
+			VGAMem.DrawTextLen(choice, n, Position, tfg, tbg);
+			VGAMem.DrawText(choice, n, Position.Advance(n), 2, 0);
 		}
 		else
-			vgaMem.DrawText(choice, Position, tfg, tbg);
+			VGAMem.DrawText(choice, Position, tfg, tbg);
 	}
 }

@@ -7,10 +7,6 @@ public class Song
 {
 	public static Song CurrentSong = new Song();
 
-	public static SongMode Mode;
-
-	public static bool IsPlaying => Mode.HasAnyFlag(SongMode.Playing | SongMode.PatternLoop);
-
 	static int s_currentOrder;
 
 	public static int PanSeparation;
@@ -81,6 +77,9 @@ public class Song
 	public readonly List<int> OrderList = new List<int>();
 	public readonly SongChannel[] Channels = new SongChannel[Constants.MaxChannels];
 	public readonly SongVoice[] Voices = new SongVoice[Constants.MaxVoices];
+	public readonly int[] VoiceMix = new int[Constants.MaxVoices];
+
+	public static int MaxVoices;
 
 	public SongFlags Flags;
 
@@ -176,6 +175,12 @@ public class Song
 		return Instruments[n];
 	}
 
+	public int[] GetMixState(out int numActiveVoices)
+	{
+		numActiveVoices = Math.Min(NumVoices, Voices.Length);
+		return VoiceMix;
+	}
+
 	// ------------------------------------------------------------------------
 
 	// calculates row of offset from passed row.
@@ -185,7 +190,7 @@ public class Song
 	// in current pattern.
 	public Pattern? GetPatternOffset(ref int patternNumber, ref int rowNumber, int offset)
 	{
-		if (Mode.HasFlag(SongMode.PatternLoop))
+		if (AudioPlayback.Mode.HasFlag(AudioPlaybackMode.PatternLoop))
 		{
 			// just wrap around current rows
 			rowNumber = (rowNumber + offset) % GetPatternLength(patternNumber);
@@ -667,7 +672,7 @@ public class Song
 				chan.Length = pIns.Length;
 				chan.LoopEnd = pIns.Length;
 				chan.LoopStart = 0;
-				chan.Flags = (chan.Flags & ~ChannelFlags.SampleFlags) | (pIns.Flags & ChannelFlags.SampleFlags);
+				chan.Flags = (chan.Flags & ~ChannelFlags.SampleFlags) | ((ChannelFlags)pIns.Flags & ChannelFlags.SampleFlags);
 
 				if (chan.Flags.HasFlag(ChannelFlags.SustainLoop))
 				{
@@ -695,9 +700,9 @@ public class Song
 			porta = false;
 
 		if ((pEnv != null) && pEnv.Flags.HasFlag(InstrumentFlags.SetPanning))
-			SetInstrumentPanning(chan, pEnv!.Panning);
+			chan.SetInstrumentPanning(pEnv!.Panning);
 		else if (pIns.Flags.HasFlag(SampleFlags.Panning))
-			SetInstrumentPanning(chan, pIns.Panning);
+			chan.SetInstrumentPanning(pIns.Panning);
 
 		// Pitch/Pan separation
 		if ((pEnv != null) && (pEnv.PitchPanSeparation != 0))
@@ -717,7 +722,7 @@ public class Song
 		if (!porta)
 		{
 			if (pEnv != null) chan.NewNoteAction = pEnv.NewNoteAction;
-			Envelope.Reset(chan, 0);
+			chan.Reset(false);
 		}
 
 		/* OpenMPT test cases Off-Porta.it, Off-Porta-CompatGxx.it */

@@ -1,12 +1,11 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Widgets;
 
-public class AboutPage : Page
+public class OrderListPanningPage : OrderListPage
 {
-	public AboutPage()
-		: base("About", PageNumbers.About)
+	public OrderListPanningPage()
+		: base(PageNumbers.OrderListPanning, HelpTexts.OrderListPanning)
 	{
-		
 	}
 }

@@ -2,6 +2,7 @@ using System;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Dialogs;
 using ChasmTracker.Pages;
 
 public static class Status
@@ -11,7 +12,7 @@ public static class Status
 	public static PageNumbers CurrentPageNumber;
 	public static PageNumbers PreviousPageNumber;
 	public static HelpTexts CurrentHelpIndex;
-	public static DialogTypes DialogType;
+	public static MessageBoxTypes MessageBoxType;
 	public static StatusFlags Flags;
 	public static TrackerTimeDisplay TimeDisplay;
 	public static TrackerVisualizationStyle VisualizationStyle;

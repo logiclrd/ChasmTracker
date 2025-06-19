@@ -97,21 +97,21 @@ public class PatternEditorOptionsDialog : Dialog
 		Keyboard.CurrentOctave = thumbBarBaseOctave!.Value;
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawText("Pattern Editor Options", new Point(28, 19), 0, 2);
-		vgaMem.DrawText("Base octave", new Point(28, 23), 0, 2);
-		vgaMem.DrawText("Cursor step", new Point(28, 26), 0, 2);
-		vgaMem.DrawText("Row hilight minor", new Point(22, 29), 0, 2);
-		vgaMem.DrawText("Row hilight major", new Point(22, 32), 0, 2);
-		vgaMem.DrawText("Number of rows in pattern", new Point(14, 35), 0, 2);
-		vgaMem.DrawText("Command/Value columns", new Point(18, 38), 0, 2);
+		VGAMem.DrawText("Pattern Editor Options", new Point(28, 19), (0, 2));
+		VGAMem.DrawText("Base octave", new Point(28, 23), (0, 2));
+		VGAMem.DrawText("Cursor step", new Point(28, 26), (0, 2));
+		VGAMem.DrawText("Row hilight minor", new Point(22, 29), (0, 2));
+		VGAMem.DrawText("Row hilight major", new Point(22, 32), (0, 2));
+		VGAMem.DrawText("Number of rows in pattern", new Point(14, 35), (0, 2));
+		VGAMem.DrawText("Command/Value columns", new Point(18, 38), (0, 2));
 
-		vgaMem.DrawBox(new Point(39, 22), new Point(42, 24), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
-		vgaMem.DrawBox(new Point(39, 25), new Point(43, 27), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
-		vgaMem.DrawBox(new Point(39, 28), new Point(45, 30), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
-		vgaMem.DrawBox(new Point(39, 31), new Point(57, 33), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
-		vgaMem.DrawBox(new Point(39, 34), new Point(62, 36), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(39, 22), new Point(42, 24), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(39, 25), new Point(43, 27), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(39, 28), new Point(45, 30), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(39, 31), new Point(57, 33), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(39, 34), new Point(62, 36), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
 	}
 
 	void CloseCancel(object? data)

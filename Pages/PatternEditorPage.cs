@@ -600,7 +600,7 @@ public class PatternEditorPage : Page
 	{
 		if (_clipboard.Data == null)
 		{
-			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+			MessageBox.Show(MessageBoxTypes.OK, "No data in clipboard");
 			return;
 		}
 
@@ -674,7 +674,7 @@ public class PatternEditorPage : Page
 	{
 		if (_clipboard.Data == null)
 		{
-			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+			MessageBox.Show(MessageBoxTypes.OK, "No data in clipboard");
 			return;
 		}
 
@@ -880,10 +880,10 @@ public class PatternEditorPage : Page
 		Clippy.Select(Widgets[0], str.ToString());
 	}
 
-	public override void SetPage(VGAMem vgaMem)
+	public override void SetPage()
 	{
 		/* only one widget, but MAN is it complicated :) */
-		base.SetPage(vgaMem);
+		base.SetPage();
 	}
 
 	void SnapPaste(PatternSnap s, Point position, int xlate)
@@ -1401,13 +1401,13 @@ public class PatternEditorPage : Page
 		* *both* the width and height are less than double the size. */
 		if (affectedWidth < 2 * selectedChans && affectedHeight < 2 * selectedRows)
 		{
-			MessageBox.Show(DialogTypes.OK, "   Swap blocks overlap    ");
+			MessageBox.Show(MessageBoxTypes.OK, "   Swap blocks overlap    ");
 			return;
 		}
 
 		if (_currentRow + selectedRows > pattern.Rows.Count || _currentChannel + selectedChans - 1 > Constants.MaxChannels)
 		{
-			MessageBox.Show(DialogTypes.OK, "   Out of pattern range   ");
+			MessageBox.Show(MessageBoxTypes.OK, "   Out of pattern range   ");
 			return;
 		}
 
@@ -2271,7 +2271,7 @@ public class PatternEditorPage : Page
 	{
 		if (_clipboard.Data == null)
 		{
-			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+			MessageBox.Show(MessageBoxTypes.OK, "No data in clipboard");
 			return;
 		}
 
@@ -2321,7 +2321,7 @@ public class PatternEditorPage : Page
 	{
 		if (_clipboard.Data == null)
 		{
-			MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+			MessageBox.Show(MessageBoxTypes.OK, "No data in clipboard");
 			return;
 		}
 
@@ -2427,20 +2427,20 @@ public class PatternEditorPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	public void UpdateCurrentRow(VGAMem vgaMem)
+	public void UpdateCurrentRow()
 	{
 		var numRows = Song.CurrentSong.GetPatternLength(_currentPattern);
 
-		vgaMem.DrawText(_currentRow.ToString("d3"), new Point(12, 7), 5, 0);
-		vgaMem.DrawText(numRows.ToString("d3"), new Point(16, 7), 5, 0);
+		VGAMem.DrawText(_currentRow.ToString("d3"), new Point(12, 7), 5, 0);
+		VGAMem.DrawText(numRows.ToString("d3"), new Point(16, 7), 5, 0);
 	}
 
-	public void UpdateCurrentPattern(VGAMem vgaMem)
+	public void UpdateCurrentPattern()
 	{
 		int numPatterns = Song.CurrentSong.Patterns.Count;
 
-		vgaMem.DrawText(_currentPattern.ToString("d3"), new Point(12, 6), 5, 0);
-		vgaMem.DrawText(numPatterns.ToString("d3"), new Point(16, 6), 5, 0);
+		VGAMem.DrawText(_currentPattern.ToString("d3"), new Point(12, 6), 5, 0);
+		VGAMem.DrawText(numPatterns.ToString("d3"), new Point(16, 6), 5, 0);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -2580,7 +2580,7 @@ public class PatternEditorPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	public override void Redraw(VGAMem vgaMem)
+	public override void Redraw()
 	{
 		int chanDrawPos = 5;
 
@@ -2589,10 +2589,10 @@ public class PatternEditorPage : Page
 		bool patternIsPlaying = Song.IsPlaying && (_currentPattern == _playingPattern);
 
 		if (_templateMode != TemplateMode.Off)
-			vgaMem.DrawTextLen(_templateMode.GetDescription(), 60, new Point(2, 12), 3, 2);
+			VGAMem.DrawTextLen(_templateMode.GetDescription(), 60, new Point(2, 12), 3, 2);
 
 		/* draw the outer box around the whole thing */
-		vgaMem.DrawBox(new Point(4, 14), new Point(5 + _visibleWidth, 47), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(4, 14), new Point(5 + _visibleWidth, 47), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 
 		/* how many rows are there? */
 		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
@@ -2611,7 +2611,7 @@ public class PatternEditorPage : Page
 				number -- modplug just happens to reserve the first 64 for
 				"real" channels. i'd rather pm not replicate this cruft and
 				more or less hide the mixer from the interface... */
-			trackView.DrawChannelHeader(vgaMem, chan, new Point(chanDrawPos, 14),
+			trackView.DrawChannelHeader(chan, new Point(chanDrawPos, 14),
 				Song.CurrentSong.GetChannel(chan - 1)!.Flags.HasFlag(ChannelFlags.Mute) ? 0 : 3);
 
 			int row, rowPos;
@@ -2626,7 +2626,7 @@ public class PatternEditorPage : Page
 				{
 					fg = patternIsPlaying && row == _playingRow ? 3 : 0;
 					bg = (_currentPattern == _markedPattern && row == _markedRow) ? 11 : 2;
-					vgaMem.DrawText(row.ToString("d3"), new Point(1, 15 + rowPos), fg, bg);
+					VGAMem.DrawText(row.ToString("d3"), new Point(1, 15 + rowPos), fg, bg);
 				}
 
 				if (IsInSelection(chan, row))
@@ -2677,14 +2677,14 @@ public class PatternEditorPage : Page
 				else
 					cpos = -1;
 
-				trackView.DrawNote(vgaMem, new Point(chanDrawPos, 15 + rowPos), note, cpos, fg, bg);
+				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), note, cpos, fg, bg);
 
 				if (_drawDivisions && chanPos < _visibleChannels - 1)
 				{
 					if (IsInSelection(chan, row))
 						bg = 0;
 
-					vgaMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), 2, bg);
+					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), 2, bg);
 				}
 			}
 
@@ -2700,36 +2700,28 @@ public class PatternEditorPage : Page
 				else
 					bg = 0;
 
-				trackView.DrawNote(vgaMem, new Point(chanDrawPos, 15 + rowPos), SongNote.Empty, -1, 6, bg);
+				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), SongNote.Empty, -1, 6, bg);
 
 				if (_drawDivisions && chanPos < _visibleChannels - 1)
 				{
-					vgaMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), 2, bg);
+					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), 2, bg);
 				}
 			}
 
 			if (chan == _currentChannel)
-				trackView.DrawMask(vgaMem, new Point(chanDrawPos, 47), _editCopyMask, _currentPosition, maskColour, 2);
+				trackView.DrawMask(new Point(chanDrawPos, 47), _editCopyMask, _currentPosition, maskColour, 2);
 
 			/* blah */
 			if (_channelMulti[chan - 1])
 			{
 				if (_trackViewScheme[chanPos] == 0)
-				{
-					vgaMem.DrawCharacter((char)172, new Point(chanDrawPos + 3, 47), maskColour, 2);
-				}
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 3, 47), maskColour, 2);
 				else if (_trackViewScheme[chanPos] < 3)
-				{
-					vgaMem.DrawCharacter((char)172, new Point(chanDrawPos + 2, 47), maskColour, 2);
-				}
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 2, 47), maskColour, 2);
 				else if (_trackViewScheme[chanPos] == 3)
-				{
-					vgaMem.DrawCharacter((char)172, new Point(chanDrawPos + 1, 47), maskColour, 2);
-				}
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 1, 47), maskColour, 2);
 				else if (_currentPosition < 2)
-				{
-					vgaMem.DrawCharacter((char)172, new Point(chanDrawPos, 47), maskColour, 2);
-				}
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos, 47), maskColour, 2);
 			}
 
 			chanDrawPos += trackView.Width + (_drawDivisions ? 1 : 0);
@@ -2974,7 +2966,7 @@ public class PatternEditorPage : Page
 			{
 				if (_clipboard.Channels < 1 || _clipboard.Rows < 1 || (_clipboard.Data == null))
 				{
-					MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+					MessageBox.Show(MessageBoxTypes.OK, "No data in clipboard");
 					success = false;
 				}
 				else
@@ -3835,7 +3827,7 @@ public class PatternEditorPage : Page
 					Clippy.Yank();
 				}
 				else
-					MessageBox.Show(DialogTypes.OK, "No data in clipboard");
+					MessageBox.Show(MessageBoxTypes.OK, "No data in clipboard");
 
 				break;
 			case KeySym.c:
@@ -4699,9 +4691,9 @@ public class PatternEditorPage : Page
 				{
 					switch (Song.Mode)
 					{
-						case SongMode.PatternLoop:
+						case AudioPlaybackMode.PatternLoop:
 							return true;
-						case SongMode.Playing:
+						case AudioPlaybackMode.Playing:
 							Song.SetCurrentOrder(Song.CurrentSong.CurrentOrder - 1);
 							return true;
 						default:
@@ -4728,9 +4720,9 @@ public class PatternEditorPage : Page
 				{
 					switch (Song.Mode)
 					{
-						case SongMode.PatternLoop:
+						case AudioPlaybackMode.PatternLoop:
 							return true;
-						case SongMode.Playing:
+						case AudioPlaybackMode.Playing:
 							Song.SetCurrentOrder(Song.CurrentSong.CurrentOrder + 1);
 							return true;
 						default:

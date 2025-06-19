@@ -23,9 +23,21 @@ public class Video
 
 	public static readonly MouseFields Mouse = new MouseFields();
 
-	public static bool Startup(VGAMem vgaMem)
+	public static bool Startup()
 	{
-		return s_backend.Initialize() && s_backend.Startup(vgaMem);
+		return s_backend.Initialize() && s_backend.Startup();
+	}
+
+	public static string DriverName => s_backend.DriverName ?? "(null)";
+
+	public static void Report()
+	{
+		Log.AppendNewLine();
+
+		Log.Append(2, "Video initialized");
+		Log.AppendUnderline(17);
+
+		s_backend.Report();
 	}
 
 	public static void ToggleScreenSaver(bool enabled)
@@ -85,7 +97,13 @@ public class Video
 		s_backend.NotifyMouseCursorChanged();
 	}
 
-	public static void CheckUpdate(VGAMem vgaMem)
+	public static void Refresh()
+	{
+		VGAMem.Flip();
+		VGAMem.Clear();
+	}
+
+	public static void CheckUpdate()
 	{
 		var now = DateTime.UtcNow;
 
@@ -109,12 +127,12 @@ public class Video
 			}
 
 			RedrawScreen();
-			PublishFramebuffer();
-			s_backend.Blit(vgaMem);
+			Refresh();
+			s_backend.Blit();
 		}
 		else if (Status.Flags.HasFlag(StatusFlags.SoftwareMouseMoved))
 		{
-			s_backend.Blit(vgaMem);
+			s_backend.Blit();
 			Status.Flags &= ~StatusFlags.SoftwareMouseMoved;
 		}
 	}

@@ -7,7 +7,7 @@ public static class OS
 		// TODO
 	}
 
-	public static void ShowMessageBox(string title, string message, MessageBoxTypes type)
+	public static void ShowMessageBox(string title, string message, OSMessageBoxTypes type)
 	{
 		// TODO
 	}

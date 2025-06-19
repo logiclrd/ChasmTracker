@@ -7,35 +7,38 @@ public class TrackView8 : TrackView
 {
 	public override int Width => 8;
 
-	public override void DrawChannelHeader(VGAMem vgaMem, int chan, Point position, int fg)
+	public override void DrawChannelHeader(int chan, Point position, byte fg)
 	{
-		vgaMem.DrawText($"  {chan:d2}  ", position, fg, 1);
+		VGAMem.DrawText($"  {chan:d2}  ", position, (fg, 1));
 	}
 
-	public override void DrawNote(VGAMem vgaMem, Point position, SongNote note, int cursorPos, int fg, int bg)
+	public override void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours)
 	{
 		string noteBuf = note.NoteString;
 
-		vgaMem.DrawText(noteBuf, position, fg, bg);
+		VGAMem.DrawText(noteBuf, position, colours);
 
 		if ((note.VolumeParameter != 0) || (note.VolumeEffect != 0))
 		{
 			string volumeBuf = note.VolumeString;
 
-			vgaMem.DrawText(volumeBuf, position.Advance(3), (note.VolumeEffect == VolumeEffects.Panning) ? 1 : 2, bg);
+			if (note.VolumeEffect == VolumeEffects.Panning)
+				VGAMem.DrawText(volumeBuf, position.Advance(3), (1, colours.BG));
+			else
+				VGAMem.DrawText(volumeBuf, position.Advance(3), (2, colours.BG));
 		}
 		else
 		{
-			vgaMem.DrawCharacter('\0', position.Advance(3), fg, bg);
-			vgaMem.DrawCharacter('\0', position.Advance(4), fg, bg);
+			VGAMem.DrawCharacter('\0', position.Advance(3), colours);
+			VGAMem.DrawCharacter('\0', position.Advance(4), colours);
 		}
 
 		string effectBuf = note.EffectString;
 
-		vgaMem.DrawText(effectBuf, position.Advance(5), fg, bg);
+		VGAMem.DrawText(effectBuf, position.Advance(5), colours);
 	}
 
-	public override void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg)
+	public override void DrawMask(Point position, PatternEditorMask mask, int cursorPos, VGAMemColours colours)
 	{
 		// Unused. The 8-column track view is only used on the Info page.
 	}

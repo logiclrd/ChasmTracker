@@ -1,25 +1,28 @@
 using System;
-using System.ComponentModel.Design;
 using System.IO;
-using System.Runtime.InteropServices.Marshalling;
-using ChasmTracker.Configurations;
 
 namespace ChasmTracker.VGA;
 
+using ChasmTracker.Configurations;
+
 public class Font
 {
+	/* int font_width = 8, font_height = 8; */
+
 	public static byte[] Normal = Array.Empty<byte>();
 	public static byte[] NormalUpper = Array.Empty<byte>();
 	public static byte[] HalfData = Array.Empty<byte>();
 	public static byte[] Alt = Array.Empty<byte>();
 	public static byte[] AltUpper = Array.Empty<byte>();
 
+	public static byte[] Data = Normal;
+
 	/* this needs to be called before any char drawing.
 	 * it's pretty much the same as doing...
 	 *         if (!font.Load("font.cfg"))
 	 *                 font.Reset();
 	 * ... the main difference being font.Initialize() is easier to deal with :) */
-	public void Initialize()
+	public static void Initialize()
 	{
 		HalfData = DefaultFonts.HalfWidth.MakeCopy();
 
@@ -27,11 +30,16 @@ public class Font
 		 || !Load(Configuration.Files.Font))
 			Reset();
 
+		Data = Normal;
+
 		Alt = DefaultFonts.Lower.MakeCopy();
 		AltUpper = DefaultFonts.UpperAlt.MakeCopy();
 	}
 
-	void MakeHalfWidthMidDot()
+	/* --------------------------------------------------------------------- */
+	/* ITF loader */
+
+	static void MakeHalfWidthMidDot()
 	{
 		/* this copies the left half of char 184 in the normal font (two
 		* half-width dots) to char 173 of the half-width font (the
@@ -67,27 +75,27 @@ public class Font
 	}
 
 	/* just the non-itf chars */
-	public void ResetLower()
+	public static void ResetLower()
 	{
 		Normal = DefaultFonts.Lower.MakeCopy();
 	}
 
 	/* just the itf chars */
-	public void ResetUpper()
+	public static void ResetUpper()
 	{
 		NormalUpper = DefaultFonts.UpperITF.MakeCopy();
 		MakeHalfWidthMidDot();
 	}
 
 	/* all together now! */
-	public void Reset()
+	public static void Reset()
 	{
 		ResetLower();
 		ResetUpper();
 	}
 
 	/* or kill the upper chars as well */
-	public void ResetBIOS()
+	public static void ResetBIOS()
 	{
 		ResetLower();
 
@@ -96,7 +104,7 @@ public class Font
 	}
 
 	/* ... or just one character */
-	public void ResetChar(int ch)
+	public static void ResetChar(int ch)
 	{
 		byte[] @base;
 		byte[] dest;
@@ -124,7 +132,7 @@ public class Font
 		MakeHalfWidthMidDot();
 	}
 
-	public bool Squeeze8x16Font(Stream fp)
+	public static bool Squeeze8x16Font(Stream fp)
 	{
 		byte[] data8x16 = new byte[4096];
 
@@ -144,7 +152,7 @@ public class Font
 	}
 
 	/* Hmm. I could've done better with this one. */
-	public bool Load(string filename)
+	public static bool Load(string filename)
 	{
 		filename = Path.Combine(Configuration.ConfigurationDirectoryDotSchism, "fonts", filename);
 
@@ -190,6 +198,29 @@ public class Font
 
 				return true;
 			}
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	public static bool Save(string filename)
+	{
+		filename = Path.Combine(Configuration.ConfigurationDirectoryDotSchism, "fonts", filename);
+
+		try
+		{
+			using (var fp = File.OpenWrite(filename))
+			{
+				fp.Write(Normal);
+
+				// ver
+				fp.WriteByte(0x12);
+				fp.WriteByte(0x2);
+			}
+
+			return true;
 		}
 		catch
 		{

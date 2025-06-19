@@ -2,11 +2,11 @@ namespace ChasmTracker;
 
 using ChasmTracker.Widgets;
 
-public class AboutPage : Page
+public class Abou5tPage : Page
 {
-	public AboutPage()
+	public Abou5tPage()
 		: base("About", PageNumbers.About)
 	{
-		
+
 	}
 }

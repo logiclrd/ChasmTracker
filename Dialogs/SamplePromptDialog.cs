@@ -39,14 +39,14 @@ public class SamplePromptDialog : NumberPromptDialog
 	public void FinishWithValue99(object? data)
 		=> Finish?.Invoke(textEntryInput.Text.Parse99());
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawText(Title, _titlePosition, 0, 2);
-		vgaMem.DrawText(Secondary, _secondaryPosition, 0, 2);
+		VGAMem.DrawText(Title, _titlePosition, (0, 2));
+		VGAMem.DrawText(Secondary, _secondaryPosition, (0, 2));
 
-		vgaMem.DrawBox(
+		VGAMem.DrawBox(
 			textEntryInput.Position.Advance(-1, -1),
-			textEntryInput.Position.Advance(textEntryInput.Width, 1),
+			textEntryInput.Position.Advance(textEntryInput.Size.Width, 1),
 			BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 	}
 }

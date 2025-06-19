@@ -9,6 +9,12 @@ public class Image
 	public Size Size;
 	public uint[] PixelData;
 
+	public uint this[int x, int y]
+	{
+		get => PixelData[x + y * Size.Width];
+		set => PixelData[x + y * Size.Width] = value;
+	}
+
 	public Image(int width, int height)
 		: this(new Size(width, height))
 	{

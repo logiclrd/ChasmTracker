@@ -3,7 +3,7 @@ using System;
 namespace ChasmTracker.Songs;
 
 [Flags]
-public enum SongMode
+public enum AudioPlaybackMode
 {
 	Stopped = 0,
 	Playing = 1,

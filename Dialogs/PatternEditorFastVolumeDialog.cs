@@ -32,10 +32,10 @@ public class PatternEditorFastVolumeDialog : Dialog
 		ActionCancel = Cancel;
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawText("Volume Amplification %", new Point(29, 27), 0, 2);
-		vgaMem.DrawBox(new Point(32, 29), new Point(44, 31), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawText("Volume Amplification %", new Point(29, 27), (0, 2));
+		VGAMem.DrawBox(new Point(32, 29), new Point(44, 31), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
 	}
 
 	public event Action<int>? AcceptDialog;

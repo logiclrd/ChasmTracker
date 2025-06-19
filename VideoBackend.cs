@@ -5,12 +5,20 @@ using ChasmTracker.VGA;
 public abstract class VideoBackend
 {
 	public abstract bool Initialize();
-	public abstract bool Startup(VGAMem vgaMem);
+	public abstract void Quit();
+
+	public abstract bool Startup();
+	public abstract void Shutdown();
+
+	public abstract void Report();
+
+	public abstract string? DriverName { get; }
 
 	public abstract bool IsFocused();
 	public abstract bool IsVisible();
 	public abstract bool IsWindowManagerAvailable();
 	public abstract bool IsHardware();
+	public abstract void Setup(VideoInterpolationMode interpolation);
 	public abstract void Fullscreen(bool? newFSFlag);
 	public abstract bool IsScreenSaverEnabled();
 	public abstract void ToggleScreenSaver(bool enabled);
@@ -22,7 +30,8 @@ public abstract class VideoBackend
 	public abstract Point GetMouseCoordinates();
 	public abstract bool HaveMenu();
 	public abstract void ToggleMenu(bool on);
-	public abstract void Blit(VGAMem vgaMem);
+	public abstract void Blit();
 	public abstract WMData? GetWMData();
 	public abstract void ShowCursor(bool enabled);
+	public abstract void NotifyMouseCursorChanged();
 }

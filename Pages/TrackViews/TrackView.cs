@@ -7,9 +7,9 @@ public abstract class TrackView
 {
 	public abstract int Width { get; }
 
-	public abstract void DrawChannelHeader(VGAMem vgaMem, int chan, Point position, int fg);
-	public abstract void DrawNote(VGAMem vgaMem, Point position, SongNote note, int cursorPos, int fg, int bg);
-	public abstract void DrawMask(VGAMem vgaMem, Point position, PatternEditorMask mask, int cursorPos, int fg, int bg);
+	public abstract void DrawChannelHeader(int chan, Point position, byte fg);
+	public abstract void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours);
+	public abstract void DrawMask(Point position, PatternEditorMask mask, int cursorPos, VGAMemColours colours);
 
 	/* --------------------------------------------------------------------- */
 	/* pattern edit mask indicators */

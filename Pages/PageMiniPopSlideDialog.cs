@@ -41,7 +41,7 @@ public class PageMiniPopSlideDialog : Dialog
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
 		string name;
 
@@ -66,13 +66,13 @@ public class PageMiniPopSlideDialog : Dialog
 		else
 			name = _text;
 
-		vgaMem.DrawFillChars(_textPosition, _textPosition.Advance(17), VGAMem.DefaultForeground, 2);
-		vgaMem.DrawTextLen(name, 17, _textPosition, 0, 2);
+		VGAMem.DrawFillChars(_textPosition, _textPosition.Advance(17), VGAMem.DefaultForeground, 2);
+		VGAMem.DrawTextLen(name, 17, _textPosition, 0, 2);
 
 		if (name.Length < 17 && name == _text)
-			vgaMem.DrawCharacter(':', _textPosition.Advance(name.Length), 0, 2);
+			VGAMem.DrawCharacter(':', _textPosition.Advance(name.Length), 0, 2);
 
-		vgaMem.DrawBox(_textPosition.Advance(0, 1), _textPosition.Advance(14, 3),
+		VGAMem.DrawBox(_textPosition.Advance(0, 1), _textPosition.Advance(14, 3),
 			BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
 	}
 

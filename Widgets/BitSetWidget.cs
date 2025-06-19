@@ -41,7 +41,7 @@ public class BitSetWidget : Widget
 			3  /* has cursor, is  set */
 		};
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
 		for (int n = 0; n < NumberOfBits; ++n)
 		{
@@ -58,9 +58,9 @@ public class BitSetWidget : Widget
 			int bg = BGSelection[(set ? 1 : 0) + (isFocused ? 2 : 0)];
 
 			if (label_c2 != '\0')
-				vgaMem.DrawHalfWidthCharacters(label_c1, label_c2, Position.Advance(n), fg, bg, fg, bg);
+				VGAMem.DrawHalfWidthCharacters(label_c1, label_c2, Position.Advance(n), fg, bg, fg, bg);
 			else
-				vgaMem.DrawCharacter(label_c1, Position.Advance(n), fg, bg);
+				VGAMem.DrawCharacter(label_c1, Position.Advance(n), fg, bg);
 		}
 	}
 }

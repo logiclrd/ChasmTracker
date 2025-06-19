@@ -4,6 +4,7 @@ using System.IO;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Dialogs;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
@@ -67,14 +68,14 @@ public class HelpPage : Page
 		_lines = Array.Empty<string>();
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawBox(
+		VGAMem.DrawBox(
 			new Point(1, 12),
 			new Point(78, 45),
 			BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Outset);
 
-		if (Status.DialogType == DialogTypes.None)
+		if (Status.MessageBoxType == MessageBoxTypes.None)
 			SetFocus(Widgets[0]);
 	}
 
@@ -110,9 +111,9 @@ public class HelpPage : Page
 
 	static readonly char[] NewLineCharacters = { '\r', '\n' };
 
-	public override void Redraw(VGAMem vgaMem)
+	public override void Redraw()
 	{
-		vgaMem.DrawFillChars(
+		VGAMem.DrawFillChars(
 			new Point(2, 13),
 			new Point(77, 44),
 			VGAMem.DefaultForeground, 0);
@@ -127,9 +128,9 @@ public class HelpPage : Page
 			{
 				default:
 					if ((lineType == LineTypes.BIOS) || (lineType == LineTypes.SchismBIOS))
-						vgaMem.DrawTextBIOSLen(line, 1, line.Length, new Point(2, pos), 6, 0);
+						VGAMem.DrawTextBIOSLen(line, 1, line.Length, new Point(2, pos), 6, 0);
 					else
-						vgaMem.DrawTextLen(line, 1, line.Length, new Point(2, pos), (lineType == LineTypes.Disabled) ? 7 : 6, 0);
+						VGAMem.DrawTextLen(line, 1, line.Length, new Point(2, pos), (lineType == LineTypes.Disabled) ? 7 : 6, 0);
 					break;
 				case LineTypes.Graphic:
 					for (int x = 1; x <= line.Length; x++)
@@ -137,12 +138,12 @@ public class HelpPage : Page
 						var ch = line[x];
 						if (ch >= '1' && ch <= '9')
 							ch = GraphicChars[ch - '0'];
-						vgaMem.DrawCharacter(ch, new Point(x + 1, pos), 6, 0);
+						VGAMem.DrawCharacter(ch, new Point(x + 1, pos), 6, 0);
 					}
 					break;
 				case LineTypes.Separator:
 					for (int x = 2; x < 78; x++)
-						vgaMem.DrawCharacter((char)154, new Point(x, pos), 6, 0);
+						VGAMem.DrawCharacter((char)154, new Point(x, pos), 6, 0);
 					break;
 			}
 		}
@@ -161,7 +162,7 @@ public class HelpPage : Page
 	static bool HiddenInSchismMode(string line)
 		=> IsClassic(line);
 
-	public override void SetPage(VGAMem vgaMem)
+	public override void SetPage()
 	{
 		SetFocus(Widgets[0]);
 
@@ -225,7 +226,7 @@ public class HelpPage : Page
 	{
 		int newTopLine = _topLine;
 
-		if (Status.DialogType != DialogTypes.None)
+		if (Status.MessageBoxType != MessageBoxTypes.None)
 			return false;
 
 		if (k.Mouse == MouseState.ScrollUp)

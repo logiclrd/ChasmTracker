@@ -51,6 +51,11 @@ public struct Point
 		return new Point(num.X / den.X, num.Y / den.Y);
 	}
 
+	public static Size operator -(Point point, Point other)
+	{
+		return new Size(point.X - other.X, point.Y - other.Y);
+	}
+
 	public double DistanceTo(Point other)
 	{
 		double dx = other.X - X;

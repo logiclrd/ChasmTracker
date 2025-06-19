@@ -13,9 +13,9 @@ public class ToggleWidget : Widget
 	{
 	}
 
-	protected override void DrawWidget(VGAMem vgaMem, bool isSelected, int tfg, int tbg)
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
-		vgaMem.DrawFillChars(Position, Position.Advance(Size.Width - 1), VGAMem.DefaultForeground, 0);
-		vgaMem.DrawText(State ? "On" : "Off", Position, tfg, tbg);
+		VGAMem.DrawFillChars(Position, Position.Advance(Size.Width - 1), VGAMem.DefaultForeground, 0);
+		VGAMem.DrawText(State ? "On" : "Off", Position, tfg, tbg);
 	}
 }

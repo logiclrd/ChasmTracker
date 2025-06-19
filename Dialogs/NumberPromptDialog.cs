@@ -52,10 +52,10 @@ public class NumberPromptDialog : Dialog
 		Widgets.Add(textEntryInput);
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawText(Title, textEntryInput.Position.Advance(-Title.Length - 1), 3, 2);
-		vgaMem.DrawBox(textEntryInput.Position.Advance(-1, -1), textEntryInput.Position.Advance(textEntryInput.Width, 1), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawText(Title, textEntryInput.Position.Advance(-Title.Length - 1), (3, 2));
+		VGAMem.DrawBox(textEntryInput.Position.Advance(-1, -1), textEntryInput.Position.Advance(textEntryInput.Size.Width, 1), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 	}
 
 	/* since this dialog might be called from another dialog as well as from a page, it can't use the

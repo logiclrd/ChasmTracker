@@ -19,7 +19,7 @@ public static class SDLLifetime
 
 			if (!SDL.Init(default))
 			{
-				OS.ShowMessageBox("SDL3 failed to initialize!", SDL.GetError(), MessageBoxTypes.Error);
+				OS.ShowMessageBox("SDL3 failed to initialize!", SDL.GetError(), OSMessageBoxTypes.Error);
 				return false;
 			}
 		}

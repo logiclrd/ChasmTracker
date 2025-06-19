@@ -21,11 +21,11 @@ public class PatternEditorTemplateErrorDialog : Dialog
 		Widgets.Add(buttonOK);
 	}
 
-	public override void DrawConst(VGAMem vgaMem)
+	public override void DrawConst()
 	{
-		vgaMem.DrawText("Template Error", new Point(33, 25), 0, 2);
-		vgaMem.DrawText("No note in the top left position", new Point(23, 27), 0, 2);
-		vgaMem.DrawText("of the clipboard on which to", new Point(25, 28), 0, 2);
-		vgaMem.DrawText("base translations.", new Point(31, 29), 0, 2);
+		VGAMem.DrawText("Template Error", new Point(33, 25), (0, 2));
+		VGAMem.DrawText("No note in the top left position", new Point(23, 27), (0, 2));
+		VGAMem.DrawText("of the clipboard on which to", new Point(25, 28), (0, 2));
+		VGAMem.DrawText("base translations.", new Point(31, 29), (0, 2));
 	}
 }

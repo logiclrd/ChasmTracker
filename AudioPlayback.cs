@@ -4,6 +4,10 @@ namespace ChasmTracker;
 
 public class AudioPlayback
 {
+	public static AudioPlaybackMode Mode;
+
+	public static bool IsPlaying => Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop);
+
 	static int s_currentPlayChannel;
 	static bool s_multichannelMode;
 
@@ -12,6 +16,10 @@ public class AudioPlayback
 
 	public static int CurrentRow;
 	public static int PlayingPattern;
+
+	static string? s_driverName;
+
+	public static string AudioDriver => s_driverName ?? "unknown";
 
 	public static void ChangeCurrentPlayChannel(int relative, bool wraparound)
 	{
@@ -27,6 +35,11 @@ public class AudioPlayback
 			s_currentPlayChannel = s_currentPlayChannel.Clamp(1, 64);
 
 		Status.FlashText("Using channel " + s_currentPlayChannel + " for playback");
+	}
+
+	public static void Reinitialize(object? floobs)
+	{
+		// TODO
 	}
 
 	public static void ToggleMultichannelMode()
