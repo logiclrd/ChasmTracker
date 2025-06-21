@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ChasmTracker.Songs;
 
@@ -43,6 +44,100 @@ public class Song
 		AudioPlayback.UnlockAudio();
 	}
 
+	// clear patterns => clear filename and save flag
+	// clear orderlist => clear title, message, and channel settings
+	public static void New(NewSongFlags flags)
+	{
+		AudioPlayback.LockAudio();
+
+		AudioPlayback.StopUnlocked(false);
+
+		Song newSong = new Song();
+
+		newSong.Flags = CurrentSong.Flags;
+
+		if (newSong.Flags.HasFlag(SongFlags.ITOldEffects))
+		{
+			for (int i = 0; i < newSong.Voices.Length; i++)
+				newSong.Voices[i].VibratoPosition = 0x10;
+		}
+
+		if (flags.HasFlag(NewSongFlags.KeepPatterns))
+		{
+			newSong.FileName = CurrentSong.FileName;
+
+			Status.Flags &= ~StatusFlags.SongNeedsSave;
+
+			newSong.Patterns.AddRange(CurrentSong.Patterns);
+		}
+
+		if (flags.HasFlag(NewSongFlags.KeepSamples))
+		{
+			int i;
+
+			for (i = 0; (i < newSong.Samples.Count) && (i < CurrentSong.Samples.Count; i++)
+				newSong.Samples[i] = CurrentSong.Samples[i];
+
+			for (; i < CurrentSong.Samples.Count; i++)
+				newSong.Samples.Add(CurrentSong.Samples[i]);
+		}
+
+		if (flags.HasFlag(NewSongFlags.KeepInstruments))
+		{
+			int i;
+
+			for (i = 0; (i < newSong.Instruments.Count) && (i < CurrentSong.Instruments.Count); i++)
+				newSong.Instruments[i] = CurrentSong.Instruments[i];
+
+			for (; i < CurrentSong.Instruments.Count; i++)
+				newSong.Instruments.Add(CurrentSong.Instruments[i]);
+
+			var requireSamples = newSong.Instruments
+				.Where(instrument => instrument != null)
+				.SelectMany(instrument => instrument.SampleMap)
+				.ToHashSet();
+
+			int maxSampleNumber = requireSamples.Max();
+
+			while (newSong.Samples.Count <= maxSampleNumber)
+				newSong.Samples.Add(null);
+
+			foreach (var sampleIndex in requireSamples)
+				newSong.Samples[sampleIndex] = CurrentSong.Samples[sampleIndex];
+		}
+
+		if (flags.HasFlag(NewSongFlags.KeepOrderList))
+		{
+			newSong.Title = CurrentSong.Title;
+			newSong.Message = CurrentSong.Message;
+
+			newSong.OrderList.Clear();
+			newSong.OrderList.AddRange(CurrentSong.OrderList);
+
+			for (int i = 0; i < Constants.MaxChannels; i++)
+			{
+				newSong.Channels[i] = CurrentSong.Channels[i];
+				newSong.Voices[i] = CurrentSong.Voices[i];
+			}
+		}
+		else
+		{
+			for (int i = 0; i < Constants.MaxChannels; i++)
+			{
+				newSong.Voices[i].Panning = newSong.Channels[i].Panning;
+				newSong.Voices[i].Flags = newSong.Channels[i].Flags;
+			}
+		}
+
+		CurrentSong = newSong;
+
+		ForgetHistory();
+
+		AudioPlayback.UnlockAudio();
+
+		main_song_changed_cb();
+	}
+
 	bool[] _savedChannelMutedStates = new bool[Constants.MaxChannels];
 
 	public void SaveChannelMuteState(int channel)
@@ -63,6 +158,9 @@ public class Song
 		for (int n = 0; n < 64; n++)
 			SetChannelMute(n, _savedChannelMutedStates[n]);
 	}
+
+	public string Title = "";
+	public string Message = "";
 
 	public int InitialGlobalVolume;
 	public int InitialSpeed;
@@ -85,6 +183,12 @@ public class Song
 
 	public bool IsInstrumentMode => Flags.HasFlag(SongFlags.InstrumentMode);
 
+	public Song()
+	{
+		for (int i = 0; i < Constants.MaxSamples; i++)
+			Samples.Add(null);
+	}
+
 	int _currentOrder;
 
 	public int CurrentOrder
@@ -96,16 +200,8 @@ public class Song
 			{
 				ref var v = ref Voices[j];
 
-				v.Frequency = 0;
-				v.Note = v.NewNote = 1;
-				v.NewInstrumentNumber = 0;
-				v.PortamentoTarget = 0;
-				v.NCommand = 0;
-				v.CountdownPatloop = 0;
-				v.PatloopRow = 0;
-				v.CountdownTremor = 0;
 				// modplug sets vib pos to 16 in old effects mode for some reason *shrug*
-				v.VibratoPosition = Flags.HasFlag(SongFlags.ITOldEffects) ? 0x10 : 0;
+				v.VibratoPosition = ;
 				v.TremoloPosition = 0;
 			}
 

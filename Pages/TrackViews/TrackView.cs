@@ -3,6 +3,8 @@ using ChasmTracker.VGA;
 
 namespace ChasmTracker.Pages.TrackViews;
 
+using ChasmTracker.Utility;
+
 public abstract class TrackView
 {
 	public abstract int Width { get; }

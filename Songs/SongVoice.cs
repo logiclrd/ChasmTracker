@@ -9,6 +9,8 @@ namespace ChasmTracker.Songs;
 // this struct should really only be holding the stuff actually needed for mixing)
 public struct SongVoice
 {
+	public SongVoice() { }
+
 	// First 32-bytes: Most used mixing information: don't change it
 	public Array? CurrentSampleData;
 	public int Position; // sample position, fixed-point -- integer part
@@ -38,7 +40,7 @@ public struct SongVoice
 	public int RightVolumeNew, LeftVolumeNew; // ?
 	public int FinalVolume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes
 	public int FinalPanning; // range 0-256 (but can temporarily exceed that range during calculations)
-	public int Volume, Panning; // range 0-256 (?); these are the current values set for the channel
+	public int Volume = 256, Panning; // range 0-256 (?); these are the current values set for the channel
 	public int CalcVolume; // calculated volume for midi macros
 	public int FadeOutVolume;
 	public int Frequency;
@@ -62,7 +64,10 @@ public struct SongVoice
 	//  And we miss a value for "running envelope volume" for the pageInfo
 	public int InstrumentVolume;
 	public int AutoVibratoDepth;
-	public int AutoVibratoPosition, VibratoPosition, TremoloPosition, PanbrelloPosition;
+	public int AutoVibratoPosition;
+	public int VibratoPosition;
+	public int TremoloPosition;
+	public int PanbrelloPosition;
 
 	// 16-bit members
 
@@ -72,9 +77,9 @@ public struct SongVoice
 	public short ChannelPanning;
 
 	// formally 8-bit members
-	public int Note; // the note that's playing
+	public int Note = 1; // the note that's playing
 	public NewNoteActions NewNoteAction;
-	public int NewNote, NewInstrumentNumber; // ?
+	public int NewNote = 1, NewInstrumentNumber; // ?
 																					 // Effect memory and handling
 	public uint NCommand; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
 	public uint MemVcVolslide; // Ax Bx Cx Dx (volume column)
@@ -96,7 +101,7 @@ public struct SongVoice
 	public uint PanbrelloType, PanbrelloSpeed, PanbrelloDepth;
 	public int TremoloDelta, PanbrelloDelta;
 
-	public int Cutoff;
+	public int Cutoff = 0x7F;
 	public int Resonance;
 	public int CountdownNoteDelay; // countdown: note starts when this hits zero
 	public int CountdownNoteCut; // countdown: note stops when this hits zero

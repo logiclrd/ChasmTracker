@@ -1,6 +1,6 @@
 namespace ChasmTracker;
 
-using ChasmTracker.VGA;
+using ChasmTracker.Utility;
 
 public abstract class VideoBackend
 {

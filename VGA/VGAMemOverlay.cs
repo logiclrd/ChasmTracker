@@ -1,7 +1,8 @@
 using System;
-using System.Runtime.Serialization;
 
 namespace ChasmTracker.VGA;
+
+using ChasmTracker.Utility;
 
 /* ---------------------------------------------------------------------------
  * drawing overlays; can draw practically anything given the length

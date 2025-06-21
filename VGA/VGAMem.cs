@@ -4,6 +4,7 @@ using System.Text;
 namespace ChasmTracker.VGA;
 
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public static class VGAMem
 {

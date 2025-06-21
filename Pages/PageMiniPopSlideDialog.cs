@@ -4,6 +4,7 @@ namespace ChasmTracker.Pages;
 
 using ChasmTracker.Dialogs;
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 

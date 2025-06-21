@@ -1,9 +1,9 @@
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using ChasmTracker.Songs;
 using ChasmTracker.VGA;
 
 namespace ChasmTracker.Pages.TrackViews;
+
+using ChasmTracker.Utility;
 
 public class TrackView6 : TrackView
 {

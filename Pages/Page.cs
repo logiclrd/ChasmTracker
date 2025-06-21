@@ -7,9 +7,11 @@ using System.Linq;
 namespace ChasmTracker;
 
 using ChasmTracker.Dialogs;
+using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
@@ -74,8 +76,11 @@ public abstract class Page
 
 	public virtual void SynchronizeWith(Page other) { }
 
+	// TODO: test once during startup with reflection whether it is overridden instead?
+	public bool DrawFullDoesNothing = false;
+
 	/* font editor takes over full screen */
-	public virtual void DrawFull() { }
+	public virtual void DrawFull() { DrawFullDoesNothing = true; }
 
 	/* draw the labels, etc. that don't change */
 	public virtual void DrawConst() { }
@@ -456,7 +461,7 @@ public abstract class Page
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						NewSongDialog();
+						Dialog.Show<NewSongDialog>();
 					return true;
 				}
 				break;
@@ -514,7 +519,7 @@ public abstract class Page
 					if (Status.CurrentPageNumber == PageNumbers.PatternEditor)
 					{
 						FinishMiniPop();
-						if (k.State == KeyState.Press && Status.MessageBoxType == MessageBoxTypes.None)
+						if (k.State == KeyState.Press && Status.DialogType == MessageBoxTypes.None)
 							PatternEditorLengthEdit();
 						return true;
 					}
@@ -527,7 +532,7 @@ public abstract class Page
 					{
 						if (k.State == KeyState.Press)
 						{
-							if (Status.MessageBoxType.HasFlag(MessageBoxTypes.Menu))
+							if (Status.DialogType.HasFlag(MessageBoxTypes.Menu))
 							{
 								return false;
 							}

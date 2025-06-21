@@ -4,13 +4,15 @@ using System.Linq;
 
 namespace ChasmTracker.Dialogs;
 
+using ChasmTracker.Input;
 using ChasmTracker.Menus;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
 public class Dialog
 {
-	public MessageBoxTypes Type;
+	public DialogTypes Type;
 	public Point Position;
 	public Size Size;
 	public List<Widget> Widgets = new List<Widget>();
@@ -79,12 +81,12 @@ public class Dialog
 			var dialog = s_activeDialogs.Peek();
 
 			Page.ActiveWidgets = dialog.Widgets;
-			Status.MessageBoxType = dialog.Type;
+			Status.DialogType = dialog.Type;
 		}
 		else
 		{
 			Page.ActiveWidgets = Status.CurrentPage.Widgets;
-			Status.MessageBoxType = MessageBoxTypes.None;
+			Status.DialogType = DialogTypes.None;
 		}
 
 		/* it's up to the calling function to redraw the page */
@@ -146,7 +148,7 @@ public class Dialog
 			switch (k.Sym)
 			{
 				case KeySym.y:
-					switch (Status.MessageBoxType)
+					switch ((MessageBoxTypes)Status.DialogType)
 					{
 						case MessageBoxTypes.YesNo:
 						case MessageBoxTypes.OKCancel:
@@ -155,7 +157,7 @@ public class Dialog
 					}
 					break;
 				case KeySym.n:
-					switch (Status.MessageBoxType)
+					switch ((MessageBoxTypes)Status.DialogType)
 					{
 						case MessageBoxTypes.YesNo:
 							/* in Impulse Tracker, 'n' means cancel, not "no"!
@@ -173,7 +175,7 @@ public class Dialog
 
 					break;
 				case KeySym.c:
-					switch (Status.MessageBoxType)
+					switch ((MessageBoxTypes)Status.DialogType)
 					{
 						case MessageBoxTypes.YesNo:
 						case MessageBoxTypes.OKCancel:
@@ -187,7 +189,7 @@ public class Dialog
 					DialogButtonCancel(dialog.Data);
 					return true;
 				case KeySym.o:
-					switch (Status.MessageBoxType)
+					switch ((MessageBoxTypes)Status.DialogType)
 					{
 						case MessageBoxTypes.YesNo:
 						case MessageBoxTypes.OKCancel:
@@ -312,14 +314,14 @@ public class Dialog
 	protected Dialog(MessageBoxTypes type, string text, Action<object?>? actionYes,
 		Action<object?>? actionNo, int defaultWidget, object? data)
 	{
-		if (!type.HasFlag(MessageBoxTypes.Box))
+		if (!type.HasFlag(MessageBoxDialogTypes.Box))
 		{
 			Console.Error.WriteLine("dialog_create called with bogus dialog type {0}", type);
 			throw new ArgumentException(nameof(type));
 		}
 
 		/* FIXME | hmm... a menu should probably be hiding itself when a widget gets selected. */
-		if (Status.MessageBoxType.HasFlag(MessageBoxTypes.Menu))
+		if (Status.DialogType.HasFlag(DialogTypes.Menu))
 			Menu.Hide();
 
 		Text = text;
@@ -351,18 +353,34 @@ public class Dialog
 		Page.ActiveWidgets = Widgets;
 		Page.SelectedActiveWidget = SelectedWidget;
 
-		Status.MessageBoxType = type;
+		Status.DialogType = (DialogTypes)type;
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	protected Dialog(Point position, Size size)
 	{
-		Type = MessageBoxTypes.Custom;
+		Type = DialogTypes.Custom;
 
 		Position = position;
 		Size = size;
 
 		Initialize();
+
+		var toggleButtonGroups = Widgets
+			.Select((widget, index) => (Widget: widget, Index: index))
+			.Where(p => p.Widget is ToggleButtonWidget)
+			.Select(p => (ToggleButton: (ToggleButtonWidget)p.Widget, p.Index))
+			.GroupBy(p => p.ToggleButton.GroupNumber);
+
+		foreach (var toggleButtonGroup in toggleButtonGroups)
+		{
+			var group = new WidgetGroup(
+				toggleButtonGroup.Select(p => p.Index).ToArray(),
+				toggleButtonGroup.Select(p => p.ToggleButton).ToArray());
+
+			foreach (var pair in toggleButtonGroup)
+				pair.ToggleButton.Group = group;
+		}
 
 		for (int i = 0; i < Widgets.Count; i++)
 		{

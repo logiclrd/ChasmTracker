@@ -15,7 +15,7 @@ public enum X11EventNames
 	Expose = 12,
 	GraphicsExpose = 13,
 	NoExpose = 14,
-	VisibilityNotify = ,
+	VisibilityNotify = 15,
 	CreateNotify = 16,
 	DestroyNotify = 17,
 	UnmapNotify = 18,

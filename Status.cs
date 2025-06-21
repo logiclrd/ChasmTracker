@@ -3,7 +3,10 @@ using System;
 namespace ChasmTracker;
 
 using ChasmTracker.Dialogs;
+using ChasmTracker.Input;
+using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
+using ChasmTracker.Utility;
 
 public static class Status
 {
@@ -12,11 +15,22 @@ public static class Status
 	public static PageNumbers CurrentPageNumber;
 	public static PageNumbers PreviousPageNumber;
 	public static HelpTexts CurrentHelpIndex;
-	public static MessageBoxTypes MessageBoxType;
+	public static DialogTypes DialogType;
 	public static StatusFlags Flags;
 	public static TrackerTimeDisplay TimeDisplay;
 	public static TrackerVisualizationStyle VisualizationStyle;
 	public static KeySym LastKeySym;
+
+	public static MessageBoxTypes MessageBoxType
+	{
+		get
+		{
+			if (DialogType.HasAnyFlag(DialogTypes.MessageBoxTypeMask))
+				return (MessageBoxTypes)(DialogType & DialogTypes.MessageBoxTypeMask);
+			else
+				return MessageBoxTypes.None;
+		}
+	}
 
 	public static KeyMod KeyMod;
 

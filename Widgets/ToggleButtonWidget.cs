@@ -2,6 +2,7 @@ using System.Linq;
 
 namespace ChasmTracker.Widgets;
 
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
 public class ToggleButtonWidget : Widget

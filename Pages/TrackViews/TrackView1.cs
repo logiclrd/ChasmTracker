@@ -1,8 +1,8 @@
-using System.IO;
-using ChasmTracker.Songs;
-using ChasmTracker.VGA;
-
 namespace ChasmTracker.Pages.TrackViews;
+
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
+using ChasmTracker.VGA;
 
 public class TrackView1 : TrackView
 {

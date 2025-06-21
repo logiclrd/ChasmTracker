@@ -220,7 +220,7 @@ public class Program
 							else
 								kk.Mouse = MouseState.Click;
 
-							if (Status.MessageBoxType == MessageBoxTypes.None)
+							if (Status.DialogType == MessageBoxTypes.None)
 							{
 								if (kk.MousePosition.Y <= 9 && (Status.CurrentPage is not FontEditPage))
 								{
@@ -389,7 +389,7 @@ public class Program
 			/* now we can do whatever we need to do */
 			Status.Now = DateTime.UtcNow;
 
-			if ((Status.MessageBoxType == MessageBoxTypes.None)
+			if ((Status.DialogType == MessageBoxTypes.None)
 			 && (startDown != default)
 			 && (Status.Now - startDown > TimeSpan.FromSeconds(1)))
 			{

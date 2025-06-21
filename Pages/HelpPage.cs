@@ -75,7 +75,7 @@ public class HelpPage : Page
 			new Point(78, 45),
 			BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Outset);
 
-		if (Status.MessageBoxType == MessageBoxTypes.None)
+		if (Status.DialogType == MessageBoxTypes.None)
 			SetFocus(Widgets[0]);
 	}
 
@@ -226,7 +226,7 @@ public class HelpPage : Page
 	{
 		int newTopLine = _topLine;
 
-		if (Status.MessageBoxType != MessageBoxTypes.None)
+		if (Status.DialogType != MessageBoxTypes.None)
 			return false;
 
 		if (k.Mouse == MouseState.ScrollUp)

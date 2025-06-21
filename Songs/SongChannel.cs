@@ -1,9 +1,11 @@
 namespace ChasmTracker.Songs;
 
-public class SongChannel
+public struct SongChannel
 {
-	public int Panning;
-	public int Volume;
+	public SongChannel() { }
+
+	public int Panning = 128;
+	public int Volume = 64;
 	public ChannelFlags Flags;
 
 	public bool IsMuted

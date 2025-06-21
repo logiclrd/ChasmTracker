@@ -2,7 +2,8 @@ using System;
 
 namespace ChasmTracker.Widgets;
 
-using ChasmTracker.VGA;
+using ChasmTracker.Events;
+using ChasmTracker.Utility;
 
 public abstract class Widget
 {

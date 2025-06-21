@@ -1,8 +1,10 @@
 using System.IO;
 
+using SkiaSharp;
+
 namespace ChasmTracker.VGA;
 
-using SkiaSharp;
+using ChasmTracker.Utility;
 
 public class Image
 {

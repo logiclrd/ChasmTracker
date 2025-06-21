@@ -11,10 +11,10 @@ public class SongSample
 	public int SustainEnd;
 	public sbyte[]? Data8;
 	public short[]? Data16;
-	public int C5Speed;
+	public int C5Speed = 8363;
 	public int Panning;
-	public int Volume;
-	public int GlobalVolume;
+	public int Volume = 64 * 4;
+	public int GlobalVolume = 64;
 	public SampleFlags Flags;
 	public VibratoType VibratoType;
 	public int VibratoRate;

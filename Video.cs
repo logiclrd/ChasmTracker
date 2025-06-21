@@ -1,8 +1,12 @@
 using System;
-using ChasmTracker.VGA;
+
 using SDL3;
 
 namespace ChasmTracker;
+
+using ChasmTracker.Input;
+using ChasmTracker.Utility;
+using ChasmTracker.VGA;
 
 public class Video
 {

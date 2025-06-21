@@ -2,6 +2,7 @@ namespace ChasmTracker.Widgets;
 
 using System;
 
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
 public class ButtonWidget : Widget
@@ -33,6 +34,6 @@ public class ButtonWidget : Widget
 			Position.Advance(Size.Width + 2, 1),
 			BoxTypes.Thin | BoxTypes.Inner | (IsDepressed ? BoxTypes.Inset : BoxTypes.Outset));
 
-		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? 3 : 0, 2);
+		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? (3, 2) : (0, 2));
 	}
 }

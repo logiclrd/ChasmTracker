@@ -5,6 +5,8 @@ namespace ChasmTracker.Songs;
 [Flags]
 public enum ChannelFlags
 {
+	None = 0,
+
 	_16bit              = 0x01, // 16-bit sample
 	Loop                = 0x02, // looped sample
 	PingPongLoop        = 0x04, // bi-directional (useless unless CHN_LOOP is also set)
@@ -41,5 +43,5 @@ public enum ChannelFlags
 
 	SampleFlags =
 		_16bit | Loop | PingPongLoop | SustainLoop | PingPongSustain |
-		Panning | Stereo | PingPongFlag | Adlib;
+		Panning | Stereo | PingPongFlag | Adlib
 }

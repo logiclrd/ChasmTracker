@@ -9,13 +9,14 @@ namespace ChasmTracker;
 using ChasmTracker.Clipboard;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
+using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Pages.TrackViews;
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
-using ChasmTracker.Widgets;
 
 /* The all-important pattern editor. The code here is a general mess, so
  * don't look at it directly or, uh, you'll go blind or something. */

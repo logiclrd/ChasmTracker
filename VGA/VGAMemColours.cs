@@ -22,4 +22,7 @@ public struct VGAMemColours
 
 	public static implicit operator VGAMemColours((int FG, byte BG) colours)
 		=> new VGAMemColours(unchecked((byte)colours.FG), colours.BG);
+
+	public static implicit operator VGAMemColours((int FG, int BG) colours)
+		=> new VGAMemColours(unchecked((byte)colours.FG), (byte)colours.BG);
 }

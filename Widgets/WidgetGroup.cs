@@ -10,4 +10,10 @@ public class WidgetGroup
 		Indices = indices;
 		Widgets = new Widget[indices.Length];
 	}
+
+	public WidgetGroup(int[] indices, Widget[] widgets)
+	{
+		Indices = indices;
+		Widgets = widgets;
+	}
 }

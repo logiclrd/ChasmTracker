@@ -104,7 +104,7 @@ public class Font
 	}
 
 	/* ... or just one character */
-	public static void ResetChar(int ch)
+	public static void ResetCharacter(int ch)
 	{
 		byte[] @base;
 		byte[] dest;
