@@ -1,16 +1,19 @@
-using ChasmTracker;
-
-namespace ChasmTracker.Dialogs;
-
 using System;
+
+namespace ChasmTracker.Dialogs.PatternEditor;
+
+using ChasmTracker.Input;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PatternEditorOptionsDialog : Dialog
+public class OptionsDialog : Dialog
 {
 	int _lastOctave;
+
+	public int LastOctave => _lastOctave;
 
 	ThumbBarWidget? thumbBarBaseOctave;
 	ThumbBarWidget? thumbBarSkip;
@@ -27,13 +30,14 @@ public class PatternEditorOptionsDialog : Dialog
 	public int PatternLength => thumbBarPatternLength!.Value;
 
 	public event Action? ApplyOptions;
+	public event Action? RevertOptions;
 
-	static int s_selectedWidget;
+	static int s_selectedWidgetIndex;
 
-	public PatternEditorOptionsDialog()
+	public OptionsDialog()
 		: base(new Point(10, 18), new Size(60, 26))
 	{
-		SelectedWidget.Value = s_selectedWidget;
+		SelectedWidgetIndex.Value = s_selectedWidgetIndex;
 
 		Data = this;
 
@@ -116,32 +120,14 @@ public class PatternEditorOptionsDialog : Dialog
 
 	void CloseCancel(object? data)
 	{
-		Keyboard.CurrentOctave = _lastOctave;
+		RevertOptions?.Invoke();
 	}
 
 	void Close(object? data)
 	{
-		s_selectedWidget = SelectedWidget;
+		s_selectedWidgetIndex = SelectedWidgetIndex;
 
 		ApplyOptions?.Invoke();
-
-/* TODO: move into ApplyOptions handler in the pattern editor page
-		var pattern = Song.CurrentSong?.GetPattern(AllPages.PatternEditor.CurrentPattern);
-
-		if (pattern != null)
-		{
-			int oldSize = pattern.Rows.Count;
-			int newSize = thumbBarPatternLength!.Value;
-
-			if (oldSize != newSize)
-			{
-				pattern.Resize(newSize);
-				if (AllPages.PatternEditor.CurrentRow >= newSize)
-					AllPages.PatternEditor.CurrentRow = newSize - 1;
-				AllPages.PatternEditor.Reposition();
-			}
-		}
-		*/
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}

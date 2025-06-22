@@ -6,6 +6,7 @@ namespace ChasmTracker;
 using ChasmTracker.Configurations;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Pages;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
@@ -20,9 +21,12 @@ public class FontEditorPage : Page
 	FileList _fontList;
 	int _fontListTopFont = 0, _fontListCurFont = 0;
 
+	public PageNumbers ReturnPage;
+
 	public FontEditorPage()
-		: base("", PageNumbers.FontEditor)
+		: base(PageNumbers.FontEditor, "", HelpTexts.Global)
 	{
+		_fontList = new FileList(); // TODO
 	}
 
 	/* --------------------------------------------------------------------- */

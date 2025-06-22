@@ -1,14 +1,13 @@
 using System;
 
-namespace ChasmTracker.Pages;
+namespace ChasmTracker.Dialogs;
 
-using ChasmTracker.Dialogs;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PageMiniPopSlideDialog : Dialog
+public class MiniPopSlideDialog : Dialog
 {
 	public ThumbBarWidget thumbBarValue;
 
@@ -20,7 +19,7 @@ public class PageMiniPopSlideDialog : Dialog
 
 	public event Action? MiniPopUsed;
 
-	public PageMiniPopSlideDialog(int currentValue, string name, int min, int max, Point mid)
+	public MiniPopSlideDialog(int currentValue, string name, int min, int max, Point mid)
 		: base(mid.Advance(-10, -3), new Size(20, 6))
 	{
 		_text = name;

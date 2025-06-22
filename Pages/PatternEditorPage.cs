@@ -951,7 +951,7 @@ public class PatternEditorPage : Page
 		}
 		else
 		{
-			var dialog = Dialog.Show(new PatternEditorFastVolumeDialog(_fastVolumePercent));
+			var dialog = Dialog.Show(new FastVolumeDialog(_fastVolumePercent));
 
 			dialog.AcceptDialog +=
 				newFastVolumePercent =>
@@ -985,7 +985,7 @@ public class PatternEditorPage : Page
 			return;
 		}
 
-		var dialog = Dialog.Show(new PatternEditorVolumeAmplifyDialog(_volumePercent));
+		var dialog = Dialog.Show(new VolumeAmplifyDialog(_volumePercent));
 
 		dialog.AcceptDialog +=
 			newVolumePercent =>
@@ -1003,7 +1003,7 @@ public class PatternEditorPage : Page
 	{
 		_currentVary = how;
 
-		var dialog = Dialog.Show(new PatternEditorVaryCommandDialog(_varyDepth));
+		var dialog = Dialog.Show(new VaryCommandDialog(_varyDepth));
 
 		dialog.AcceptDialog +=
 			newVaryDepth =>
@@ -2353,7 +2353,7 @@ public class PatternEditorPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	void Reposition()
+	public void Reposition()
 	{
 		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
 
@@ -2976,7 +2976,7 @@ public class PatternEditorPage : Page
 
 					if (q.Note == 0)
 					{
-						Dialog.Show<PatternEditorTemplateErrorDialog>();
+						Dialog.Show<TemplateErrorDialog>();
 						success = false;
 					}
 					else
@@ -3883,7 +3883,7 @@ public class PatternEditorPage : Page
 
 				if (Status.LastKeySym == KeySym.n)
 				{
-					var dialog = Dialog.Show(new PatternEditorMultiChannelDialog(_channelMulti));
+					var dialog = Dialog.Show(new MultiChannelDialog(_channelMulti));
 
 					dialog.ActionYes = MultiChannelClose;
 					dialog.ActionCancel = MultiChannelClose;
@@ -4264,7 +4264,7 @@ public class PatternEditorPage : Page
 				if (k.State == KeyState.Release)
 					return true;
 
-				Dialog.Show(new PatternEditorHistoryDialog(_undoHistory));
+				Dialog.Show(new HistoryDialog(_undoHistory));
 
 				return true;
 			}

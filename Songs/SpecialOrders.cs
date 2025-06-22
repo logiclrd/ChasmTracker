@@ -1,4 +1,4 @@
-namespace ChasmTracker.Pages;
+namespace ChasmTracker.Songs;
 
 public class SpecialOrders
 {

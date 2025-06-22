@@ -361,12 +361,12 @@ public static class EventHub
 
 		return @event;
 	}
-	
+
 
 
 	static Event? MacOSXEventFilter(Event @event)
 	{
-		switch (@event) 
+		switch (@event)
 		{
 			case WindowEvent windowEvent:
 			{
@@ -392,10 +392,10 @@ public static class EventHub
 					if (MacOSX.FnKeyModeAtStartup != MacOSX.FnKeyMode.Check)
 					{
 						if ((Page.ActiveWidgets != null)
-						 && (Page.SelectedActiveWidget != null)
-						 && (Page.SelectedActiveWidget >= 0)
-						 && (Page.SelectedActiveWidget < Page.ActiveWidgets.Count)
-						 && Page.ActiveWidgets[Page.SelectedActiveWidget].AcceptsText)
+						 && (Page.SelectedActiveWidgetIndex != null)
+						 && (Page.SelectedActiveWidgetIndex >= 0)
+						 && (Page.SelectedActiveWidgetIndex < Page.ActiveWidgets.Count)
+						 && Page.ActiveWidgets[Page.SelectedActiveWidgetIndex].AcceptsText)
 						{
 							/* text is more likely? */
 							keyEvent.Modifiers |= KeyMod.Num;
@@ -431,7 +431,7 @@ public static class EventHub
 				return @event;
 			}
 		}
-		
+
 		return @event;
 	}
 
@@ -551,7 +551,7 @@ public static class EventHub
 				break;
 			}
 		}
-	
+
 		wmData.XUnlock?.Invoke();
 
 		return null;

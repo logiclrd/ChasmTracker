@@ -6,7 +6,9 @@ using System.Linq;
 
 namespace ChasmTracker;
 
+using System.Reflection;
 using ChasmTracker.Dialogs;
+using ChasmTracker.Dialogs.PatternEditor;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Pages;
@@ -20,10 +22,24 @@ public abstract class Page
 	public readonly PageNumbers PageNumber;
 	public readonly string Title;
 	public readonly HelpTexts HelpText;
-	public readonly SharedInt SelectedWidget = new SharedInt();
+	public readonly SharedInt SelectedWidgetIndex = new SharedInt();
 
 	public static List<Widget>? ActiveWidgets;
-	public static SharedInt? SelectedActiveWidget;
+	public static SharedInt? SelectedActiveWidgetIndex;
+
+	public static Widget? SelectedActiveWidget
+	{
+		get
+		{
+			if ((ActiveWidgets == null) || (SelectedActiveWidgetIndex == null))
+				return null;
+
+			if ((SelectedActiveWidgetIndex < 0) || (SelectedActiveWidgetIndex >= ActiveWidgets.Count))
+				return null;
+
+			return ActiveWidgets[SelectedActiveWidgetIndex];
+		}
+	}
 
 	public static MiniPopState MiniPopActive;
 
@@ -32,6 +48,8 @@ public abstract class Page
 		PageNumber = pageNumber;
 		Title = title;
 		HelpText = helpText;
+
+		CheckDrawFull();
 	}
 
 	public static void SetPage(PageNumbers newPageNumber)
@@ -44,7 +62,7 @@ public abstract class Page
 		newPage.SynchronizeWith(Status.CurrentPage);
 
 		ActiveWidgets = newPage.Widgets;
-		SelectedActiveWidget = newPage.SelectedWidget;
+		SelectedActiveWidgetIndex = newPage.SelectedWidgetIndex;
 
 		Status.CurrentPageNumber = newPageNumber;
 	}
@@ -77,10 +95,20 @@ public abstract class Page
 	public virtual void SynchronizeWith(Page other) { }
 
 	// TODO: test once during startup with reflection whether it is overridden instead?
-	public bool DrawFullDoesNothing = false;
+	bool _drawFullDoesNothing = false;
+
+	void CheckDrawFull()
+	{
+		var thisType = GetType();
+
+		var drawFull = thisType.GetMethod(nameof(DrawFull), BindingFlags.DeclaredOnly);
+
+		if (drawFull == null)
+			_drawFullDoesNothing = true;
+	}
 
 	/* font editor takes over full screen */
-	public virtual void DrawFull() { DrawFullDoesNothing = true; }
+	public virtual void DrawFull() { }
 
 	/* draw the labels, etc. that don't change */
 	public virtual void DrawConst() { }
@@ -117,15 +145,15 @@ public abstract class Page
 
 	public void SetFocus(Widget widget)
 	{
-		SelectedWidget.Value = Widgets.IndexOf(widget);
+		SelectedWidgetIndex.Value = Widgets.IndexOf(widget);
 	}
 
 	/* HelpTexts.Global if no page-specific help */
 	public HelpTexts HelpIndex;
 
-	public PageMiniPopSlideDialog ShowMiniPop(int currentValue, string name, int min, int max, Point mid)
+	public MiniPopSlideDialog ShowMiniPop(int currentValue, string name, int min, int max, Point mid)
 	{
-		var miniPopDialog = Dialog.Show(new PageMiniPopSlideDialog(currentValue, name, min, max, mid));
+		var miniPopDialog = Dialog.Show(new MiniPopSlideDialog(currentValue, name, min, max, mid));
 
 		miniPopDialog.MiniPopUsed +=
 			() => { MiniPopActive = MiniPopState.ActiveUsed; };
@@ -146,8 +174,6 @@ public abstract class Page
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
-	static PageNumbers s_fontEditReturnPage;
-
 	public static void SaveCheck(Action<object?> ok, Action<object?>? cancel = null, object? data = null)
 	{
 		if (Status.Flags.HasFlag(StatusFlags.SongNeedsSave))
@@ -156,45 +182,9 @@ public abstract class Page
 			ok(data);
 	}
 
-	public static void ShowExitPrompt()
-	{
-		/* This used to kill all open dialogs, but that doesn't seem to be necessary.
-		Do keep in mind though, a dialog *might* exist when this function is called
-		(for example, if the WM sends a close request). */
-
-		if (Status.CurrentPage is AboutPage)
-		{
-			/* haven't even started up yet; don't bother confirming */
-			Program.Exit(0);
-		}
-		else if (Status.CurrentPage is FontEditorPage)
-		{
-			if (Status.Flags.HasFlag(StatusFlags.StartupFontEdit))
-			{
-				MessageBox.Show(MessageBoxTypes.OKCancel, "Exit Font Editor?", _ => Program.Exit(0));
-			}
-			else
-			{
-				/* don't ask, just go away */
-				Dialog.DestroyAll();
-				SetPage(s_fontEditReturnPage);
-			}
-		}
-		else if (Status.MessageBoxType != MessageBoxTypes.OKCancel)
-		{
-			/* don't draw an exit prompt on top of an existing one */
-			MessageBox.Show(
-				MessageBoxTypes.OKCancel,
-				Status.Flags.HasFlag(StatusFlags.ClassicMode)
-				? "Exit Impulse Tracker?"
-				: "Exit Schism Tracker?",
-				_ => SaveCheck(_ => Program.Exit(0)));
-		}
-	}
-
 	/* --------------------------------------------------------------------------------------------------------- */
 
-		/* returns true if the key was handled */
+	/* returns true if the key was handled */
 	public bool HandleKeyGlobal(KeyEvent k)
 	{
 		if ((MiniPopActive == MiniPopState.ActiveUsed) && (k.Mouse == MouseState.Click) && (k.State == KeyState.Release))
@@ -472,7 +462,7 @@ public abstract class Page
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						ShowSongTimeJump();
+						Dialog.Show<TimeJumpDialog>();
 					return true;
 				}
 				break;
@@ -544,7 +534,34 @@ public abstract class Page
 							else
 							{
 								FinishMiniPop();
-								PatternEditorDisplayOptions();
+
+								var optionsDialog = Dialog.Show<OptionsDialog>();
+
+								optionsDialog.ApplyOptions +=
+									() =>
+									{
+										var pattern = Song.CurrentSong.GetPattern(AllPages.PatternEditor.CurrentPattern);
+
+										if (pattern != null)
+										{
+											int oldSize = pattern.Rows.Count;
+											int newSize = optionsDialog.PatternLength;
+
+											if (oldSize != newSize)
+											{
+												pattern.Resize(newSize);
+												if (AllPages.PatternEditor.CurrentRow >= newSize)
+													AllPages.PatternEditor.CurrentRow = newSize - 1;
+												AllPages.PatternEditor.Reposition();
+											}
+										}
+									};
+
+								optionsDialog.RevertOptions +=
+									() =>
+									{
+										Keyboard.CurrentOctave = optionsDialog.LastOctave;
+									};
 							}
 						}
 					}
@@ -938,5 +955,17 @@ public abstract class Page
 
 		/* oh well */
 		return false;
+	}
+
+	void ShowLengthDialog(string label, TimeSpan length)
+	{
+		MessageBox.Show(
+			MessageBoxTypes.OK,
+			$"{label}: {length.Hours,3}:{length.Minutes:d2}:{length.Seconds:d2}");
+	}
+
+	void ShowSongLength(string label)
+	{
+		ShowLengthDialog("Total song time", Song.CurrentSong.GetLength());
 	}
 }

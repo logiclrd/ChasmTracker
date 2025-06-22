@@ -1,18 +1,19 @@
 using System;
 
-namespace ChasmTracker.Pages;
+namespace ChasmTracker.Dialogs.PatternEditor;
 
 using ChasmTracker.Dialogs;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PatternEditorVaryCommandDialog : Dialog
+public class VaryCommandDialog : Dialog
 {
 	ThumbBarWidget thumbBarVaryDepth;
 	ButtonWidget buttonOK;
 	ButtonWidget buttonCancel;
 
-	public PatternEditorVaryCommandDialog(int varyDepth)
+	public VaryCommandDialog(int varyDepth)
 		: base(new Point(22, 25), new Size(36, 11))
 	{
 		thumbBarVaryDepth = new ThumbBarWidget(new Point(26, 30), 26, 0, 50);

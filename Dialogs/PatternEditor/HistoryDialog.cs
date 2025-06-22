@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 
-namespace ChasmTracker.Pages;
+namespace ChasmTracker.Dialogs.PatternEditor;
 
 using ChasmTracker.Dialogs;
+using ChasmTracker.Input;
+using ChasmTracker.Pages;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
-public class PatternEditorHistoryDialog : Dialog
+public class HistoryDialog : Dialog
 {
 	/* --------------------------------------------------------------------------------------------------------- */
 	/* undo dialog */
@@ -14,7 +17,7 @@ public class PatternEditorHistoryDialog : Dialog
 
 	List<PatternSnap> _undoHistory;
 
-	public PatternEditorHistoryDialog(List<PatternSnap> undoHistory)
+	public HistoryDialog(List<PatternSnap> undoHistory)
 		: base(new Point(17, 21), new Size(47, 16))
 	{
 		_undoHistory = undoHistory;

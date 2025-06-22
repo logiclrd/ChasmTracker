@@ -1,9 +1,11 @@
-namespace ChasmTracker.Dialogs;
+namespace ChasmTracker.Dialogs.PatternEditor;
 
+using ChasmTracker.Input;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PatternEditorMultiChannelDialog : Dialog
+public class MultiChannelDialog : Dialog
 {
 	/* --------------------------------------------------------------------------------------------------------- */
 	/* multichannel dialog */
@@ -15,7 +17,7 @@ public class PatternEditorMultiChannelDialog : Dialog
 	public bool IsMultiChannelEnabledForChannel(int channel)
 		=> toggleChannel![channel].State;
 
-	public PatternEditorMultiChannelDialog(bool[] channelMulti)
+	public MultiChannelDialog(bool[] channelMulti)
 		: base(new Point(7, 18), new Size(66, 25))
 	{
 		_channelMulti = channelMulti;
@@ -50,7 +52,7 @@ public class PatternEditorMultiChannelDialog : Dialog
 
 	void AdvanceChannel()
 	{
-		ChangeFocusTo(SelectedWidget + 1);
+		ChangeFocusTo(SelectedWidgetIndex + 1);
 	}
 
 	public override void DrawConst()

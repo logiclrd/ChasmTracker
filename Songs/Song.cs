@@ -4,6 +4,9 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
+using ChasmTracker.Pages;
+using ChasmTracker.Utility;
+
 public class Song
 {
 	public static Song CurrentSong = new Song();
@@ -75,7 +78,7 @@ public class Song
 		{
 			int i;
 
-			for (i = 0; (i < newSong.Samples.Count) && (i < CurrentSong.Samples.Count; i++)
+			for (i = 0; (i < newSong.Samples.Count) && (i < CurrentSong.Samples.Count); i++)
 				newSong.Samples[i] = CurrentSong.Samples[i];
 
 			for (; i < CurrentSong.Samples.Count; i++)
@@ -131,11 +134,17 @@ public class Song
 
 		CurrentSong = newSong;
 
-		ForgetHistory();
+		CurrentSong.ForgetHistory();
 
 		AudioPlayback.UnlockAudio();
 
-		main_song_changed_cb();
+		// TODO: Program.SongChanged(); ?    main_song_changed_cb();
+	}
+
+	void ForgetHistory()
+	{
+		History.Clear();
+		EditStart = new SongHistory();
 	}
 
 	bool[] _savedChannelMutedStates = new bool[Constants.MaxChannels];
@@ -161,6 +170,7 @@ public class Song
 
 	public string Title = "";
 	public string Message = "";
+	public string FileName = "";
 
 	public int InitialGlobalVolume;
 	public int InitialSpeed;
@@ -177,7 +187,74 @@ public class Song
 	public readonly SongVoice[] Voices = new SongVoice[Constants.MaxVoices];
 	public readonly int[] VoiceMix = new int[Constants.MaxVoices];
 
-	public static int MaxVoices;
+	public readonly List<SongHistory> History = new List<SongHistory>();
+	public SongHistory? EditStart;
+
+	// mixer stuff -----------------------------------------------------------
+	// TODO: public MixFlags MixFlags;
+	public int MixFrequency;
+	public int MixBitsPerSample;
+	public int MaxChannels;
+	public int RampingSamples; // default: 64
+	public int MaxVoices;
+	public int VULeft;
+	public int VURight;
+	public int DryROfsVol; // un-globalized, didn't care enough
+	public int DryLOfsVol; // to find out what these do  -paper
+												 // -----------------------------------------------------------------------
+
+	// OPL stuff -------------------------------------------------------------
+	// TODO: public OPL OPL;
+	public int OPLRetVal;
+	public int OPLRegNumber;
+	public bool OPLFMActive;
+
+	public byte[] OPLDTab = new byte[9];
+	public byte[] OPlKeyOnTab = new byte[9];
+	public int[] OPLPans = new int[Constants.MaxVoices];
+
+	public int[] OPLToChan = new int[9];
+	public int[] OPLFromChan = new int[Constants.MaxVoices];
+	// -----------------------------------------------------------------------
+
+	// MIDI stuff ------------------------------------------------------------
+	/* This maps S3M concepts into MIDI concepts */
+	// TODO: song_s3m_channel_info_t midi_s3m_chans[MAX_VOICES];
+	/* This helps reduce the MIDI traffic, also does some encapsulation */
+	// TODO: song_midi_state_t midi_chans[MAX_MIDI_CHANNELS];
+	double MIDILastSongCounter;
+
+	uint MIDIRunningStates;
+
+	/* for midi translation, memberized from audio_playback.c */
+	public int[] MIDINoteTracker = new int[Constants.MaxChannels];
+	public int[] MIDIVolTracker = new int[Constants.MaxChannels];
+	public int[] MIDIInsTracker = new int[Constants.MaxChannels];
+	public int[] MIDIWasProgram = new int[Constants.MaxMIDIChannels];
+	public int[] MIDIWasBankLo = new int[Constants.MaxMIDIChannels];
+	public int[] MIDIWasBankHi = new int[Constants.MaxMIDIChannels];
+
+	// TODO: const song_note_t *midi_last_row[Constants.MaxChannels];
+	public int MIDILastRowNumber;
+
+	public bool MIDIPlaying;
+
+	/* MIDI callback function */
+	// TODO: song_midi_out_raw_spec_t midi_out_raw;
+	// -----------------------------------------------------------------------
+
+	public int PatternLoop; // effects.c: need this for stupid pattern break compatibility
+
+	// noise reduction filter
+	public int LeftNoiseReduction, RightNoiseReduction;
+
+	// chaseback
+	public int StopAtOrder;
+	public int StopAtRow;
+	public TimeSpan StopAtTime;
+
+	// multi-write stuff -- null if no multi-write is in progress, else array of one struct per channel
+	// public MultiWrite[]? MultiWrite;
 
 	public SongFlags Flags;
 
@@ -200,8 +277,8 @@ public class Song
 			{
 				ref var v = ref Voices[j];
 
-				// modplug sets vib pos to 16 in old effects mode for some reason *shrug*
-				v.VibratoPosition = ;
+				// modplug sets vib pos to 16 outside of old effects mode
+				v.VibratoPosition = Flags.HasFlag(SongFlags.ITOldEffects) ? 0 : 0x10;
 				v.TremoloPosition = 0;
 			}
 
@@ -333,6 +410,191 @@ public class Song
 			return null;
 
 		return Channels[n];
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
+
+	public TimeSpan GetLength()
+	{
+		TimeSpan elapsed = TimeSpan.Zero;
+
+		int row = 0;
+		int nextRow = 0;
+
+		int curOrder = 0;
+		int nextOrder = 0;
+
+		int pat = OrderList.First();
+
+		int speed = InitialSpeed;
+		int tempo = InitialTempo;
+
+		TimeSpan[] patLoop = new TimeSpan[Constants.MaxChannels];
+		byte[] memTempo = new byte[Constants.MaxChannels];
+
+		ulong setloop = 0; // bitmask
+
+		for (; ; )
+		{
+			int speedCount = 0;
+
+			row = nextRow;
+			curOrder = nextOrder;
+
+			// Check if pattern is valid
+			pat = OrderList[curOrder];
+			while (pat >= Constants.MaxPatterns)
+			{
+				// End of song ?
+				if (pat == SpecialOrders.Last || curOrder >= Constants.MaxOrders)
+				{
+					pat = SpecialOrders.Last; // cause break from outer loop too
+					break;
+				}
+				else
+				{
+					curOrder++;
+					pat = (curOrder < Constants.MaxOrders) ? OrderList[curOrder] : SpecialOrders.Last;
+				}
+
+				nextOrder = curOrder;
+			}
+
+			// Weird stuff?
+			if (pat >= Constants.MaxPatterns)
+				break;
+
+			var pData = Patterns[pat];
+			int pSize;
+
+			if (pData != null)
+				pSize = pData.Rows.Count;
+			else
+			{
+				pData = Pattern.Empty;
+				pSize = 64;
+			}
+
+			// guard against Cxx to invalid row, etc.
+			if (row >= pSize)
+				row = 0;
+
+			// Update next position
+			nextRow = row + 1;
+			if (nextRow >= pSize)
+			{
+				nextOrder = curOrder + 1;
+				nextRow = 0;
+			}
+
+			/* muahahaha */
+			if (StopAtOrder > -1 && StopAtRow > -1)
+			{
+				if (StopAtOrder <= curOrder && StopAtRow <= row)
+					break;
+
+				if (StopAtTime > TimeSpan.Zero)
+				{
+					if (elapsed >= StopAtTime)
+					{
+						StopAtOrder = curOrder;
+						StopAtRow = row;
+						break;
+					}
+				}
+			}
+
+			/* This is nasty, but it fixes inaccuracies with SB0 SB1 SB1. (Simultaneous
+			loops in multiple channels are still wildly incorrect, though.) */
+			if (row == 0)
+				setloop = ~0ul;
+
+			if (setloop != 0)
+			{
+				for (int n = 0; n < Constants.MaxChannels; n++)
+					if ((setloop & (1ul << n)) != 0)
+						patLoop[n] = elapsed;
+				setloop = 0;
+			}
+
+			for (int n = 0; n < Constants.MaxChannels; n++)
+			{
+				ref var note = ref pData[row][n];
+
+				var param = note.Parameter;
+				switch (note.Effect)
+				{
+					case Effects.None:
+						break;
+					case Effects.PositionJump:
+						nextOrder = param > curOrder ? param : curOrder + 1;
+						nextRow = 0;
+						break;
+					case Effects.PatternBreak:
+						nextOrder = curOrder + 1;
+						nextRow = param;
+						break;
+					case Effects.Speed:
+						if (param != 0)
+							speed = param;
+						break;
+					case Effects.Tempo:
+					{
+						if (param != 0)
+							memTempo[n] = param;
+						else
+							param = memTempo[n];
+
+						// WTF is this doing? --paper
+						int d = (param & 0xf);
+						switch (param >> 4)
+						{
+							default:
+								tempo = param;
+								break;
+							case 0:
+								d = -d;
+								goto case 1;
+							case 1:
+								d = d * (speed - 1) + tempo;
+								tempo = d.Clamp(32, 255);
+								break;
+						}
+
+						break;
+					}
+					case Effects.Special:
+						switch (param >> 4)
+						{
+							case 0x6:
+								speedCount = param & 0x0F;
+								break;
+							case 0xb:
+								if ((param & 0x0F) != 0)
+								{
+									elapsed += (elapsed - patLoop[n]) * (param & 0x0F);
+									patLoop[n] = TimeSpan.MaxValue;
+									setloop = 1;
+								}
+								else
+								{
+									patLoop[n] = elapsed;
+								}
+								break;
+							case 0xe:
+								speedCount = (param & 0x0F) * speed;
+								break;
+						}
+						break;
+				}
+			}
+			//  sec/tick = 5 / (2 * tempo)
+			// msec/tick = 5000 / (2 * tempo)
+			//           = 2500 / tempo
+			elapsed = elapsed + TimeSpan.FromMilliseconds((speed + speedCount) * 2500 / tempo);
+		}
+
+		return elapsed;
 	}
 
 	// ------------------------------------------------------------------------------------------------------------

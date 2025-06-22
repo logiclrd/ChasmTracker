@@ -1,13 +1,14 @@
-namespace ChasmTracker.Dialogs;
+namespace ChasmTracker.Dialogs.PatternEditor;
 
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PatternEditorTemplateErrorDialog : Dialog
+public class TemplateErrorDialog : Dialog
 {
 	ButtonWidget? buttonOK;
 
-	public PatternEditorTemplateErrorDialog()
+	public TemplateErrorDialog()
 		: base(new Point(20, 23), new Size(40, 12))
 	{
 	}

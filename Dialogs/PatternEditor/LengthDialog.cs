@@ -1,11 +1,12 @@
-namespace ChasmTracker.Pages;
+namespace ChasmTracker.Dialogs.PatternEditor;
 
 using ChasmTracker.Dialogs;
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PatternEditorLengthDialog : Dialog
+public class LengthDialog : Dialog
 {
 	/* --------------------------------------------------------------------------------------------------------- */
 	/* pattern length dialog */
@@ -16,7 +17,7 @@ public class PatternEditorLengthDialog : Dialog
 
 	int _currentPattern;
 
-	public PatternEditorLengthDialog(int initialValue, int currentPattern)
+	public LengthDialog(int initialValue, int currentPattern)
 		: base(new Point(15, 19), new Size(51, 15))
 	{
 		thumbBarPatternLength =

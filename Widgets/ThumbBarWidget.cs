@@ -1,7 +1,7 @@
-using System;
-using ChasmTracker.VGA;
-
 namespace ChasmTracker.Widgets;
+
+using ChasmTracker.Utility;
+using ChasmTracker.VGA;
 
 public class ThumbBarWidget : Widget
 {
@@ -37,7 +37,7 @@ public class ThumbBarWidget : Widget
 	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
 		if ((TextAtMinimum != null) && (Value == Minimum))
-			VGAMem.DrawTextLen(TextAtMinimum, Size.Width, Position, isSelected ? 3 : 2, 0);
+			VGAMem.DrawTextLen(TextAtMinimum, Size.Width, Position, isSelected ? (3, 0) : (2, 0));
 		else if ((TextAtMaximum != null) && (Value == Maximum))
 		{
 			int len = TextAtMaximum.Length;
@@ -49,8 +49,8 @@ public class ThumbBarWidget : Widget
 				len = Size.Width;
 			}
 
-			VGAMem.DrawFillChars(Position, Position.Advance(len - 1), VGAMem.DefaultForeground, 0);
-			VGAMem.DrawTextLen(TextAtMaximum, Size.Width, Position.Advance(offset), isSelected ? 3 : 2, 0);
+			VGAMem.DrawFillCharacters(Position, Position.Advance(len - 1), (VGAMem.DefaultForeground, 0));
+			VGAMem.DrawTextLen(TextAtMaximum, Size.Width, Position.Advance(offset), isSelected ? (3, 0) : (2, 0));
 		}
 		else
 		{
@@ -59,6 +59,6 @@ public class ThumbBarWidget : Widget
 
 		string buf = Value.ToString("d3");
 
-		VGAMem.DrawText(buf, Position.Advance(Size.Width + 1), 1, 2);
+		VGAMem.DrawText(buf, Position.Advance(Size.Width + 1), (1, 2));
 	}
 }

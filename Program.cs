@@ -8,10 +8,13 @@ using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
 using ChasmTracker.Events;
+using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Menus;
+using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public class Program
 {
@@ -38,31 +41,34 @@ public class Program
 
 		fixNumLockKey = Status.FixNumLockSetting;
 
-		downTrip = 0;
+		downTrip = false;
 		lastMouseDown = DateTime.MinValue;
 		lastAudioPoll = DateTime.UtcNow;
 		startDown = DateTime.MinValue;
 		Status.LastKeySym = KeySym.None;
 
-		Status.KeyMod = Events.CurrentKeyMod;
+		Status.KeyMod = EventHub.CurrentKeyMod;
 
 		OS.GetModKey(ref Status.KeyMod);
 
-		s_video.ToggleScreenSaver(true);
+		Video.ToggleScreenSaver(true);
 		screensaver = true;
 
 		Status.Now = DateTime.UtcNow;
 
 		while (true)
 		{
-			while (Events.PollEvent(out var se))
+			while (EventHub.PollEvent(out var se))
 			{
+				if (se == null)
+					continue;
+
 				if (MIDIEngine.HandleEvent(se))
 					continue;
 
 				kk.Reset(kk.StartPosition);
 
-				if (se is ButtonPressEvent buttonPress)
+				if (se is IButtonPressEvent buttonPress)
 					kk.State = buttonPress.KeyState;
 
 				if ((se is KeyboardEvent) || (se is TextInputEvent))
@@ -78,7 +84,7 @@ public class Program
 				switch (se)
 				{
 					case QuitEvent:
-						show_exit_prompt();
+						ShowExitPrompt();
 						break;
 					case AudioDevicesChangedEvent:
 						refresh_audio_device_list();
@@ -407,7 +413,8 @@ public class Program
 
 			Video.CheckUpdate();
 
-			switch (AudioPlayback.Mode) {
+			switch (AudioPlayback.Mode)
+			{
 				case AudioPlaybackMode.Playing:
 				case AudioPlaybackMode.PatternLoop:
 					if (screensaver)
@@ -423,7 +430,8 @@ public class Program
 						screensaver = true;
 					}
 					break;
-			};
+			}
+			;
 
 			// Check for new audio devices every 5 seconds.
 			if (Status.Now - lastAudioPoll > TimeSpan.FromMilliseconds(5000))
@@ -689,5 +697,41 @@ public class Program
 		EventLoop();
 
 		return 0; /* blah */
+	}
+
+	public static void ShowExitPrompt()
+	{
+		/* This used to kill all open dialogs, but that doesn't seem to be necessary.
+		Do keep in mind though, a dialog *might* exist when this function is called
+		(for example, if the WM sends a close request). */
+
+		if (Status.CurrentPage is AboutPage)
+		{
+			/* haven't even started up yet; don't bother confirming */
+			Program.Exit(0);
+		}
+		else if (Status.CurrentPage is FontEditorPage)
+		{
+			if (Status.Flags.HasFlag(StatusFlags.StartupFontEdit))
+			{
+				MessageBox.Show(MessageBoxTypes.OKCancel, "Exit Font Editor?", _ => Program.Exit(0));
+			}
+			else
+			{
+				/* don't ask, just go away */
+				Dialog.DestroyAll();
+				Page.SetPage(AllPages.FontEditor.ReturnPage);
+			}
+		}
+		else if (Status.MessageBoxType != MessageBoxTypes.OKCancel)
+		{
+			/* don't draw an exit prompt on top of an existing one */
+			MessageBox.Show(
+				MessageBoxTypes.OKCancel,
+				Status.Flags.HasFlag(StatusFlags.ClassicMode)
+				? "Exit Impulse Tracker?"
+				: "Exit Schism Tracker?",
+				_ => SaveCheck(_ => Program.Exit(0)));
+		}
 	}
 }

@@ -1,6 +1,6 @@
 namespace ChasmTracker.Events;
 
-public class TextInputEvent
+public class TextInputEvent : Event
 {
 	public string Text;
 	public bool IsHandled;

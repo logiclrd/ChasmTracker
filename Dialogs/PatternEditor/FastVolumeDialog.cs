@@ -1,18 +1,19 @@
 using System;
 
-namespace ChasmTracker.Pages;
+namespace ChasmTracker.Dialogs.PatternEditor;
 
 using ChasmTracker.Dialogs;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PatternEditorFastVolumeDialog : Dialog
+public class FastVolumeDialog : Dialog
 {
 	ThumbBarWidget thumbBarVolumePercent;
 	ButtonWidget buttonOK;
 	ButtonWidget buttonCancel;
 
-	public PatternEditorFastVolumeDialog(int fastVolumePercent)
+	public FastVolumeDialog(int fastVolumePercent)
 		: base(new Point(22, 25), new Size(36, 11))
 	{
 		thumbBarVolumePercent = new ThumbBarWidget(new Point(33, 30), 11, 10, 90);

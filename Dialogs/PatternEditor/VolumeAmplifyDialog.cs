@@ -1,18 +1,20 @@
 using System;
 
-namespace ChasmTracker.Pages;
+namespace ChasmTracker.Dialogs.PatternEditor;
 
 using ChasmTracker.Dialogs;
+using ChasmTracker.Input;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class PatternEditorVolumeAmplifyDialog : Dialog
+public class VolumeAmplifyDialog : Dialog
 {
 	ThumbBarWidget thumbBarVolumePercent;
 	ButtonWidget buttonOK;
 	ButtonWidget buttonCancel;
 
-	public PatternEditorVolumeAmplifyDialog(int volumePercent)
+	public VolumeAmplifyDialog(int volumePercent)
 		: base(new Point(22, 25), new Size(36, 11))
 	{
 		thumbBarVolumePercent = new ThumbBarWidget(new Point(26, 30), 26, 0, 200);

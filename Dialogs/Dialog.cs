@@ -16,7 +16,7 @@ public class Dialog
 	public Point Position;
 	public Size Size;
 	public List<Widget> Widgets = new List<Widget>();
-	public SharedInt SelectedWidget = new SharedInt();
+	public SharedInt SelectedWidgetIndex = new SharedInt();
 
 	public string? Text;
 	public int TextX;
@@ -43,8 +43,8 @@ public class Dialog
 	{
 		get
 		{
-			if ((SelectedWidget >= 0) && (SelectedWidget < Widgets.Count))
-				return Widgets[SelectedWidget];
+			if ((SelectedWidgetIndex >= 0) && (SelectedWidgetIndex < Widgets.Count))
+				return Widgets[SelectedWidgetIndex];
 
 			return Widgets[0];
 		}
@@ -52,14 +52,14 @@ public class Dialog
 
 	public void ChangeFocusTo(int newWidgetIndex)
 	{
-		if ((newWidgetIndex == SelectedWidget)
+		if ((newWidgetIndex == SelectedWidgetIndex)
 		 || (newWidgetIndex < 0)
 		 || (newWidgetIndex >= Widgets.Count))
 			return;
 
 		ActiveWidget.IsDepressed = false;
 
-		SelectedWidget.Value = newWidgetIndex;
+		SelectedWidgetIndex.Value = newWidgetIndex;
 
 		ActiveWidget.IsDepressed = false;
 
@@ -122,7 +122,7 @@ public class Dialog
 			for (int i = 0; i < dialog.Widgets.Count; i++)
 			{
 				var widget = dialog.Widgets[i];
-				bool isSelected = (i == dialog.SelectedWidget);
+				bool isSelected = (i == dialog.SelectedWidgetIndex);
 
 				widget.DrawWidget(isSelected);
 			}
@@ -329,7 +329,7 @@ public class Dialog
 		ActionYes = actionYes;
 		ActionNo = actionNo;
 		ActionCancel = null; /* ??? */
-		SelectedWidget.Value = defaultWidget;
+		SelectedWidgetIndex.Value = defaultWidget;
 
 		switch (type)
 		{
@@ -351,7 +351,7 @@ public class Dialog
 		s_activeDialogs.Push(this);
 
 		Page.ActiveWidgets = Widgets;
-		Page.SelectedActiveWidget = SelectedWidget;
+		Page.SelectedActiveWidgetIndex = SelectedWidgetIndex;
 
 		Status.DialogType = (DialogTypes)type;
 		Status.Flags |= StatusFlags.NeedUpdate;

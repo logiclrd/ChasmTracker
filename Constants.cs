@@ -13,4 +13,5 @@ public class Constants
 	public const int MaxSamples = 236;
 	public const int MaxInstruments = 236;
 	public const int DefaultPatternLength = 64;
+	public const int MaxMIDIChannels = 16;
 }

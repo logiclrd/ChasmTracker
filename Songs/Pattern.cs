@@ -26,8 +26,7 @@ public class Pattern
 
 		foreach (var note in data)
 		{
-			if (x < Rows[y].Notes.Length)
-				Rows[y].Notes[x] = note;
+			Rows[y][x] = note;
 
 			x++;
 

@@ -1,7 +1,11 @@
 using System;
-using ChasmTracker.VGA;
 
 namespace ChasmTracker.Widgets;
+
+using ChasmTracker.Events;
+using ChasmTracker.Input;
+using ChasmTracker.Utility;
+using ChasmTracker.VGA;
 
 public class NumberEntryWidget : Widget
 {
@@ -78,26 +82,26 @@ public class NumberEntryWidget : Widget
 			if (str.Length > Size.Width)
 				str = str.Substring(str.Length - Size.Width);
 
-			VGAMem.DrawTextLen("", Size.Width, Position, 2, 0);
+			VGAMem.DrawTextLen("", Size.Width, Position, (2, 0));
 
-			VGAMem.DrawText(str, Position.Advance(Size.Width - str.Length), 2, 0);
+			VGAMem.DrawText(str, Position.Advance(Size.Width - str.Length), (2, 0));
 
 			if (isSelected)
 			{
 				if (str == "")
 					str = " ";
 
-				VGAMem.DrawCharacter(str[str.Length - 1], Position.Advance(Size.Width - 1), 0, 3);
+				VGAMem.DrawCharacter(str[str.Length - 1], Position.Advance(Size.Width - 1), (0, 3));
 			}
 		}
 		else
 		{
 			string buf = Value.ToString("d" + Size.Width);
 
-			VGAMem.DrawTextLen(buf, Size.Width, Position, 2, 0);
+			VGAMem.DrawTextLen(buf, Size.Width, Position, (2, 0));
 
 			if (isSelected)
-				VGAMem.DrawCharacter(buf[CursorPosition], Position.Advance(CursorPosition), 0, 3);
+				VGAMem.DrawCharacter(buf[CursorPosition], Position.Advance(CursorPosition), (0, 3));
 		}
 	}
 }

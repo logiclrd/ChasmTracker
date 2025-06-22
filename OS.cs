@@ -1,5 +1,7 @@
 namespace ChasmTracker;
 
+using ChasmTracker.Input;
+
 public static class OS
 {
 	public static void GetModKey(ref KeyMod km)
