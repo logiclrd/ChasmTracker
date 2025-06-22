@@ -81,41 +81,44 @@ public struct SongVoice
 	public NewNoteActions NewNoteAction;
 	public int NewNote = 1, NewInstrumentNumber; // ?
 																					 // Effect memory and handling
-	public uint NCommand; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
-	public uint MemVcVolslide; // Ax Bx Cx Dx (volume column)
-	public uint MemArpeggio; // Axx
-	public uint MemVolslide; // Dxx
-	public uint MemPitchslide; // Exx Fxx (and Gxx maybe)
-	public int MemPortanote; // Gxx (synced with memPitchslide if compat gxx is set)
-	public uint MemTremor; // Ixx
-	public uint MemChannelVolslide; // Nxx
-	public uint MemOffset; // final, combined yxx00h from Oxx and SAy
-	public uint MemPanslide; // Pxx
-	public uint MemRetrig; // Qxx
-	public uint MemSpecial; // Sxx
-	public uint MemTempo; // Txx
-	public uint MemGlobalVolslide; // Wxx
-	public uint NoteSlideCounter, NoteSlideSpeed, NoteSlideStep; // IMF effect
-	public uint VibType, VibratoSpeed, VibratoDepth;
-	public uint TremoloType, TremoloSpeed, TremoloDepth;
-	public uint PanbrelloType, PanbrelloSpeed, PanbrelloDepth;
+	public Effects NCommand; // This sucks and needs to go away (dumb "flag" for arpeggio / tremor)
+	public int MemVolumeColumnVolSlide; // Ax Bx Cx Dx (volume column)
+	public int MemArpeggio; // Axx
+	public int MemVolSlide; // Dxx
+	public int MemPitchSlide; // Exx Fxx (and Gxx maybe)
+	public int MemPortaNote; // Gxx (synced with memPitchslide if compat gxx is set)
+	public int MemTremor; // Ixx
+	public int MemChannelVolumeSlide; // Nxx
+	public int MemOffset; // final, combined yxx00h from Oxx and SAy
+	public int MemPanningSlide; // Pxx
+	public int MemRetrig; // Qxx
+	public int MemSpecial; // Sxx
+	public int MemTempo; // Txx
+	public int MemGlobalVolumeSlide; // Wxx
+	public int NoteSlideCounter, NoteSlideSpeed, NoteSlideStep; // IMF effect
+	public VibratoType VibratoType;
+	public int VibratoSpeed, VibratoDepth;
+	public VibratoType TremoloType;
+	public int TremoloSpeed, TremoloDepth;
+	public VibratoType PanbrelloType;
+	public int PanbrelloSpeed, PanbrelloDepth;
 	public int TremoloDelta, PanbrelloDelta;
 
 	public int Cutoff = 0x7F;
 	public int Resonance;
 	public int CountdownNoteDelay; // countdown: note starts when this hits zero
 	public int CountdownNoteCut; // countdown: note stops when this hits zero
-	public int CountdownRetrig; // countdown: note retrigs when this hits zero
+	public int CountdownRetrigger; // countdown: note retrigs when this hits zero
 	public uint CountdownTremor; // (weird) countdown + flag: see sndFx.c and sndmix.c
-	public uint PatloopRow; // row number that SB0 was on
-	public uint CountdownPatloop; // countdown: pattern loops back when this hits zero
+	public int PatternLoopRow; // row number that SB0 was on
+	public int CountdownPatternLoop; // countdown: pattern loops back when this hits zero
 
-	public uint RowNote, RowInstrumentNumber;
+	public int RowNote, RowInstrumentNumber;
 	public VolumeEffects RowVolumeEffect;
-	public int RowVolparam;
+	public int RowVolumeParameter;
 	public Effects RowEffect;
 	public int RowParam;
-	public int ActiveMacro, LastInstrument;
+	public int ActiveMacro, LastInstrumentNumber;
 
 	public bool IsMuted
 	{

@@ -484,17 +484,17 @@ public class PatternEditorPage : Page
 					{
 						case 'v': n.VolumeEffect = VolumeEffects.Volume; break;
 						case 'p': n.VolumeEffect = VolumeEffects.Panning; break;
-						case 'c': n.VolumeEffect = VolumeEffects.VolSlideUp; break;
-						case 'd': n.VolumeEffect = VolumeEffects.VolSlideDown; break;
-						case 'a': n.VolumeEffect = VolumeEffects.FineVolUp; break;
-						case 'b': n.VolumeEffect = VolumeEffects.FineVolDown; break;
+						case 'c': n.VolumeEffect = VolumeEffects.VolumeSlideUp; break;
+						case 'd': n.VolumeEffect = VolumeEffects.VolumeSlideDown; break;
+						case 'a': n.VolumeEffect = VolumeEffects.FineVolumeUp; break;
+						case 'b': n.VolumeEffect = VolumeEffects.FineVolumeDown; break;
 						case 'u': n.VolumeEffect = VolumeEffects.VibratoSpeed; break;
 						case 'h': n.VolumeEffect = VolumeEffects.VibratoDepth; break;
-						case 'l': n.VolumeEffect = VolumeEffects.PanSlideLeft; break;
-						case 'r': n.VolumeEffect = VolumeEffects.PanSlideRight; break;
+						case 'l': n.VolumeEffect = VolumeEffects.PanningSlideLeft; break;
+						case 'r': n.VolumeEffect = VolumeEffects.PanningSlideRight; break;
 						case 'g': n.VolumeEffect = VolumeEffects.TonePortamento; break;
-						case 'f': n.VolumeEffect = VolumeEffects.PortaUp; break;
-						case 'e': n.VolumeEffect = VolumeEffects.PortaDown; break;
+						case 'f': n.VolumeEffect = VolumeEffects.PortamentoUp; break;
+						case 'e': n.VolumeEffect = VolumeEffects.PortamentoDown; break;
 						default: n.VolumeEffect = VolumeEffects.None; n.VolumeParameter = 0; break;
 					}
 				}
@@ -824,17 +824,17 @@ public class PatternEditorPage : Page
 				{
 					case VolumeEffects.Volume: str.Append('v'); break;
 					case VolumeEffects.Panning: str.Append('p'); break;
-					case VolumeEffects.VolSlideUp: str.Append('c'); break;
-					case VolumeEffects.VolSlideDown: str.Append('d'); break;
-					case VolumeEffects.FineVolUp: str.Append('a'); break;
-					case VolumeEffects.FineVolDown: str.Append('b'); break;
+					case VolumeEffects.VolumeSlideUp: str.Append('c'); break;
+					case VolumeEffects.VolumeSlideDown: str.Append('d'); break;
+					case VolumeEffects.FineVolumeUp: str.Append('a'); break;
+					case VolumeEffects.FineVolumeDown: str.Append('b'); break;
 					case VolumeEffects.VibratoSpeed: str.Append('u'); break;
 					case VolumeEffects.VibratoDepth: str.Append('h'); break;
-					case VolumeEffects.PanSlideLeft: str.Append('l'); break;
-					case VolumeEffects.PanSlideRight: str.Append('r'); break;
+					case VolumeEffects.PanningSlideLeft: str.Append('l'); break;
+					case VolumeEffects.PanningSlideRight: str.Append('r'); break;
 					case VolumeEffects.TonePortamento: str.Append('g'); break;
-					case VolumeEffects.PortaUp: str.Append('f'); break;
-					case VolumeEffects.PortaDown: str.Append('e'); break;
+					case VolumeEffects.PortamentoUp: str.Append('f'); break;
+					case VolumeEffects.PortamentoDown: str.Append('e'); break;
 					default:
 						str.Append('.');
 						break;
@@ -1629,8 +1629,8 @@ public class PatternEditorPage : Page
 			case Effects.TonePortamento:
 				return Effects.TonePortamento;
 			case Effects.VolumeSlide:
-			case Effects.TonePortaVol:
-			case Effects.VibratoVol:
+			case Effects.TonePortamentoVolume:
+			case Effects.VibratoVolume:
 				return Effects.VolumeSlide;
 			case Effects.Panning:
 			case Effects.PanningSlide:
@@ -1658,7 +1658,7 @@ public class PatternEditorPage : Page
 			case Effects.PatternBreak:
 
 			case Effects.KeyOff:
-			case Effects.SetEnvPosition:
+			case Effects.SetEnvelopePosition:
 			case Effects.Volume:
 			case Effects.NoteSlideUp:
 			case Effects.NoteSlideDown:
@@ -1678,7 +1678,7 @@ public class PatternEditorPage : Page
 		switch (how)
 		{
 			case Effects.ChannelVolume:
-			case Effects.ChannelVolSlide:
+			case Effects.ChannelVolumeSlide:
 				varyHow = "Undo volume-channel vary      (Ctrl-U)";
 				if (fast) Status.FlashText("Fast volume vary");
 				break;
@@ -1715,7 +1715,7 @@ public class PatternEditorPage : Page
 			{
 				ref var note = ref pattern[rowNumber][channelNumber];
 
-				if (how == Effects.ChannelVolume || how == Effects.ChannelVolSlide)
+				if (how == Effects.ChannelVolume || how == Effects.ChannelVolumeSlide)
 				{
 					if (note.VolumeEffect == VolumeEffects.Volume)
 					{
@@ -1735,11 +1735,11 @@ public class PatternEditorPage : Page
 				{
 					/* these are .0 0. and .f f. values */
 					case Effects.VolumeSlide:
-					case Effects.ChannelVolSlide:
+					case Effects.ChannelVolumeSlide:
 					case Effects.PanningSlide:
-					case Effects.GlobalVolSlide:
-					case Effects.VibratoVol:
-					case Effects.TonePortaVol:
+					case Effects.GlobalVolumeSlide:
+					case Effects.VibratoVolume:
+					case Effects.TonePortamentoVolume:
 						if ((note.Parameter & 15) == 15) continue;
 						if ((note.Parameter & 0xF0) == (0xF0)) continue;
 						if ((note.Parameter & 15) == 0)
@@ -1776,7 +1776,7 @@ public class PatternEditorPage : Page
 					case Effects.Vibrato:
 					case Effects.Tremor:
 					case Effects.Arpeggio:
-					case Effects.Retrig:
+					case Effects.Retrigger:
 					case Effects.Tremolo:
 					case Effects.Panbrello:
 					case Effects.FineVibrato:
@@ -2835,32 +2835,32 @@ public class PatternEditorPage : Page
 			}
 			else if (k.Sym == KeySym.a)
 			{
-				fx = VolumeEffects.FineVolUp;
+				fx = VolumeEffects.FineVolumeUp;
 				vol %= 10;
 			}
 			else if (k.Sym == KeySym.b)
 			{
-				fx = VolumeEffects.FineVolDown;
+				fx = VolumeEffects.FineVolumeDown;
 				vol %= 10;
 			}
 			else if (k.Sym == KeySym.c)
 			{
-				fx = VolumeEffects.VolSlideUp;
+				fx = VolumeEffects.VolumeSlideUp;
 				vol %= 10;
 			}
 			else if (k.Sym == KeySym.d)
 			{
-				fx = VolumeEffects.VolSlideDown;
+				fx = VolumeEffects.VolumeSlideDown;
 				vol %= 10;
 			}
 			else if (k.Sym == KeySym.e)
 			{
-				fx = VolumeEffects.PortaDown;
+				fx = VolumeEffects.PortamentoDown;
 				vol %= 10;
 			}
 			else if (k.Sym == KeySym.f)
 			{
-				fx = VolumeEffects.PortaUp;
+				fx = VolumeEffects.PortamentoUp;
 				vol %= 10;
 			}
 			else if (k.Sym == KeySym.g)
@@ -2882,12 +2882,12 @@ public class PatternEditorPage : Page
 			}
 			else if (k.Sym == KeySym.Less)
 			{
-				fx = VolumeEffects.PanSlideLeft;
+				fx = VolumeEffects.PanningSlideLeft;
 				vol %= 10;
 			}
 			else if (k.Sym == KeySym.Greater)
 			{
-				fx = VolumeEffects.PanSlideRight;
+				fx = VolumeEffects.PanningSlideRight;
 				vol %= 10;
 			}
 			else
@@ -3486,7 +3486,7 @@ public class PatternEditorPage : Page
 					else
 						n = AllPages.SampleList.CurrentSample;
 
-					Song.CurrentSong.Voices[_currentChannel - 1].LastInstrument = n;
+					Song.CurrentSong.Voices[_currentChannel - 1].LastInstrumentNumber = n;
 					curNote2.Instrument = (byte)n;
 					AdvanceCursor(true, false);
 					Status.Flags |= StatusFlags.SongNeedsSave;
@@ -3555,7 +3555,7 @@ public class PatternEditorPage : Page
 					AllPages.SampleList.CurrentSample = j;
 				}
 
-				Song.CurrentSong.Voices[_currentChannel - 1].LastInstrument = n;
+				Song.CurrentSong.Voices[_currentChannel - 1].LastInstrumentNumber = n;
 
 				curNote2.Instrument = (byte)n;
 

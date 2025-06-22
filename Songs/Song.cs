@@ -4,7 +4,6 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
-using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 
 public class Song
@@ -37,6 +36,8 @@ public class Song
 	// process row is set to this in order to get the player to jump to the end of the pattern.
 	// (See ITTECH.TXT)
 	const int ProcessNextOrder = 0xFFFE; // special value for ProcessRow
+
+	static Random s_rnd = new Random();
 
 	public static int CurrentTick => TickCount % CurrentSpeed;
 
@@ -96,7 +97,7 @@ public class Song
 				newSong.Instruments.Add(CurrentSong.Instruments[i]);
 
 			var requireSamples = newSong.Instruments
-				.Where(instrument => instrument != null)
+				.OfType<SongInstrument>() // where not null
 				.SelectMany(instrument => instrument.SampleMap)
 				.ToHashSet();
 
@@ -243,7 +244,7 @@ public class Song
 	// TODO: song_midi_out_raw_spec_t midi_out_raw;
 	// -----------------------------------------------------------------------
 
-	public int PatternLoop; // effects.c: need this for stupid pattern break compatibility
+	public bool PatternLoop; // effects.c: need this for stupid pattern break compatibility
 
 	// noise reduction filter
 	public int LeftNoiseReduction, RightNoiseReduction;
@@ -682,6 +683,34 @@ public class Song
 			return def;
 	}
 
+	void EnvelopeReset(ref SongVoice chan, bool always)
+	{
+		if (chan.Instrument != null)
+		{
+			chan.Flags |= ChannelFlags.FastVolumeRamp;
+
+			if (always)
+			{
+				chan.VolumeEnvelopePosition = 0;
+				chan.PanningEnvelopePosition = 0;
+				chan.PitchEnvelopePosition = 0;
+			}
+			else
+			{
+				/* only reset envelopes with carry off */
+				if (!chan.Instrument.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry))
+					chan.VolumeEnvelopePosition = 0;
+				if (!chan.Instrument.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry))
+					chan.PanningEnvelopePosition = 0;
+				if (!chan.Instrument.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry))
+					chan.PitchEnvelopePosition = 0;
+			}
+		}
+
+		// this was migrated from csf_note_change, should it be here?
+		chan.FadeOutVolume = 65536;
+	}
+
 	public int GetNNAChannel(int nchan)
 	{
 		ref var chan = ref Voices[nchan];
@@ -944,6 +973,1044 @@ public class Song
 		}
 	}
 
+	////////////////////////////////////////////////////////////
+	// Channels effects
+
+	void EffectNoteCut(int nchan, bool clearNote)
+	{
+		ref var chan = ref Voices[nchan];
+
+		// stop the current note:
+		chan.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
+		//if (chan->ptr_instrument) chan->volume = 0;
+		chan.Increment = 0;
+		chan.FadeOutVolume = 0;
+		//chan->length = 0;
+		if (clearNote)
+		{
+			// keep instrument numbers from picking up old notes
+			// (SCx doesn't do this)
+			// Apparently this isn't necessary at all anymore?
+			// Note cuts seem to work perfectly fine without it.
+			// SCx plays fine too.  -paper
+			//chan.Frequency = 0;
+		}
+
+		if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+		{
+			//Do this only if really an adlib chan. Important!
+			// TODO
+			//OPL_NoteOff(csf, nchan);
+			//OPL_Touch(csf, nchan, 0);
+		}
+
+		// TODO
+		//GM_KeyOff(csf, nchan);
+		//GM_Touch(csf, nchan, 0);
+	}
+
+	void EffectKeyOff(int nchan)
+	{
+		ref var chan = ref Voices[nchan];
+
+		/*
+		Console.Error.WriteLine(
+			"KeyOff[{0}] [ch{1}]: flags=0x{2:X}",
+			TickCount,
+			nchan,
+			(int)chan.Flags);
+		*/
+
+		if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+		{
+			//Do this only if really an adlib chan. Important!\
+			// TODO
+			//OPL_NoteOff(csf, nchan);
+		}
+
+		// TODO
+		//GM_KeyOff(csf, nchan);
+
+		var pEnv = IsInstrumentMode ? chan.Instrument : null;
+
+		/*
+		if (chan.Flags.HasFlag(ChannelFlags.Adlib)
+		|| ((pEnv != null) && (pEnv.MIDIChannelMask != 0)))
+		{
+			// When in AdLib / MIDI mode, end the sample
+			chan.Flags |= ChannelFlags.FastVolumeRamp;
+			chan.Length = 0;
+			chan.Position = 0;
+			return;
+		}
+		*/
+
+		chan.Flags |= ChannelFlags.KeyOff;
+
+		if (IsInstrumentMode && (chan.Instrument != null) && !chan.Flags.HasFlag(ChannelFlags.VolumeEnvelope))
+			chan.Flags |= ChannelFlags.NoteFade;
+
+		if (chan.Length == 0)
+			return;
+
+		if (chan.Flags.HasFlag(ChannelFlags.SustainLoop) && (chan.Sample != null))
+		{
+			var pSmp = chan.Sample;
+
+			if (pSmp.Flags.HasFlag(SampleFlags.Loop))
+			{
+				if (pSmp.Flags.HasFlag(SampleFlags.PingPongLoop))
+					chan.Flags |= ChannelFlags.PingPongLoop;
+				else
+					chan.Flags &= ~(ChannelFlags.PingPongLoop | ChannelFlags.PingPongFlag);
+				chan.Flags |= ChannelFlags.Loop;
+				chan.Length = pSmp.Length;
+				chan.LoopStart = pSmp.LoopStart;
+				chan.LoopEnd = pSmp.LoopEnd;
+				if (chan.Length > chan.LoopEnd) chan.Length = chan.LoopEnd;
+				if (chan.Position >= chan.Length)
+					chan.Position = chan.Position - chan.Length + chan.LoopStart;
+			}
+			else
+			{
+				chan.Flags &= ~(ChannelFlags.Loop | ChannelFlags.PingPongLoop | ChannelFlags.PingPongFlag);
+				chan.Length = pSmp.Length;
+			}
+		}
+
+		if ((pEnv != null) && (pEnv.FadeOut != 0) && pEnv.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop))
+			chan.Flags |= ChannelFlags.NoteFade;
+	}
+
+	// negative value for slide = down, positive = up
+	public int EffectDoFrequencySlide(SongFlags flags, int frequency, int slide, bool isTonePortamento)
+	{
+		// IT Linear slides
+		if (frequency == 0) return 0;
+
+		if (flags.HasFlag(SongFlags.LinearSlides))
+		{
+			int oldFrequency = frequency;
+
+			int n = Math.Abs(slide);
+			if (n > 255 * 4)
+				n = 255 * 4;
+
+			if (slide > 0)
+			{
+				if (n < 16)
+					frequency = (int)(frequency * (long)Tables.FineLinearSlideUpTable[n] / 65536);
+				else
+					frequency = (int)(frequency * (long)Tables.LinearSlideUpTable[n / 4] / 65536);
+
+				if (oldFrequency == frequency)
+					frequency++;
+			}
+			else if (slide < 0)
+			{
+				if (n < 16)
+					frequency = (int)(frequency * (long)Tables.FineLinearSlideDownTable[n] / 65536);
+				else
+					frequency = (int)(frequency * (long)Tables.LinearSlideDownTable[n / 4] / 65536);
+
+				if (oldFrequency == frequency)
+					frequency--;
+			}
+		}
+		else
+		{
+			if (slide < 0)
+				frequency = (int)((1712 * 8363 * (long)frequency) / (((long)(frequency) * -slide) + 1712 * 8363));
+			else if (slide > 0)
+			{
+				int frequencyDiv = (int)(1712 * 8363 - ((long)(frequency) * slide));
+				if (frequencyDiv <= 0)
+				{
+					if (isTonePortamento)
+						frequencyDiv = 1;
+					else
+						return 0;
+				}
+
+				long freq = ((1712 * 8363 * (long)frequency) / frequencyDiv);
+				if (freq > int.MaxValue)
+					frequency = int.MaxValue;
+				else
+					frequency = (int)freq;
+			}
+		}
+
+		return frequency;
+	}
+
+	void EffectFinePortamentoUp(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * 4, false);
+	}
+
+	void EffectFinePortamentoDown(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * -4, false);
+	}
+
+	void EffectExtraFinePortamentoUp(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param, false);
+	}
+
+	void EffectExtraFinePortamentoDown(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, -param, false);
+	}
+
+	void EffectRegularPortamentoUp(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (!flags.HasFlag(SongFlags.FirstTick))
+			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * 4, false);
+	}
+
+	void EffectRegularPortamentoDown(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (!flags.HasFlag(SongFlags.FirstTick))
+			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, -param * 4, false);
+	}
+
+	void EffectPortamentoUp(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (param == 0)
+			param = chan.MemPitchSlide;
+
+		switch (param & 0xf0)
+		{
+			case 0xe0:
+				EffectExtraFinePortamentoUp(flags, ref chan, param & 0x0F);
+				break;
+			case 0xf0:
+				EffectFinePortamentoUp(flags, ref chan, param & 0x0F);
+				break;
+			default:
+				EffectRegularPortamentoUp(flags, ref chan, param);
+				break;
+		}
+	}
+
+	void EffectPortamentoDown(SongFlags flags, ref SongVoice chan, int param)
+	{
+		if (param == 0)
+			param = chan.MemPitchSlide;
+
+		switch (param & 0xf0)
+		{
+			case 0xe0:
+				EffectExtraFinePortamentoDown(flags, ref chan, param & 0x0F);
+				break;
+			case 0xf0:
+				EffectFinePortamentoDown(flags, ref chan, param & 0x0F);
+				break;
+			default:
+				EffectRegularPortamentoDown(flags, ref chan, param);
+				break;
+		}
+	}
+
+	void EffectTonePortamento(SongFlags flags, ref SongVoice chan, int param)
+	{
+		chan.Flags |= ChannelFlags.Portamento;
+
+		if ((chan.Frequency != 0) && (chan.PortamentoTarget != 0) && !flags.HasFlag(SongFlags.FirstTick))
+		{
+			if ((param == 0) && chan.RowEffect == Effects.TonePortamentoVolume)
+			{
+				if (chan.Frequency > 1 && flags.HasFlag(SongFlags.LinearSlides))
+					chan.Frequency--;
+				if (chan.Frequency < chan.PortamentoTarget)
+				{
+					chan.Frequency = chan.PortamentoTarget;
+					chan.PortamentoTarget = 0;
+				}
+			}
+			else if ((param != 0) && chan.Frequency < chan.PortamentoTarget)
+			{
+				chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * 4, true);
+				if (chan.Frequency >= chan.PortamentoTarget)
+				{
+					chan.Frequency = chan.PortamentoTarget;
+					chan.PortamentoTarget = 0;
+				}
+			}
+			else if ((param != 0) && chan.Frequency >= chan.PortamentoTarget)
+			{
+				chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * -4, true);
+				if (chan.Frequency < chan.PortamentoTarget)
+				{
+					chan.Frequency = chan.PortamentoTarget;
+					chan.PortamentoTarget = 0;
+				}
+			}
+		}
+	}
+
+	// Implemented for IMF compatibility, can't actually save this in any formats
+	// sign should be 1 (up) or -1 (down)
+	void EffectNoteSlide(SongFlags flags, ref SongVoice chan, int param, int sign)
+	{
+		int x, y;
+
+		if (flags.HasFlag(SongFlags.FirstTick))
+		{
+			x = param & 0xf0;
+			if (x != 0)
+				chan.NoteSlideSpeed = (x >> 4);
+			y = param & 0xf;
+			if (y != 0)
+				chan.NoteSlideStep = y;
+			chan.NoteSlideCounter = chan.NoteSlideSpeed;
+		}
+		else
+		{
+			if (--chan.NoteSlideCounter == 0)
+			{
+				chan.NoteSlideCounter = chan.NoteSlideSpeed;
+				// update it
+				chan.Frequency = SongNote.FrequencyFromNote
+					(sign * chan.NoteSlideStep + SongNote.NoteFromFrequency(chan.Frequency, chan.C5Speed),
+						chan.C5Speed);
+			}
+		}
+	}
+
+	void EffectVibrato(ref SongVoice p, int param)
+	{
+		if ((param & 0x0F) != 0)
+			p.VibratoDepth = (param & 0x0F) * 4;
+		if ((param & 0xF0) != 0)
+			p.VibratoSpeed = (param >> 4) & 0x0F;
+		p.Flags |= ChannelFlags.Vibrato;
+	}
+
+	static void EffectFineVibrato(ref SongVoice p, int param)
+	{
+		if ((param & 0x0F) != 0)
+			p.VibratoDepth = param & 0x0F;
+		if ((param & 0xF0) != 0)
+			p.VibratoSpeed = (param >> 4) & 0x0F;
+		p.Flags |= ChannelFlags.Vibrato;
+	}
+
+	static void EffectPanbrello(ref SongVoice chan, int param)
+	{
+		int panPosition = chan.PanbrelloPosition & 0xFF;
+
+		int panDelta = chan.PanbrelloDelta;
+
+		if ((param & 0x0F) != 0)
+			chan.PanbrelloDepth = param & 0x0F;
+		if ((param & 0xF0) != 0)
+			chan.PanbrelloSpeed = (param >> 4) & 0x0F;
+
+		switch (chan.PanbrelloType)
+		{
+			case VibratoType.Sine:
+			default:
+				panDelta = Tables.SineTable[panPosition];
+				break;
+			case VibratoType.RampDown:
+				panDelta = Tables.RampDownTable[panPosition];
+				break;
+			case VibratoType.Square:
+				panDelta = Tables.SquareTable[panPosition];
+				break;
+			case VibratoType.Random:
+				panDelta = (s_rnd.Next() & 0x7F) - 0x40;
+				break;
+		}
+
+		/* OpenMPT test case RandomWaveform.it:
+			Speed for random panbrello says how many ticks the value should be used */
+		if (chan.PanbrelloType == VibratoType.Random)
+		{
+			if ((chan.PanbrelloPosition == 0) || (chan.PanbrelloPosition >= chan.PanbrelloSpeed))
+				chan.PanbrelloPosition = 0;
+
+			chan.PanbrelloPosition++;
+		}
+		else
+			chan.PanbrelloPosition += chan.PanbrelloSpeed;
+
+		chan.PanbrelloDelta = panDelta;
+	}
+
+	void EffectVolumeUp(ref SongVoice chan, int param)
+	{
+		chan.Volume += param * 4;
+		if (chan.Volume > 256)
+			chan.Volume = 256;
+	}
+
+	void EffectVolumeDown(ref SongVoice chan, int param)
+	{
+		chan.Volume -= param * 4;
+		if (chan.Volume < 0)
+			chan.Volume = 0;
+	}
+
+	void EffectVolumeSlide(SongFlags flags, ref SongVoice chan, int param)
+	{
+		// Dxx     Volume slide down
+		//
+		// if (xx == 0) then xx = last xx for (Dxx/Kxx/Lxx) for this channel.
+		if (param != 0)
+			chan.MemVolSlide = param;
+		else
+			param = chan.MemVolSlide;
+
+		// Order of testing: Dx0, D0x, DxF, DFx
+		if (param == (param & 0xf0))
+		{
+			// Dx0     Set effect update for channel enabled if channel is ON.
+			//         If x = F, then slide up volume by 15 straight away also (for S3M compat)
+			//         Every update, add x to the volume, check and clip values > 64 to 64
+			param >>= 4;
+			if (param == 0xf || !flags.HasFlag(SongFlags.FirstTick))
+				EffectVolumeUp(ref chan, param);
+		}
+		else if (param == (param & 0xf))
+		{
+			// D0x     Set effect update for channel enabled if channel is ON.
+			//         If x = F, then slide down volume by 15 straight away also (for S3M)
+			//         Every update, subtract x from the volume, check and clip values < 0 to 0
+			if (param == 0xf || !flags.HasFlag(SongFlags.FirstTick))
+				EffectVolumeDown(ref chan, param);
+		}
+		else if ((param & 0xf) == 0xf)
+		{
+			// DxF     Add x to volume straight away. Check and clip values > 64 to 64
+			param >>= 4;
+			if (flags.HasFlag(SongFlags.FirstTick))
+				EffectVolumeUp(ref chan, param);
+		}
+		else if ((param & 0xf0) == 0xf0)
+		{
+			// DFx     Subtract x from volume straight away. Check and clip values < 0 to 0
+			param &= 0xf;
+			if (flags.HasFlag(SongFlags.FirstTick))
+				EffectVolumeDown(ref chan, param);
+		}
+	}
+
+	void EffectPanningSlide(SongFlags flags, ref SongVoice chan, int param)
+	{
+		int slide = 0;
+
+		if (param != 0)
+			chan.MemPanningSlide = param;
+		else
+			param = chan.MemPanningSlide;
+
+		if (((param & 0x0F) == 0x0F) && ((param & 0xF0) != 0))
+		{
+			if (flags.HasFlag(SongFlags.FirstTick))
+			{
+				param = (param & 0xF0) >> 2;
+				slide = -(int)param;
+			}
+		}
+		else if (((param & 0xF0) == 0xF0) && ((param & 0x0F) != 0))
+		{
+			if (flags.HasFlag(SongFlags.FirstTick))
+				slide = (param & 0x0F) << 2;
+		}
+		else
+		{
+			if (!flags.HasFlag(SongFlags.FirstTick))
+			{
+				if ((param & 0x0F) != 0)
+					slide = ((param & 0x0F) << 2);
+				else
+					slide = -((param & 0xF0) >> 2);
+			}
+		}
+
+		if (slide != 0)
+		{
+			slide += chan.Panning;
+			chan.Panning = slide.Clamp(0, 256);
+			chan.ChannelPanning = 0;
+		}
+
+		chan.Flags &= ~ChannelFlags.Surround;
+		chan.PanbrelloDelta = 0;
+	}
+
+	void EffectTremolo(SongFlags flags, ref SongVoice chan, int param)
+	{
+		int tremoloPosition = chan.TremoloPosition & 0xFF;
+		int tremoloDelta;
+
+		if ((param & 0x0F) != 0)
+			chan.TremoloDepth = (param & 0x0F) << 2;
+		if ((param & 0xF0) != 0)
+			chan.TremoloSpeed = (param >> 4) & 0x0F;
+
+		chan.Flags |= ChannelFlags.Tremolo;
+
+		// don't handle on first tick if old-effects mode
+		if (flags.HasFlag(SongFlags.FirstTick) && flags.HasFlag(SongFlags.ITOldEffects))
+			return;
+
+		switch (chan.TremoloType)
+		{
+			case VibratoType.Sine:
+			default:
+				tremoloDelta = Tables.SineTable[tremoloPosition];
+				break;
+			case VibratoType.RampDown:
+				tremoloDelta = Tables.RampDownTable[tremoloPosition];
+				break;
+			case VibratoType.Square:
+				tremoloDelta = Tables.SquareTable[tremoloPosition];
+				break;
+			case VibratoType.Random:
+				tremoloDelta = (int)(128 * s_rnd.NextDouble() - 64);
+				break;
+		}
+
+		chan.TremoloPosition = (tremoloPosition + 4 * chan.TremoloSpeed) & 0xFF;
+		tremoloDelta = (tremoloDelta * (int)chan.TremoloDepth) >> 5;
+		chan.TremoloDelta = tremoloDelta;
+	}
+
+	void EffectRetriggerNote(int nchan, int param)
+	{
+		ref var chan = ref Voices[nchan];
+
+		/*
+		Console.WriteLine(
+			"Q{0:X2} note={1:X2} tick{2}  {3}\n",
+			param,
+			chan.RowNote,
+			TickCount,
+			chan.CountdownRetrig);
+		*/
+
+		if (Flags.HasFlag(SongFlags.FirstTick) && (chan.RowNote != SpecialNotes.None))
+			chan.CountdownRetrigger = param & 0xf;
+		else if (--chan.CountdownRetrigger <= 0)
+		{
+			// in Impulse Tracker, retrig only works if a sample is currently playing in the channel
+			if (chan.Position == 0)
+				return;
+
+			chan.CountdownRetrigger = param & 0xf;
+			param >>= 4;
+			if (param != 0)
+			{
+				int vol = chan.Volume;
+
+				if (Tables.RetriggerTable1[param] != 0)
+					vol = (vol * Tables.RetriggerTable1[param]) >> 4;
+				else
+					vol += (Tables.RetriggerTable2[param]) << 2;
+
+				chan.Volume = vol.Clamp(0, 256);
+				chan.Flags |= ChannelFlags.FastVolumeRamp;
+			}
+
+			int note = chan.NewNote;
+			int frequency = chan.Frequency;
+
+			if (SongNote.IsNote(note) && (chan.Length != 0))
+				CheckNNA(nchan, 0, note, true);
+
+			NoteChange(nchan, note, true, true, false);
+
+			if ((frequency != 0) && chan.RowNote == SpecialNotes.None)
+				chan.Frequency = frequency;
+
+			chan.Position = chan.PositionFrac = 0;
+		}
+	}
+
+	void EffectChannelVolumeSlide(SongFlags flags, ref SongVoice chan, int param)
+	{
+		int slide = 0;
+
+		if (param != 0)
+			chan.MemChannelVolumeSlide = param;
+		else
+			param = chan.MemChannelVolumeSlide;
+
+		if (((param & 0x0F) == 0x0F) && ((param & 0xF0) != 0))
+		{
+			if (flags.HasFlag(SongFlags.FirstTick))
+				slide = param >> 4;
+		}
+		else if (((param & 0xF0) == 0xF0) && ((param & 0x0F) != 0))
+		{
+			if (flags.HasFlag(SongFlags.FirstTick))
+				slide = -(int)(param & 0x0F);
+		}
+		else
+		{
+			if (!flags.HasFlag(SongFlags.FirstTick))
+			{
+				if ((param & 0x0F) != 0)
+					slide = -(int)(param & 0x0F);
+				else
+					slide = (int)((param & 0xF0) >> 4);
+			}
+		}
+
+		if (slide != 0)
+		{
+			slide += chan.GlobalVolume;
+			chan.GlobalVolume = slide.Clamp(0, 64);
+		}
+	}
+
+	void EffectGlobalVolumeSlide(ref SongVoice chan, int param)
+	{
+		int slide = 0;
+
+		if (param != 0)
+			chan.MemGlobalVolumeSlide = param;
+		else
+			param = chan.MemGlobalVolumeSlide;
+
+		if (((param & 0x0F) == 0x0F) && ((param & 0xF0) != 0))
+		{
+			if (Flags.HasFlag(SongFlags.FirstTick))
+				slide = param >> 4;
+		}
+		else if (((param & 0xF0) == 0xF0) && ((param & 0x0F) != 0))
+		{
+			if (Flags.HasFlag(SongFlags.FirstTick))
+				slide = -(int)(param & 0x0F);
+		}
+		else
+		{
+			if (!Flags.HasFlag(SongFlags.FirstTick))
+			{
+				if ((param & 0xF0) != 0)
+					slide = ((param & 0xF0) >> 4);
+				else
+					slide = -(param & 0x0F);
+			}
+		}
+
+		if (slide != 0)
+		{
+			slide += CurrentGlobalVolume;
+			CurrentGlobalVolume = slide.Clamp(0, 128);
+		}
+	}
+
+	void EffectPatternLoop(ref SongVoice chan, int param)
+	{
+		if (param != 0)
+		{
+			if (chan.CountdownPatternLoop != 0)
+			{
+				if (--chan.CountdownPatternLoop == 0)
+				{
+					// this should get rid of that nasty infinite loop for cases like
+					//     ... .. .. SB0
+					//     ... .. .. SB1
+					//     ... .. .. SB1
+					// it still doesn't work right in a few strange cases, but oh well :P
+					chan.PatternLoopRow = Row + 1;
+					PatternLoop = false;
+					return; // don't loop!
+				}
+			}
+			else
+				chan.CountdownPatternLoop = param;
+
+			ProcessRow = chan.PatternLoopRow - 1;
+		}
+		else
+		{
+			PatternLoop = true;
+			chan.PatternLoopRow = Row;
+		}
+	}
+
+	void EffectSpecial(int nchan, int param)
+	{
+		ref SongVoice chan = ref Voices[nchan];
+
+		int command = param & 0xF0;
+
+		param &= 0x0F;
+
+		switch (command)
+		{
+			// S0x: Set Filter
+			// S1x: Set Glissando Control
+			case 0x10:
+				chan.Flags &= ~ChannelFlags.Glissando;
+				if (param != 0) chan.Flags |= ChannelFlags.Glissando;
+				break;
+			// S2x: Set FineTune (no longer implemented)
+			// S3x: Set Vibrato WaveForm
+			case 0x30:
+				chan.VibratoType = (VibratoType)param;
+				break;
+			// S4x: Set Tremolo WaveForm
+			case 0x40:
+				chan.TremoloType = (VibratoType)param;
+				break;
+			// S5x: Set Panbrello WaveForm
+			case 0x50:
+				/* some mpt compat thing */
+				chan.PanbrelloType = (param < 0x04) ? (VibratoType)param : VibratoType.Sine;
+				chan.PanbrelloPosition = 0;
+				break;
+			// S6x: Pattern Delay for x ticks
+			case 0x60:
+				if (Flags.HasFlag(SongFlags.FirstTick))
+				{
+					FrameDelay += param;
+					TickCount += param;
+				}
+				break;
+			// S7x: Envelope Control
+			case 0x70:
+				if (!Flags.HasFlag(SongFlags.FirstTick))
+					break;
+				switch (param)
+				{
+					case 0:
+					case 1:
+					case 2:
+					{
+						for (int i = Channels.Length; i < Voices.Length; i++)
+						{
+							ref var backup = ref Voices[i];
+
+							if (backup.MasterChannel == nchan + 1)
+							{
+								if (param == 1)
+									EffectKeyOff(i);
+								else if (param == 2)
+									backup.Flags |= ChannelFlags.NoteFade;
+								else
+								{
+									backup.Flags |= ChannelFlags.NoteFade;
+									backup.FadeOutVolume = 0;
+								}
+							}
+						}
+					}
+					break;
+					case 3: chan.NewNoteAction = NewNoteActions.NoteCut; break;
+					case 4: chan.NewNoteAction = NewNoteActions.Continue; break;
+					case 5: chan.NewNoteAction = NewNoteActions.NoteOff; break;
+					case 6: chan.NewNoteAction = NewNoteActions.NoteFade; break;
+					case 7: chan.Flags &= ~ChannelFlags.VolumeEnvelope; break;
+					case 8: chan.Flags |= ChannelFlags.VolumeEnvelope; break;
+					case 9: chan.Flags &= ~ChannelFlags.PanningEnvelope; break;
+					case 10: chan.Flags |= ChannelFlags.PanningEnvelope; break;
+					case 11: chan.Flags &= ~ChannelFlags.PitchEnvelope; break;
+					case 12: chan.Flags |= ChannelFlags.PitchEnvelope; break;
+				}
+				break;
+			// S8x: Set 4-bit Panning
+			case 0x80:
+				if (Flags.HasFlag(SongFlags.FirstTick))
+				{
+					chan.Flags &= ~ChannelFlags.Surround;
+					chan.PanbrelloDelta = 0;
+					chan.Panning = (param << 4) + 8;
+					chan.ChannelPanning = 0;
+					chan.Flags |= ChannelFlags.FastVolumeRamp;
+					chan.PanningSwing = 0;
+				}
+				break;
+			// S9x: Set Surround
+			case 0x90:
+				if (param == 1 && Flags.HasFlag(SongFlags.FirstTick))
+				{
+					chan.Flags |= ChannelFlags.Surround;
+					chan.PanbrelloDelta = 0;
+					chan.Panning = 128;
+					chan.ChannelPanning = 0;
+				}
+				break;
+			// SAx: Set 64k Offset
+			// Note: don't actually APPLY the offset, and don't clear the regular offset value, either.
+			case 0xA0:
+				if (Flags.HasFlag(SongFlags.FirstTick))
+					chan.MemOffset = (param << 16) | (chan.MemOffset & ~0xf0000);
+				break;
+			// SBx: Pattern Loop
+			case 0xB0:
+				if (Flags.HasFlag(SongFlags.FirstTick))
+					EffectPatternLoop(ref chan, param & 0x0F);
+				break;
+			// SCx: Note Cut
+			case 0xC0:
+				if (Flags.HasFlag(SongFlags.FirstTick))
+					chan.CountdownNoteCut = (param != 0) ? param : 1;
+				else if (--chan.CountdownNoteCut == 0)
+					EffectNoteCut(nchan, true);
+				break;
+			// SDx: Note Delay
+			// SEx: Pattern Delay for x rows
+			case 0xE0:
+				if (Flags.HasFlag(SongFlags.FirstTick))
+				{
+					if (RowCount == 0) // ugh!
+						RowCount = param + 1;
+				}
+				break;
+			// SFx: Set Active Midi Macro
+			case 0xF0:
+				chan.ActiveMacro = param;
+				break;
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	// Effects
+
+	public void InstrumentChange(ref SongVoice chan, int instrument, bool portamento, int instrumentColumn)
+	{
+		bool instrumentChanged = false;
+
+		if (instrument >= Instruments.Count)
+			return;
+
+		var pEnv = IsInstrumentMode ? Instruments[instrument] : null;
+		var pSmp = (instrument < Samples.Count) ? Samples[instrument] : null;
+
+		var oldSample = chan.Sample;
+		var oldInstrumentVolume = chan.InstrumentVolume;
+
+		var note = chan.NewNote;
+
+		if (note == SpecialNotes.None)
+			return;
+
+		if ((pEnv != null) && SongNote.IsNote(note))
+		{
+			/* OpenMPT test case emptyslot.it */
+			if (pEnv.SampleMap[note - SpecialNotes.First] == 0)
+			{
+				chan.Instrument = pEnv;
+				return;
+			}
+
+			if (pEnv.NoteMap[note - SpecialNotes.First] > SpecialNotes.Last)
+				return;
+
+			//int n = pEnv.SampleMap[note - SpecialNotes.First];
+
+			pSmp = TranslateKeyboard(pEnv, note, null);
+		}
+		else if (IsInstrumentMode)
+		{
+			if (SongNote.IsControl(note))
+				return;
+
+			if (pEnv == null)
+			{
+				/* OpenMPT test case emptyslot.it */
+				chan.Instrument = null;
+				chan.NewInstrumentNumber = 0;
+				return;
+			}
+
+			pSmp = null;
+		}
+
+		// Update Volume
+		if ((instrumentColumn != 0) && (pSmp != null))
+			chan.Volume = pSmp.Volume;
+
+		// inst_changed is used for IT carry-on env option
+		if (pEnv != chan.Instrument || (chan.CurrentSampleData == null))
+		{
+			instrumentChanged = true;
+			chan.Instrument = pEnv;
+		}
+
+		// Instrument adjust
+		chan.NewInstrumentNumber = 0;
+
+		if (pSmp != null)
+		{
+			pSmp.IsPlayed = true;
+			if (pEnv != null)
+			{
+				pEnv.IsPlayed = true;
+				chan.InstrumentVolume = (pSmp.GlobalVolume * pEnv.GlobalVolume) >> 7;
+			}
+			else
+				chan.InstrumentVolume = pSmp.GlobalVolume;
+		}
+
+		/* samples should not change on instrument number in compatible Gxx mode.
+		*
+		* OpenMPT test cases:
+		* PortaInsNumCompat.it, PortaSampleCompat.it, PortaCutCompat.it */
+		if ((chan.Sample != null) && (pSmp != chan.Sample) && portamento && (chan.Increment != 0) && Flags.HasFlag(SongFlags.CompatibleGXX))
+			pSmp = chan.Sample;
+
+		/* OpenMPT test case InstrAfterMultisamplePorta.it:
+			C#5 01 ... <- maps to sample 1
+			C-5 .. G02 <- maps to sample 2
+			... 01 ... <- plays sample 1 with the volume and panning attributes of sample 2
+		*/
+		if ((pEnv != null) && !instrumentChanged && (pSmp != oldSample) && (chan.Sample != null) && !SongNote.IsNote(chan.RowNote))
+			return;
+
+		if ((pEnv == null) && (pSmp != oldSample) && portamento)
+			chan.Flags |= ChannelFlags.NewNote;
+
+		// Reset envelopes
+
+		// Conditions experimentally determined to cause envelope reset in Impulse Tracker:
+		// - no note currently playing (of course)
+		// - note given, no portamento
+		// - instrument number given, portamento, compat gxx enabled
+		// - instrument number given, no portamento, after keyoff, old effects enabled
+		// If someone can enlighten me to what the logic really is here, I'd appreciate it.
+		// Seems like it's just a total mess though, probably to get XMs to play right.
+		if (pEnv != null)
+		{
+			if ((
+				chan.Length == 0
+			) || (
+				(instrumentColumn != 0)
+				&& portamento
+				&& Flags.HasFlag(SongFlags.CompatibleGXX)
+			) || (
+				(instrumentColumn != 0)
+				&& !portamento
+				&& chan.Flags.HasAnyFlag(ChannelFlags.NoteFade | ChannelFlags.KeyOff)
+				&& Flags.HasFlag(SongFlags.ITOldEffects)
+			))
+				EnvelopeReset(ref chan, instrumentChanged || (chan.FadeOutVolume == 0) || !SongNote.IsNote(chan.RowNote));
+			else if (!pEnv.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+			{
+				// XXX why is this being done?
+				// I'm pretty sure this is just some stupid IT thing with portamentos
+				chan.VolumeEnvelopePosition = 0;
+			}
+
+			if (!portamento)
+			{
+				chan.VolumeSwing = chan.PanningSwing = 0;
+				if (pEnv.VolumeSwing != 0)
+				{
+					/* this was wrong, and then it was still wrong.
+					(possibly it continues to be wrong even now?) */
+					double d = 2 * s_rnd.NextDouble() - 1;
+					// Math.Floor() is applied to get exactly the same volume levels as in IT. -- Saga
+					chan.VolumeSwing = (int)Math.Floor(d * pEnv.VolumeSwing / 100.0 * chan.InstrumentVolume);
+				}
+				if (pEnv.PanningSwing != 0)
+				{
+					/* this was also wrong, and even more so */
+					double d = 2 * s_rnd.NextDouble() - 1;
+					chan.PanningSwing = (int)(d * pEnv.PanningSwing * 4);
+				}
+			}
+		}
+
+		// Invalid sample ?
+		if (pSmp == null)
+		{
+			chan.Sample = null;
+			chan.InstrumentVolume = 0;
+			return;
+		}
+
+		bool wasKeyOff = chan.Flags.HasFlag(ChannelFlags.KeyOff);
+
+		if (pSmp == chan.Sample && (chan.CurrentSampleData != null) && (chan.Length != 0))
+		{
+			if (portamento && instrumentChanged && (pEnv != null))
+				chan.Flags &= ~(ChannelFlags.KeyOff | ChannelFlags.NoteFade);
+
+			return;
+		}
+
+		if (portamento && (chan.Length == 0))
+			chan.Increment = 0;
+
+		chan.Flags &= ~(ChannelFlags.SampleFlags | ChannelFlags.KeyOff | ChannelFlags.NoteFade
+					 | ChannelFlags.VolumeEnvelope | ChannelFlags.PanningEnvelope | ChannelFlags.PitchEnvelope);
+		if (pEnv != null)
+		{
+			if (pEnv.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+				chan.Flags |= ChannelFlags.VolumeEnvelope;
+			if (pEnv.Flags.HasFlag(InstrumentFlags.PanningEnvelope))
+				chan.Flags |= ChannelFlags.PanningEnvelope;
+			if (pEnv.Flags.HasFlag(InstrumentFlags.PitchEnvelope))
+				chan.Flags |= ChannelFlags.PitchEnvelope;
+			if ((pEnv.IFCutoff & 0x80) != 0)
+				chan.Cutoff = pEnv.IFCutoff & 0x7F;
+			if ((pEnv.IFResonance & 0x80) != 0)
+				chan.Resonance = pEnv.IFResonance & 0x7F;
+		}
+
+		if (chan.RowNote == SpecialNotes.NoteOff && Flags.HasFlag(SongFlags.ITOldEffects) && pSmp != oldSample)
+		{
+			if (chan.Sample != null)
+				chan.Flags |= (ChannelFlags)chan.Sample.Flags & ChannelFlags.SampleFlags;
+			if (pSmp.Flags.HasFlag(SampleFlags.Panning))
+				chan.Panning = pSmp.Panning;
+			chan.InstrumentVolume = oldInstrumentVolume;
+			chan.Volume = pSmp.Volume;
+			chan.Position = 0;
+			return;
+		}
+
+		// sample change: reset sample vibrato
+		chan.AutoVibratoDepth = 0;
+		chan.AutoVibratoPosition = 0;
+
+		// Don't start new notes after ===/~~~
+		if (chan.Flags.HasAnyFlag(ChannelFlags.KeyOff | ChannelFlags.NoteFade) && (instrumentColumn != 0))
+			chan.Frequency = 0;
+
+		chan.Flags |= (ChannelFlags)pSmp.Flags & ChannelFlags.SampleFlags;
+
+		chan.Sample = pSmp;
+		chan.Length = pSmp.Length;
+		chan.LoopStart = pSmp.LoopStart;
+		chan.LoopEnd = pSmp.LoopEnd;
+		chan.C5Speed = pSmp.C5Speed;
+		chan.CurrentSampleData = pSmp.Data;
+		chan.Position = 0;
+
+		if (chan.Flags.HasFlag(ChannelFlags.SustainLoop) && (!portamento || ((pEnv != null) && !wasKeyOff)))
+		{
+			chan.LoopStart = pSmp.SustainStart;
+			chan.LoopEnd = pSmp.SustainEnd;
+			chan.Flags |= ChannelFlags.Loop;
+			if (chan.Flags.HasFlag(ChannelFlags.PingPongSustain))
+				chan.Flags |= ChannelFlags.PingPongLoop;
+		}
+		if (chan.Flags.HasFlag(ChannelFlags.Loop) && (chan.LoopEnd < chan.Length))
+			chan.Length = chan.LoopEnd;
+
+		/*
+		Console.Error.WriteLine(
+			"length set as {0} (from {1}), ch flags {2:X} smp flags {3:X}\n",
+			chan.Length,
+			pSmp.Length,
+			(int)chan.Flags,
+			(int)pSmp.Flags);
+		*/
+	}
+
 	// have_inst is a hack to ignore the note-sample map when no instrument number is present
 	public void NoteChange(int nchan, int note, bool porta, bool retrigger, bool haveInstrument)
 	{
@@ -975,7 +2042,7 @@ public class Song
 		if (SongNote.IsControl(note))
 		{
 			// hax: keep random sample numbers from triggering notes (see csf_instrument_change)
-			// NOTE_OFF is a completely arbitrary choice - this could be anything above NOTE_LAST
+			// NOTE_OFF is a completely arbitrary choice - this could be anything above SpecialNotes.Last
 			chan.NewNote = SpecialNotes.NoteOff;
 
 			switch (note)
@@ -1115,6 +2182,686 @@ public class Song
 		}
 	}
 
+	// XXX why is `portamento` here, and what was it used for?
+	void HandleEffect(int nchan, Effects cmd, int param, bool portamento, bool firstTick)
+	{
+		ref var chan = ref Voices[nchan];
+
+		switch (cmd)
+		{
+			case Effects.None:
+				break;
+
+			// Set Volume
+			case Effects.Volume:
+				if (!Flags.HasFlag(SongFlags.FirstTick))
+					break;
+				chan.Volume = (param < 64) ? param*4 : 256;
+				chan.Flags |= ChannelFlags.FastVolumeRamp;
+				break;
+
+			case Effects.PortamentoUp:
+				EffectPortamentoUp(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPitchSlide);
+				break;
+
+			case Effects.PortamentoDown:
+				EffectPortamentoDown(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPitchSlide);
+				break;
+
+			case Effects.VolumeSlide:
+				EffectVolumeSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param);
+				break;
+
+			case Effects.TonePortamento:
+				EffectTonePortamento(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPortaNote);
+				break;
+
+			case Effects.TonePortamentoVolume:
+				EffectTonePortamento(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPortaNote);
+				EffectVolumeSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param);
+				break;
+
+			case Effects.Vibrato:
+				EffectVibrato(ref chan, param);
+				break;
+
+			case Effects.VibratoVolume:
+				EffectVolumeSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param);
+				EffectVibrato(ref chan, 0);
+				break;
+
+			case Effects.Speed:
+				if (Flags.HasFlag(SongFlags.FirstTick) && (param != 0))
+				{
+					TickCount = param;
+					CurrentSpeed = param;
+				}
+				break;
+
+			case Effects.Tempo:
+				if (Flags.HasFlag(SongFlags.FirstTick))
+				{
+					if (param != 0)
+						chan.MemTempo = param;
+					else
+						param = chan.MemTempo;
+
+					if (param >= 0x20)
+						CurrentTempo = param;
+				}
+				else
+				{
+					param = chan.MemTempo; // this just got set on tick zero
+
+					switch (param >> 4)
+					{
+						case 0:
+							CurrentTempo -= param & 0xf;
+							if (CurrentTempo < 32)
+								CurrentTempo = 32;
+							break;
+						case 1:
+							CurrentTempo += param & 0xf;
+							if (CurrentTempo > 255)
+								CurrentTempo = 255;
+							break;
+					}
+				}
+				break;
+
+			case Effects.Offset:
+				if (!Flags.HasFlag(SongFlags.FirstTick))
+					break;
+				if (param != 0)
+					chan.MemOffset = (chan.MemOffset & ~0xff00) | (param << 8);
+				if (SongNote.IsNote(chan.RowInstrumentNumber != 0 ? chan.NewNote : chan.RowNote))
+				{
+					chan.Position = chan.MemOffset;
+					if (chan.Position > chan.Length)
+						chan.Position = Flags.HasFlag(SongFlags.ITOldEffects) ? chan.Length : 0;
+				}
+				break;
+
+			case Effects.Arpeggio:
+				chan.NCommand = Effects.Arpeggio;
+				if (!Flags.HasFlag(SongFlags.FirstTick))
+					break;
+				if (param != 0)
+					chan.MemArpeggio = param;
+				break;
+
+			case Effects.Retrigger:
+				if (param != 0)
+					chan.MemRetrig = param & 0xFF;
+				EffectRetriggerNote(nchan, chan.MemRetrig);
+				break;
+
+			case Effects.Tremor:
+				// Tremor logic lifted from DUMB, which is the only player that actually gets it right.
+				// I *sort of* understand it.
+				if (Flags.HasFlag(SongFlags.FirstTick))
+				{
+					if (param == 0)
+						param = chan.MemTremor;
+					else if (!Flags.HasFlag(SongFlags.ITOldEffects))
+					{
+						if ((param & 0xf0) != 0) param -= 0x10;
+						if ((param & 0x0f) != 0) param -= 0x01;
+					}
+
+					chan.MemTremor = param;
+					chan.CountdownTremor |= 128;
+				}
+
+				chan.NCommand = Effects.Tremor;
+
+				break;
+
+			case Effects.GlobalVolume:
+				if (!firstTick)
+					break;
+				if (param <= 128)
+					CurrentGlobalVolume = param;
+				break;
+
+			case Effects.GlobalVolumeSlide:
+				EffectGlobalVolumeSlide(ref chan, param);
+				break;
+
+			case Effects.Panning:
+				if (!Flags.HasFlag(SongFlags.FirstTick))
+					break;
+				chan.Flags &= ~ChannelFlags.Surround;
+				chan.PanbrelloDelta = 0;
+				chan.Panning = param;
+				chan.ChannelPanning = 0;
+				chan.PanningSwing = 0;
+				chan.Flags |= ChannelFlags.FastVolumeRamp;
+				break;
+
+			case Effects.PanningSlide:
+				EffectPanningSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param);
+				break;
+
+			case Effects.Tremolo:
+				EffectTremolo(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param);
+				break;
+
+			case Effects.FineVibrato:
+				EffectFineVibrato(ref chan, param);
+				break;
+
+			case Effects.Special:
+				EffectSpecial(nchan, param);
+				break;
+
+			case Effects.KeyOff:
+				if ((CurrentSpeed - TickCount) == param)
+					EffectKeyOff(nchan);
+				break;
+
+			case Effects.ChannelVolume:
+				if (!Flags.HasFlag(SongFlags.FirstTick))
+					break;
+				// FIXME rename global_volume to channel_volume in the channel struct
+				if (param <= 64)
+				{
+					chan.GlobalVolume = param;
+					chan.Flags |= ChannelFlags.FastVolumeRamp;
+				}
+				break;
+
+			case Effects.ChannelVolumeSlide:
+				EffectChannelVolumeSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param);
+				break;
+
+			case Effects.Panbrello:
+				EffectPanbrello(ref chan, param);
+				break;
+
+			case Effects.SetEnvelopePosition:
+				if (!Flags.HasFlag(SongFlags.FirstTick))
+					break;
+				chan.VolumeEnvelopePosition = param;
+				chan.PanningEnvelopePosition = param;
+				chan.PitchEnvelopePosition = param;
+				if (IsInstrumentMode && (chan.Instrument != null))
+				{
+					var pEnv = chan.Instrument;
+					if ((chan.Flags.HasFlag(ChannelFlags.PanningEnvelope))
+							&& (pEnv.PanningEnvelope != null)
+							&& (param > pEnv.PanningEnvelope.Nodes.Last().Tick))
+					{
+						chan.Flags &= ~ChannelFlags.PanningEnvelope;
+					}
+				}
+				break;
+
+			case Effects.PositionJump:
+				if (!AudioPlayback.Flags.HasFlag(MixFlags.NoBackwardJumps) || ProcessOrder < param)
+					ProcessOrder = param - 1;
+				ProcessRow = ProcessNextOrder;
+				break;
+
+			case Effects.PatternBreak:
+				if (!PatternLoop)
+				{
+					BreakRow = param;
+					ProcessRow = ProcessNextOrder;
+				}
+				break;
+
+			case Effects.NoteSlideUp:
+				EffectNoteSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param, 1);
+				break;
+			case Effects.NoteSlideDown:
+				EffectNoteSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param, -1);
+				break;
+		}
+	}
+
+	void HandleVolumeEffect(ref SongVoice chan, VolumeEffects volumeCommand, int volume,
+		bool firstTick, bool startNote)
+	{
+		/* A few notes, paraphrased from ITTECH.TXT:
+			Ex/Fx/Gx are shared with Exx/Fxx/Gxx; Ex/Fx are 4x the 'normal' slide value
+			Gx is linked with Ex/Fx if Compat Gxx is off, just like Gxx is with Exx/Fxx
+			Gx values: 1, 4, 8, 16, 32, 64, 96, 128, 255
+			Ax/Bx/Cx/Dx values are used directly (i.e. D9 == D09), and are NOT shared with Dxx
+				(value is stored into mem_vc_volslide and used by A0/B0/C0/D0)
+			Hx uses the same value as Hxx and Uxx, and affects the *depth*
+				so... hxx = (hx | (oldhxx & 0xf0))  ???
+
+		Additionally: volume and panning are handled on the start tick, not
+		the first tick of the row (that is, SDx alters their behavior) */
+
+		switch (volumeCommand)
+		{
+			case VolumeEffects.None:
+				break;
+
+			case VolumeEffects.Volume:
+				if (startNote)
+				{
+					if (volume > 64) volume = 64;
+					chan.Volume = volume << 2;
+					chan.Flags |= ChannelFlags.FastVolumeRamp;
+				}
+				break;
+
+			case VolumeEffects.Panning:
+				if (startNote)
+				{
+					if (volume > 64) volume = 64;
+					chan.Panning = volume << 2;
+					chan.ChannelPanning = 0;
+					chan.PanningSwing = 0;
+					chan.PanbrelloDelta = 0;
+					chan.Flags |= ChannelFlags.FastVolumeRamp;
+					chan.Flags &= ~ChannelFlags.Surround;
+				}
+				break;
+
+			case VolumeEffects.PortamentoUp: // Fx
+				if (!startNote)
+					EffectRegularPortamentoUp(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPitchSlide);
+				break;
+
+			case VolumeEffects.PortamentoDown: // Ex
+				if (!startNote)
+					EffectRegularPortamentoDown(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPitchSlide);
+				break;
+
+			case VolumeEffects.TonePortamento: // Gx
+				if (!startNote)
+					EffectTonePortamento(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPortaNote);
+				break;
+
+			case VolumeEffects.VolumeSlideUp: // Cx
+				if (startNote)
+				{
+					if (volume != 0)
+						chan.MemVolumeColumnVolSlide = volume;
+				}
+				else
+					EffectVolumeUp(ref chan, chan.MemVolumeColumnVolSlide);
+				break;
+
+			case VolumeEffects.VolumeSlideDown: // Dx
+				if (startNote)
+				{
+					if (volume != 0)
+						chan.MemVolumeColumnVolSlide = volume;
+				}
+				else
+					EffectVolumeDown(ref chan, chan.MemVolumeColumnVolSlide);
+				break;
+
+			case VolumeEffects.FineVolumeUp: // Ax
+				if (startNote)
+				{
+					if (volume != 0)
+						chan.MemVolumeColumnVolSlide = volume;
+					else
+						volume = chan.MemVolumeColumnVolSlide;
+					EffectVolumeUp(ref chan, volume);
+				}
+				break;
+
+			case VolumeEffects.FineVolumeDown: // Bx
+				if (startNote)
+				{
+					if (volume != 0)
+						chan.MemVolumeColumnVolSlide = volume;
+					else
+						volume = chan.MemVolumeColumnVolSlide;
+					EffectVolumeDown(ref chan, volume);
+				}
+				break;
+
+			case VolumeEffects.VibratoDepth: // Hx
+				EffectVibrato(ref chan, volume);
+				break;
+
+			case VolumeEffects.VibratoSpeed: // $x (FT2 compat.)
+				/* Unlike the vibrato depth, this doesn't actually trigger a vibrato. */
+				chan.VibratoSpeed = volume;
+				break;
+
+			case VolumeEffects.PanningSlideLeft: // <x (FT2)
+				EffectPanningSlide(Flags, ref chan, volume);
+				break;
+
+			case VolumeEffects.PanningSlideRight: // >x (FT2)
+				EffectPanningSlide(Flags, ref chan, volume << 4);
+				break;
+		}
+	}
+
+	/* firstTick is only used for SDx at the moment */
+	public void ProcessEffects(bool firstTick)
+	{
+		for (int nchan=0; nchan < Constants.MaxChannels; nchan++)
+		{
+			ref var chan = ref Voices[nchan];
+
+			chan.NCommand = Effects.None;
+
+			int instrumentNumber = chan.RowInstrumentNumber;
+			var volumeCommand = chan.RowVolumeEffect;
+			int volume = chan.RowVolumeParameter;
+			var cmd = chan.RowEffect;
+			int param = chan.RowParam;
+
+			bool portamento =
+				cmd == Effects.TonePortamento ||
+				cmd == Effects.TonePortamentoVolume ||
+				volumeCommand == VolumeEffects.TonePortamento;
+
+			bool startNote = Flags.HasFlag(SongFlags.FirstTick);
+
+			chan.Flags &= ~(ChannelFlags.FastVolumeRamp | ChannelFlags.NewNote);
+
+			// set instrument before doing anything else
+			if ((instrumentNumber != 0) && startNote) chan.NewInstrumentNumber = instrumentNumber;
+
+			// This is probably the single biggest WTF replayer bug in Impulse Tracker.
+			// In instrument mode, when an note + instrument is triggered that does not map to any sample, the entire cell (including potentially present global effects!)
+			// is ignored. Even better, if on a following row another instrument number (this time without a note) is encountered, we end up in the same situation!
+			if (IsInstrumentMode && instrumentNumber > 0 && instrumentNumber < Instruments.Count && Instruments[instrumentNumber] != null)
+			{
+				var instrument = Instruments[instrumentNumber];
+
+				if (instrument != null)
+				{
+					int note = (chan.RowNote != SpecialNotes.None) ? chan.RowNote : chan.NewNote;
+
+					if (SongNote.IsNote(note) && instrument.SampleMap[note - SpecialNotes.First] == 0)
+					{
+						chan.NewNote = note;
+						chan.RowInstrumentNumber = instrumentNumber;
+						chan.RowVolumeEffect = VolumeEffects.None;
+						chan.RowEffect = Effects.None;
+						continue;
+					}
+				}
+			}
+
+			/* Have to handle SDx specially because of the way the effects are structured.
+			In a PERFECT world, this would be very straightforward:
+				- Handle the effect column, and set flags for things that should happen
+					(portamento, volume slides, arpeggio, vibrato, tremolo)
+				- If note delay counter is set, stop processing that channel
+				- Trigger all notes if it's their start tick
+				- Handle volume column.
+			The obvious implication of this is that all effects are checked only once, and
+			volumes only need to be set for notes once. Additionally this helps for separating
+			the mixing code from the rest of the interface (which is always good, especially
+			for hardware mixing...)
+			Oh well, the world is not perfect. */
+
+			if (cmd == Effects.Special)
+			{
+				if (param != 0)
+					chan.MemSpecial = param;
+				else
+					param = chan.MemSpecial;
+
+				if (param >> 4 == 0xd)
+				{
+					// Ideally this would use SongFlags.FirstTick, but Impulse Tracker has a bug here :)
+					if (firstTick)
+					{
+						chan.CountdownNoteDelay = ((param & 0xf) != 0) ? (param & 0xf) : 1;
+						continue; // notes never play on the first tick with SDx, go away
+					}
+					chan.CountdownNoteDelay--;
+					if (chan.CountdownNoteDelay > 0)
+						continue; // not our turn yet, go away
+					startNote = (chan.CountdownNoteDelay == 0);
+				}
+			}
+
+			// Handles note/instrument/volume changes
+			if (startNote)
+			{
+				int note = chan.RowNote;
+				/* MPT test case InstrumentNumberChange.it */
+				if (IsInstrumentMode && (SongNote.IsNote(note) || note == SpecialNotes.None))
+				{
+					int instrCheck = (instrumentNumber != 0) ? instrumentNumber : chan.LastInstrumentNumber;
+					if ((instrCheck != 0) && (instrCheck < 0 || instrCheck >= Instruments.Count || Instruments[instrCheck] == null))
+					{
+						note = SpecialNotes.None;
+						instrumentNumber = 0;
+					}
+				}
+
+				if (IsInstrumentMode && (instrumentNumber != 0) && !SongNote.IsNote(note))
+				{
+					if ((portamento && Flags.HasFlag(SongFlags.CompatibleGXX))
+						|| (!portamento && Flags.HasFlag(SongFlags.ITOldEffects)))
+					{
+						EnvelopeReset(ref chan, always: true);
+						chan.FadeOutVolume = 65536;
+					}
+				}
+
+				if ((instrumentNumber != 0) && note == SpecialNotes.None)
+				{
+					if (IsInstrumentMode)
+					{
+						if (chan.Sample != null)
+							chan.Volume = chan.Sample.Volume;
+					}
+					else if (instrumentNumber < Samples.Count)
+					{
+						var sample = Samples[instrumentNumber];
+
+						if (sample != null)
+							chan.Volume = sample.Volume;
+						else
+							chan.Volume = 0;
+					}
+
+					if (IsInstrumentMode)
+					{
+						if (instrumentNumber < Instruments.Count && (chan.Instrument != Instruments[instrumentNumber] || (chan.CurrentSampleData == null)))
+							note = chan.NewNote;
+					}
+					else
+					{
+						if (instrumentNumber < Samples.Count && (chan.Sample != Samples[instrumentNumber] || (chan.CurrentSampleData == null)))
+							note = chan.NewNote;
+					}
+				}
+
+				// Invalid Instrument ?
+				if (instrumentNumber >= Instruments.Count)
+					instrumentNumber = 0;
+
+				if (SongNote.IsControl(note))
+				{
+					if (instrumentNumber != 0)
+					{
+						int sampleNumber = instrumentNumber;
+
+						if (IsInstrumentMode)
+						{
+							sampleNumber = 0;
+
+							var instrument = Instruments[instrumentNumber];
+
+							if (instrument != null)
+								sampleNumber = instrument.SampleMap[chan.Note];
+						}
+
+						if (sampleNumber > 0 && sampleNumber < Samples.Count)
+							chan.Volume = Samples[sampleNumber]?.Volume ?? 0;
+					}
+
+					if (!Flags.HasFlag(SongFlags.ITOldEffects))
+						instrumentNumber = 0;
+				}
+
+				// Note Cut/Off/Fade => ignore instrument
+				if (SongNote.IsControl(note) || (note != SpecialNotes.None && !portamento)) {
+					/* This is required when the instrument changes (KeyOff is not called) */
+					/* Possibly a better bugfix could be devised. --Bisqwit */
+					if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+					{
+						//Do this only if really an adlib chan. Important!
+						// TODO
+						//OPL_NoteOff(csf, nchan);
+						//OPL_Touch(csf, nchan, 0);
+					}
+
+					// TODO
+					//GM_KeyOff(csf, nchan);
+					//GM_Touch(csf, nchan, 0);
+				}
+
+				int previousNewNote = chan.NewNote;
+				if (SongNote.IsNote(note))
+				{
+					chan.NewNote = note;
+
+					if (!portamento)
+						CheckNNA(nchan, instrumentNumber, note, false);
+
+					if (chan.ChannelPanning > 0)
+					{
+						chan.Panning = (chan.ChannelPanning & 0x7FFF) - 1;
+						if ((chan.ChannelPanning & 0x8000) != 0)
+							chan.Flags |= ChannelFlags.Surround;
+						chan.ChannelPanning = 0;
+					}
+				}
+
+				// Instrument Change ?
+				if (instrumentNumber != 0)
+				{
+					var pSmp = chan.Sample;
+					var pEnv = chan.Instrument;
+
+					InstrumentChange(ref chan, instrumentNumber, portamento, instrumentColumn: 1);
+
+					var sample = Samples[instrumentNumber];
+
+					if ((sample != null) && sample.Flags.HasFlag(SampleFlags.Adlib))
+					{
+						// TODO
+						//OPL_Patch(csf, nchan, csf->samples[instr].adlib_bytes);
+					}
+
+					if (IsInstrumentMode && Instruments[instrumentNumber] != null)
+					{
+						// TODO
+						//GM_DPatch(csf, nchan, csf->instruments[instr]->midi_program,
+						//	csf->instruments[instr]->midi_bank,
+						//	csf->instruments[instr]->midi_channel_mask);
+					}
+
+					if (SongNote.IsNote(note))
+					{
+						chan.NewInstrumentNumber = 0;
+
+						if (pSmp != chan.Sample)
+							chan.Position = chan.PositionFrac = 0;
+					}
+				}
+
+				// New Note ?
+				if (note != SpecialNotes.None)
+				{
+					if ((instrumentNumber == 0) && (chan.NewInstrumentNumber != 0) && SongNote.IsNote(note))
+					{
+						if (SongNote.IsNote(previousNewNote))
+							chan.NewNote = previousNewNote;
+
+						InstrumentChange(ref chan, chan.NewInstrumentNumber, portamento, 0);
+
+						if (IsInstrumentMode
+								&& chan.NewInstrumentNumber < Instruments.Count
+								&& (Instruments[chan.NewInstrumentNumber] != null))
+						{
+							var sample = Samples[chan.NewInstrumentNumber];
+
+							if ((sample != null) && sample.Flags.HasFlag(SampleFlags.Adlib))
+							{
+								// TODO
+								//OPL_Patch(csf, nchan, csf->samples[chan->new_instrument].adlib_bytes);
+							}
+
+							// TODO
+							//GM_DPatch(csf, nchan, csf->instruments[chan->new_instrument]->midi_program,
+							//	csf->instruments[chan->new_instrument]->midi_bank,
+							//	csf->instruments[chan->new_instrument]->midi_channel_mask);
+						}
+
+						chan.NewNote = note;
+						chan.NewInstrumentNumber = 0;
+					}
+
+					NoteChange(nchan, note, portamento, retrigger: false, haveInstrument: (instrumentNumber != 0));
+				}
+			}
+
+			// Initialize portamento command memory (needs to be done in exactly this order)
+			if (firstTick)
+			{
+				bool effectColumnTonePortamento = (cmd == Effects.TonePortamento || cmd == Effects.TonePortamentoVolume);
+				if (effectColumnTonePortamento)
+				{
+					int tonePortamentoParam = (cmd != Effects.TonePortamentoVolume ? param : 0);
+
+					if (tonePortamentoParam != 0)
+						chan.MemPortaNote = tonePortamentoParam;
+					else if ((tonePortamentoParam == 0) && !Flags.HasFlag(SongFlags.CompatibleGXX))
+						chan.MemPortaNote = chan.MemPitchSlide;
+
+					if (!Flags.HasFlag(SongFlags.CompatibleGXX))
+						chan.MemPitchSlide = chan.MemPortaNote;
+				}
+
+				if (volumeCommand == VolumeEffects.TonePortamento)
+				{
+					if (volume != 0)
+						chan.MemPortaNote = Tables.VolumeColumnPortamentoTable[volume & 0x0F];
+
+					if (!Flags.HasFlag(SongFlags.CompatibleGXX))
+						chan.MemPitchSlide = chan.MemPortaNote;
+				}
+
+				if ((volume != 0) && (volumeCommand == VolumeEffects.PortamentoUp || volumeCommand == VolumeEffects.PortamentoDown))
+				{
+					chan.MemPitchSlide = 4 * volume;
+					if (!effectColumnTonePortamento && !Flags.HasFlag(SongFlags.CompatibleGXX))
+						chan.MemPortaNote = chan.MemPitchSlide;
+				}
+
+				if ((param != 0) && (cmd == Effects.PortamentoUp || cmd == Effects.PortamentoDown))
+				{
+					chan.MemPitchSlide = param;
+					if (!Flags.HasFlag(SongFlags.CompatibleGXX))
+						chan.MemPortaNote = chan.MemPitchSlide;
+				}
+			}
+
+			HandleVolumeEffect(ref chan, volumeCommand, volume, firstTick, startNote);
+			HandleEffect(nchan, cmd, param, portamento, firstTick);
+
+			/* stupid hax: handling effect column after volume column breaks
+			* handling when both columns have a vibrato effect.
+			*
+			* overwrite the memory after the fact with the correct parameters.
+			*   --paper */
+			if (volumeCommand == VolumeEffects.VibratoDepth
+				&& (cmd == Effects.Vibrato/* || cmd == Effects.VibratoVol -- do we also need this? */))
+				EffectVibrato(ref chan, volume);
+		}
+	}
+
 	// ------------------------------------------------------------------------------------------------------------
 
 	/* These return the channel that was used for the note. */
@@ -1122,7 +2869,7 @@ public class Song
 	/* **** chan ranges from 1 to MAX_CHANNELS   */
 	static int KeyDownEx(int samp, int ins, int note, int vol, int chan, Effects effect, int param)
 	{
-		int midiNote = note; /* note gets overwritten, possibly NOTE_NONE */
+		int midiNote = note; /* note gets overwritten, possibly SpecialNotes.None */
 
 		SongSample? s = null;
 		SongInstrument? i = null;
@@ -1177,16 +2924,16 @@ public class Song
 
 			// handle blank instrument values and "fake" sample #0 (used by sample loader)
 			if (samp == 0)
-				samp = c.LastInstrument;
+				samp = c.LastInstrumentNumber;
 			else if (samp == KeyJazz.FakeInstrument)
 				samp = 0; // dumb hack
 
 			if (ins == 0)
-				ins = c.LastInstrument;
+				ins = c.LastInstrumentNumber;
 			else if (ins == KeyJazz.FakeInstrument)
 				ins = 0; // dumb hack
 
-			c.LastInstrument = insMode ? ins : samp;
+			c.LastInstrumentNumber = insMode ? ins : samp;
 
 			// give the channel a sample, and maybe an instrument
 			s = (samp == KeyJazz.NoInstrument) ? null : CurrentSong.Samples[samp];
@@ -1274,7 +3021,7 @@ public class Song
 			//c.AutoVibDepth = 0;
 			//c.AutoVibPosition = 0;
 
-			// csf_note_change copies stuff from c->ptr_sample as long as c->length is zero
+			// NoteChange copies stuff from c.Sample as long as c.Length is zero
 			// and if period != 0 (ie. sample not playing at a stupid rate)
 			c.Sample = s;
 			c.Length = 0;

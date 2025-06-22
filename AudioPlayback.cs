@@ -1,10 +1,12 @@
-using ChasmTracker.Songs;
-
 namespace ChasmTracker;
+
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public class AudioPlayback
 {
 	public static AudioPlaybackMode Mode;
+	public static MixFlags Flags;
 
 	public static bool IsPlaying => Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop);
 
