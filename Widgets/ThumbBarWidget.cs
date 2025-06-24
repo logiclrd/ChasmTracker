@@ -1,5 +1,7 @@
 namespace ChasmTracker.Widgets;
 
+using System.Diagnostics.CodeAnalysis;
+using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
@@ -20,6 +22,13 @@ public class ThumbBarWidget : Widget
 	{
 		Minimum = min;
 		Maximum = max;
+	}
+
+	public void ChangeValue(int newValue)
+	{
+		Value = newValue.Clamp(Minimum, Maximum);
+		OnChanged();
+		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	public ThumbBarWidget(Point position, int width, int min, int max, string textAtMin, string textAtMax)
@@ -60,5 +69,83 @@ public class ThumbBarWidget : Widget
 		string buf = Value.ToString("d3");
 
 		VGAMem.DrawText(buf, Position.Advance(Size.Width + 1), (1, 2));
+	}
+
+	public override bool? PreHandleKey(KeyEvent k)
+	{
+		if (k.Mouse == MouseState.Click)
+		{
+			if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+				return false;
+
+			/* swallow it */
+			if (!k.OnTarget)
+				return false;
+
+			int fMin = Minimum;
+			int fMax = Maximum;
+
+			int n = k.MousePositionFine.X - Position.X * k.CharacterResolution.X;
+			int wx = (Size.Width - 1) * k.CharacterResolution.X;
+
+			if (n < 0)
+				n = 0;
+			else if (n >= wx)
+				n = wx;
+
+			n = fMin + n * (fMax - fMin) / wx;
+
+			if (n < fMin)
+				n = fMin;
+			else if (n > fMax)
+				n = fMax;
+
+			ChangeValue(n);
+
+			return true;
+		}
+
+		return default;
+	}
+
+	public override bool? HandleArrow(KeyEvent k)
+	{
+		/* I'm handling the key modifiers differently than Impulse Tracker, but only
+		because I think this is much more useful. :) */
+		int n = 1;
+
+		if (k.Modifiers.HasAnyFlag(KeyMod.Alt | KeyMod.GUI))
+			n *= 8;
+		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+			n *= 4;
+		if (k.Modifiers.HasAnyFlag(KeyMod.Control))
+			n *= 2;
+
+		if (k.Sym == KeySym.Left)
+			n = Value - n;
+		else if (k.Sym == KeySym.Right)
+			n = Value + n;
+		else
+			return default;
+
+		ChangeValue(n);
+
+		return true;
+	}
+
+
+	public override bool HandleKey(KeyEvent k)
+	{
+		switch (k.Sym)
+		{
+			case KeySym.Home:
+				ChangeValue(Minimum);
+				return true;
+			case KeySym.End:
+				ChangeValue(Maximum);
+				return true;
+		}
+
+		return false;
 	}
 }

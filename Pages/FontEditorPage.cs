@@ -21,7 +21,7 @@ public class FontEditorPage : Page
 	FileList _fontList;
 	int _fontListTopFont = 0, _fontListCurFont = 0;
 
-	public PageNumbers ReturnPage;
+	public PageNumbers ReturnPageNumber;
 
 	public FontEditorPage()
 		: base(PageNumbers.FontEditor, "", HelpTexts.Global)

@@ -129,6 +129,8 @@ public class Dialog
 		}
 	}
 
+	public static bool HasCurrentDialog => s_activeDialogs.Any();
+
 	public static bool HandleKeyForCurrentDialog(KeyEvent k)
 	{
 		if (!s_activeDialogs.Any())

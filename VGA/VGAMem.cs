@@ -437,6 +437,12 @@ public static class VGAMem
 			DrawCharacter(text[n], position.Advance(n), colours);
 	}
 
+	public static void DrawText(string text, int offset, Point position, VGAMemColours colours)
+	{
+		for (int n = offset; n < text.Length; n++)
+			DrawCharacter(text[n], position.Advance(n - offset), colours);
+	}
+
 	public static void DrawTextBIOS(string text, Point position, VGAMemColours colours)
 	{
 		for (int n = 0; n < text.Length; n++)

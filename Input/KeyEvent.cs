@@ -1,4 +1,5 @@
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 namespace ChasmTracker.Input;
 
@@ -51,6 +52,9 @@ public struct KeyEvent
 	{
 		get
 		{
+			if (Modifiers.HasAnyFlag(KeyMod.ControlAlt))
+				return -1;
+
 			if ((OriginalSym >= KeySym._0) && (OriginalSym <= KeySym._9))
 				return OriginalSym - KeySym._0;
 

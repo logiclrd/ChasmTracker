@@ -18,6 +18,7 @@ public class AudioPlayback
 
 	public static int CurrentRow;
 	public static int PlayingPattern;
+	public static int CurrentOrder; // TODO: accessors (song_set_current_order)
 
 	static string? s_driverName;
 

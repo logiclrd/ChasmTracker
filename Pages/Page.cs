@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
-//using Microsoft.Maui.Graphics;
+using System.Reflection;
 
 namespace ChasmTracker;
 
-using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.PatternEditor;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
+using ChasmTracker.Menus;
+using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -27,6 +29,17 @@ public abstract class Page
 	public static List<Widget>? ActiveWidgets;
 	public static SharedInt? SelectedActiveWidgetIndex;
 
+	public Widget? SelectedWidget
+	{
+		get
+		{
+			if ((SelectedWidgetIndex < 0) || (SelectedWidgetIndex >= Widgets.Count))
+				return null;
+
+			return Widgets[SelectedWidgetIndex];
+		}
+	}
+
 	public static Widget? SelectedActiveWidget
 	{
 		get
@@ -42,6 +55,45 @@ public abstract class Page
 	}
 
 	public static MiniPopState MiniPopActive;
+
+	public static void ChangeFocusTo(int newWidgetIndex)
+	{
+		if ((ActiveWidgets == null) || (SelectedActiveWidgetIndex == null))
+			return;
+
+		if ((newWidgetIndex == SelectedActiveWidgetIndex)
+		 || (newWidgetIndex < 0)
+		 || (newWidgetIndex >= ActiveWidgets.Count))
+			return;
+
+		if (SelectedActiveWidget != null)
+			SelectedActiveWidget.IsDepressed = false;
+
+		SelectedActiveWidgetIndex.Value = newWidgetIndex;
+
+		if (SelectedActiveWidget != null)
+		{
+			SelectedActiveWidget.IsDepressed = false;
+
+			if (SelectedActiveWidget is TextEntryWidget textEntry)
+				textEntry.CursorPosition = textEntry.Text.Length;
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
+	public static void ChangeFocusTo(Widget? newWidget)
+	{
+		if (newWidget != null)
+		{
+			if (ActiveWidgets == null)
+				return;
+
+			ChangeFocusTo(ActiveWidgets.IndexOf(newWidget));
+		}
+		else
+			ChangeFocusTo(-1);
+	}
 
 	protected Page(PageNumbers pageNumber, string title, HelpTexts helpText)
 	{
@@ -151,7 +203,9 @@ public abstract class Page
 	/* HelpTexts.Global if no page-specific help */
 	public HelpTexts HelpIndex;
 
-	public MiniPopSlideDialog ShowMiniPop(int currentValue, string name, int min, int max, Point mid)
+	/* --------------------------------------------------------------------------------------------------------- */
+
+	public static MiniPopSlideDialog ShowMiniPop(int currentValue, string name, int min, int max, Point mid)
 	{
 		var miniPopDialog = Dialog.Show(new MiniPopSlideDialog(currentValue, name, min, max, mid));
 
@@ -163,7 +217,7 @@ public abstract class Page
 		return miniPopDialog;
 	}
 
-	public void FinishMiniPop()
+	public static void FinishMiniPop()
 	{
 		if (MiniPopActive != MiniPopState.Inactive)
 		{
@@ -184,8 +238,385 @@ public abstract class Page
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
+	static int s_altNumPad = 0;
+	static int s_altNumPadC = 0;
+	static int s_digraphN = 0;
+	static char s_digraphC = '\0';
+	static int s_csUnicode = 0;
+	static int s_csUnicodeC = 0;
+
+	static bool HandleIME(KeyEvent k)
+	{
+		char c;
+
+		if (Status.CurrentPage.SelectedWidgetIndex > -1 && Status.CurrentPage.SelectedWidgetIndex < Status.CurrentPage.Widgets.Count
+				&& Status.CurrentPage.Widgets[Status.CurrentPage.SelectedWidgetIndex].AcceptsText)
+		{
+			if (s_digraphN == -1 && k.State == KeyState.Release) {
+				s_digraphN = 0;
+
+			}
+			else if (!Status.Flags.HasFlag(StatusFlags.ClassicMode) && (k.Sym == KeySym.LeftControl || k.Sym == KeySym.RightControl))
+			{
+				if (k.State == KeyState.Release && s_digraphN >= 0)
+				{
+					s_digraphN++;
+					if (s_digraphN >= 2)
+						Status.FlashText("Enter digraph:", biosFont: true);
+				}
+			}
+			else if (k.Sym == KeySym.LeftShift || k.Sym == KeySym.RightShift)
+			{
+				/* do nothing */
+			}
+			else if (k.Modifiers.HasAnyFlag(KeyMod.ControlAlt) || (c = (k.Text != null) ? k.Text[0] : (char)k.Sym) == 0 || s_digraphN < 2)
+			{
+				if (k.State == KeyState.Press && k.Mouse == MouseState.None)
+				{
+					if (s_digraphN > 0)
+						Status.FlashText(" ");
+					s_digraphN = -1;
+				}
+			}
+			else if (s_digraphN >= 2)
+			{
+				if (k.State == KeyState.Release)
+					return true;
+
+				if (s_digraphC == 0)
+				{
+					s_digraphC = c;
+					Status.FlashText("Enter digraph: " + c, biosFont: true);
+				}
+				else
+				{
+					char digraphInput = Digraphs.Digraph(s_digraphC, c);
+
+					if (digraphInput != '\0')
+						Status.FlashText($"Enter digraph: {s_digraphC}{c} -> {digraphInput}", biosFont: true);
+					else
+						Status.FlashText($"Enter digraph: {s_digraphC}{c} -> INVALID", biosFont: true);
+
+					s_digraphN = 0;
+					s_digraphC = '\0';
+
+					if (digraphInput != '\0')
+						MainHandleTextInput(digraphInput.ToString());
+				}
+
+				return true;
+			}
+			else
+			{
+				if (s_digraphN > 0)
+					Status.FlashText(" ");
+				s_digraphN = 0;
+			}
+
+			/* ctrl+shift -> unicode character */
+			if (k.Sym == KeySym.LeftControl || k.Sym == KeySym.RightControl || k.Sym == KeySym.LeftShift || k.Sym == KeySym.RightShift)
+			{
+				if (k.State == KeyState.Release)
+				{
+					if (s_csUnicodeC > 0)
+					{
+						byte unicode = ((char)s_csUnicode).ToCP437();
+
+						if (unicode >= 32)
+						{
+							Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4} -> {unicode}");
+							MainHandleTextInput(Encoding.ASCII.GetString(new[] { unicode }));
+						}
+						else
+							Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4} -> INVALID");
+
+						s_csUnicode = 0;
+						s_csUnicodeC = 0;
+
+						s_altNumPad = 0;
+						s_altNumPadC = 0;
+
+						s_digraphN = 0;
+						s_digraphC = '\0';
+					}
+
+					return true;
+				}
+			}
+			else if (!Status.Flags.HasFlag(StatusFlags.ClassicMode) && k.Modifiers.HasAnyFlag(KeyMod.Control) && k.Modifiers.HasAnyFlag(KeyMod.Shift))
+			{
+				if (s_csUnicodeC >= 0)
+				{
+					/* bleh... */
+					var m = k.Modifiers;
+					k.Modifiers = KeyMod.None;
+					var v = k.HexValue;
+					k.Modifiers = m;
+
+					if (v == -1)
+						s_csUnicode = s_csUnicodeC = -1;
+					else
+					{
+						if (k.State == KeyState.Press)
+							return true;
+
+						s_csUnicode *= 16;
+						s_csUnicode += v;
+						s_csUnicodeC++;
+
+						s_digraphN = 0;
+						s_digraphC = '\0';
+
+						Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4}", biosFont: true);
+
+						return true;
+					}
+				}
+			}
+			else
+			{
+				if (k.Sym == KeySym.LeftControl || k.Sym == KeySym.RightControl || k.Sym == KeySym.LeftShift || k.Sym == KeySym.RightShift)
+					return true;
+
+				s_csUnicode = 0;
+				s_csUnicodeC = 0;
+			}
+
+			/* alt+numpad -> char number */
+			if (k.Sym == KeySym.LeftAlt || k.Sym == KeySym.RightAlt
+				|| k.Sym == KeySym.LeftGUI || k.Sym == KeySym.RightGUI)
+			{
+				if (k.State == KeyState.Release && s_altNumPadC > 0 && (s_altNumPad & 255) > 0)
+				{
+					if (s_altNumPad < 32)
+						return false;
+
+					char unicode = (char)(s_altNumPad & 255);
+
+					if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+						Status.FlashText($"Enter DOS/ASCII: {(int)unicode} -> {unicode}");
+
+					MainHandleTextInput(unicode.ToString());
+
+					s_altNumPad = 0;
+					s_altNumPadC = 0;
+
+					s_digraphN = 0;
+					s_digraphC = '\0';
+
+					s_csUnicode = 0;
+					s_csUnicodeC = 0;
+
+					return true;
+				}
+			}
+			else if (k.Modifiers.HasAnyFlag(KeyMod.Alt) && !k.Modifiers.HasAnyFlag(KeyMod.Control | KeyMod.Shift))
+			{
+				if (s_altNumPadC >= 0)
+				{
+					var m = k.Modifiers;
+					k.Modifiers = KeyMod.None;
+					int v = k.NumericValue(kpOnly: true);
+					k.Modifiers = m;
+
+					if (v == -1 || v > 9)
+					{
+						s_altNumPad = -1;
+						s_altNumPadC = -1;
+					}
+					else
+					{
+						if (k.State == KeyState.Press)
+							return true;
+
+						s_altNumPad *= 10;
+						s_altNumPad += v;
+						s_altNumPadC++;
+
+						if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+							Status.FlashText($"Enter DOS/ASCII: {s_altNumPad}", biosFont: true);
+
+						return true;
+					}
+				}
+			}
+			else
+			{
+				s_altNumPad = 0;
+				s_altNumPadC = 0;
+			}
+		}
+		else
+		{
+			s_altNumPad = 0;
+			s_altNumPadC = 0;
+
+			s_digraphN = 0;
+			s_digraphC = '\0';
+
+			s_csUnicode = 0;
+			s_csUnicodeC = 0;
+		}
+
+		return false;
+	}
+
+	/* whenever there's a keypress ;) */
+	/* this is the important one */
+	public static void MainHandleKey(KeyEvent k)
+	{
+		if (HandleIME(k))
+			return;
+
+		/* okay... */
+		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+		{
+			if (Status.CurrentPage.PreHandleKey(k))
+				return;
+		}
+
+		if (HandleKeyGlobal(k))
+			return;
+		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive) && Menu.HandleKey(k))
+			return;
+		if (Widget.MainHandleKey(k))
+			return;
+
+		/* now check a couple other keys. */
+		switch (k.Sym)
+		{
+			case KeySym.Left:
+				if (k.State == KeyState.Release) return;
+				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Control) && Status.CurrentPageNumber != PageNumbers.PatternEditor)
+				{
+					FinishMiniPop();
+					if (AudioPlayback.Mode == AudioPlaybackMode.Playing)
+						AudioPlayback.CurrentOrder--;
+					return;
+				}
+				break;
+			case KeySym.Right:
+				if (k.State == KeyState.Release) return;
+				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Control) && Status.CurrentPageNumber != PageNumbers.PatternEditor)
+				{
+					FinishMiniPop();
+					if (AudioPlayback.Mode == AudioPlaybackMode.Playing)
+						AudioPlayback.CurrentOrder++;
+					return;
+				}
+				break;
+			case KeySym.Escape:
+				/* TODO | Page key handlers should return true/false depending on if the key was handled
+					TODO | (same as with other handlers), and the escape key check should go *after* the
+					TODO | page gets a chance to grab it. This way, the load sample page can switch back
+					TODO | to the sample list on escape like it's supposed to. (The Status.CurrentPageNumber
+					TODO | checks above won't be necessary, either.) */
+				if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift) && Status.DialogType == DialogTypes.None
+						&& Status.CurrentPageNumber != PageNumbers.SampleLibrary
+						&& Status.CurrentPageNumber != PageNumbers.InstrumentLoad)
+				{
+					if (k.State == KeyState.Release) return;
+					if (MiniPopActive != MiniPopState.Inactive)
+					{
+						FinishMiniPop();
+						return;
+					}
+					Menu.Show();
+					return;
+				}
+				break;
+			case KeySym.Slash:
+				if (k.State == KeyState.Release) return;
+				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				Keyboard.CurrentOctave--;
+				break;
+			case KeySym.Asterisk:
+				if (k.State == KeyState.Release) return;
+				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				Keyboard.CurrentOctave++;
+				break;
+			case KeySym.LeftBracket:
+				if (k.State == KeyState.Release) break;
+				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					Song.CurrentSpeed--;
+					Status.FlashText($"Speed set to {Song.CurrentSpeed} frames per row");
+					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+						Song.CurrentSong.InitialSpeed = Song.CurrentSpeed;
+				}
+				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				{
+					Song.CurrentTempo--;
+					Status.FlashText($"Tempo set to {Song.CurrentTempo} beats per minute");
+					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+						Song.CurrentSong.InitialTempo = Song.CurrentTempo;
+				}
+				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+				{
+					Song.CurrentGlobalVolume--;
+					Status.FlashText($"Global volume set to {Song.CurrentGlobalVolume}");
+					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+						Song.CurrentSong.InitialGlobalVolume = Song.CurrentGlobalVolume;
+				}
+				return;
+			case KeySym.RightBracket:
+				if (k.State == KeyState.Release) break;
+				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					Song.CurrentSpeed++;
+					Status.FlashText($"Speed set to {Song.CurrentSpeed} frames per row");
+					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+						Song.CurrentSong.InitialSpeed = Song.CurrentSpeed;
+				}
+				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				{
+					Song.CurrentTempo++;
+					Status.FlashText($"Tempo set to {Song.CurrentTempo} beats per minute");
+					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+						Song.CurrentSong.InitialTempo = Song.CurrentTempo;
+				}
+				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+				{
+					Song.CurrentGlobalVolume++;
+					Status.FlashText($"Global volume set to {Song.CurrentGlobalVolume}");
+					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+						Song.CurrentSong.InitialGlobalVolume = Song.CurrentGlobalVolume;
+				}
+
+				return;
+		}
+
+		/* and if we STILL didn't handle the key, pass it to the page.
+		* (or dialog, if one's active) */
+		if (Dialog.HasCurrentDialog)
+			Dialog.HandleKeyForCurrentDialog(k);
+		else
+		{
+			if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+				return;
+
+			Status.CurrentPage.HandleKey(k);
+		}
+	}
+
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* text input handler */
+
+	public static void MainHandleTextInput(string textInput)
+	{
+		if (Widget.HandleTextInput(textInput))
+			return;
+
+		if (!Status.DialogType.HasFlag(DialogTypes.Box))
+			Status.CurrentPage.HandleTextInput(textInput);
+	}
+
 	/* returns true if the key was handled */
-	public bool HandleKeyGlobal(KeyEvent k)
+	public static bool HandleKeyGlobal(KeyEvent k)
 	{
 		if ((MiniPopActive == MiniPopState.ActiveUsed) && (k.Mouse == MouseState.Click) && (k.State == KeyState.Release))
 		{
@@ -439,7 +870,7 @@ public abstract class Page
 					{
 						if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 							Program.Exit(0);
-						ShowExitPrompt();
+						Program.ShowExitPrompt();
 					}
 					return true;
 				}
@@ -509,8 +940,12 @@ public abstract class Page
 					if (Status.CurrentPageNumber == PageNumbers.PatternEditor)
 					{
 						FinishMiniPop();
-						if (k.State == KeyState.Press && Status.DialogType == MessageBoxTypes.None)
-							PatternEditorLengthEdit();
+						if (k.State == KeyState.Press && Status.DialogType == DialogTypes.None)
+						{
+							Dialog.Show(new LengthDialog(
+								Song.CurrentSong.GetPatternLength(AllPages.PatternEditor.CurrentPattern),
+								AllPages.PatternEditor.CurrentPattern));
+						}
 						return true;
 					}
 					if (Status.MessageBoxType != MessageBoxTypes.None)
@@ -522,7 +957,7 @@ public abstract class Page
 					{
 						if (k.State == KeyState.Press)
 						{
-							if (Status.DialogType.HasFlag(MessageBoxTypes.Menu))
+							if (Status.DialogType.HasFlag(DialogTypes.Menu))
 							{
 								return false;
 							}
@@ -652,13 +1087,13 @@ public abstract class Page
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						Song.StartAtArder(AllPages.OrderList.CurrentOrder, 0);
+						AudioPlayback.StartAtOrder(AllPages.OrderList.CurrentOrder, 0);
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						Song.LoopPattern(AllPages.PatternEditor.CurrentPattern);
+						AudioPlayback.LoopPattern(AllPages.PatternEditor.CurrentPattern, 0);
 				}
 				else
 				{
@@ -670,7 +1105,7 @@ public abstract class Page
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						Song.PlayFromMark();
+						AudioPlayback.PlayFromMark();
 				}
 				else
 				{
@@ -681,13 +1116,13 @@ public abstract class Page
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
 					if (k.State == KeyState.Press)
-						Song.Pause();
+						AudioPlayback.Pause();
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						Song.Stop();
+						AudioPlayback.Stop();
 					Status.Flags |= StatusFlags.NeedUpdate;
 				}
 				else
@@ -769,7 +1204,7 @@ public abstract class Page
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
 					if (k.State == KeyState.Press)
-						SetPage(PageNumbers.ExportModule);
+						SetPage(PageNumbers.ModuleExport);
 				}
 				else
 				{
@@ -799,14 +1234,11 @@ public abstract class Page
 					if (k.State == KeyState.Press)
 					{
 						FinishMiniPop();
+
 						if (Status.CurrentPageNumber == PageNumbers.Log)
-						{
-							ShowAbout();
-						}
+							SetPage(PageNumbers.About);
 						else
-						{
 							SetPage(PageNumbers.Log);
-						}
 					}
 				}
 				else if (k.State == KeyState.Press && (k.Modifiers.HasAnyFlag(KeyMod.Alt)))
@@ -957,14 +1389,14 @@ public abstract class Page
 		return false;
 	}
 
-	void ShowLengthDialog(string label, TimeSpan length)
+	static void ShowLengthDialog(string label, TimeSpan length)
 	{
 		MessageBox.Show(
 			MessageBoxTypes.OK,
 			$"{label}: {length.Hours,3}:{length.Minutes:d2}:{length.Seconds:d2}");
 	}
 
-	void ShowSongLength(string label)
+	static void ShowSongLength()
 	{
 		ShowLengthDialog("Total song time", Song.CurrentSong.GetLength());
 	}

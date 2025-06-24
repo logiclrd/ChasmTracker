@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
+using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 
 public class Song
@@ -669,6 +670,107 @@ public class Song
 				return n;
 
 		return 63;
+	}
+
+	/* this function is a lost little puppy */
+	public void SetPanScheme(PanSchemes scheme)
+	{
+		//mphack alert, all pan values multiplied by 4
+		switch (scheme)
+		{
+			case PanSchemes.Stereo:
+				for (int n = 0; n < Channels.Length; n++)
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+						Channels[n].Panning = (n & 1) * 256;
+				break;
+			case PanSchemes.Amiga:
+				for (int n = 0; n < Channels.Length; n++)
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+						Channels[n].Panning = ((n + 1) & 2) * 128;
+				break;
+			case PanSchemes.Left:
+				for (int n = 0; n < Channels.Length; n++)
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+						Channels[n].Panning = 0;
+				break;
+			case PanSchemes.Right:
+				for (int n = 0; n < Channels.Length; n++)
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+						Channels[n].Panning = 256;
+				break;
+			case PanSchemes.Mono:
+				for (int n = 0; n < Channels.Length; n++)
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+						Channels[n].Panning = 128;
+				break;
+			case PanSchemes.Slash:
+			case PanSchemes.Backslash:
+			{
+				int active = Channels.Where(ch => !ch.Flags.HasFlag(ChannelFlags.Mute)).Count();
+
+				int b = (scheme == PanSchemes.Slash) ? 256 : 0;
+				int s = (scheme == PanSchemes.Slash) ? -1 : +1;
+
+				for (int n = 0, nc = 0; nc < active; n++)
+				{
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					{
+						Channels[n].Panning = b + s * (nc * 256 / active - 1);
+					}
+				}
+
+				break;
+			}
+#if false
+			case PanSchemes.Cross:
+			{
+				int active = Channels.Where(ch => !ch.Flags.HasFlag(ChannelFlags.Mute)).Count();
+
+				int half = active / 2;
+
+				int n, nc;
+
+				for (n = 0, nc = 0; nc < half; n++)
+				{
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					{
+						if ((nc & 1) != 0)
+						{
+							// right bias - go from 64 to 32
+							Channels[n].Panning = (64 - (32 * nc / half)) * 4;
+						}
+						else
+						{
+							// left bias - go from 0 to 32
+							Channels[n].Panning = (32 * nc / half) * 4;
+						}
+
+						nc++;
+					}
+				}
+
+				for (; nc < active; n++)
+				{
+					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					{
+						if ((nc & 1) != 0)
+							Channels[n].Panning = (64 - (32 * (active - nc) / half)) * 4;
+						else
+							Channels[n].Panning = (32 * (active - nc) / half) * 4;
+
+						nc++;
+					}
+				}
+
+				break;
+#endif
+			default:
+				Console.WriteLine("oh i am confused");
+				break;
+		}
+
+		// get the values on the page to correspond to the song...
+		AllPages.OrderListPanning.NotifySongChanged();
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -2859,6 +2961,61 @@ public class Song
 			if (volumeCommand == VolumeEffects.VibratoDepth
 				&& (cmd == Effects.Vibrato/* || cmd == Effects.VibratoVol -- do we also need this? */))
 				EffectVibrato(ref chan, volume);
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
+
+	// Send exactly one MIDI message
+	public void MIDISend(byte[] data, int len, int nchan, bool fake)
+	{
+		ref var chan = ref Voices[nchan];
+
+		if (len >= 1 && (data[0] == 0xFA || data[0] == 0xFC || data[0] == 0xFF))
+		{
+			// Start Song, Stop Song, MIDI Reset
+
+			for (int c = 0; c < Voices.Length; c++)
+			{
+				Voices[c].Cutoff = 0x7F;
+				Voices[c].Resonance = 0x00;
+			}
+		}
+
+		if (len >= 4 && data[0] == 0xF0 && data[1] == 0xF0)
+		{
+			// impulse tracker filter control (mfg. 0xF0)
+			switch (data[2])
+			{
+				case 0x00: // set cutoff
+					if (data[3] < 0x80)
+					{
+						chan.Cutoff = data[3];
+						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, MixFrequency);
+					}
+					break;
+				case 0x01: // set resonance
+					if (data[3] < 0x80)
+					{
+						chan.Resonance = data[3];
+						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, MixFrequency);
+					}
+					break;
+			}
+		}
+		else if (!fake && MIDIOutRaw csf->midi_out_raw)
+		{
+			/* okay, this is kind of how it works.
+			we pass buffer_count as here because while
+				1000 * ((8((buffer_size/2) - buffer_count)) / sample_rate)
+			is the number of msec we need to delay by, libmodplug simply doesn't know
+			what the buffer size is at this point so buffer_count simply has no
+			frame of reference.
+
+			fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
+
+			*/
+			csf->midi_out_raw(csf, data, len, csf->buffer_count);
 		}
 	}
 

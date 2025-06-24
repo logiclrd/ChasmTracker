@@ -1,7 +1,7 @@
 namespace ChasmTracker.Widgets;
 
 using System;
-
+using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
@@ -35,5 +35,14 @@ public class ButtonWidget : Widget
 			BoxTypes.Thin | BoxTypes.Inner | (IsDepressed ? BoxTypes.Inset : BoxTypes.Outset));
 
 		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? (3, 2) : (0, 2));
+	}
+
+	public override bool? HandleActivate(KeyEvent k)
+	{
+		/* maybe buttons should ignore the changed callback, and use activate instead...
+		(but still call the changed callback for togglebuttons if they *actually* changed) */
+		OnChanged();
+		Status.Flags |= StatusFlags.NeedUpdate;
+		return true;
 	}
 }

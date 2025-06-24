@@ -1,3 +1,6 @@
+using System.Runtime.CompilerServices;
+using ChasmTracker.Input;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
 namespace ChasmTracker.Widgets;
@@ -20,6 +23,18 @@ public class BitSetWidget : Widget
 		BitsOff = bitsOff;
 
 		ActivationKeys = new char[nbits];
+	}
+
+	public void MoveCursor(int delta)
+	{
+		int n = CursorPosition + delta;
+		n = n.Clamp(0, NumberOfBits - 1);
+
+		if (CursorPosition != n)
+		{
+			CursorPosition.Value = n;
+			Status.Flags = StatusFlags.NeedUpdate;
+		}
 	}
 
 	/* In textentries, cursor=0,3; normal=2,0 */
@@ -58,9 +73,40 @@ public class BitSetWidget : Widget
 			int bg = BGSelection[(set ? 1 : 0) + (isFocused ? 2 : 0)];
 
 			if (label_c2 != '\0')
-				VGAMem.DrawHalfWidthCharacters(label_c1, label_c2, Position.Advance(n), fg, bg, fg, bg);
+				VGAMem.DrawHalfWidthCharacters(label_c1, label_c2, Position.Advance(n), (fg, bg), (fg, bg));
 			else
-				VGAMem.DrawCharacter(label_c1, Position.Advance(n), fg, bg);
+				VGAMem.DrawCharacter(label_c1, Position.Advance(n), (fg, bg));
 		}
+	}
+
+	public override bool? HandleArrow(KeyEvent k)
+	{
+		if (k.Sym == KeySym.Left)
+			MoveCursor(-1);
+		else if (k.Sym == KeySym.Right)
+			MoveCursor(+1);
+
+		return default;
+	}
+
+	public override bool HandleKey(KeyEvent k)
+	{
+		switch (k.Sym)
+		{
+			case KeySym.Space:
+			{
+				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+					return false;
+
+				Value ^= (1 << CursorPosition);
+
+				OnChanged();
+				Status.Flags |= StatusFlags.NeedUpdate;
+
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

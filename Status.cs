@@ -34,7 +34,7 @@ public static class Status
 
 	public static KeyMod KeyMod;
 
-	public static long LastMIDITick;
+	public static DateTime LastMIDITick;
 	public static byte[] LastMIDIEvent = new byte[64];
 	public static int LastMIDILength;
 	public static int LastMIDIRealLength; /* XXX what is this */

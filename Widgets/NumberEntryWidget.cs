@@ -24,6 +24,7 @@ public class NumberEntryWidget : Widget
 		{
 			_value = value.Clamp(Minimum, Maximum);
 			OnChanged();
+			Status.Flags |= StatusFlags.NeedUpdate;
 		}
 	}
 
@@ -35,6 +36,22 @@ public class NumberEntryWidget : Widget
 		Value = min;
 		CursorPosition = cursorPosition;
 		Reverse = false;
+	}
+
+	public void MoveCursor(int delta)
+	{
+		if (Reverse)
+			return;
+
+		int n = CursorPosition + delta;
+
+		n = n.Clamp(0, Size.Width - 1);
+
+		if (CursorPosition != n)
+		{
+			CursorPosition.Value = n;
+			Status.Flags |= StatusFlags.NeedUpdate;
+		}
 	}
 
 	public override void HandleText(TextInputEvent textInput)
@@ -103,5 +120,80 @@ public class NumberEntryWidget : Widget
 			if (isSelected)
 				VGAMem.DrawCharacter(buf[CursorPosition], Position.Advance(CursorPosition), (0, 3));
 		}
+	}
+
+	public override bool? HandleActivate(KeyEvent k)
+	{
+		if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+			return false;
+
+		if (k.Mouse == MouseState.Click && k.OnTarget)
+		{
+			/* position cursor */
+			int n = k.MousePosition.X - Position.X;
+			n = n.Clamp(0, Size.Width - 1);
+
+			int wx = k.StartPosition.X - Position.X;
+			wx = wx.Clamp(0, Size.Width - 1);
+
+			if (n >= Size.Width)
+				n = Size.Width - 1;
+
+			CursorPosition.Value = n;
+
+			Status.Flags |= StatusFlags.NeedUpdate;
+		}
+
+		return default;
+	}
+
+	public override bool? HandleArrow(KeyEvent k)
+	{
+		if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+			return false;
+
+		if (k.Sym == KeySym.Left)
+			MoveCursor(-1);
+		else if (k.Sym == KeySym.Right)
+			MoveCursor(+1);
+
+		return true;
+	}
+
+	public override bool HandleKey(KeyEvent k)
+	{
+		if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+			return false;
+
+		switch (k.Sym)
+		{
+			case KeySym.Home:
+				MoveCursor(int.MinValue);
+				return true;
+			case KeySym.End:
+				MoveCursor(int.MaxValue);
+				return true;
+			case KeySym.Backspace:
+				if (Reverse)
+				{
+					/* woot! */
+					Value /= 10;
+
+					OnChanged();
+					Status.Flags |= StatusFlags.NeedUpdate;
+
+					return true;
+				}
+
+				break;
+			case KeySym.Plus:
+				Value++;
+				return true;
+			case KeySym.Minus:
+				Value--;
+				return true;
+		}
+
+		return false;
 	}
 }

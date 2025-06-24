@@ -2,6 +2,7 @@ using System.Linq;
 
 namespace ChasmTracker.Widgets;
 
+using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
@@ -65,6 +66,29 @@ public class ToggleButtonWidget : Widget
 			BoxTypes.Thin | BoxTypes.Inner |
 			(State || IsDepressed ? BoxTypes.Inset : BoxTypes.Outset));
 
-		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? 3 : 0, 2);
+		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? (3, 2) : (0, 2));
+	}
+
+	public override bool? HandleActivate(KeyEvent k)
+	{
+		if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+			return false;
+
+		if (GroupNumber != 0)
+		{
+			/* this also runs the changed callback and redraws the button(s) */
+			SetState(true);
+			return true;
+		}
+
+		/* else... */
+		_state = !_state;
+		/* maybe buttons should ignore the changed callback, and use activate instead...
+		(but still call the changed callback for togglebuttons if they *actually* changed) */
+		OnChanged();
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+
+		return true;
 	}
 }

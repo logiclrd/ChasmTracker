@@ -720,7 +720,7 @@ public class Program
 			{
 				/* don't ask, just go away */
 				Dialog.DestroyAll();
-				Page.SetPage(AllPages.FontEditor.ReturnPage);
+				Page.SetPage(AllPages.FontEditor.ReturnPageNumber);
 			}
 		}
 		else if (Status.MessageBoxType != MessageBoxTypes.OKCancel)
