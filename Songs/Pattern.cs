@@ -14,6 +14,18 @@ public class Pattern
 			Rows.Add(new PatternRow());
 	}
 
+	public Pattern Clone()
+	{
+		var clone = new Pattern();
+
+		clone.Rows.Clear();
+
+		foreach (var row in Rows)
+			clone.Rows.Add(row.Clone());
+
+		return clone;
+	}
+
 	public PatternRow this[int row] => Rows[row];
 
 	public static readonly Pattern Empty = new Pattern();

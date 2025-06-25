@@ -13,7 +13,6 @@ public class Song
 
 	static int s_currentOrder;
 
-	public static int PanSeparation;
 	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
 	public static int MixStat; // number of channels being mixed (not really used)
 	public static int BufferCount; // number of samples to mix per tick
@@ -173,10 +172,13 @@ public class Song
 	public string Title = "";
 	public string Message = "";
 	public string FileName = "";
+	public string TrackerID = "";
 
 	public int InitialGlobalVolume;
 	public int InitialSpeed;
 	public int InitialTempo;
+
+	public int PanSeparation;
 
 	public int RowHighlightMajor;
 	public int RowHighlightMinor;
@@ -191,6 +193,86 @@ public class Song
 
 	public readonly List<SongHistory> History = new List<SongHistory>();
 	public SongHistory? EditStart;
+
+	public void InsertRestartPos(int restartOrder) // hax
+	{
+		if (restartOrder == 0)
+			return;
+
+		// find the last pattern, also look for one that's not being used
+		int max = OrderList.Max();
+
+		int newPat = max + 1;
+
+		int pat = OrderList.Last();
+
+		if ((pat >= Patterns.Count) || (Patterns[pat] == null) || (Patterns[pat].Rows.Count == 0))
+			return;
+
+		// how many times it was used (if >1, copy it)
+		int used = OrderList.Where(n => n == pat).Count();
+
+		if (used > 1)
+		{
+			// copy the pattern so we don't screw up the playback elsewhere
+			while ((newPat < Patterns.Count) && (Patterns[newPat] != null))
+				newPat++;
+
+			//Log.Append(2, "Copying pattern {0} to {1} for restart position", pat, newPat);
+			if (newPat < Patterns.Count)
+				Patterns[newPat] = Patterns[pat].Clone();
+			else
+				Patterns.Add(Patterns[pat].Clone());
+
+			OrderList[OrderList.Count - 1] = pat = newPat;
+		}
+		else
+		{
+			//Log.Append(2, "Modifying pattern {0} to add restart position", pat);
+		}
+
+		int maxRow = Patterns[pat].Rows.Count - 1;
+
+		for (int row = 0; row <= maxRow; row++)
+		{
+			int emptyChannel = -1; // where's an empty effect?
+
+			bool hasBreak = false;
+			bool hasJump = false;
+
+			for (int n = 0; n < Constants.MaxChannels; n++)
+			{
+				ref var note = ref Patterns[pat][row][n + 1];
+
+				switch (note.Effect)
+				{
+					case Effects.PositionJump:
+						hasJump = true;
+						break;
+					case Effects.PatternBreak:
+						hasBreak = true;
+						if (note.Parameter == 0)
+							emptyChannel = n; // always rewrite C00 with Bxx (it's cleaner)
+						break;
+					case Effects.None:
+						if (emptyChannel < 0)
+							emptyChannel = n;
+						break;
+				}
+			}
+
+			// if there's not already a Bxx, and we have a spare channel,
+			// AND either there's a Cxx or it's the last row of the pattern,
+			// then stuff in a jump back to the restart position.
+			if (!hasJump && (emptyChannel >= 0) && (hasBreak || row == maxRow))
+			{
+				ref var empty = ref Patterns[pat][row][emptyChannel];
+
+				empty.Effect = Effects.PositionJump; ;
+				empty.Parameter = (byte)restartOrder;
+			}
+		}
+	}
 
 	// mixer stuff -----------------------------------------------------------
 	// TODO: public MixFlags MixFlags;
@@ -948,7 +1030,7 @@ public class Song
 				if (sample == null)
 					data = null;
 				else
-					data = sample.Flags.HasFlag(SampleFlags._16Bit) ? sample.Data16 : sample.Data8;
+					data = sample.Flags.HasFlag(SampleFlags._16Bit) ? sample.Data16.Array : sample.Data8.Array;
 			}
 			else /* OpenMPT test case emptyslot.it */
 				return;

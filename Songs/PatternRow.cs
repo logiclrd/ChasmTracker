@@ -6,6 +6,16 @@ public class PatternRow
 {
 	SongNote[] _notes = new SongNote[Constants.MaxChannels];
 
+	public PatternRow Clone()
+	{
+		var clone = new PatternRow();
+
+		for (int i = 0; i < Constants.MaxChannels; i++)
+			clone._notes[i] = _notes[i];
+
+		return clone;
+	}
+
 	public static implicit operator Span<SongNote>(PatternRow @this)
 		=> @this._notes;
 
