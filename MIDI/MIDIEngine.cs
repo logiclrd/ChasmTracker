@@ -119,7 +119,7 @@ public class MIDIEngine : IMIDISink
 		=> s_ports.OfType<MIDIPort>().Count();
 
 	/* midi engines list ports this way */
-	public int RegisterPort(MIDIPort p)
+	public static int RegisterPort(MIDIPort p)
 	{
 		if (s_portMutex == null)
 			return -1;
@@ -152,7 +152,7 @@ public class MIDIEngine : IMIDISink
 		return p.Number;
 	}
 
-	public void UnregisterPort(int num)
+	public static void UnregisterPort(int num)
 	{
 		if (s_portMutex == null)
 			return;
@@ -163,8 +163,7 @@ public class MIDIEngine : IMIDISink
 			{
 				q.Received -= port_Received;
 
-				if (q.CanDisable)
-					q.Disable();
+				q.Disable();
 
 				s_ports[num] = null;
 			}
@@ -179,8 +178,7 @@ public class MIDIEngine : IMIDISink
 		lock (s_recordMutex)
 			lock (s_portMutex)
 			{
-				if (p.CanEnable)
-					r = p.Enable();
+				r = p.Enable();
 
 				if (!r)
 					p.IO = MIDIIO.None; // why
@@ -195,10 +193,7 @@ public class MIDIEngine : IMIDISink
 
 		lock (s_recordMutex)
 			lock (s_portMutex)
-			{
-				if (p.CanDisable)
-					r = p.Disable();
-			}
+				r = p.Disable();
 
 		return r;
 	}
@@ -215,7 +210,7 @@ public class MIDIEngine : IMIDISink
 
 	/*----------------------------------------------------------------------------------*/
 
-	static void port_Receive(MIDIPort src, byte[] data)
+	static void port_Received(MIDIPort src, byte[] data)
 	{
 		if (data.Length == 0)
 			return;
@@ -277,7 +272,7 @@ public class MIDIEngine : IMIDISink
 			{
 				case 0: /* sysex */
 					if (len <= 2) return;
-					EventSysEx(data, offset: 1, len - 2);
+					EventSysEx(new ArraySegment<byte>(data, offset: 1, len - 2));
 					break;
 				case 6: /* tick */
 					EventTick();
@@ -292,7 +287,7 @@ public class MIDIEngine : IMIDISink
 		}
 	}
 
-	public void EventNote(MIDINote mnStatus, int channel, int note, int velocity)
+	public static void EventNote(MIDINote mnStatus, int channel, int note, int velocity)
 	{
 		var @event = new MIDINoteEvent();
 
@@ -304,7 +299,7 @@ public class MIDIEngine : IMIDISink
 		EventHub.PushEvent(@event);
 	}
 
-	public void EventController(int channel, int param, int value)
+	public static void EventController(int channel, int param, int value)
 	{
 		var @event = new MIDIControllerEvent();
 
@@ -315,7 +310,7 @@ public class MIDIEngine : IMIDISink
 		EventHub.PushEvent(@event);
 	}
 
-	public void EventProgram(int channel, int value)
+	public static void EventProgram(int channel, int value)
 	{
 		var @event = new MIDIProgramEvent();
 
@@ -325,7 +320,7 @@ public class MIDIEngine : IMIDISink
 		EventHub.PushEvent(@event);
 	}
 
-	public void EventAfterTouch(int channel, int value)
+	public static void EventAfterTouch(int channel, int value)
 	{
 		var @event = new MIDIAfterTouchEvent();
 
@@ -335,7 +330,7 @@ public class MIDIEngine : IMIDISink
 		EventHub.PushEvent(@event);
 	}
 
-	public void EventPitchBend(int channel, int value)
+	public static void EventPitchBend(int channel, int value)
 	{
 		var @event = new MIDIPitchBendEvent();
 
@@ -345,7 +340,7 @@ public class MIDIEngine : IMIDISink
 		EventHub.PushEvent(@event);
 	}
 
-	public void EventSystem(int argv, int param)
+	public static void EventSystem(int argv, int param)
 	{
 		var @event = new MIDISystemEvent();
 
@@ -355,12 +350,12 @@ public class MIDIEngine : IMIDISink
 		EventHub.PushEvent(@event);
 	}
 
-	public void EventTick()
+	public static void EventTick()
 	{
 		EventHub.PushEvent(new MIDITickEvent());
 	}
 
-	public void EventSysEx(ArraySegment<byte> data)
+	public static void EventSysEx(ArraySegment<byte> data)
 	{
 		var @event = new MIDISysExEvent();
 
@@ -390,7 +385,7 @@ public class MIDIEngine : IMIDISink
 		lock (s_recordMutex)
 		{
 			foreach (var ptr in s_ports)
-				if (ptr.IO.HasFlag(MIDIIO.Output) && ptr.CanDrain)
+				if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output) && ptr.CanDrain)
 					ptr.Drain();
 		}
 	}
@@ -452,44 +447,44 @@ public class MIDIEngine : IMIDISink
 				else
 					kk.MIDIVolume = 128;
 				kk.MIDIVolume = kk.MIDIVolume * Amplification / 100;
-				Page.HandleKey(kk);
-				return 1;
-		case SCHISM_EVENT_MIDI_PITCHBEND:
-			/* wheel */
-			kk.midi_channel = ev->midi_pitchbend.channel+1;
-			kk.midi_volume = -1;
-			kk.midi_note = -1;
-			kk.midi_bend = ev->midi_pitchbend.value;
-			handle_key(&kk);
-			return 1;
-		case SCHISM_EVENT_MIDI_CONTROLLER:
-			/* controller events */
-			return 1;
-		case SCHISM_EVENT_MIDI_SYSTEM:
-			switch (ev->midi_system.argv) {
-			case 0x8: /* MIDI tick */
-				break;
-			case 0xA: /* MIDI start */
-			case 0xB: /* MIDI continue */
-				song_start();
-				break;
-			case 0xC: /* MIDI stop */
-			case 0xF: /* MIDI reset */
-				/* this is helpful when miditracking */
-				song_stop();
-				break;
-			};
-			return 1;
-		case SCHISM_EVENT_MIDI_SYSEX: /* but missing the F0 and the stop byte (F7) */
-			/* tfw midi ports just hand us friggin packets yo */
-			free(ev->midi_sysex.packet);
-			return 1;
-		default:
-			return 0;
+				Page.MainHandleKey(kk);
+				return true;
+			case MIDIPitchBendEvent pitchBendEvent:
+				/* wheel */
+				kk.MIDIChannel = pitchBendEvent.Channel + 1;
+				kk.MIDIVolume = -1;
+				kk.MIDINote = -1;
+				kk.MIDIBend = pitchBendEvent.Value;
+				Page.MainHandleKey(kk);
+				return true;
+			case MIDIControllerEvent:
+				/* controller events */
+				return true;
+			case MIDISystemEvent systemEvent:
+				switch (systemEvent.ArgV)
+				{
+					case 0x8: /* MIDI tick */
+						break;
+					case 0xA: /* MIDI start */
+					case 0xB: /* MIDI continue */
+						AudioPlayback.Start();
+						break;
+					case 0xC: /* MIDI stop */
+					case 0xF: /* MIDI reset */
+						/* this is helpful when miditracking */
+						AudioPlayback.Stop();
+						break;
+				}
+
+				return true;
+			case MIDISysExEvent: /* but missing the F0 and the stop byte (F7) */
+				/* tfw midi ports just hand us friggin packets yo */
+				return true;
+			default:
+				return false;
 		}
 
-		return 1;
-		return false;
+		return true;
 	}
 
 	static bool SendUnlocked(byte[] data, int len, TimeSpan delay, MIDIFrom from)
@@ -510,7 +505,7 @@ public class MIDIEngine : IMIDISink
 				/* everyone plays */
 				foreach (var ptr in s_ports!)
 				{
-					if (ptr.IO.HasFlag(MIDIIO.Output))
+					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
 					{
 						if (ptr.CanSendNow)
 							ptr.SendNow(data, len, TimeSpan.Zero);
@@ -523,7 +518,7 @@ public class MIDIEngine : IMIDISink
 				/* only "now" plays */
 				foreach (var ptr in s_ports!)
 				{
-					if (ptr.IO.HasFlag(MIDIIO.Output))
+					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
 					{
 						if (ptr.CanSendNow)
 							ptr.SendNow(data, len, TimeSpan.Zero);
@@ -534,7 +529,7 @@ public class MIDIEngine : IMIDISink
 				/* only "later" plays */
 				foreach (var ptr in s_ports!)
 				{
-					if (ptr.IO.HasFlag(MIDIIO.Output))
+					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
 					{
 						if (ptr.CanSendLater)
 							ptr.SendLater(data, len, delay);
@@ -590,9 +585,9 @@ public class MIDIEngine : IMIDISink
 				Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.MIDIEventChanged;
 			}
 
-			if (s_midiMS > 0) // should always be true but I'm paranoid
+			if (s_midiBytesPerMillisecond > 0) // should always be true but I'm paranoid
 			{
-				pos /= s_midiMS;
+				pos /= s_midiBytesPerMillisecond;
 
 				if (pos > TimeSpan.Zero)
 				{
