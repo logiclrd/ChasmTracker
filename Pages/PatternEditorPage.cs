@@ -4337,7 +4337,7 @@ public class PatternEditorPage : Page
 		return null;
 	}
 
-	bool? HandleKey(KeyEvent k)
+	public override bool? HandleKey(KeyEvent k)
 	{
 		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
 
@@ -4950,7 +4950,7 @@ public class PatternEditorPage : Page
 		_markedRow = 0;
 	}
 
-	public override bool PreHandleKey(KeyEvent k)
+	public override bool? PreHandleKey(KeyEvent k)
 	{
 		// _fix_f7
 

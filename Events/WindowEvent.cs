@@ -1,5 +1,7 @@
 namespace ChasmTracker.Events;
 
+using ChasmTracker.Utility;
+
 public class WindowEvent : Event
 {
 	public WindowEventType EventType;

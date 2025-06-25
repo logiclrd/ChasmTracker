@@ -4,6 +4,8 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
+using System.Reflection.Metadata;
+using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 
@@ -12,6 +14,7 @@ public class Song
 	public static Song CurrentSong = new Song();
 
 	static int s_currentOrder;
+	static IMIDISink? s_midiSink;
 
 	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
 	public static int MixStat; // number of channels being mixed (not really used)
@@ -497,6 +500,46 @@ public class Song
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
+
+	public TimeSpan GetLengthTo(int order, int row)
+	{
+		AudioPlayback.LockAudio();
+
+		StopAtOrder = order;
+		StopAtRow = row;
+
+		var t = GetLength();
+
+		StopAtOrder = -1;
+		StopAtRow = -1;
+
+		AudioPlayback.UnlockAudio();
+
+		return t;
+	}
+
+	public (int OrderNumber, int RowNumber) GetAtTime(TimeSpan time)
+	{
+		if (time <= TimeSpan.Zero)
+			return (0, 0);
+
+		AudioPlayback.LockAudio();
+
+		StopAtOrder = Constants.MaxOrders;
+		StopAtRow = 255; /* unpossible */
+		StopAtTime = time;
+
+		GetLength();
+
+		var ret = (StopAtOrder, StopAtRow);
+
+		StopAtOrder = StopAtRow = -1;
+		StopAtTime = default;
+
+		AudioPlayback.UnlockAudio();
+
+		return ret;
+	}
 
 	public TimeSpan GetLength()
 	{
@@ -3085,7 +3128,7 @@ public class Song
 					break;
 			}
 		}
-		else if (!fake && MIDIOutRaw csf->midi_out_raw)
+		else if (!fake)
 		{
 			/* okay, this is kind of how it works.
 			we pass buffer_count as here because while
@@ -3097,7 +3140,7 @@ public class Song
 			fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
 
 			*/
-			csf->midi_out_raw(csf, data, len, csf->buffer_count);
+			s_midiSink?.OutRaw(this, data, len, AudioPlayback.BufferCount);
 		}
 	}
 

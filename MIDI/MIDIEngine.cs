@@ -565,6 +565,24 @@ public class MIDIEngine : IMIDISink
 			SendUnlocked(msg, len, TimeSpan.Zero, MIDIFrom.Now);
 	}
 
+	void IMIDISink.OutRaw(Song csf, byte[] data, int len, int samplesDelay)
+	{
+		Assert.IsTrue(
+			() => Song.CurrentSong == csf,
+			"Hardware MIDI out should only be processed for the current playing song"); // AGH!
+
+#if SCHISM_MIDI_DEBUG
+		/* prints all of the raw midi messages into the terminal; useful for debugging output */
+		//int i = (8000*AudioPlayback.AudioBufferSamples) / AudioPlayback.MixFrequency;
+
+		for (int i = 0; i < len; i++)
+			Console.Write("{0:x2} ", data[i]);
+		Console.WriteLine(); /* newline */
+#endif
+
+		SendBuffer(data, len, TimeSpan.FromMilliseconds(samplesDelay / s_midiBytesPerMillisecond));
+	}
+
 	public static void SendBuffer(byte[] data, int len, TimeSpan pos)
 	{
 		lock (s_recordMutex)

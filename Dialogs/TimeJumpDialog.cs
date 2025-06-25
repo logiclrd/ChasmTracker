@@ -1,21 +1,25 @@
+using System;
+
 namespace ChasmTracker.Dialogs;
 
 using ChasmTracker.Input;
+using ChasmTracker.Pages;
+using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
 public class TimeJumpDialog : Dialog
 {
-	NumberEntryWidget numEntryMinute;
-	NumberEntryWidget numEntrySecond;
-	ButtonWidget buttonOK;
-	ButtonWidget buttonCancel;
+	NumberEntryWidget? numEntryMinute;
+	NumberEntryWidget? numEntrySecond;
+	ButtonWidget? buttonOK;
+	ButtonWidget? buttonCancel;
 
 	public TimeJumpDialog()
 		: base(new Point(26, 24), new Size(30, 8))
 	{
-		ActionYes = AcceptDialog();
+		ActionYes = _ => AcceptDialog();
 	}
 
 	protected override void Initialize()
@@ -37,6 +41,11 @@ public class TimeJumpDialog : Dialog
 		Widgets.Add(numEntrySecond);
 	}
 
+	void numEntryMinute_HandleUnknownKey(KeyEvent k)
+	{
+		HandleKey(k);
+	}
+
 	public override void DrawConst()
 	{
 		VGAMem.DrawText("Jump to time:", new Point(30, 26), (0, 2));
@@ -49,18 +58,21 @@ public class TimeJumpDialog : Dialog
 	{
 		if (k.Sym == KeySym.Backspace)
 		{
-			if (SelectedWidgetIndex == 1 && _timejump_widgets[1].d.numentry.value == 0)
+			if (SelectedWidgetIndex == 1 && numEntrySecond!.Value == 0)
 			{
-				if (k->state == KEY_RELEASE) widget_change_focus_to(0);
+				if (k.State == KeyState.Release)
+					Page.ChangeFocusTo(0);
 				return true;
 			}
 		}
-		if (k.Sym == KeySym.Colon || k.Sym == KeySym.Semicolon) {
-			if (k->state == KEY_RELEASE) {
-				if (*selected_widget == 0) {
-					widget_change_focus_to(1);
-				}
+		if (k.Sym == KeySym.Colon || k.Sym == KeySym.Semicolon)
+		{
+			if (k.State == KeyState.Release)
+			{
+				if ((Page.SelectedActiveWidgetIndex != null) && (Page.SelectedActiveWidgetIndex == 0))
+					Page.ChangeFocusTo(1);
 			}
+
 			return true;
 		}
 
@@ -69,17 +81,23 @@ public class TimeJumpDialog : Dialog
 
 	void AcceptDialog()
 	{
-		unsigned long sec;
-		int no, np, nr;
-		sec = (_timejump_widgets[0].d.numentry.value * 60)
-			+ _timejump_widgets[1].d.numentry.value;
-		song_get_at_time(sec, &no, &nr);
-		set_current_order(no);
-		np = current_song->orderlist[no];
-		if (np < 200) {
-			set_current_pattern(np);
-			set_current_row(nr);
-			set_page(PAGE_PATTERN_EDITOR);
+		int second = numEntryMinute!.Value * 60 + numEntrySecond!.Value;
+
+		var (order, row) = Song.CurrentSong.GetAtTime(TimeSpan.FromSeconds(second));
+
+		AllPages.OrderList.CurrentOrder = order;
+
+		if (order < Song.CurrentSong.OrderList.Count)
+		{
+			int pattern = Song.CurrentSong.OrderList[order];
+
+			if (pattern < Song.CurrentSong.Patterns.Count)
+			{
+				AllPages.PatternEditor.CurrentPattern = pattern;
+				AllPages.PatternEditor.CurrentRow = row;
+
+				Page.SetPage(PageNumbers.PatternEditor);
+			}
 		}
 	}
 }

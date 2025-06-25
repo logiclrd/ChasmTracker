@@ -18,6 +18,20 @@
 		<EmbeddedResource Include="LogoBanner.png" />
 		<EmbeddedResource Include="ImpulseTrackerLogo.png" />
 		<EmbeddedResource Include="Icon128.png" />
+
+		<EmbeddedResource Include="Help\Text\adlib-sample" />
+		<EmbeddedResource Include="Help\Text\copyright" />
+		<EmbeddedResource Include="Help\Text\global-keys" />
+		<EmbeddedResource Include="Help\Text\info-page" />
+		<EmbeddedResource Include="Help\Text\instrument-list" />
+		<EmbeddedResource Include="Help\Text\message-editor" />
+		<EmbeddedResource Include="Help\Text\midi-output" />
+		<EmbeddedResource Include="Help\Text\orderlist-pan" />
+		<EmbeddedResource Include="Help\Text\orderlist-vol" />
+		<EmbeddedResource Include="Help\Text\palettes" />
+		<EmbeddedResource Include="Help\Text\pattern-editor" />
+		<EmbeddedResource Include="Help\Text\sample-list" />
+		<EmbeddedResource Include="Help\Text\time-information" />
 	</ItemGroup>
 
 	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">

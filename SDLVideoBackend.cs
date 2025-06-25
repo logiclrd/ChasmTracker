@@ -9,6 +9,7 @@ namespace ChasmTracker;
 using ChasmTracker.Configurations;
 using ChasmTracker.Events;
 using ChasmTracker.Interop;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
 public class SDLVideoBackend : VideoBackend

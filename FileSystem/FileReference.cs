@@ -36,7 +36,7 @@ public class FileReference : Reference, IComparable<FileReference> // dmoz_file
 	public int SampleSustainStart;
 	public int SampleSustainEnd;
 	public int SampleLength;
-	public int SampleFlags;
+	public SampleFlags SampleFlags;
 
 	public int SampleDefaultVolume;
 	public int SampleGlobalVolume;

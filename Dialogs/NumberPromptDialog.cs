@@ -1,8 +1,10 @@
 using System;
-using ChasmTracker.VGA;
-using ChasmTracker.Widgets;
 
 namespace ChasmTracker.Dialogs;
+
+using ChasmTracker.Utility;
+using ChasmTracker.VGA;
+using ChasmTracker.Widgets;
 
 public class NumberPromptDialog : Dialog
 {
@@ -10,7 +12,7 @@ public class NumberPromptDialog : Dialog
 
 	public Action<int>? Finish;
 
-	protected TextEntryWidget textEntryInput;
+	protected TextEntryWidget? textEntryInput;
 
 	string _initialText;
 
@@ -54,7 +56,7 @@ public class NumberPromptDialog : Dialog
 
 	public override void DrawConst()
 	{
-		VGAMem.DrawText(Title, textEntryInput.Position.Advance(-Title.Length - 1), (3, 2));
+		VGAMem.DrawText(Title, textEntryInput!.Position.Advance(-Title.Length - 1), (3, 2));
 		VGAMem.DrawBox(textEntryInput.Position.Advance(-1, -1), textEntryInput.Position.Advance(textEntryInput.Size.Width, 1), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 	}
 
@@ -65,7 +67,7 @@ public class NumberPromptDialog : Dialog
 	{
 		Dialog.Destroy();
 
-		if (int.TryParse(textEntryInput.Text, out var n))
+		if (int.TryParse(textEntryInput!.Text, out var n))
 			Finish?.Invoke(n);
 	}
 }

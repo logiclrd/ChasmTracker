@@ -3,6 +3,7 @@ using System;
 namespace ChasmTracker.Pages;
 
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public class PatternSnap
 {

@@ -1,9 +1,8 @@
-using System.Security.Cryptography.X509Certificates;
+namespace ChasmTracker.Dialogs;
+
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
-using X11;
-
-namespace ChasmTracker.Dialogs;
 
 public class SamplePromptDialog : NumberPromptDialog
 {

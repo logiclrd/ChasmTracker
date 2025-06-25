@@ -14,6 +14,11 @@ public class FileList
 
 	public int NumFiles => _files.Count;
 
+	public void Clear()
+	{
+		_files.Clear();
+	}
+
 	public void RemoveAt(int fileIndex)
 	{
 		_files.RemoveAt(fileIndex);

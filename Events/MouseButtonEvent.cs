@@ -1,5 +1,7 @@
 namespace ChasmTracker.Events;
 
+using ChasmTracker.Input;
+
 public class MouseButtonEvent : MouseEvent, IButtonPressEvent
 {
 	public MouseButtonEventType EventType;

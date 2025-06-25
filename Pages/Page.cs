@@ -178,9 +178,9 @@ public abstract class Page
 	 * (this is called *very* frequently) */
 	public virtual void PlaybackUpdate() { }
 	/* this gets first shot at keys (to do unnatural overrides) */
-	public virtual bool PreHandleKey(KeyEvent k) { return false; }
+	public virtual bool? PreHandleKey(KeyEvent k) { return false; }
 	/* this catches any keys that the main handler doesn't deal with */
-	public virtual bool HandleKey(KeyEvent k) { return false; }
+	public virtual bool? HandleKey(KeyEvent k) { return false; }
 	/* handle any text input events from SDL */
 	public virtual void HandleTextInput(string textInput) { }
 	/* called when the page is set. this is for reloading the
