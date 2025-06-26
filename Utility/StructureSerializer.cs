@@ -11,6 +11,16 @@ public static class StructureSerializer
 			return Marshal.PtrToStructure<T>((IntPtr)dataPointer)!;
 	}
 
+	public static unsafe T MarshalFromBytes<T>(byte[] data, int dataLength)
+		where T : struct
+	{
+		if (dataLength < Marshal.SizeOf<T>())
+			return default;
+
+		fixed (byte* dataPointer = &data[0])
+			return Marshal.PtrToStructure<T>((IntPtr)dataPointer)!;
+	}
+
 	public static unsafe byte[] MarshalToBytes<T>(T structure)
 		where T : notnull
 	{

@@ -3,24 +3,15 @@ using System.IO;
 
 namespace ChasmTracker.FileTypes;
 
+using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
 public abstract class SampleFileConverter
 {
-	// public abstract SongSample LoadSample(Stream stream);
-	// public abstract void SaveSong(Song song);
-
-	static readonly short[] ByteSwap;
-
-	static SampleFileConverter()
-	{
-		ByteSwap = new short[65536];
-
-		for (int i = 0; i < 256; i++)
-			for (int j = 0; j < 256; j++)
-				ByteSwap[i + j << 8] = unchecked((short)(i << 8 + j));
-	}
+	public abstract void ReadInfo(Stream stream, FileReference file);
+	public abstract SongSample LoadSample(Stream stream);
+	//public abstract void SaveSample(SongSample sample);
 
 	public static int ReadSample(SongSample sample, SampleFormat flags, Stream fp)
 	{
@@ -267,7 +258,7 @@ public abstract class SampleFileConverter
 				if ((flags & SampleFormat.EndiannessMask) == SampleFormat.BigEndian)
 				{
 					for (int i = 0; i < data.Count; i++)
-						data[i] = ByteSwap[unchecked((ushort)data[i])];
+						data[i] = ByteSwap.Swap(data[i]);
 				}
 
 				bool delta = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMDeltaEncoded;
@@ -329,7 +320,7 @@ public abstract class SampleFileConverter
 							Buffer.BlockCopy(rawData, o + o, data.Array!, 2 * data.Offset + p, 2);
 
 							if (bswap)
-								data[p] = ByteSwap[unchecked((ushort)data[p])];
+								data[p] = ByteSwap.Swap(data[p]);
 						}
 				}
 
