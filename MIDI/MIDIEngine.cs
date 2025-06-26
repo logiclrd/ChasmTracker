@@ -53,6 +53,7 @@ public class MIDIEngine : IMIDISink
 	public static int Amplification = 100;
 	public static int C5Note = 60;
 
+	public static int[] BendHit = new int[Constants.MaxChannels];
 	public static int[] LastBendHit = new int[Constants.MaxChannels];
 
 	static int s_midiBytesPerMillisecond;
@@ -198,7 +199,7 @@ public class MIDIEngine : IMIDISink
 		return r;
 	}
 
-	static void QueueAlloc(int bufferLength, int sampleSize, int samplesPerSecond)
+	public static void QueueAlloc(int bufferLength, int sampleSize, int samplesPerSecond)
 	{
 		// bytes per millisecond, rounded up
 		s_midiBytesPerMillisecond = sampleSize * samplesPerSecond;

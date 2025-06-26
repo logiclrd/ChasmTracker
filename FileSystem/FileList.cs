@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using ChasmTracker.Utility;
 
 namespace ChasmTracker.FileSystem;
 
@@ -24,7 +25,24 @@ public class FileList
 		_files.RemoveAt(fileIndex);
 	}
 
-	public int SelectedIndex;
+	public SharedInt SelectedIndexRef = new SharedInt();
+
+	public int SelectedIndex
+	{
+		get => SelectedIndexRef;
+		set => SelectedIndexRef.Value = value;
+	}
+
+	public void SelectFileByName(string? fileName)
+	{
+		if (fileName == null)
+			return;
+
+		SelectedIndex = _files.FindIndex(reference => reference.BaseName == fileName);
+
+		if (SelectedIndex < 0)
+			SelectedIndex = 0;
+	}
 
 	public int AddFile(string fullPath, int sortOrder)
 		=> AddFile(new FileReference(fullPath, sortOrder));

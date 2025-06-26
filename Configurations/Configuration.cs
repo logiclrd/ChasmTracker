@@ -7,8 +7,6 @@ namespace ChasmTracker.Configurations;
 
 public class Configuration
 {
-	public static string ConfigurationDirectoryDotSchism = ""; /* the full path to ~/.schism */
-
 	public static VideoConfiguration Video = new VideoConfiguration();
 	public static BackupsConfiguration Backups = new BackupsConfiguration();
 	public static GeneralConfiguration General = new GeneralConfiguration();
@@ -30,21 +28,21 @@ public class Configuration
 
 			if (Directory.Exists(fullPath))
 			{
-				ConfigurationDirectoryDotSchism = fullPath;
+				Directories.DotSchism = fullPath;
 				return;
 			}
 		}
 
-		ConfigurationDirectoryDotSchism = Path.Combine(
+		Directories.DotSchism = Path.Combine(
 			dotDirectory,
 			Paths.EnumerateDotFolders().First());
 
-		Console.WriteLine("Creating directory {0}", ConfigurationDirectoryDotSchism);
+		Console.WriteLine("Creating directory {0}", Directories.DotSchism);
 		Console.WriteLine("Chasm Tracker uses this directory to store your settings.");
 
 		try
 		{
-			Directory.CreateDirectory(ConfigurationDirectoryDotSchism);
+			Directory.CreateDirectory(Directories.DotSchism);
 		}
 		catch (Exception e)
 		{

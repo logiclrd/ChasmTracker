@@ -1,6 +1,6 @@
 using System;
 
-namespace ChasmTracker.Songs;
+namespace ChasmTracker.Playback;
 
 [Flags]
 public enum AudioPlaybackMode

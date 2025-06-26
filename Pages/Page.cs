@@ -190,6 +190,12 @@ public abstract class Page
 	/* called when the song-mode changes */
 	public virtual void NotifySongModeChanged() { }
 
+	public static void NotifySongModeChangedGlobal()
+	{
+		foreach (var page in AllPages.EnumeratePages())
+			page.NotifySongModeChanged();
+	}
+
 	/* called by the clipboard manager */
 	public virtual bool ClipboardPaste(int cb, byte[] cptr) { return false; }
 
@@ -471,7 +477,7 @@ public abstract class Page
 		/* okay... */
 		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
 		{
-			if (Status.CurrentPage.PreHandleKey(k))
+			if (Status.CurrentPage.PreHandleKey(k) ?? true)
 				return;
 		}
 

@@ -1,15 +1,81 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace ChasmTracker.FileSystem;
 
+using System.Linq;
+using System.Text;
+using System.Threading;
+using ChasmTracker.Playback;
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
+
 public class DirectoryScanner
 {
+	public static int CurrentFile = 0;
+	public static FileList? CurrentFileList = null;
+	public static Func<FileReference, bool>? CurrentFilter = null;
+	public static SharedInt? CurrentFilePointer = null;
+	public static Action? OnMove = null;
+
+	// dmoz_filter_filelist
+	public static void SetAsynchronousFileListParameters(FileList fileList, Func<FileReference, bool> grep, SharedInt pointer, Action? fn = null)
+	{
+		CurrentFileList = fileList;
+		CurrentFilter = grep;
+		CurrentFile = 0;
+		CurrentFilePointer = pointer;
+		OnMove = fn;
+	}
+
+	// thunk
+	public static bool FillExtendedData(FileReference reference)
+		=> reference.FillExtendedData();
+
+	// dmoz_worker
+	// this is called by main to actually do some dmoz work. returns 0 if there is no dmoz work to do...
+	public static bool TakeAsynchronousFileListStep()
+	{
+		if ((CurrentFileList == null) || (CurrentFilter == null))
+			return false;
+
+		if (CurrentFile >= CurrentFileList.NumFiles)
+		{
+			CurrentFileList = null;
+			CurrentFilter = null;
+			OnMove?.Invoke();
+			return false;
+		}
+
+		if (!CurrentFilter(CurrentFileList[CurrentFile]))
+		{
+			CurrentFileList.RemoveAt(CurrentFile);
+
+			if (CurrentFilePointer != null)
+			{
+				if (CurrentFilePointer >= CurrentFile)
+				{
+					CurrentFilePointer.Value--;
+					OnMove?.Invoke();
+				}
+
+				if (CurrentFilePointer >= CurrentFileList.NumFiles)
+				{
+					CurrentFilePointer.Value = CurrentFileList.NumFiles - 1;
+					OnMove?.Invoke();
+				}
+			}
+
+			Status.Flags |= StatusFlags.NeedUpdate;
+		}
+		else
+			CurrentFile++;
+
+		return true;
+	}
+
 	public static void AddPlatformDirs(FileList fileList, DirectoryList? dirList)
 	{
 		void Add(string fullPath, int sortOrder)
@@ -119,7 +185,7 @@ public class DirectoryScanner
 	}
 
 	// dmoz_read
-	public static bool Populate(string directory, FileList fileList, DirectoryList? dirList = null, Action<string, FileList, DirectoryList?> loadLibrary = null)
+	public static bool Populate(string directory, FileList fileList, DirectoryList? dirList = null, Action<string, FileList, DirectoryList?>? loadLibrary = null)
 	{
 		int _;
 
@@ -168,5 +234,227 @@ public class DirectoryScanner
 	public static void Sort(FileList fileList, DirectoryList? dirList)
 	{
 		fileList.Sort();
+	}
+
+	static Song? s_library = null;
+
+	public static void ReadSampleLibraryThunk(string path, FileList flist, DirectoryList? dlist)
+	{
+		ReadSampleLibrary(path, flist, dlist);
+	}
+
+	public static bool ReadSampleLibrary(string path, FileList flist, DirectoryList? dlist)
+	{
+		// XXX: just [0] ??
+		if (Song.CurrentSong.Samples[0] is SongSample firstSample)
+			AudioPlayback.StopSample(Song.CurrentSong, firstSample);
+
+		if (s_library != null)
+		{
+			// s_library.Destroy();
+			s_library = null;
+		}
+
+		string @base = Path.GetFileName(path);
+
+		try
+		{
+			/* ask what type of file we have
+			* FIXME use slurp and read info funcs manually */
+			var infoFile = new FileReference(path);
+
+			infoFile.FileSize = new FileInfo(path).Length;
+
+			infoFile.FillExtendedData();
+
+			if (infoFile.Type.HasAnyFlag(FileTypes.ModuleMask))
+				s_library = Song.Load(path);
+			else if (infoFile.Type.HasAnyFlag(FileTypes.InstrumentMask))
+			{
+				s_library = new Song();
+
+				s_library.LoadInstrument(1, path);
+			}
+			else
+				return false;
+		}
+		catch (Exception e)
+		{
+			Log.AppendException(e);
+			return false;
+		}
+
+		if (s_library == null)
+			return false;
+
+		for (int n = 1; n < s_library.Samples.Count; n++)
+		{
+			if ((s_library.Samples[n] is SongSample sample) && (sample.Length > 0))
+			{
+				sample.Name = sample.Name.Replace('\0', ' ');
+
+				var file = new FileReference(path, @base, n);
+
+				file.Type = FileTypes.SampleExtended;
+				file.Description = "Impulse Tracker Sample"; /* FIXME: this lies for XI and PAT */
+				file.FileSize = sample.Length * (sample.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1) * (sample.Flags.HasFlag(SampleFlags._16Bit) ? 2 : 1);
+				file.SampleSpeed = sample.C5Speed;
+				file.SampleLoopStart = sample.LoopStart;
+				file.SampleLoopEnd = sample.LoopEnd;
+				file.SampleSustainStart = sample.SustainStart;
+				file.SampleSustainEnd = sample.SustainEnd;
+				file.SampleLength = sample.Length;
+				file.SampleFlags = sample.Flags;
+				file.SampleDefaultVolume = sample.Volume >> 2;
+				file.SampleGlobalVolume = sample.GlobalVolume;
+				file.SampleVibratoSpeed = sample.VibratoSpeed;
+				file.SampleVibratoDepth = sample.VibratoDepth;
+				file.SampleVibratoRate = sample.VibratoDepth;
+
+				// don't screw this up...
+				if ((sample.Name.Length > 23) && (sample.Name[23] == 0xFF))
+					sample.Name = sample.Name.Substring(0, 23) + ' ' + sample.Name.Substring(23);
+
+				file.Title = sample.Name;
+				file.Sample = sample;
+
+				flist.AddFile(file);
+			}
+		}
+
+		return true;
+	}
+
+	class Cache
+	{
+		public Cache? Next;
+		public string? Path;
+		public string? CacheFileName;
+		public string? CacheDirectoryName;
+	}
+
+	static Cache s_cacheTop = null;
+
+	public static void CacheUpdate(string path, FileList? fl, DirectoryList? dl)
+	{
+		string? fn = null;
+		string? dn = null;
+
+		if ((fl != null) && (fl.SelectedIndex > -1) && (fl.SelectedIndex < fl.NumFiles))
+			fn = fl[fl.SelectedIndex].BaseName;
+
+		if ((dl != null) && (dl.SelectedIndex > -1) && (dl.SelectedIndex < dl.NumDirectories))
+			dn = dl[dl.SelectedIndex].BaseName;
+
+		CacheUpdateNames(path, fn, dn);
+	}
+
+	public static void CacheUpdateNames(string path, string? filen, string? dirn)
+	{
+		filen = Path.GetFileName(filen);
+		dirn = Path.GetFileName(dirn);
+
+		if (filen == "..")
+			filen = null;
+		if (dirn == "..")
+			dirn = null;
+
+		for (Cache? p = s_cacheTop, lp = null; p != null; lp = p, p = p.Next)
+		{
+			if (p.Path == path)
+			{
+				if (filen != null)
+					p.CacheFileName = filen;
+				if (dirn != null)
+					p.CacheDirectoryName = dirn;
+
+				if (lp != null)
+				{
+					lp.Next = p.Next;
+					/* !lp means we're already cache_top */
+					p.Next = s_cacheTop;
+					s_cacheTop = p;
+				}
+
+				return;
+			}
+		}
+
+		var np = new Cache();
+		np.Path = path;
+		np.CacheFileName = filen;
+		np.CacheDirectoryName = dirn;
+		np.Next = s_cacheTop;
+		s_cacheTop = np;
+	}
+
+	public static void CacheLookup(string path, FileList? fl, DirectoryList? dl)
+	{
+		if (fl != null)
+			fl.SelectedIndex = 0;
+		if (dl != null)
+			dl.SelectedIndex = 0;
+
+		for (var p = s_cacheTop; p != null; p = p.Next)
+		{
+			if (p.Path == path)
+			{
+				fl?.SelectFileByName(p.CacheFileName);
+				dl?.SelectDirectoryByName(p.CacheDirectoryName);
+				break;
+			}
+		}
+	}
+
+	/* Normalize a path (remove /../ and stuff, condense multiple slashes, etc.)
+	this will return NULL if the path could not be normalized (not well-formed?).
+	the returned string must be free()'d. */
+	/* This function should:
+		- strip out any parent directory references ("/sheep/../goat" => "/goat")
+		- switch slashes to backslashes for MS systems ("c:/winnt" => "c:\\winnt")
+		- condense multiple slashes into one ("/sheep//goat" => "/sheep/goat")
+		- remove any trailing slashes
+	*/
+	public static string NormalizePath(string path)
+	{
+		var builder = new StringBuilder();
+
+		if (Path.IsPathRooted(path))
+			builder.Append(Path.GetPathRoot(path));
+
+		var componentList = path
+			.Replace('\\', '/')
+			.TrimEnd('/')
+			.Split('/', StringSplitOptions.RemoveEmptyEntries)
+			.ToList();
+
+		for (int i = 0; i < componentList.Count; i++)
+		{
+			if (componentList[i] == "..")
+			{
+				componentList.RemoveAt(i);
+				if (i > 0)
+					componentList.RemoveAt(i - 1);
+
+				i--;
+			}
+		}
+
+		if (componentList.Any())
+		{
+			foreach (var component in componentList)
+				builder.Append(component).Append('/');
+
+			builder.Length--;
+		}
+
+		if (Path.DirectorySeparatorChar == '\\')
+		{
+			for (int i = 0; i < builder.Length; i++)
+				if (builder[i] == '/')
+					builder[i] = '\\';
+		}
+
+		return builder.ToString();
 	}
 }

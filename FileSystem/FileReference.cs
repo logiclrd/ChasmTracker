@@ -50,6 +50,12 @@ public class FileReference : Reference, IComparable<FileReference> // dmoz_file
 	const string TitleDirectory = "\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a" +
 		"Directory\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a";
 
+	public FileReference(string fullPath)
+		: this(fullPath, 0)
+	{
+
+	}
+
 	public FileReference(string fullPath, string baseName, int sortOrder)
 		: this(fullPath, sortOrder)
 	{

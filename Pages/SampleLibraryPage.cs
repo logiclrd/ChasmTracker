@@ -1,12 +1,10 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
-using ChasmTracker.Widgets;
-
-public class AboutP1age : Page
+public class SampleLibraryPage : SampleFileListPageBase
 {
-	public AboutP1age()
-		: base("About", PageNumbers.About)
+	public override void SetPage()
 	{
-
+		SetLibraryMode(true);
+		CommonSetPage();
 	}
 }

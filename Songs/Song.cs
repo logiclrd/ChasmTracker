@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace ChasmTracker.Songs;
 
-using System.Reflection.Metadata;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
+using ChasmTracker.Playback;
 using ChasmTracker.Utility;
 
 public class Song
@@ -43,6 +44,11 @@ public class Song
 	static Random s_rnd = new Random();
 
 	public static int CurrentTick => TickCount % CurrentSpeed;
+
+	public static void InitializeMIDI(IMIDISink midiSink)
+	{
+		s_midiSink = midiSink;
+	}
 
 	public static void SetCurrentOrder(int newValue)
 	{
@@ -321,7 +327,7 @@ public class Song
 	public int[] MIDIWasBankLo = new int[Constants.MaxMIDIChannels];
 	public int[] MIDIWasBankHi = new int[Constants.MaxMIDIChannels];
 
-	// TODO: const song_note_t *midi_last_row[Constants.MaxChannels];
+	public SongNoteRef[] MIDILastRow = new SongNoteRef[Constants.MaxChannels];
 	public int MIDILastRowNumber;
 
 	public bool MIDIPlaying;
@@ -417,7 +423,7 @@ public class Song
 
 	public SongSample? GetSample(int n)
 	{
-		if (n > Constants.MaxSamples)
+		if (n > Samples.Count)
 			return null;
 
 		return Samples[n];
@@ -489,6 +495,25 @@ public class Song
 
 		return pattern?.Rows.Count
 			?? ((n >= Constants.MaxPatterns) ? 0 : Constants.DefaultPatternLength);
+	}
+
+	/* search the orderlist for a pattern, starting at the current order.
+	return value of -1 means the pattern isn't on the list */
+	public int GetNextOrderForPattern(int pat)
+	{
+		int ord = CurrentOrder;
+
+		ord = ord.Clamp(0, 255);
+
+		for (int i = ord; i < 255; i++)
+			if (OrderList[i] == pat)
+				return i;
+
+		for (int i = 0; i < ord; i++)
+			if (OrderList[i] == pat)
+				return i;
+
+		return -1;
 	}
 
 	public SongChannel? GetChannel(int n)
@@ -896,6 +921,39 @@ public class Song
 
 		// get the values on the page to correspond to the song...
 		AllPages.OrderListPanning.NotifySongChanged();
+	}
+
+	// ------------------------------------------------------------------------------------------------------------
+
+	public void ResetPlaymarks()
+	{
+		for (int n = 0; n < Samples.Count; n++)
+			if (Samples[n] is SongSample sample)
+				sample.IsPlayed = false;
+
+		for (int n = 0; n < Instruments.Count; n++)
+			if (Instruments[n] is SongInstrument instrument)
+				instrument.IsPlayed = false;
+	}
+
+	public void LoopPattern(int pat, int row)
+	{
+		if (pat < 0 || pat >= Patterns.Count || !(Patterns[pat] is Pattern pattern))
+			Flags &= ~SongFlags.PatternLoop;
+		else
+		{
+			if (row < 0 || row >= pattern.Rows.Count)
+				row = 0;
+
+			ProcessOrder = 0; // hack - see increment_order in sndmix.c
+			ProcessRow = ProcessNextOrder;
+			BreakRow = row;
+			TickCount = 1;
+			RowCount = 0;
+			CurrentPattern = pat;
+			BufferCount = 0;
+			Flags |= SongFlags.PatternLoop;
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------------------
@@ -2382,7 +2440,8 @@ public class Song
 			chan.Flags &= ~ChannelFlags.KeyOff;
 
 		// Enable Ramping
-		if (!porta) {
+		if (!porta)
+		{
 			//chan.VUMeter = 0x0;
 			chan.Strike = 4; /* this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows) */
 			chan.Flags &= ~ChannelFlags.Filter;
@@ -2423,7 +2482,7 @@ public class Song
 			case Effects.Volume:
 				if (!Flags.HasFlag(SongFlags.FirstTick))
 					break;
-				chan.Volume = (param < 64) ? param*4 : 256;
+				chan.Volume = (param < 64) ? param * 4 : 256;
 				chan.Flags |= ChannelFlags.FastVolumeRamp;
 				break;
 
@@ -2625,7 +2684,7 @@ public class Song
 				break;
 
 			case Effects.PositionJump:
-				if (!AudioPlayback.Flags.HasFlag(MixFlags.NoBackwardJumps) || ProcessOrder < param)
+				if (!AudioPlayback.MixFlags.HasFlag(MixFlags.NoBackwardJumps) || ProcessOrder < param)
 					ProcessOrder = param - 1;
 				ProcessRow = ProcessNextOrder;
 				break;
@@ -2768,7 +2827,7 @@ public class Song
 	/* firstTick is only used for SDx at the moment */
 	public void ProcessEffects(bool firstTick)
 	{
-		for (int nchan=0; nchan < Constants.MaxChannels; nchan++)
+		for (int nchan = 0; nchan < Constants.MaxChannels; nchan++)
 		{
 			ref var chan = ref Voices[nchan];
 
@@ -2932,7 +2991,8 @@ public class Song
 				}
 
 				// Note Cut/Off/Fade => ignore instrument
-				if (SongNote.IsControl(note) || (note != SpecialNotes.None && !portamento)) {
+				if (SongNote.IsControl(note) || (note != SpecialNotes.None && !portamento))
+				{
 					/* This is required when the instrument changes (KeyOff is not called) */
 					/* Possibly a better bugfix could be devised. --Bisqwit */
 					if (chan.Flags.HasFlag(ChannelFlags.Adlib))
@@ -3406,6 +3466,108 @@ public class Song
 		KeyJazz.UnlinkNoteAndChannel(note, chan);
 
 		return KeyDownEx(samp, ins, SpecialNotes.NoteOff, KeyJazz.DefaultVolume, chan, Effects.None, 0);
+	}
+
+	public static Song? CreateLoad(string file)
+	{
+	}
+
+	public void FixNames()
+	{
+		Title = Title.Fix();
+
+		foreach (var sample in Samples)
+			if (sample != null)
+			{
+				sample.Name = sample.Name.Fix();
+				sample.FileName = sample.FileName.Fix();
+			}
+
+		foreach (var instrument in Instruments)
+			if (instrument != null)
+			{
+				instrument.Name = instrument.Name.Fix();
+				instrument.FileName = instrument.FileName.Fix();
+			}
+	}
+
+	public static Song? Load(string file)
+	{
+		string @base = Path.GetFileName(file);
+
+		bool wasPlaying;
+
+		// IT stops the song even if the new song can't be loaded
+		if (Status.Flags.HasFlag(StatusFlags.PlayAfterLoad))
+			wasPlaying = (AudioPlayback.Mode == AudioPlaybackMode.Playing);
+		else
+		{
+			wasPlaying = false;
+			AudioPlayback.Stop();
+		}
+
+		Log.AppendNewLine();
+		Log.Append(2, "Loading {0}", @base);
+		Log.AppendUnderline(@base.Length + 8);
+
+		Song? newSong;
+
+		try
+		{
+			newSong = CreateLoad(file);
+		}
+		catch (Exception e)
+		{
+			Log.AppendException(e);
+			return null;
+		}
+
+		if (newSong == null)
+		{
+			Log.Append(4, " song failed to load");
+			return null;
+		}
+
+		AudioPlayback.SetFileName(file);
+
+		AudioPlayback.LockAudio();
+
+		Song.CurrentSong = newSong;
+
+		Song.RepeatCount = 0;
+
+		AudioPlayback.MaxChannelsUsed = 0;
+
+		newSong.FixNames();
+
+		AudioPlayback.StopUnlocked(false);
+		AudioPlayback.InitializeModPlug();
+		AudioPlayback.UnlockAudio();
+
+		if (wasPlaying && Status.Flags.HasFlag(StatusFlags.PlayAfterLoad))
+			AudioPlayback.Start();
+
+		Page.NotifySongChangedGlobal();
+
+		Status.Flags &= ~StatusFlags.SongNeedsSave;
+
+		// print out some stuff
+		string tid = newSong.TrackerID;
+
+		string fmt = " {0} patterns, {1} samples, {2} instruments";
+
+		int nSmp = newSong.Samples.Where(s => (s != null) && s.HasData).Count();
+		int nIns = newSong.Instruments.Where(i => i != null).Count();
+
+		if (!string.IsNullOrWhiteSpace(tid))
+			Log.Append(5, " {0}", tid);
+
+		if (nIns == 0)
+			fmt = " {0} patterns, {1} samples"; // cut off 'instruments'
+
+		Log.Append(5, fmt, newSong.Patterns.Count, nSmp, nIns);
+
+		return newSong;
 	}
 }
 

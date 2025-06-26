@@ -70,6 +70,11 @@ public class Video
 		s_backend.SetInputGrabbed(newValue);
 	}
 
+	public static void SetMouseCursor(MouseCursorMode cursor)
+	{
+		// TODO
+	}
+
 	public static void SetMouseCursorState(MouseCursorState vis)
 	{
 		switch (vis)

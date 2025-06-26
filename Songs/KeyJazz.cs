@@ -1,3 +1,5 @@
+using System;
+
 namespace ChasmTracker.Songs;
 
 public static class KeyJazz
@@ -19,6 +21,12 @@ public static class KeyJazz
 	fairly unlikely scenario that you'd have to TRY to bring about. */
 	static int[] s_noteToChannel = new int[SpecialNotes.Last + 1];
 	static int[] s_channelToNote = new int[Constants.MaxChannels + 1];
+
+	public static void ResetChannelNoteMappings()
+	{
+		Array.Clear(s_noteToChannel);
+		Array.Clear(s_channelToNote);
+	}
 
 	public static int GetLastChannelForNote(int note)
 	{

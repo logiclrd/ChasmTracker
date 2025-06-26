@@ -13,6 +13,7 @@ using ChasmTracker.Memory;
 using ChasmTracker.Menus;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
@@ -587,7 +588,7 @@ public class Program
 			}
 
 			// Initialize modplug only
-			Song.InitializeModPlug();
+			AudioPlayback.InitializeModPlug();
 
 			// Load and export song
 			if (Song.LoadUnchecked(args.InitialSong))
@@ -636,21 +637,21 @@ public class Program
 		Font.Initialize();
 		MIDIEngine.Start();
 		Audio.Initialize(audio_driver, audio_device);
-		Song.InitializeModPlug();
+		AudioPlayback.InitializeModPlug();
 
-		Video.MouseCursor(Configuration.Video.MouseCursor);
+		Video.SetMouseCursor(Configuration.Video.MouseCursor);
 		Status.FlashText(" "); /* silence the mouse cursor message */
 
-		Page.NotifySongChanged();
+		Page.NotifySongChangedGlobal();
 
 		if ((args.InitialSong != null) && (args.InitialDirectory == null))
 			args.InitialDirectory = Path.GetDirectoryName(Path.GetFullPath(args.InitialSong!));
 
 		if (args.InitialDirectory != null)
 		{
-			Configuration.Files.ModulesDirectory = args.InitialDirectory;
-			Configuration.Files.SamplesDirectory = args.InitialDirectory;
-			Configuration.Files.InstrumentsDirectory = args.InitialDirectory;
+			Configuration.Directories.ModulesDirectory = args.InitialDirectory;
+			Configuration.Directories.SamplesDirectory = args.InitialDirectory;
+			Configuration.Directories.InstrumentsDirectory = args.InitialDirectory;
 		}
 
 		if (args.StartupFlags.HasFlag(StartupFlags.FontEdit))
@@ -662,8 +663,12 @@ public class Program
 		{
 			Page.SetPage(PageNumbers.Log);
 
-			if (Song.LoadUnchecked(args.InitialSong))
+			var song = Song.Load(args.InitialSong);
+
+			if (song != null)
 			{
+				Song.CurrentSong = song;
+
 				if (args.DiskwriteTo != null)
 				{
 					// make a guess?
@@ -681,7 +686,7 @@ public class Program
 				}
 				else if (args.StartupFlags.HasFlag(StartupFlags.Play))
 				{
-					Song.Start();
+					AudioPlayback.Start();
 					Page.SetPage(PageNumbers.Info);
 				}
 			}

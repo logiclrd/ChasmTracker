@@ -225,4 +225,12 @@ public static class StringExtensions
 		else
 			return -1;
 	}
+
+	public static string Fix(this string? str)
+	{
+		if (str == null)
+			return "";
+		else
+			return str.Replace('\0', ' ').TrimEnd();
+	}
 }

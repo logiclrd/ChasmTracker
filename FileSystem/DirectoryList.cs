@@ -13,6 +13,17 @@ public class DirectoryList
 
 	public int NumDirectories => _directories.Count;
 
+	public void SelectDirectoryByName(string? directoryName)
+	{
+		if (directoryName == null)
+			return;
+
+		SelectedIndex = _directories.FindIndex(reference => reference.BaseName == directoryName);
+
+		if (SelectedIndex < 0)
+			SelectedIndex = 0;
+	}
+
 	public void RemoveAt(int dirIndex)
 	{
 		_directories.RemoveAt(dirIndex);

@@ -185,9 +185,19 @@ public class PatternEditorPage : Page
 	bool _playbackTracing = false;     /* scroll lock */
 	bool _midiPlaybackTracing = false;
 
+	public bool PlaybackTracing
+	{
+		get => _playbackTracing;
+		set => _playbackTracing = value;
+	}
+
+	public bool MIDIPlaybackTracing
+	{
+		get => _midiPlaybackTracing;
+		set => _midiPlaybackTracing = value;
+	}
+
 	bool _panningMode = false;
-	int[] _midiBendHit = new int[64];
-	int[] _midiLastBendHit = new int[64];
 
 	/* these should fix the playback tracing position discrepancy */
 	int _playingRow = -1;
