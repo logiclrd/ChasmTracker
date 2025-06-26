@@ -3,13 +3,13 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ChasmTracker.FileTypes;
+namespace ChasmTracker.FileTypes.Converters;
 
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public class _669 : FileConverter
+public class _669 : SongFileConverter
 {
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct Header669
@@ -330,7 +330,7 @@ public class _669 : FileConverter
 				if (song.Samples[smp]!.Length == 0)
 					continue;
 
-				ReadSample(song.Samples[smp]!, SampleFormat.LittleEndian | SampleFormat.Mono | SampleFormat.PCMUnsigned | SampleFormat._8, stream);
+				SampleFileConverter.ReadSample(song.Samples[smp]!, SampleFormat.LittleEndian | SampleFormat.Mono | SampleFormat.PCMUnsigned | SampleFormat._8, stream);
 			}
 		}
 

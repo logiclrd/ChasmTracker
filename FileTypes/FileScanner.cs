@@ -7,10 +7,10 @@ namespace ChasmTracker.FileTypes;
 
 public class FileScanner
 {
-	static FileConverter[] s_converters =
+	static SongFileConverter[] s_converters =
 		typeof(FileScanner).Assembly.GetTypes()
-		.Where(t => typeof(FileConverter).IsAssignableFrom(t))
-		.Select(t => (FileConverter)Activator.CreateInstance(t)!)
+		.Where(t => typeof(SongFileConverter).IsAssignableFrom(t))
+		.Select(t => (SongFileConverter)Activator.CreateInstance(t)!)
 		.ToArray();
 
 	public static FillResult FillExtendedData(FileReference fileReference)
