@@ -393,9 +393,9 @@ public class Dialog
 			ref var next = ref Widgets[i].Next;
 
 			if ((next.BackTab == null) && (i > 0))
-				next.BackTab = Widgets[i - 1];
+				next.BackTab = Widgets.FindPreviousWithLoop(i - 1, w => w.IsTabStop);
 			if ((next.Tab == null) && (i + 1 < Widgets.Count))
-				next.Tab = Widgets[i + 1];
+				next.Tab = Widgets.FindNextWithLoop(i + 1, w => w.IsTabStop);
 
 			Widget? Search(int dx, int dy, int expandX, int expandY)
 			{
@@ -438,6 +438,9 @@ public class Dialog
 							continue;
 
 						var other = Widgets[j];
+
+						if (other.Size.IsEmpty)
+							continue;
 
 						if (Intersects(other))
 						{

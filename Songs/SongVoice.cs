@@ -30,7 +30,7 @@ public struct SongVoice
 	public int LeftRampVolume; // ?
 	public int Strike; // decremented to zero. this affects how long the initial hit on the playback marks lasts (bigger dot in instrument and sample list windows)
 
-	public int FilterY1, FilterY2, FilterY3, FilterY4;
+	public int FilterY00, FilterY01, FilterY10, FilterY11;
 	public int FilterA0, FilterB0, FilterB1;
 
 	public int ROfs, LOfs; // ?

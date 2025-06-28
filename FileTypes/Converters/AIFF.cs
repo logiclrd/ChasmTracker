@@ -1,10 +1,10 @@
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ChasmTracker.FileTypes.Converters;
 
-using System;
-using System.Text;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -345,9 +345,17 @@ public class AIFF : SampleFileConverter
 		return null;
 	}
 
-	public override void ReadInfo(Stream stream, FileReference file)
+	public override bool ReadInfo(Stream stream, FileReference file)
 	{
-		ReadIFF(stream, file, false);
+		try
+		{
+			ReadIFF(stream, file, false);
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
 	}
 
 	public override SongSample LoadSample(Stream stream)

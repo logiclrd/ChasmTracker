@@ -33,6 +33,17 @@ public class FileList
 		set => SelectedIndexRef.Value = value;
 	}
 
+	public FileReference? SelectedFile
+	{
+		get
+		{
+			if ((SelectedIndex >= 0) && (SelectedIndex < NumFiles))
+				return this[SelectedIndex];
+			else
+				return null;
+		}
+	}
+
 	public void SelectFileByName(string? fileName)
 	{
 		if (fileName == null)

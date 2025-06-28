@@ -96,7 +96,7 @@ public class IFF
 		if (numRead == 0)
 			return 0;
 
-		return callback?.Invoke(buffer, numRead, userData) ?? 0;
+		return callback?.Invoke(buffer, numRead) ?? 0;
 	}
 
 	/* offset is the offset the sample is actually located in the chunk;

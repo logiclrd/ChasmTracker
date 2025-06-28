@@ -23,4 +23,6 @@ public struct Size
 
 	public static Size operator /(Size size, int divisor)
 		=> new Size(size.Width / divisor, size.Height / divisor);
+
+	public bool IsEmpty => (Width | Height) == 0;
 }

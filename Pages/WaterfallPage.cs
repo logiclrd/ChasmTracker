@@ -16,11 +16,6 @@ public class WaterfallPage : Page
 
 	VGAMemOverlay _ovl;
 
-	public override void SetPage()
-	{
-		base.SetPage();
-	}
-
 	/* Convert the output of */
 	static int DoBits(byte[] q, int qOffset, byte[] @in, int offset, int length, int y)
 	{

@@ -28,4 +28,10 @@ public class Constants
 	public const int MaxVoices = 256;
 
 	public const int DefaultPatternLength = 64;
+
+	public const int MixingAttenuation = 5;
+	public const int MixingClipMin = -0x04000000;
+	public const int MixingClipMax = 0x03FFFFFF;
+	public const int VolumeRampPrecision = 12;
+	public const int FilterPrecision = (sizeof(int) * 8) - 8; /* faithfully stolen from openmpt */
 }

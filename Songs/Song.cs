@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
+using ChasmTracker.FileTypes;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Playback;
@@ -14,27 +15,25 @@ public class Song
 {
 	public static Song CurrentSong = new Song();
 
-	static int s_currentOrder;
 	static IMIDISink? s_midiSink;
 
-	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
-	public static int MixStat; // number of channels being mixed (not really used)
-	public static int BufferCount; // number of samples to mix per tick
-	public static int TickCount;
-	public static int FrameDelay;
-	public static int RowCount; /* IMPORTANT needs to be signed */
-	public static int CurrentSpeed;
-	public static int CurrentTempo;
-	public static int ProcessRow;
-	public static int Row; // no analogue in pm.h? should be either renamed or factored out.
-	public static int BreakRow;
-	public static int CurrentPattern;
-	public static int ProcessOrder;
-	public static int CurrentGlobalVolume;
-	public static int MixingVolume;
-	public static int FreqFactor; // not used -- for tweaking the song speed LP-style (interesting!)
-	public static int TempoFactor; // ditto
-	public static int RepeatCount; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
+	public int NumVoices;// how many are currently playing. (POTENTIALLY larger than global MaxVoices)
+	public int BufferCount; // number of samples to mix per tick
+	public int TickCount;
+	public int FrameDelay;
+	public int RowCount; /* IMPORTANT needs to be signed */
+	public int CurrentSpeed;
+	public int CurrentTempo;
+	public int ProcessRow;
+	public int Row; // no analogue in pm.h? should be either renamed or factored out.
+	public int BreakRow;
+	public int CurrentPattern;
+	public int ProcessOrder;
+	public int CurrentGlobalVolume;
+	public int MixingVolume;
+	public int FreqFactor; // not used -- for tweaking the song speed LP-style (interesting!)
+	public int TempoFactor; // ditto
+	public int RepeatCount; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
 
 	// Nothing innately special about this -- just needs to be above the max pattern length.
 	// process row is set to this in order to get the player to jump to the end of the pattern.
@@ -43,112 +42,110 @@ public class Song
 
 	static Random s_rnd = new Random();
 
-	public static int CurrentTick => TickCount % CurrentSpeed;
+	public int CurrentTick => TickCount % CurrentSpeed;
 
 	public static void InitializeMIDI(IMIDISink midiSink)
 	{
 		s_midiSink = midiSink;
 	}
 
-	public static void SetCurrentOrder(int newValue)
+	public void SetCurrentOrder(int newValue)
 	{
-		AudioPlayback.LockAudio();
-		CurrentSong.CurrentOrder = newValue;
-		AudioPlayback.UnlockAudio();
+		lock (AudioPlayback.LockScope())
+			CurrentOrder = newValue;
 	}
 
 	// clear patterns => clear filename and save flag
 	// clear orderlist => clear title, message, and channel settings
 	public static void New(NewSongFlags flags)
 	{
-		AudioPlayback.LockAudio();
-
-		AudioPlayback.StopUnlocked(false);
-
-		Song newSong = new Song();
-
-		newSong.Flags = CurrentSong.Flags;
-
-		if (newSong.Flags.HasFlag(SongFlags.ITOldEffects))
+		lock (AudioPlayback.LockScope())
 		{
-			for (int i = 0; i < newSong.Voices.Length; i++)
-				newSong.Voices[i].VibratoPosition = 0x10;
-		}
+			AudioPlayback.StopUnlocked(false);
 
-		if (flags.HasFlag(NewSongFlags.KeepPatterns))
-		{
-			newSong.FileName = CurrentSong.FileName;
+			Song newSong = new Song();
 
-			Status.Flags &= ~StatusFlags.SongNeedsSave;
+			newSong.Flags = CurrentSong.Flags;
 
-			newSong.Patterns.AddRange(CurrentSong.Patterns);
-		}
-
-		if (flags.HasFlag(NewSongFlags.KeepSamples))
-		{
-			int i;
-
-			for (i = 0; (i < newSong.Samples.Count) && (i < CurrentSong.Samples.Count); i++)
-				newSong.Samples[i] = CurrentSong.Samples[i];
-
-			for (; i < CurrentSong.Samples.Count; i++)
-				newSong.Samples.Add(CurrentSong.Samples[i]);
-		}
-
-		if (flags.HasFlag(NewSongFlags.KeepInstruments))
-		{
-			int i;
-
-			for (i = 0; (i < newSong.Instruments.Count) && (i < CurrentSong.Instruments.Count); i++)
-				newSong.Instruments[i] = CurrentSong.Instruments[i];
-
-			for (; i < CurrentSong.Instruments.Count; i++)
-				newSong.Instruments.Add(CurrentSong.Instruments[i]);
-
-			var requireSamples = newSong.Instruments
-				.OfType<SongInstrument>() // where not null
-				.SelectMany(instrument => instrument.SampleMap)
-				.ToHashSet();
-
-			int maxSampleNumber = requireSamples.Max();
-
-			while (newSong.Samples.Count <= maxSampleNumber)
-				newSong.Samples.Add(null);
-
-			foreach (var sampleIndex in requireSamples)
-				newSong.Samples[sampleIndex] = CurrentSong.Samples[sampleIndex];
-		}
-
-		if (flags.HasFlag(NewSongFlags.KeepOrderList))
-		{
-			newSong.Title = CurrentSong.Title;
-			newSong.Message = CurrentSong.Message;
-
-			newSong.OrderList.Clear();
-			newSong.OrderList.AddRange(CurrentSong.OrderList);
-
-			for (int i = 0; i < Constants.MaxChannels; i++)
+			if (newSong.Flags.HasFlag(SongFlags.ITOldEffects))
 			{
-				newSong.Channels[i] = CurrentSong.Channels[i];
-				newSong.Voices[i] = CurrentSong.Voices[i];
+				for (int i = 0; i < newSong.Voices.Length; i++)
+					newSong.Voices[i].VibratoPosition = 0x10;
 			}
-		}
-		else
-		{
-			for (int i = 0; i < Constants.MaxChannels; i++)
+
+			if (flags.HasFlag(NewSongFlags.KeepPatterns))
 			{
-				newSong.Voices[i].Panning = newSong.Channels[i].Panning;
-				newSong.Voices[i].Flags = newSong.Channels[i].Flags;
+				newSong.FileName = CurrentSong.FileName;
+
+				Status.Flags &= ~StatusFlags.SongNeedsSave;
+
+				newSong.Patterns.AddRange(CurrentSong.Patterns);
 			}
+
+			if (flags.HasFlag(NewSongFlags.KeepSamples))
+			{
+				int i;
+
+				for (i = 0; (i < newSong.Samples.Count) && (i < CurrentSong.Samples.Count); i++)
+					newSong.Samples[i] = CurrentSong.Samples[i];
+
+				for (; i < CurrentSong.Samples.Count; i++)
+					newSong.Samples.Add(CurrentSong.Samples[i]);
+			}
+
+			if (flags.HasFlag(NewSongFlags.KeepInstruments))
+			{
+				int i;
+
+				for (i = 0; (i < newSong.Instruments.Count) && (i < CurrentSong.Instruments.Count); i++)
+					newSong.Instruments[i] = CurrentSong.Instruments[i];
+
+				for (; i < CurrentSong.Instruments.Count; i++)
+					newSong.Instruments.Add(CurrentSong.Instruments[i]);
+
+				var requireSamples = newSong.Instruments
+					.OfType<SongInstrument>() // where not null
+					.SelectMany(instrument => instrument.SampleMap)
+					.ToHashSet();
+
+				int maxSampleNumber = requireSamples.Max();
+
+				while (newSong.Samples.Count <= maxSampleNumber)
+					newSong.Samples.Add(null);
+
+				foreach (var sampleIndex in requireSamples)
+					newSong.Samples[sampleIndex] = CurrentSong.Samples[sampleIndex];
+			}
+
+			if (flags.HasFlag(NewSongFlags.KeepOrderList))
+			{
+				newSong.Title = CurrentSong.Title;
+				newSong.Message = CurrentSong.Message;
+
+				newSong.OrderList.Clear();
+				newSong.OrderList.AddRange(CurrentSong.OrderList);
+
+				for (int i = 0; i < Constants.MaxChannels; i++)
+				{
+					newSong.Channels[i] = CurrentSong.Channels[i];
+					newSong.Voices[i] = CurrentSong.Voices[i];
+				}
+			}
+			else
+			{
+				for (int i = 0; i < Constants.MaxChannels; i++)
+				{
+					newSong.Voices[i].Panning = newSong.Channels[i].Panning;
+					newSong.Voices[i].Flags = newSong.Channels[i].Flags;
+				}
+			}
+
+			CurrentSong = newSong;
+
+			CurrentSong.ForgetHistory();
 		}
 
-		CurrentSong = newSong;
-
-		CurrentSong.ForgetHistory();
-
-		AudioPlayback.UnlockAudio();
-
-		// TODO: Program.SongChanged(); ?    main_song_changed_cb();
+		Page.NotifySongChangedGlobal();
 	}
 
 	void ForgetHistory()
@@ -176,6 +173,65 @@ public class Song
 	{
 		for (int n = 0; n < 64; n++)
 			SetChannelMute(n, _savedChannelMutedStates[n]);
+	}
+
+	// Simple 2-poles resonant filter
+	//
+	// XXX freq WAS unused but is now mix_frequency!
+	//
+	void SetUpChannelFilter(ref SongVoice chan, bool reset, int filterModifier, int freq)
+	{
+		const double FrequencyParamMult = 128.0 / (24.0 * 256.0);
+
+		int cutoff = chan.Cutoff;
+		int resonance = chan.Resonance;
+
+		cutoff = cutoff * (filterModifier + 256) / 256;
+
+		if (cutoff > 255)
+			cutoff = 255;
+
+		if (resonance > 255)
+			resonance = 255;
+
+		if (resonance == 0 && cutoff >= 254)
+		{
+			if (chan.Flags.HasFlag(ChannelFlags.NewNote))
+			{
+				// Z7F next to a note disables the filter, however in other cases this should not happen.
+				// Test cases: filter-reset.it, filter-reset-carry.it, filter-reset-envelope.it, filter-nna.it, FilterResetPatDelay.it, FilterPortaSmpChange.it, FilterPortaSmpChange-InsMode.it
+				chan.Flags &= ~ChannelFlags.Filter;
+			}
+
+			return;
+		}
+
+		chan.Flags |= ChannelFlags.Filter;
+
+		// 2 ^ (i / 24 * 256)
+		double frequency = 110.0 * Math.Pow(2.0, cutoff * FrequencyParamMult + 0.25);
+
+		if (frequency > freq / 2.0)
+			frequency = freq / 2.0;
+
+		double r = freq / (2.0F * Math.PI * frequency);
+
+		double d = Tables.ResonanceTable[resonance] * r + Tables.ResonanceTable[resonance] - 1.0F;
+		double e = r * r;
+
+		double fg = 1.0 / (1.0 + d + e);
+		double fb0 = (d + e + e) / (1.0 + d + e);
+		double fb1 = -e / (1.0 + d + e);
+
+		chan.FilterA0 = (int)(fg * (1 << Constants.FilterPrecision));
+		chan.FilterB0 = (int)(fb0 * (1 << Constants.FilterPrecision));
+		chan.FilterB1 = (int)(fb1 * (1 << Constants.FilterPrecision));
+
+		if (reset)
+		{
+			chan.FilterY00 = chan.FilterY01 = 0;
+			chan.FilterY10 = chan.FilterY11 = 0;
+		}
 	}
 
 	public string Title = "";
@@ -447,6 +503,20 @@ public class Song
 		return VoiceMix;
 	}
 
+	public bool SampleIsUsedByInstrument(int samp)
+	{
+		foreach (var instrument in Instruments)
+		{
+			if (instrument == null)
+				continue;
+
+			if (instrument.SampleMap.Contains((byte)samp))
+				return true;
+		}
+
+		return false;
+	}
+
 	// ------------------------------------------------------------------------
 
 	// calculates row of offset from passed row.
@@ -528,19 +598,18 @@ public class Song
 
 	public TimeSpan GetLengthTo(int order, int row)
 	{
-		AudioPlayback.LockAudio();
+		lock (AudioPlayback.LockScope())
+		{
+			StopAtOrder = order;
+			StopAtRow = row;
 
-		StopAtOrder = order;
-		StopAtRow = row;
+			var t = GetLength();
 
-		var t = GetLength();
+			StopAtOrder = -1;
+			StopAtRow = -1;
 
-		StopAtOrder = -1;
-		StopAtRow = -1;
-
-		AudioPlayback.UnlockAudio();
-
-		return t;
+			return t;
+		}
 	}
 
 	public (int OrderNumber, int RowNumber) GetAtTime(TimeSpan time)
@@ -548,22 +617,21 @@ public class Song
 		if (time <= TimeSpan.Zero)
 			return (0, 0);
 
-		AudioPlayback.LockAudio();
+		lock (AudioPlayback.LockScope())
+		{
+			StopAtOrder = Constants.MaxOrders;
+			StopAtRow = 255; /* unpossible */
+			StopAtTime = time;
 
-		StopAtOrder = Constants.MaxOrders;
-		StopAtRow = 255; /* unpossible */
-		StopAtTime = time;
+			GetLength();
 
-		GetLength();
+			var ret = (StopAtOrder, StopAtRow);
 
-		var ret = (StopAtOrder, StopAtRow);
+			StopAtOrder = StopAtRow = -1;
+			StopAtTime = default;
 
-		StopAtOrder = StopAtRow = -1;
-		StopAtTime = default;
-
-		AudioPlayback.UnlockAudio();
-
-		return ret;
+			return ret;
+		}
 	}
 
 	public TimeSpan GetLength()
@@ -913,6 +981,7 @@ public class Song
 				}
 
 				break;
+			}
 #endif
 			default:
 				Console.WriteLine("oh i am confused");
@@ -3200,7 +3269,7 @@ public class Song
 			fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
 
 			*/
-			s_midiSink?.OutRaw(this, data, len, AudioPlayback.BufferCount);
+			s_midiSink?.OutRaw(this, data, len, BufferCount);
 		}
 	}
 
@@ -3247,190 +3316,189 @@ public class Song
 			throw new Exception("Out-of-range channel number: " + chan);
 
 		// hm
-		AudioPlayback.LockAudio();
-
-		var c = CurrentSong.Voices[chanInternal];
-
-		bool insMode = CurrentSong.IsInstrumentMode;
-
-		if (SongNote.IsNote(note))
+		lock (AudioPlayback.LockScope())
 		{
-			// keep track of what channel this note was played in so we can note-off properly later
-			if (KeyJazz.GetLastNoteInChannel(chan) != 0)
+			var c = CurrentSong.Voices[chanInternal];
+
+			bool insMode = CurrentSong.IsInstrumentMode;
+
+			if (SongNote.IsNote(note))
 			{
-				// reset note-off pending state for last note in channel
-				KeyJazz.UnlinkLastNoteForChannel(chan);
-			}
-
-			KeyJazz.LinkNoteAndChannel(note, chan);
-
-			// handle blank instrument values and "fake" sample #0 (used by sample loader)
-			if (samp == 0)
-				samp = c.LastInstrumentNumber;
-			else if (samp == KeyJazz.FakeInstrument)
-				samp = 0; // dumb hack
-
-			if (ins == 0)
-				ins = c.LastInstrumentNumber;
-			else if (ins == KeyJazz.FakeInstrument)
-				ins = 0; // dumb hack
-
-			c.LastInstrumentNumber = insMode ? ins : samp;
-
-			// give the channel a sample, and maybe an instrument
-			s = (samp == KeyJazz.NoInstrument) ? null : CurrentSong.Samples[samp];
-			i = (ins == KeyJazz.NoInstrument) ? null : CurrentSong.GetInstrument(ins); // blah
-
-			if ((i != null) && (samp == KeyJazz.NoInstrument))
-			{
-				// we're playing an instrument and don't know what sample! WHAT WILL WE EVER DO?!
-				// well, look it up in the note translation table, silly.
-				// the weirdness here the default value here is to mimic IT behavior: we want to use
-				// the sample corresponding to the instrument number if in sample mode and no sample
-				// is defined for the note in the instrument's note map.
-				s = CurrentSong.TranslateKeyboard(i, note, insMode ? null : CurrentSong.Samples[ins]);
-			}
-		}
-
-		c.RowEffect = effect;
-		c.RowParam = param;
-
-		// now do a rough equivalent of csf_instrument_change and csf_note_change
-		if (i != null)
-			CurrentSong.CheckNNA(chanInternal, ins, note, false);
-
-		if (s != null)
-		{
-			if (c.Flags.HasFlag(ChannelFlags.Adlib))
-			{
-				// TODO:
-				//OPL_NoteOff(current_song, chanInternal);
-				//OPL_Patch(current_song, chanInternal, s->adlib_bytes);
-			}
-
-			c.Flags = ((ChannelFlags)s.Flags & ChannelFlags.SampleFlags) | (c.Flags & ChannelFlags.Mute);
-
-			if (c.IsMuted)
-				c.Flags |= ChannelFlags.NNAMute;
-
-			c.Cutoff = 0x7f;
-			c.Resonance = 0;
-
-			if (i != null)
-			{
-				c.Instrument = i;
-
-				if (!i.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry)) c.VolumeEnvelopePosition = 0;
-				if (!i.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry)) c.PanningEnvelopePosition = 0;
-				if (!i.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry)) c.PitchEnvelopePosition = 0;
-				if (i.Flags.HasFlag(InstrumentFlags.VolumeEnvelope)) c.Flags |= ChannelFlags.VolumeEnvelope;
-				if (i.Flags.HasFlag(InstrumentFlags.PanningEnvelope)) c.Flags |= ChannelFlags.PanningEnvelope;
-				if (i.Flags.HasFlag(InstrumentFlags.PitchEnvelope)) c.Flags |= ChannelFlags.PitchEnvelope;
-
-				i.IsPlayed = true;
-
-				if (Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+				// keep track of what channel this note was played in so we can note-off properly later
+				if (KeyJazz.GetLastNoteInChannel(chan) != 0)
 				{
-					if (i.MIDIChannelMask != 0)
-					{
-						// TODO:
-						//GM_KeyOff(current_song, chanInternal);
-						//GM_DPatch(current_song, chanInternal, i->midi_program, i->midi_bank, i->midi_channel_mask);
-					}
+					// reset note-off pending state for last note in channel
+					KeyJazz.UnlinkLastNoteForChannel(chan);
 				}
 
-				if ((i.IFCutoff & 0x80) != 0)
-					c.Cutoff = i.IFCutoff & 0x7f;
-				if ((i.IFResonance & 0x80) != 0)
-					c.Resonance = i.IFResonance & 0x7f;
-				//?
-				c.VolumeSwing = i.VolumeSwing;
-				c.PanningSwing = i.PanningSwing;
-				c.NewNoteAction = i.NewNoteAction;
+				KeyJazz.LinkNoteAndChannel(note, chan);
+
+				// handle blank instrument values and "fake" sample #0 (used by sample loader)
+				if (samp == 0)
+					samp = c.LastInstrumentNumber;
+				else if (samp == KeyJazz.FakeInstrument)
+					samp = 0; // dumb hack
+
+				if (ins == 0)
+					ins = c.LastInstrumentNumber;
+				else if (ins == KeyJazz.FakeInstrument)
+					ins = 0; // dumb hack
+
+				c.LastInstrumentNumber = insMode ? ins : samp;
+
+				// give the channel a sample, and maybe an instrument
+				s = (samp == KeyJazz.NoInstrument) ? null : CurrentSong.Samples[samp];
+				i = (ins == KeyJazz.NoInstrument) ? null : CurrentSong.GetInstrument(ins); // blah
+
+				if ((i != null) && (samp == KeyJazz.NoInstrument))
+				{
+					// we're playing an instrument and don't know what sample! WHAT WILL WE EVER DO?!
+					// well, look it up in the note translation table, silly.
+					// the weirdness here the default value here is to mimic IT behavior: we want to use
+					// the sample corresponding to the instrument number if in sample mode and no sample
+					// is defined for the note in the instrument's note map.
+					s = CurrentSong.TranslateKeyboard(i, note, insMode ? null : CurrentSong.Samples[ins]);
+				}
 			}
-			else
+
+			c.RowEffect = effect;
+			c.RowParam = param;
+
+			// now do a rough equivalent of csf_instrument_change and csf_note_change
+			if (i != null)
+				CurrentSong.CheckNNA(chanInternal, ins, note, false);
+
+			if (s != null)
 			{
-				c.Instrument = null;
-				c.Cutoff = 0x7F;
+				if (c.Flags.HasFlag(ChannelFlags.Adlib))
+				{
+					// TODO:
+					//OPL_NoteOff(current_song, chanInternal);
+					//OPL_Patch(current_song, chanInternal, s->adlib_bytes);
+				}
+
+				c.Flags = ((ChannelFlags)s.Flags & ChannelFlags.SampleFlags) | (c.Flags & ChannelFlags.Mute);
+
+				if (c.IsMuted)
+					c.Flags |= ChannelFlags.NNAMute;
+
+				c.Cutoff = 0x7f;
 				c.Resonance = 0;
+
+				if (i != null)
+				{
+					c.Instrument = i;
+
+					if (!i.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry)) c.VolumeEnvelopePosition = 0;
+					if (!i.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry)) c.PanningEnvelopePosition = 0;
+					if (!i.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry)) c.PitchEnvelopePosition = 0;
+					if (i.Flags.HasFlag(InstrumentFlags.VolumeEnvelope)) c.Flags |= ChannelFlags.VolumeEnvelope;
+					if (i.Flags.HasFlag(InstrumentFlags.PanningEnvelope)) c.Flags |= ChannelFlags.PanningEnvelope;
+					if (i.Flags.HasFlag(InstrumentFlags.PitchEnvelope)) c.Flags |= ChannelFlags.PitchEnvelope;
+
+					i.IsPlayed = true;
+
+					if (Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+					{
+						if (i.MIDIChannelMask != 0)
+						{
+							// TODO:
+							//GM_KeyOff(current_song, chanInternal);
+							//GM_DPatch(current_song, chanInternal, i->midi_program, i->midi_bank, i->midi_channel_mask);
+						}
+					}
+
+					if ((i.IFCutoff & 0x80) != 0)
+						c.Cutoff = i.IFCutoff & 0x7f;
+					if ((i.IFResonance & 0x80) != 0)
+						c.Resonance = i.IFResonance & 0x7f;
+					//?
+					c.VolumeSwing = i.VolumeSwing;
+					c.PanningSwing = i.PanningSwing;
+					c.NewNoteAction = i.NewNoteAction;
+				}
+				else
+				{
+					c.Instrument = null;
+					c.Cutoff = 0x7F;
+					c.Resonance = 0;
+				}
+
+				c.MasterChannel = 0; // indicates foreground channel.
+
+				//c.Flags &= ~(ChannelFlags.PingPong);
+
+				// ?
+				//c.AutoVibDepth = 0;
+				//c.AutoVibPosition = 0;
+
+				// NoteChange copies stuff from c.Sample as long as c.Length is zero
+				// and if period != 0 (ie. sample not playing at a stupid rate)
+				c.Sample = s;
+				c.Length = 0;
+				// ... but it doesn't copy the volumes, for somewhat obvious reasons.
+				c.Volume = (vol == KeyJazz.DefaultVolume) ? s.Volume : (vol << 2);
+				c.InstrumentVolume = s.GlobalVolume;
+				if (i != null)
+					c.InstrumentVolume = (c.InstrumentVolume * i.GlobalVolume) >> 7;
+				c.GlobalVolume = 64;
+				// use the sample's panning if it's set, or use the default
+				c.ChannelPanning = (short)(c.Panning + 1);
+				if (c.Flags.HasFlag(ChannelFlags.Surround))
+					c.ChannelPanning = (short)(c.ChannelPanning | 0x8000);
+
+				c.Panning = s.Flags.HasFlag(SampleFlags.Panning) ? s.Panning : 128;
+				if (i != null)
+					c.Panning = i.Flags.HasFlag(InstrumentFlags.SetPanning) ? i.Panning : 128;
+				c.Flags &= ChannelFlags.Surround;
+				// gotta set these by hand, too
+				c.C5Speed = s.C5Speed;
+				c.NewNote = note;
+				s.IsPlayed = true;
+			}
+			else if (SongNote.IsNote(note))
+			{
+				// Note given with no sample number. This might happen if on the instrument list and playing
+				// an instrument that has no sample mapped for the given note. In this case, ignore the note.
+				note = SpecialNotes.None;
 			}
 
-			c.MasterChannel = 0; // indicates foreground channel.
+			if (c.Increment < 0)
+				c.Increment = -c.Increment; // lousy hack
 
-			//c.Flags &= ~(ChannelFlags.PingPong);
+			CurrentSong.NoteChange(chanInternal, note, false, false, true);
 
-			// ?
-			//c.AutoVibDepth = 0;
-			//c.AutoVibPosition = 0;
+			if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) && (i != null))
+			{
+				/* midi keyjazz shouldn't require a sample */
+				SongNote mc = default;
 
-			// NoteChange copies stuff from c.Sample as long as c.Length is zero
-			// and if period != 0 (ie. sample not playing at a stupid rate)
-			c.Sample = s;
-			c.Length = 0;
-			// ... but it doesn't copy the volumes, for somewhat obvious reasons.
-			c.Volume = (vol == KeyJazz.DefaultVolume) ? s.Volume : (vol << 2);
-			c.InstrumentVolume = s.GlobalVolume;
-			if (i != null)
-				c.InstrumentVolume = (c.InstrumentVolume * i.GlobalVolume) >> 7;
-			c.GlobalVolume = 64;
-			// use the sample's panning if it's set, or use the default
-			c.ChannelPanning = (short)(c.Panning + 1);
-			if (c.Flags.HasFlag(ChannelFlags.Surround))
-				c.ChannelPanning = (short)(c.ChannelPanning | 0x8000);
+				mc.Note = (byte)((note != 0) ? note : midiNote);
 
-			c.Panning = s.Flags.HasFlag(SampleFlags.Panning) ? s.Panning : 128;
-			if (i != null)
-				c.Panning = i.Flags.HasFlag(InstrumentFlags.SetPanning) ? i.Panning : 128;
-			c.Flags &= ChannelFlags.Surround;
-			// gotta set these by hand, too
-			c.C5Speed = s.C5Speed;
-			c.NewNote = note;
-			s.IsPlayed = true;
+				mc.Instrument = (byte)ins;
+				mc.VolumeEffect = VolumeEffects.Volume;
+				mc.VolumeParameter = (byte)vol;
+				mc.Effect = effect;
+				mc.Parameter = (byte)param;
+
+				// TODO:
+				//csf_midi_out_note(current_song, chanInternal, &mc);
+			}
+
+			/*
+			TODO:
+			- If this is the ONLY channel playing, and the song is stopped, always reset the tick count
+				(will fix the "random" behavior for most effects)
+			- If other channels are playing, don't reset the tick count, but do process first-tick effects
+				for this note *right now* (this will fix keyjamming with effects like Oxx and SCx)
+			- Need to handle volume column effects with this function...
+			*/
+			if (CurrentSong.Flags.HasFlag(SongFlags.EndReached))
+			{
+				CurrentSong.Flags &= ~SongFlags.EndReached;
+				CurrentSong.Flags |= SongFlags.Paused;
+			}
 		}
-		else if (SongNote.IsNote(note))
-		{
-			// Note given with no sample number. This might happen if on the instrument list and playing
-			// an instrument that has no sample mapped for the given note. In this case, ignore the note.
-			note = SpecialNotes.None;
-		}
-
-		if (c.Increment < 0)
-			c.Increment = -c.Increment; // lousy hack
-
-		CurrentSong.NoteChange(chanInternal, note, false, false, true);
-
-		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) && (i != null))
-		{
-			/* midi keyjazz shouldn't require a sample */
-			SongNote mc = default;
-
-			mc.Note = (byte)((note != 0) ? note : midiNote);
-
-			mc.Instrument = (byte)ins;
-			mc.VolumeEffect = VolumeEffects.Volume;
-			mc.VolumeParameter = (byte)vol;
-			mc.Effect = effect;
-			mc.Parameter = (byte)param;
-
-			// TODO:
-			//csf_midi_out_note(current_song, chanInternal, &mc);
-		}
-
-		/*
-		TODO:
-		- If this is the ONLY channel playing, and the song is stopped, always reset the tick count
-			(will fix the "random" behavior for most effects)
-		- If other channels are playing, don't reset the tick count, but do process first-tick effects
-			for this note *right now* (this will fix keyjamming with effects like Oxx and SCx)
-		- Need to handle volume column effects with this function...
-		*/
-		if (CurrentSong.Flags.HasFlag(SongFlags.EndReached))
-		{
-			CurrentSong.Flags &= ~SongFlags.EndReached;
-			CurrentSong.Flags |= SongFlags.Paused;
-		}
-
-		AudioPlayback.UnlockAudio();
 
 		return chan;
 	}
@@ -3470,6 +3538,47 @@ public class Song
 
 	public static Song? CreateLoad(string file)
 	{
+	}
+
+	public bool LoadSample(int n, string file)
+	{
+		try
+		{
+			using (var s = File.OpenRead(file))
+			{
+				// set some default stuff
+				lock (AudioPlayback.LockScope())
+				{
+					CurrentSong.StopSample(n);
+
+					var smp = SampleFileConverter.TryLoadSampleWithAllConverters(file);
+
+					if (smp == null)
+					{
+						Log.Append(4, "Unsupported sample file");
+						return false;
+					}
+
+					// this is after the loaders because i don't trust them, even though i wrote them ;)
+					smp.FileName = Path.GetFileName(file);
+
+					if ((smp.Name.Length >= 23) && (smp.Name[23] == '\xFF'))
+					{
+						// don't load embedded samples
+						// (huhwhat?!)
+						smp.Name = smp.Name.Substring(0, 23) + ' ' + smp.Name.Substring(23);
+					}
+
+					Samples[n] = smp;
+				}
+			}
+
+			return true;
+		}
+		catch
+		{
+			return false;
+		}
 	}
 
 	public void FixNames()
@@ -3530,19 +3639,19 @@ public class Song
 
 		AudioPlayback.SetFileName(file);
 
-		AudioPlayback.LockAudio();
+		lock (AudioPlayback.LockScope())
+		{
+			CurrentSong = newSong;
 
-		Song.CurrentSong = newSong;
+			CurrentSong.RepeatCount = 0;
 
-		Song.RepeatCount = 0;
+			AudioPlayback.MaxChannelsUsed = 0;
 
-		AudioPlayback.MaxChannelsUsed = 0;
+			newSong.FixNames();
 
-		newSong.FixNames();
-
-		AudioPlayback.StopUnlocked(false);
-		AudioPlayback.InitializeModPlug();
-		AudioPlayback.UnlockAudio();
+			AudioPlayback.StopUnlocked(false);
+			AudioPlayback.InitializeModPlug();
+		}
 
 		if (wasPlaying && Status.Flags.HasFlag(StatusFlags.PlayAfterLoad))
 			AudioPlayback.Start();
@@ -3569,5 +3678,88 @@ public class Song
 
 		return newSong;
 	}
-}
 
+	// 'start' indicates minimum sample/instrument to check
+	int FirstBlankSampleNumber(int start)
+	{
+		if (start < 1)
+			start = 1;
+
+		for (int n = start; n < Samples.Count; n++)
+			if (SongSample.IsNullOrEmpty(Samples[n]))
+				return n;
+
+		return -1;
+	}
+
+	// 'start' indicates minimum sample/instrument to check
+	int FirstBlankInstrumentNumber(int start)
+	{
+		if (start < 1)
+			start = 1;
+
+		for (int n = start; n < Instruments.Count; n++)
+			if (SongInstrument.IsNullOrEmpty(Instruments[n]))
+				return n;
+
+		return -1;
+	}
+
+	public void CreateHostInstrument(int smpNumber)
+	{
+		var smp = GetSample(smpNumber);
+
+		if (smp == null)
+			return;
+
+		var insNumber = AllPages.InstrumentList.CurrentInstrument;
+
+		if (SongInstrument.IsNullOrEmpty(GetInstrument(smpNumber)))
+			insNumber = smpNumber;
+		else if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || !SongInstrument.IsNullOrEmpty(GetInstrument(insNumber)))
+			insNumber = FirstBlankInstrumentNumber(0);
+
+		if (insNumber > 0)
+		{
+			var ins = new SongInstrument(this);
+
+			Instruments[insNumber] = ins;
+
+			ins.InitializeFromSample(smpNumber, smp);
+
+			Status.FlashText("Sample assigned to Instrument " + insNumber);
+		}
+		else
+			Status.FlashText("Error: No available Instruments!");
+	}
+
+	public void StopSample(SongSample smp)
+	{
+		if (!smp.HasData)
+			return;
+
+		for (int i = 0; i < Voices.Length; i++)
+		{
+			ref var v = ref Voices[i];
+
+			if (v.Sample == smp || v.CurrentSampleData == smp.Data)
+			{
+				v.Note = v.NewNote = 1;
+				v.NewInstrumentNumber = 0;
+				v.FadeOutVolume = 0;
+				v.Flags |= ChannelFlags.KeyOff | ChannelFlags.NoteFade;
+				v.Frequency = 0;
+				v.Position = v.Length = 0;
+				v.LoopStart = 0;
+				v.LoopEnd = 0;
+				v.ROfs = v.LOfs = 0;
+				v.CurrentSampleData = null;
+				v.Sample = null;
+				v.Instrument = null;
+				v.LeftVolume = v.RightVolume = 0;
+				v.LeftVolumeNew = v.RightVolumeNew = 0;
+				v.LeftRamp = v.RightRamp = 0;
+			}
+		}
+	}
+}

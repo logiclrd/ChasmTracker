@@ -12,4 +12,14 @@ public static class ArrayExtensions
 
 		return ret;
 	}
+
+	public static Span<T> Slice<T>(this T[] array, int index)
+	{
+		return array.Slice(index, array.Length - index);
+	}
+
+	public static Span<T> Slice<T>(this T[] array, int index, int length)
+	{
+		return new Span<T>(array, index, length);
+	}
 }

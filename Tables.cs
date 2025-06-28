@@ -338,4 +338,17 @@ public class Tables
 			"Jingle Bell",
 			"Bell Tree",
 		};
+
+	/*
+	 * LUT for 2 * damping factor
+	 *
+	 * Formula for the table:
+	 *
+	 *    resonance_table[i] = pow(10.0, -((24.0 / 128.0) * i) / 20.0);
+	 * or
+	 *    resonance_table[i] = pow(10.0, -3.0 * i / 320.0);
+	 *
+	 */
+	public static readonly double[] ResonanceTable =
+		Enumerable.Range(0, 128).Select(i => Math.Pow(10.0, -3.0 * i / 320)).ToArray();
 }

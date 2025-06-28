@@ -1,25 +1,35 @@
-/*
 using System;
 
 namespace ChasmTracker.Widgets;
 
+using ChasmTracker.Events;
+using ChasmTracker.Input;
+using ChasmTracker.Utility;
+
 public class OtherWidget : Widget
 {
-	public Action<KeyEvent> HandleKey;
-	public Action<TextInputEvent>? HandleTextInput;
-	public Action Redraw;
+	public bool OtherAcceptsText;
 
-	public OtherWidget(WidgetNext next, Action<KeyEvent> handleKey, Action<TextInputEvent>? handleTextInput, Action redraw)
-		: base(new Point(-1, -1), new WidgetNext(-1, -1, -1, -1, next.TabIndex, -1))
+	public event Func<KeyEvent, bool>? OtherHandleKey;
+	public event Action<TextInputEvent>? OtherHandleText;
+	public event Action? OtherRedraw;
+
+	public OtherWidget()
+		: base(new Point(-1, -1), 0)
 	{
-		HandleKey = handleKey;
-		HandleTextInput = handleTextInput;
-		Redraw = redraw;
 	}
+
+	// Position and size for navigation discovery
+	public OtherWidget(Point position, Size size)
+		: base(new Point(-1, -1), 0)
+	{
+	}
+
+	public override bool AcceptsText => OtherAcceptsText;
+
+	public override bool HandleKey(KeyEvent k)
+		=> OtherHandleKey?.Invoke(k) ?? false;
 
 	public override void HandleText(TextInputEvent textInput)
-	{
-		HandleTextInput?.Invoke(textInput);
-	}
+		=> OtherHandleText?.Invoke(textInput);
 }
-*/

@@ -1,4 +1,6 @@
 using System;
+using System.Reflection.Metadata.Ecma335;
+using ChasmTracker.Utility;
 
 namespace ChasmTracker.Songs;
 
@@ -275,6 +277,39 @@ public class SongSample
 				SustainEnd - SustainStart,
 				channels,
 				Flags.HasFlag(SampleFlags.PingPongSustain));
+		}
+	}
+
+	public static bool IsNullOrEmpty(SongSample? smp)
+	{
+		if (smp == null)
+			return true;
+
+		return smp.IsEmpty;
+	}
+
+	public bool IsEmpty
+	{
+		get
+		{
+			return
+				!HasData &&
+				string.IsNullOrWhiteSpace(Name) &&
+				string.IsNullOrEmpty(FileName) &&
+				C5Speed == 8363 &&
+				Volume == 64 * 4 && //mphack
+				GlobalVolume == 64 &&
+				Panning == 0 &&
+				!Flags.HasAnyFlag(SampleFlags.Loop | SampleFlags.SustainLoop | SampleFlags.Panning) &&
+				Length == 0 &&
+				LoopStart == 0 &&
+				LoopEnd == 0 &&
+				SustainStart == 0 &&
+				SustainEnd == 0 &&
+				VibratoType == default &&
+				VibratoRate == 0 &&
+				VibratoDepth == 0 &&
+				VibratoSpeed == 0;
 		}
 	}
 }

@@ -11,7 +11,7 @@ public class MenuToggleWidget : Widget
 	public int State;
 	public MenuToggleWidgetChoice[] Choices;
 
-	public MenuToggleWidget(Point position, WidgetNext next, string[] choices)
+	public MenuToggleWidget(Point position, string[] choices)
 		: base(position, width: choices.Max(choice => choice.Length))
 	{
 		Choices = choices.Select(choice => new MenuToggleWidgetChoice(choice)).ToArray();

@@ -9,7 +9,7 @@ public class FileScanner
 {
 	static SongFileConverter[] s_converters =
 		typeof(FileScanner).Assembly.GetTypes()
-		.Where(t => typeof(SongFileConverter).IsAssignableFrom(t))
+		.Where(t => typeof(SongFileConverter).IsAssignableFrom(t) && !t.IsAbstract)
 		.Select(t => (SongFileConverter)Activator.CreateInstance(t)!)
 		.ToArray();
 

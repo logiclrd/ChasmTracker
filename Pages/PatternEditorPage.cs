@@ -894,6 +894,7 @@ public class PatternEditorPage : Page
 	public override void SetPage()
 	{
 		/* only one widget, but MAN is it complicated :) */
+		// TODO: other widget??
 		base.SetPage();
 	}
 

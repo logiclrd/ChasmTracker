@@ -499,9 +499,8 @@ public class Program
 			*/
 		}
 
-		AudioPlayback.LockAudio();
-		Song.StopUnlocked(true);
-		AudioPlayback.UnlockAudio();
+		using (AudioPlayback.LockScope())
+			Song.StopUnlocked(true);
 
 		MIDIEngine.Stop();
 

@@ -34,6 +34,66 @@ public class SongInstrument
 	public SongInstrument(Song owner)
 	{
 		Owner = owner;
+		Initialize();
+	}
+
+	public void Initialize()
+	{
+		if (!IsEmpty)
+			return;
+
+		FadeOut = default;
+		Flags = default;
+		VolumeEnvelope = default;
+		PanningEnvelope = default;
+		PitchEnvelope = default;
+		NewNoteAction = default;
+		DuplicateCheckTypes = default;
+		DuplicateCheckActions = default;
+		PanningSwing = default;
+		VolumeSwing = default;
+		IFCutoff = default;
+		IFResonance = default;
+		MIDIChannelMask = default;
+		PitchPanSeparation = default;
+		Name = default;
+		FileName = default;
+		IsPlayed = default;
+
+		VolumeEnvelope = new Envelope(64);
+		PanningEnvelope = new Envelope(32);
+		PitchEnvelope = new Envelope(32);
+
+		GlobalVolume = 128;
+		Panning = 128;
+		MIDIBank = -1;
+		MIDIProgram = -1;
+		PitchPanCenter = 60; // why does pitch/pan not use the same note values as everywhere else?!
+
+		for (int n = 0; n < 128; n++)
+		{
+			SampleMap[n] = 0;
+			NoteMap[n] = (byte)(n + 1);
+		}
+	}
+
+	public void InitializeFromSample(int sampleNumber, SongSample sample)
+	{
+		if (!IsEmpty)
+			return;
+
+		if (!sample.HasData)
+			return;
+
+		Initialize();
+
+		for (int i = 0; i < SampleMap.Length; i++)
+			SampleMap[i] = (byte)sampleNumber;
+
+		// IT doesn't set instrument filenames unless loading an instrument from disk
+		//FileName = sample.FileName;
+
+		Name = sample.Name;
 	}
 
 	public SongSample? TranslateKeyboard(int note, SongSample? def = default)
@@ -44,5 +104,46 @@ public class SongInstrument
 			return Owner.Samples[note];
 		else
 			return def;
+	}
+
+	public static bool IsNullOrEmpty(SongInstrument? ins)
+	{
+		if (ins == null)
+			return true;
+
+		return ins.IsEmpty;
+	}
+
+	public bool IsEmpty
+	{
+		get
+		{
+			for (int n = 0; n < SampleMap.Length; n++)
+				if (SampleMap[n] != 0 || NoteMap[n] != (n + SpecialNotes.First))
+					return false;
+
+			return
+				string.IsNullOrWhiteSpace(Name) &&
+				string.IsNullOrEmpty(FileName) &&
+				Flags == default && /* No envelopes, loop points, panning, or carry flags set */
+				NewNoteAction == NewNoteActions.NoteCut &&
+				DuplicateCheckTypes == DuplicateCheckTypes.None &&
+				DuplicateCheckActions == DuplicateCheckActions.NoteCut &&
+				Envelope.IsNullOrBlank(VolumeEnvelope, 64) &&
+				GlobalVolume == 128 &&
+				FadeOut == 0 &&
+				VolumeSwing == 0 &&
+				Envelope.IsNullOrBlank(PanningEnvelope, 32) &&
+				Panning == 32 * 4 && //mphack
+				PitchPanCenter == 60 && // C-5 (blah)
+				PitchPanSeparation == 0 &&
+				PanningSwing == 0 &&
+				Envelope.IsNullOrBlank(PitchEnvelope, 32) &&
+				IFCutoff == 0 &&
+				IFResonance == 0 &&
+				MIDIChannelMask == 0 &&
+				MIDIProgram == -1 &&
+				MIDIBank == -1;
+		}
 	}
 }

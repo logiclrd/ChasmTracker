@@ -182,7 +182,7 @@ public abstract class Page
 	/* this catches any keys that the main handler doesn't deal with */
 	public virtual bool? HandleKey(KeyEvent k) { return false; }
 	/* handle any text input events from SDL */
-	public virtual void HandleTextInput(string textInput) { }
+	public virtual bool HandleTextInput(string textInput) { }
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
 	public virtual void SetPage() { }

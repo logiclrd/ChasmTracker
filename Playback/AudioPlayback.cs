@@ -1,7 +1,8 @@
+using System;
+using System.IO;
+
 namespace ChasmTracker.Playback;
 
-using System;
-using System.Runtime.CompilerServices;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
@@ -9,6 +10,8 @@ using ChasmTracker.Utility;
 
 public class AudioPlayback
 {
+	public static string SongFileName = "";
+	public static string SongBaseName = "";
 	public static AudioPlaybackMode Mode;
 	public static MixFlags MixFlags;
 
@@ -50,43 +53,60 @@ public class AudioPlayback
 	public static int AudioBuffersPerSecond;
 	public static int AudioWriteOutCount;
 
+	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
+	public static int MixStat; // number of channels being mixed (not really used)
+	public static int BufferCount; // number of samples to mix per tick
+
 	static string? s_driverName;
 
 	public static string AudioDriver => s_driverName ?? "unknown";
 
 	public static void InitializeModPlug()
 	{
-		LockAudio();
-
-		Song.CurrentSong.MaxVoices = AudioSettings.ChannelLimit;
-
-		SetResamplingMode(AudioSettings.InterpolationMode);
-
-		if (AudioSettings.NoRamping)
-			MixFlags |= MixFlags.NoRamping;
-		else
-			MixFlags &= ~MixFlags.NoRamping;
-
-		// disable the S91 effect? (this doesn't make anything faster, it
-		// just sounds better with one woofer.)
-		Surround = AudioSettings.SurroundEffect;
-
-		// update midi queue configuration
-		MIDIEngine.QueueAlloc(AudioBuffer?.Length ?? 0, AudioSampleSize, Song.CurrentSong.MixFrequency);
-
-		// timelimit the playback_update() calls when midi isn't actively going on
+		using (LockScope())
 		{
-			int divisor = (AudioBuffer?.Length ?? 0) * 8 * AudioSampleSize;
+			Song.CurrentSong.MaxVoices = AudioSettings.ChannelLimit;
 
-			AudioBuffersPerSecond = (divisor != 0) ? (Song.CurrentSong.MixFrequency / divisor) : 0;
+			SetResamplingMode(AudioSettings.InterpolationMode);
 
-			if (AudioBuffersPerSecond > 1)
-				AudioBuffersPerSecond--;
+			if (AudioSettings.NoRamping)
+				MixFlags |= MixFlags.NoRamping;
+			else
+				MixFlags &= ~MixFlags.NoRamping;
+
+			// disable the S91 effect? (this doesn't make anything faster, it
+			// just sounds better with one woofer.)
+			Surround = AudioSettings.SurroundEffect;
+
+			// update midi queue configuration
+			MIDIEngine.QueueAlloc(AudioBuffer?.Length ?? 0, AudioSampleSize, Song.CurrentSong.MixFrequency);
+
+			// timelimit the playback_update() calls when midi isn't actively going on
+			{
+				int divisor = (AudioBuffer?.Length ?? 0) * 8 * AudioSampleSize;
+
+				AudioBuffersPerSecond = (divisor != 0) ? (Song.CurrentSong.MixFrequency / divisor) : 0;
+
+				if (AudioBuffersPerSecond > 1)
+					AudioBuffersPerSecond--;
+			}
+
+			Song.InitializeMIDI(new MIDIEngine());
 		}
+	}
 
-		Song.InitializeMIDI(new MIDIEngine());
-
-		UnlockAudio();
+	public static void SetFileName(string? file)
+	{
+		if (!string.IsNullOrEmpty(file))
+		{
+			SongFileName = file;
+			SongBaseName = Path.GetFileName(file);
+		}
+		else
+		{
+			SongFileName = "";
+			SongBaseName = "";
+		}
 	}
 
 	public static bool SetResamplingMode(SourceMode mode)
@@ -139,12 +159,22 @@ public class AudioPlayback
 			"Multichannel playback disabled");
 	}
 
-	public static void LockAudio()
+	class Scope : IDisposable
+	{
+		bool _active = true;
+
+		public Scope() { LockAudio(); }
+		public void Dispose() { if (_active) { UnlockAudio(); _active = false; } }
+	}
+
+	public static IDisposable LockScope() => new Scope();
+
+	static void LockAudio()
 	{
 		// TODO
 	}
 
-	public static void UnlockAudio()
+	static void UnlockAudio()
 	{
 		// TODO
 	}
@@ -209,10 +239,10 @@ public class AudioPlayback
 		// TODO:
 		//OPL_Reset(current_song); // gruh?
 
-		Song.SetCurrentOrder(0);
+		Song.CurrentSong.SetCurrentOrder(0);
 
-		Song.RepeatCount = 0;
-		Song.BufferCount = 0;
+		Song.CurrentSong.RepeatCount = 0;
+		Song.CurrentSong.BufferCount = 0;
 
 		Song.CurrentSong.Flags &= ~(SongFlags.Paused | SongFlags.PatternLoop | SongFlags.EndReached);
 
@@ -224,20 +254,19 @@ public class AudioPlayback
 
 	public static void StartOnce()
 	{
-		LockAudio();
+		using (LockScope())
+		{
+			ResetPlayState();
 
-		ResetPlayState();
+			MixFlags |= MixFlags.NoBackwardJumps;
 
-		MixFlags |= MixFlags.NoBackwardJumps;
+			MaxChannelsUsed = 0;
 
-		MaxChannelsUsed = 0;
+			Song.CurrentSong.RepeatCount = -1; // FIXME do this right
 
-		Song.RepeatCount = -1; // FIXME do this right
-
-		// TODO
-		//GM_SendSongStartCode(Song.CurrentSong)
-
-		UnlockAudio();
+			// TODO
+			//GM_SendSongStartCode(Song.CurrentSong)
+		}
 
 		Page.NotifySongModeChangedGlobal();
 
@@ -246,15 +275,15 @@ public class AudioPlayback
 
 	public static void Start()
 	{
-		LockAudio();
+		using (LockScope())
+		{
+			ResetPlayState();
+			MaxChannelsUsed = 0;
 
-		ResetPlayState();
-		MaxChannelsUsed = 0;
+			// TODO
+			//GM_SendSongStartCode(current_song);
+		}
 
-		// TODO
-		//GM_SendSongStartCode(current_song);
-
-		UnlockAudio();
 		Page.NotifySongModeChangedGlobal();
 
 		Song.CurrentSong.ResetPlaymarks();
@@ -262,22 +291,24 @@ public class AudioPlayback
 
 	public static void Pause()
 	{
-		LockAudio();
-
-		// Highly unintuitive, but SONG_PAUSED has nothing to do with pause.
-		if (!Song.CurrentSong.Flags.HasFlag(SongFlags.Paused))
-			Song.CurrentSong.Flags ^= SongFlags.EndReached;
-
-		UnlockAudio();
+		using (LockScope())
+		{
+			// Highly unintuitive, but SONG_PAUSED has nothing to do with pause.
+			if (!Song.CurrentSong.Flags.HasFlag(SongFlags.Paused))
+				Song.CurrentSong.Flags ^= SongFlags.EndReached;
+		}
 
 		Page.NotifySongModeChangedGlobal();
 	}
 
 	public static void Stop()
 	{
-		LockAudio();
-		StopUnlocked(false);
-		UnlockAudio();
+		using (LockScope())
+		{
+			StopUnlocked(false);
+		}
+
+
 		Page.NotifySongModeChangedGlobal();
 	}
 
@@ -366,14 +397,14 @@ public class AudioPlayback
 
 	public static void LoopPattern(int pattern, int row)
 	{
-		LockAudio();
+		using (LockScope())
+		{
+			ResetPlayState();
 
-		ResetPlayState();
+			MaxChannelsUsed = 0;
+			Song.CurrentSong.LoopPattern(pattern, row);
+		}
 
-		MaxChannelsUsed = 0;
-		Song.CurrentSong.LoopPattern(pattern, row);
-
-		UnlockAudio();
 		Page.NotifySongModeChangedGlobal();
 
 		Song.CurrentSong.ResetPlaymarks();
@@ -381,20 +412,20 @@ public class AudioPlayback
 
 	public static void StartAtOrder(int order, int row)
 	{
-		LockAudio();
+		using (LockScope())
+		{
+			ResetPlayState();
 
-		ResetPlayState();
+			Song.CurrentSong.SetCurrentOrder(order);
+			Song.CurrentSong.BreakRow = row;
+			MaxChannelsUsed = 0;
 
-		Song.SetCurrentOrder(order);
-		Song.BreakRow = row;
-		MaxChannelsUsed = 0;
+			// TODO
+			//GM_SendSongStartCode(current_song);
 
-		// TODO
-		//GM_SendSongStartCode(current_song);
+			// TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes)
+		}
 
-		// TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes)
-
-		UnlockAudio();
 		Page.NotifySongModeChangedGlobal();
 
 		Song.CurrentSong.ResetPlaymarks();

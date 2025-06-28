@@ -3,6 +3,7 @@ using System.Text;
 
 namespace ChasmTracker.VGA;
 
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
@@ -943,47 +944,46 @@ public static class VGAMem
 		if (AudioPlayback.Mode == AudioPlaybackMode.Stopped)
 			return;
 
-		AudioPlayback.LockAudio();
-
-		var channelList = Song.CurrentSong.GetMixState(out int numActiveVoices);
-
-		for (int n = numActiveVoices - 1; n >= 0; n--)
+		lock (AudioPlayback.LockScope())
 		{
-			ref var channel = ref Song.CurrentSong.Voices[channelList[n]];
+			var channelList = Song.CurrentSong.GetMixState(out int numActiveVoices);
 
-			if (channel.CurrentSampleData != sample.Data)
-				continue;
-
-			if (channel.FinalVolume == 0)
-				continue;
-
-			byte c = channel.Flags.HasFlag(ChannelFlags.KeyOff | ChannelFlags.NoteFade) ? SampleBackgroundMarkColour : SampleMarkColour;
-
-			int x = channel.Position * (r.Size.Width - 1) / sample.Length;
-
-			if (x >= r.Size.Width)
+			for (int n = numActiveVoices - 1; n >= 0; n--)
 			{
-				/* this does, in fact, happen :( */
-				continue;
+				ref var channel = ref Song.CurrentSong.Voices[channelList[n]];
+
+				if (channel.CurrentSampleData != sample.Data)
+					continue;
+
+				if (channel.FinalVolume == 0)
+					continue;
+
+				byte c = channel.Flags.HasFlag(ChannelFlags.KeyOff | ChannelFlags.NoteFade) ? SampleBackgroundMarkColour : SampleMarkColour;
+
+				int x = channel.Position * (r.Size.Width - 1) / sample.Length;
+
+				if (x >= r.Size.Width)
+				{
+					/* this does, in fact, happen :( */
+					continue;
+				}
+
+				int y = 0;
+
+				do
+				{
+					/* unrolled 8 times */
+					r[x, y++] = c;
+					r[x, y++] = c;
+					r[x, y++] = c;
+					r[x, y++] = c;
+					r[x, y++] = c;
+					r[x, y++] = c;
+					r[x, y++] = c;
+					r[x, y++] = c;
+				} while (y < r.Size.Height);
 			}
-
-			int y = 0;
-
-			do
-			{
-				/* unrolled 8 times */
-				r[x, y++] = c;
-				r[x, y++] = c;
-				r[x, y++] = c;
-				r[x, y++] = c;
-				r[x, y++] = c;
-				r[x, y++] = c;
-				r[x, y++] = c;
-				r[x, y++] = c;
-			} while (y < r.Size.Height);
 		}
-
-		AudioPlayback.UnlockAudio();
 	}
 
 	/* --------------------------------------------------------------------- */

@@ -3,15 +3,40 @@ using System.IO;
 
 namespace ChasmTracker.FileTypes;
 
+using System.Linq;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public abstract class SampleFileConverter
+public abstract class SampleFileConverter : FileInfoReader
 {
-	public abstract void ReadInfo(Stream stream, FileReference file);
 	public abstract SongSample LoadSample(Stream stream);
 	//public abstract void SaveSample(SongSample sample);
+
+	static Type[] s_converterTypes =
+		typeof(SampleFileConverter).Assembly.GetTypes()
+		.Where(t => typeof(SampleFileConverter).IsAssignableFrom(t) && !t.IsAbstract)
+		.ToArray(); // TODO: priority
+
+	public static SongSample? TryLoadSampleWithAllConverters(string path)
+	{
+		using (var stream = File.OpenRead(path))
+		{
+			foreach (var type in s_converterTypes)
+			{
+				var converter = (SampleFileConverter)Activator.CreateInstance(type)!;
+
+				try
+				{
+					stream.Position = 0;
+					return converter.LoadSample(stream);
+				}
+				catch { }
+			}
+		}
+
+		return null;
+	}
 
 	public static int ReadSample(SongSample sample, SampleFormat flags, Stream fp)
 	{

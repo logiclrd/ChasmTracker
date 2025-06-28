@@ -18,6 +18,7 @@ public abstract class Widget
 
 	/* these fields specify what widget gets selected next */
 	public WidgetNext Next;
+	public bool IsTabStop = true;
 
 	public Widget(Point position, int width)
 	{
