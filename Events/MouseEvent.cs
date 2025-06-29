@@ -1,5 +1,7 @@
 namespace ChasmTracker.Events;
 
+using ChasmTracker.Utility;
+
 public abstract class MouseEvent : Event
 {
 	/* coordinates relative to the window */

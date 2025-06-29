@@ -50,4 +50,9 @@ public class Configuration
 			Console.Error.WriteLine("Everything will still work, but preferences will not be saved.");
 		}
 	}
+
+	public void Save()
+	{
+		// TODO
+	}
 }

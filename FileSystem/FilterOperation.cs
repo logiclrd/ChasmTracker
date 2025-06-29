@@ -2,6 +2,8 @@ using System;
 
 namespace ChasmTracker.FileSystem;
 
+using ChasmTracker.Utility;
+
 public class FilterOperation
 {
 	FileList _fileList;

@@ -2,9 +2,9 @@ namespace ChasmTracker.Events;
 
 public class ClipboardPasteEvent : Event
 {
-	public string Clipboard;
+	public byte[]? Clipboard;
 
-	public ClipboardPasteEvent(string clipboard)
+	public ClipboardPasteEvent(byte[]? clipboard)
 	{
 		Clipboard = clipboard;
 	}

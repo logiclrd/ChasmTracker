@@ -560,7 +560,7 @@ public class PatternEditorPage : Page
 	/* this is here so that we could possibly handle other clipboard formats. */
 	readonly Func<string, PatternSnap, bool>[] PasteHandlers;
 
-	bool PatternSelectionSystemPaste(int cb, byte[] data)
+	bool PatternSelectionSystemPaste(byte[]? data)
 	{
 		/* this is a bug */
 		if (_patternCopyInBehaviour != PatternCopyInBehaviour.Invalid)
@@ -2357,9 +2357,9 @@ public class PatternEditorPage : Page
 		PatternSelectionSystemCopyOut();
 	}
 
-	public override bool ClipboardPaste(int cb, byte[] cptr)
+	public override bool ClipboardPaste(byte[]? cptr)
 	{
-		return PatternSelectionSystemPaste(cb, cptr);
+		return PatternSelectionSystemPaste();
 	}
 
 	/* --------------------------------------------------------------------- */

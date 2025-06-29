@@ -1,5 +1,7 @@
 namespace ChasmTracker.Events;
 
+using ChasmTracker.Utility;
+
 public class MouseWheelEvent : MouseEvent
 {
 	public Point WheelDelta;

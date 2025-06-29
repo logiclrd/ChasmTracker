@@ -1,5 +1,7 @@
 namespace ChasmTracker.Events;
 
+using ChasmTracker.Input;
+
 public class KeyboardEvent : Event, IButtonPressEvent
 {
 	public KeyboardEventType EventType;

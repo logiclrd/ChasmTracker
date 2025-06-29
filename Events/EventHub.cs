@@ -7,6 +7,7 @@ using SDL3;
 namespace ChasmTracker.Events;
 
 using ChasmTracker.Configurations;
+using ChasmTracker.Input;
 using ChasmTracker.Interop;
 
 public static class EventHub

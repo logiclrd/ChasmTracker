@@ -21,6 +21,8 @@ public static class VGAMem
 
 	public static byte[] Overlay = new byte[Constants.NativeScreenWidth * Constants.NativeScreenHeight];
 
+	public static Palette CurrentPalette = Palettes.UserDefined;
+
 	static void CheckInvert(ref byte tl, ref byte br)
 	{
 		if (Status.Flags.HasFlag(StatusFlags.InvertedPalette))
@@ -723,9 +725,9 @@ public static class VGAMem
 	/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug */
 
 	static void DrawSampleData8(VGAMemOverlay r,
-		sbyte[]? data, int length, int inputChans, int outputChans)
+		Span<sbyte> data, int length, int inputChans, int outputChans)
 	{
-		if (data == null)
+		if (data.Length == 0)
 			return;
 
 		int nh = r.Size.Height / outputChans;
@@ -737,7 +739,8 @@ public static class VGAMem
 
 		for (int cc = 0; cc < outputChans; cc++)
 		{
-			long posHi = 0, posLo = 0;
+			int posHi = 0;
+			long posLo = 0;
 
 			for (int x = 0; x < r.Size.Width; x++)
 			{
@@ -772,7 +775,7 @@ public static class VGAMem
 
 				r.DrawLine(new Point(x, np - 1 - max), new Point(x, np - 1 - min), SampleDataColour);
 
-				posHi += (posLo >> 32);
+				posHi += unchecked((int)(posLo >> 32));
 				posLo &= 0xFFFFFFFF;
 			}
 
@@ -781,9 +784,9 @@ public static class VGAMem
 	}
 
 	static void DrawSampleData16(VGAMemOverlay r,
-		short[]? data, int length, int inputChans, int outputChans)
+		Span<short> data, int length, int inputChans, int outputChans)
 	{
-		if (data == null)
+		if (data.Length == 0)
 			return;
 
 		int nh = r.Size.Height / outputChans;
@@ -795,7 +798,8 @@ public static class VGAMem
 
 		for (int cc = 0; cc < outputChans; cc++)
 		{
-			long posHi = 0, posLo = 0;
+			int posHi = 0;
+			long posLo = 0;
 
 			for (int x = 0; x < r.Size.Width; x++)
 			{
@@ -830,7 +834,7 @@ public static class VGAMem
 
 				r.DrawLine(new Point(x, np - 1 - max), new Point(x, np - 1 - min), SampleDataColour);
 
-				posHi += (posLo >> 32);
+				posHi += unchecked((int)(posLo >> 32));
 				posLo &= 0xFFFFFFFF;
 			}
 

@@ -89,7 +89,7 @@ public abstract class Widget
 
 	/* called by the clipboard manager; really, only "other" widgets
 	should "override" this... */
-	public virtual bool ClipboardPaste(int cb, string cptr) { return false; }
+	public virtual bool ClipboardPaste(byte[]? cptr) { return false; }
 
 	protected virtual void DrawWidget(bool isSelected, int tfg, int tbg) { }
 

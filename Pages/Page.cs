@@ -14,6 +14,7 @@ using ChasmTracker.Memory;
 using ChasmTracker.Menus;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -182,7 +183,7 @@ public abstract class Page
 	/* this catches any keys that the main handler doesn't deal with */
 	public virtual bool? HandleKey(KeyEvent k) { return false; }
 	/* handle any text input events from SDL */
-	public virtual bool HandleTextInput(string textInput) { }
+	public virtual bool HandleTextInput(string textInput) { return false; }
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
 	public virtual void SetPage() { }
@@ -197,7 +198,7 @@ public abstract class Page
 	}
 
 	/* called by the clipboard manager */
-	public virtual bool ClipboardPaste(int cb, byte[] cptr) { return false; }
+	public virtual bool ClipboardPaste(byte[]? cptr) { return false; }
 
 	public readonly List<Widget> Widgets = new List<Widget>();
 
@@ -548,24 +549,24 @@ public abstract class Page
 				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					Song.CurrentSpeed--;
-					Status.FlashText($"Speed set to {Song.CurrentSpeed} frames per row");
+					Song.CurrentSong.CurrentSpeed--;
+					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
 					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
-						Song.CurrentSong.InitialSpeed = Song.CurrentSpeed;
+						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
 				{
-					Song.CurrentTempo--;
-					Status.FlashText($"Tempo set to {Song.CurrentTempo} beats per minute");
+					Song.CurrentSong.CurrentTempo--;
+					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
 					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
-						Song.CurrentSong.InitialTempo = Song.CurrentTempo;
+						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					Song.CurrentGlobalVolume--;
-					Status.FlashText($"Global volume set to {Song.CurrentGlobalVolume}");
+					Song.CurrentSong.CurrentGlobalVolume--;
+					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
 					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
-						Song.CurrentSong.InitialGlobalVolume = Song.CurrentGlobalVolume;
+						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
 				}
 				return;
 			case KeySym.RightBracket:
@@ -573,24 +574,24 @@ public abstract class Page
 				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					Song.CurrentSpeed++;
-					Status.FlashText($"Speed set to {Song.CurrentSpeed} frames per row");
+					Song.CurrentSong.CurrentSpeed++;
+					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
 					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
-						Song.CurrentSong.InitialSpeed = Song.CurrentSpeed;
+						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
 				{
-					Song.CurrentTempo++;
-					Status.FlashText($"Tempo set to {Song.CurrentTempo} beats per minute");
+					Song.CurrentSong.CurrentTempo++;
+					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
 					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
-						Song.CurrentSong.InitialTempo = Song.CurrentTempo;
+						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					Song.CurrentGlobalVolume++;
-					Status.FlashText($"Global volume set to {Song.CurrentGlobalVolume}");
+					Song.CurrentSong.CurrentGlobalVolume++;
+					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
 					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
-						Song.CurrentSong.InitialGlobalVolume = Song.CurrentGlobalVolume;
+						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
 				}
 
 				return;
@@ -657,12 +658,12 @@ public abstract class Page
 			}
 			else if (k.MousePosition.Y == 4 && k.MousePosition.X >= 50 && k.MousePosition.X <= 52)
 			{
-				var minipop = ShowMiniPop(Song.CurrentSpeed, "Speed", 1, 255, new Point(51, 4));
+				var minipop = ShowMiniPop(Song.CurrentSong.CurrentSpeed, "Speed", 1, 255, new Point(51, 4));
 
 				minipop.SetValue +=
 					newValue =>
 					{
-						Song.CurrentSpeed = newValue;
+						Song.CurrentSong.CurrentSpeed = newValue;
 					};
 
 				minipop.SetValueNoPlay +=
@@ -676,12 +677,12 @@ public abstract class Page
 			}
 			else if (k.MousePosition.Y == 4 && k.MousePosition.X >= 54 && k.MousePosition.X <= 56)
 			{
-				var minipop = ShowMiniPop(Song.CurrentTempo, "Tempo", 32, 255, new Point(55, 4));
+				var minipop = ShowMiniPop(Song.CurrentSong.CurrentTempo, "Tempo", 32, 255, new Point(55, 4));
 
 				minipop.SetValue +=
 					newValue =>
 					{
-						Song.CurrentTempo = newValue;
+						Song.CurrentSong.CurrentTempo = newValue;
 					};
 
 				minipop.SetValueNoPlay +=
