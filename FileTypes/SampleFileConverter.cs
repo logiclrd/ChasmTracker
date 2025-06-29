@@ -1,10 +1,9 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace ChasmTracker.FileTypes;
 
-using System.Linq;
-using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 

@@ -1,12 +1,11 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
-using ChasmTracker.Widgets;
-
-public class Abo2utPage : Page
+public class InstrumentLibraryPage : InstrumentFileListPageBase
 {
-	public Abo2utPage()
-		: base("About", PageNumbers.About)
-	{
+	protected override bool IsLibraryMode => true;
 
+	public InstrumentLibraryPage()
+		: base(PageNumbers.InstrumentLibrary, "Instrument Library (Ctrl-F4)")
+	{
 	}
 }

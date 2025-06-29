@@ -1,13 +1,13 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ChasmTracker.FileSystem;
 
-using System.Linq;
-using System.Text;
-using System.Threading;
+using System.Collections.Generic;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -236,6 +236,9 @@ public class DirectoryScanner
 		fileList.Sort();
 	}
 
+	// ------------------------------------------------------------------------
+	// sample library browsing
+
 	static Song? s_library = null;
 
 	public static void ReadSampleLibraryThunk(string path, FileList flist, DirectoryList? dlist)
@@ -320,6 +323,78 @@ public class DirectoryScanner
 
 				flist.AddFile(file);
 			}
+		}
+
+		return true;
+	}
+
+	public static void ReadInstrumentLibraryThunk(string path, FileList flist, DirectoryList? dlist)
+	{
+		ReadInstrumentLibrary(path, flist, dlist);
+	}
+
+	// TODO: stat the file?
+	public static bool ReadInstrumentLibrary(string path, FileList flist, DirectoryList? dlist)
+	{
+		// FIXME why does this do this ? seems to be a no-op
+		if (Song.CurrentSong.Samples.FirstOrDefault() is SongSample sample)
+			Song.CurrentSong.StopSample(sample);
+
+		s_library = null;
+
+		string @base = Path.GetFileName(path);
+
+		try
+		{
+			s_library = Song.CreateLoad(path);
+		}
+		catch (Exception e)
+		{
+			Log.AppendException(e, @base);
+			return false;
+		}
+
+		if (s_library == null)
+			return false;
+
+		for (int n = 1; n < s_library.Instruments.Count; n++)
+		{
+			var instrument = s_library.Instruments[n];
+
+			if (instrument == null)
+				continue;
+
+			var file = new FileReference(path, @base, n);
+
+			flist.AddFile(file);
+
+			file.Title = instrument.Name ?? "";
+
+			var seenSample = new HashSet<int>();
+
+			file.SampleCount = 0;
+			file.FileSize = 0;
+			file.InstrumentNumber = n;
+
+			for (int j = 0; j < 128; j++)
+			{
+				int x = instrument.SampleMap[j];
+
+				if (seenSample.Add(x))
+				{
+					if ((x > 0) && (x < s_library.Samples.Count))
+					{
+						file.FileSize += s_library.Samples[x]?.Length ?? 0;
+						file.SampleCount++;
+					}
+				}
+			}
+
+			file.Type = FileTypes.InstrumentITI;
+			file.Description = "Fishcakes";
+
+			// IT doesn't support this, despite it being useful.
+			// Simply "unrecognized"
 		}
 
 		return true;

@@ -1,7 +1,6 @@
-namespace ChasmTracker;
-
 using System;
-using ChasmTracker.Widgets;
+
+namespace ChasmTracker.Pages;
 
 public class SampleListPage : Page
 {

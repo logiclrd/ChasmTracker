@@ -1,5 +1,5 @@
 using System;
-using System.Reflection.Metadata.Ecma335;
+
 using ChasmTracker.Utility;
 
 namespace ChasmTracker.Songs;
@@ -311,5 +311,42 @@ public class SongSample
 				VibratoDepth == 0 &&
 				VibratoSpeed == 0;
 		}
+	}
+
+	public SongSample Clone()
+	{
+		var ret = new SongSample();
+
+		ret.Length = Length;
+		ret.LoopStart = LoopStart;
+		ret.LoopEnd = LoopEnd;
+		ret.SustainStart = SustainStart;
+		ret.SustainEnd = SustainEnd;
+		ret.C5Speed = C5Speed;
+		ret.Panning = Panning;
+		ret.Volume = Volume;
+		ret.GlobalVolume = GlobalVolume;
+		ret.Flags = Flags;
+		ret.VibratoType = VibratoType;
+		ret.VibratoRate = VibratoRate;
+		ret.VibratoDepth = VibratoDepth;
+		ret.VibratoSpeed = VibratoSpeed;
+		ret.Name = Name;
+		ret.FileName = FileName;
+
+		ret.DiskWriterBoundPattern = null;
+		ret.IsPlayed = false;
+
+		ret.AllocateData();
+
+		if (AdlibBytes != null)
+			ret.AdlibBytes = (byte[])AdlibBytes.Clone();
+
+		if (RawData8 != null)
+			Array.Copy(RawData8, ret.RawData8!, RawData8.Length);
+		if (RawData16 != null)
+			Array.Copy(RawData16, ret.RawData16!, RawData16.Length);
+
+		return ret;
 	}
 }

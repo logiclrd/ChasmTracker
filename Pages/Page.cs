@@ -2,18 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
-namespace ChasmTracker;
-
-using System.Runtime.InteropServices;
 using System.Text;
+
+namespace ChasmTracker.Pages;
+
 using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.PatternEditor;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Menus;
 using ChasmTracker.MIDI;
-using ChasmTracker.Pages;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -1112,7 +1110,7 @@ public abstract class Page
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)
-						AudioPlayback.PlayFromMark();
+						AllPages.PatternEditor.PlaySongFromMark();
 				}
 				else
 				{

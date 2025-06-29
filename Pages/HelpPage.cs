@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Dialogs;
 using ChasmTracker.Input;

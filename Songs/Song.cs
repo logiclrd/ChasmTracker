@@ -5,7 +5,10 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
+using ChasmTracker.Dialogs;
+using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
+using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Playback;
@@ -43,6 +46,50 @@ public class Song
 	static Random s_rnd = new Random();
 
 	public int CurrentTick => TickCount % CurrentSpeed;
+
+	public void PromptEnableInstrumentMode()
+	{
+		var dialog = MessageBox.Show(MessageBoxTypes.YesNo, "Enable instrument mode?");
+
+		dialog.ActionYes =
+			_ =>
+			{
+				SetInstrumentMode(true);
+				Page.NotifySongChangedGlobal();
+				Page.SetPage(PageNumbers.InstrumentList);
+				MemoryUsage.NotifySongChanged();
+			};
+
+		dialog.ActionNo =
+			_ =>
+			{
+				Page.SetPage(PageNumbers.InstrumentList);
+			};
+	}
+
+	public void SetInstrumentMode(bool value)
+	{
+		if (value && !IsInstrumentMode)
+		{
+			Flags |= SongFlags.InstrumentMode;
+
+			for (int i = 0; i < Instruments.Count; i++)
+			{
+				var instrument = GetInstrument(i);
+
+				if (instrument != null)
+				{
+					/* fix wiped notes */
+					for (int j = 0; j < instrument.NoteMap.Length; j++)
+						if ((instrument.NoteMap[j] < 1)
+						|| (instrument.NoteMap[j] > 120))
+							instrument.NoteMap[j] = (byte)(j + 1);
+				}
+			}
+		}
+		else
+			Flags &= ~SongFlags.InstrumentMode;
+	}
 
 	public static void InitializeMIDI(IMIDISink midiSink)
 	{
@@ -3549,7 +3596,7 @@ public class Song
 				// set some default stuff
 				lock (AudioPlayback.LockScope())
 				{
-					CurrentSong.StopSample(n);
+					CurrentSong.StopSample(GetSample(n));
 
 					var smp = SampleFileConverter.TryLoadSampleWithAllConverters(file);
 
@@ -3579,6 +3626,211 @@ public class Song
 		{
 			return false;
 		}
+	}
+
+	public bool LoadInstrument(int n, string file)
+	{
+		return LoadInstrumentEx(n, file, null, -1);
+	}
+
+	public bool LoadInstrumentWithPrompt(int n, string file)
+	{
+		var retval = LoadInstrumentEx(n, file, null, -1);
+
+		if (!IsInstrumentMode)
+			PromptEnableInstrumentMode();
+		else
+			Page.SetPage(PageNumbers.InstrumentList);
+
+		return retval;
+	}
+
+	public bool LoadInstrumentEx(int target, string? file, string? libf, int n)
+	{
+		lock (AudioPlayback.LockScope())
+		{
+			/* 0. delete old samples */
+			if (GetInstrument(target) is SongInstrument existing)
+			{
+				/* init... */
+				var usedSamples = existing.SampleMap.ToHashSet();
+
+				/* mark... */
+				var nonExclusiveSamples = Instruments
+					.Except([existing])
+					.OfType<SongInstrument>()
+					.SelectMany(instr => instr.SampleMap)
+					.ToHashSet();
+
+				/* sweep! */
+				foreach (int j in usedSamples.Except(nonExclusiveSamples))
+					Samples[j] = null;
+			}
+
+			if (libf != null) /* file is ignored */
+			{
+				Song xl;
+
+				try
+				{
+					xl = CreateLoad(libf) ?? throw new Exception("Failed to load: " + libf);
+				}
+				catch (Exception e)
+				{
+					Log.AppendException(e, libf);
+					return false;
+				}
+
+				if (xl == null)
+					return false;
+
+				var sampleMap = new Dictionary<int, int>();
+
+				/* 1. find a place for all the samples */
+				for (int j = 0; j < 128; j++)
+				{
+					int x = xl.Instruments[n]?.SampleMap[j] ?? -1;
+
+					if (!sampleMap.ContainsKey(x))
+					{
+						if (x > 0 && x < xl.Samples.Count)
+						{
+							for (int k = 1; k < Samples.Count; k++)
+							{
+								if ((Samples[k]?.Length ?? 0) != 0) continue;
+								sampleMap[x] = k;
+
+								var smp = GetSample(k);
+
+								if (smp != null)
+								{
+									smp.Name = smp.Name.Replace('\0', ' ');
+
+									CopySample(k, smp);
+								}
+							}
+						}
+					}
+				}
+
+				/* transfer the instrument */
+				var instrument = xl.Instruments[n]!;
+
+				Instruments[target] = instrument;
+
+				// detach
+				xl.Instruments[n] = null;
+
+				/* and rewrite! */
+				for (int k = 0; k < 128; k++)
+					instrument.SampleMap[k] = (byte)sampleMap[instrument.SampleMap[k]];
+
+				return true;
+			}
+
+			/* okay, load an ITI file */
+			if (file == null)
+				return false;
+
+			try
+			{
+				return InstrumentFileConverter.TryLoadInstrumentWithAllConverters(file, target);
+			}
+			catch (IOException e)
+			{
+				Log.AppendException(e);
+				return false;
+			}
+		}
+	}
+
+	public int PreloadSample(FileReference file)
+	{
+		// 0 is our "hidden sample"
+		const int FakeSlot = 0;
+
+		//StopSample(GetSample(FakeSlot));
+
+		if (file.Sample != null)
+		{
+			var smp = GetSample(FakeSlot);
+
+			if (smp == null)
+				Samples[FakeSlot] = smp = new SongSample();
+
+			lock (AudioPlayback.LockScope())
+			{
+				DestroySample(FakeSlot);
+				CopySample(FakeSlot, file.Sample);
+
+				smp.Name = file.Title;
+				smp.FileName = file.BaseName;
+			}
+
+			return FakeSlot;
+		}
+
+		// WARNING this function must return 0 or KeyJazz.NoInstrument
+		return LoadSample(FakeSlot, file.FullPath) ? FakeSlot : KeyJazz.NoInstrument;
+	}
+
+	public void CopySample(int n, SongSample src)
+	{
+		lock (AudioPlayback.LockScope())
+			Samples[n] = src.Clone();
+	}
+
+	public void DestroySample(int nsmp)
+	{
+		var smp = GetSample(nsmp);
+
+		if (smp == null)
+			return;
+		if (!smp.HasData)
+			return;
+
+		StopSample(smp);
+
+		smp.RawData8 = null;
+		smp.RawData16 = null;
+		smp.Length = 0;
+		smp.Flags &= ~SampleFlags._16Bit;
+	}
+
+	// All of the sample's fields are initially zeroed except the filename (which is set to the sample's
+	// basename and shouldn't be changed). A sample loader should not change anything in the sample until
+	// it is sure that it can accept the file.
+	// The title points to a buffer of 26 characters.
+
+	public void ClearSample(int n)
+	{
+		lock (AudioPlayback.LockScope())
+		{
+			DestroySample(n);
+
+			Samples[n] =
+				new SongSample()
+				{
+					C5Speed = 8363,
+					Volume = 64 * 4,
+					GlobalVolume = 64,
+				};
+		}
+	}
+
+	public void WipeInstrument(int n)
+	{
+		/* wee .... */
+		var instrument = Instruments[n];
+
+		if (instrument == null)
+			return;
+		if (instrument.IsEmpty)
+			return;
+
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		CurrentSong.Instruments[n] = null;
 	}
 
 	public void FixNames()
@@ -3733,10 +3985,12 @@ public class Song
 			Status.FlashText("Error: No available Instruments!");
 	}
 
-	public void StopSample(SongSample smp)
+	public void StopSample(SongSample? smp)
 	{
-		if (!smp.HasData)
+		if (smp == null)
 			return;
+		if (!smp.HasData)
+				return;
 
 		for (int i = 0; i < Voices.Length; i++)
 		{

@@ -8,12 +8,14 @@ namespace ChasmTracker;
 
 using ChasmTracker.Clipboard;
 using ChasmTracker.Dialogs;
+using ChasmTracker.Dialogs.PatternEditor;
 using ChasmTracker.DiskOutput;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Pages.TrackViews;
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -108,7 +110,7 @@ public class PatternEditorPage : Page
 		get => _currentPattern;
 		set
 		{
-			if (!_playbackTracing || !Song.IsPlaying)
+			if (!_playbackTracing || !AudioPlayback.IsPlaying)
 				UpdateMagicBytes();
 
 			_currentPattern = value.Clamp(0, 199);
@@ -2165,7 +2167,7 @@ public class PatternEditorPage : Page
 		bool[] mute = new bool[s.Channels];
 
 		for (int i = 0; i < s.Channels; i++)
-			mute[i] = Song.CurrentSong.GetChannel(i + baseChannel)!.Flags.HasFlag(ChannelFlags.Mute);
+			mute[i] = Song.CurrentSong.GetChannel(i + baseChannel)?.Flags.HasFlag(ChannelFlags.Mute) ?? false;
 
 		for (int row = 0; row < s.Rows; row++)
 		{
@@ -2359,7 +2361,7 @@ public class PatternEditorPage : Page
 
 	public override bool ClipboardPaste(byte[]? cptr)
 	{
-		return PatternSelectionSystemPaste();
+		return PatternSelectionSystemPaste(cptr);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -2402,7 +2404,7 @@ public class PatternEditorPage : Page
 
 	void AdvanceCursor(bool nextRow, bool multichannel)
 	{
-		if (nextRow && !(Song.IsPlaying && _playbackTracing))
+		if (nextRow && !(AudioPlayback.IsPlaying && _playbackTracing))
 		{
 			var pattern = Song.CurrentSong.GetPattern(_currentPattern);
 
@@ -2443,16 +2445,16 @@ public class PatternEditorPage : Page
 	{
 		var numRows = Song.CurrentSong.GetPatternLength(_currentPattern);
 
-		VGAMem.DrawText(_currentRow.ToString("d3"), new Point(12, 7), 5, 0);
-		VGAMem.DrawText(numRows.ToString("d3"), new Point(16, 7), 5, 0);
+		VGAMem.DrawText(_currentRow.ToString("d3"), new Point(12, 7), (5, 0));
+		VGAMem.DrawText(numRows.ToString("d3"), new Point(16, 7), (5, 0));
 	}
 
 	public void UpdateCurrentPattern()
 	{
 		int numPatterns = Song.CurrentSong.Patterns.Count;
 
-		VGAMem.DrawText(_currentPattern.ToString("d3"), new Point(12, 6), 5, 0);
-		VGAMem.DrawText(numPatterns.ToString("d3"), new Point(16, 6), 5, 0);
+		VGAMem.DrawText(_currentPattern.ToString("d3"), new Point(12, 6), (5, 0));
+		VGAMem.DrawText(numPatterns.ToString("d3"), new Point(16, 6), (5, 0));
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -2486,7 +2488,7 @@ public class PatternEditorPage : Page
 		}
 	}
 
-	void PlaySongFromMarkOrderPan()
+	public void PlaySongFromMarkOrderPan()
 	{
 		if (_markedPattern == -1)
 			AudioPlayback.StartAtOrder(AllPages.OrderList.CurrentOrder, _currentRow);
@@ -2494,7 +2496,7 @@ public class PatternEditorPage : Page
 			AudioPlayback.StartAtPattern(_markedPattern, _markedRow);
 	}
 
-	void PlaySongFromMark()
+	public void PlaySongFromMark()
 	{
 		int newOrder;
 
@@ -2598,10 +2600,10 @@ public class PatternEditorPage : Page
 
 		int maskColour = Status.Flags.HasFlag(StatusFlags.InvertedPalette) ? 1 : 3; /* mask colour */
 
-		bool patternIsPlaying = Song.IsPlaying && (_currentPattern == _playingPattern);
+		bool patternIsPlaying = AudioPlayback.IsPlaying && (_currentPattern == _playingPattern);
 
 		if (_templateMode != TemplateMode.Off)
-			VGAMem.DrawTextLen(_templateMode.GetDescription(), 60, new Point(2, 12), 3, 2);
+			VGAMem.DrawTextLen(_templateMode.GetDescription(), 60, new Point(2, 12), (3, 2));
 
 		/* draw the outer box around the whole thing */
 		VGAMem.DrawBox(new Point(4, 14), new Point(5 + _visibleWidth, 47), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
@@ -2624,7 +2626,8 @@ public class PatternEditorPage : Page
 				"real" channels. i'd rather pm not replicate this cruft and
 				more or less hide the mixer from the interface... */
 			trackView.DrawChannelHeader(chan, new Point(chanDrawPos, 14),
-				Song.CurrentSong.GetChannel(chan - 1)!.Flags.HasFlag(ChannelFlags.Mute) ? 0 : 3);
+				(Song.CurrentSong.GetChannel(chan - 1)?.Flags.HasFlag(ChannelFlags.Mute) ?? false)
+				? (byte)0 : (byte)3);
 
 			int row, rowPos;
 
@@ -2638,7 +2641,7 @@ public class PatternEditorPage : Page
 				{
 					fg = patternIsPlaying && row == _playingRow ? 3 : 0;
 					bg = (_currentPattern == _markedPattern && row == _markedRow) ? 11 : 2;
-					VGAMem.DrawText(row.ToString("d3"), new Point(1, 15 + rowPos), fg, bg);
+					VGAMem.DrawText(row.ToString("d3"), new Point(1, 15 + rowPos), (fg, bg));
 				}
 
 				if (IsInSelection(chan, row))
@@ -2689,14 +2692,14 @@ public class PatternEditorPage : Page
 				else
 					cpos = -1;
 
-				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), note, cpos, fg, bg);
+				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), note, cpos, (fg, bg));
 
 				if (_drawDivisions && chanPos < _visibleChannels - 1)
 				{
 					if (IsInSelection(chan, row))
 						bg = 0;
 
-					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), 2, bg);
+					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), (2, bg));
 				}
 			}
 
@@ -2712,28 +2715,28 @@ public class PatternEditorPage : Page
 				else
 					bg = 0;
 
-				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), SongNote.Empty, -1, 6, bg);
+				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), SongNote.Empty, -1, (6, bg));
 
 				if (_drawDivisions && chanPos < _visibleChannels - 1)
 				{
-					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), 2, bg);
+					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), (2, bg));
 				}
 			}
 
 			if (chan == _currentChannel)
-				trackView.DrawMask(new Point(chanDrawPos, 47), _editCopyMask, _currentPosition, maskColour, 2);
+				trackView.DrawMask(new Point(chanDrawPos, 47), _editCopyMask, _currentPosition, (maskColour, 2));
 
 			/* blah */
 			if (_channelMulti[chan - 1])
 			{
 				if (_trackViewScheme[chanPos] == 0)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 3, 47), maskColour, 2);
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 3, 47), (maskColour, 2));
 				else if (_trackViewScheme[chanPos] < 3)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 2, 47), maskColour, 2);
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 2, 47), (maskColour, 2));
 				else if (_trackViewScheme[chanPos] == 3)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 1, 47), maskColour, 2);
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 1, 47), (maskColour, 2));
 				else if (_currentPosition < 2)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos, 47), maskColour, 2);
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos, 47), (maskColour, 2));
 			}
 
 			chanDrawPos += trackView.Width + (_drawDivisions ? 1 : 0);
@@ -3059,7 +3062,7 @@ public class PatternEditorPage : Page
 		int r = _currentRow, c = _currentChannel, p = _currentPattern;
 		bool quantizeNextRow = false;
 		int ins = KeyJazz.NoInstrument, smp = KeyJazz.NoInstrument;
-		bool songWasPlaying = Song.IsPlaying;
+		bool songWasPlaying = AudioPlayback.IsPlaying;
 
 		if (Song.CurrentSong.IsInstrumentMode)
 			ins = AllPages.InstrumentList.CurrentInstrument;
@@ -3068,10 +3071,10 @@ public class PatternEditorPage : Page
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
 
-		int speed = Song.CurrentSpeed;
-		int tick = Song.CurrentTick;
+		int speed = Song.CurrentSong.CurrentSpeed;
+		int tick = Song.CurrentSong.CurrentTick;
 
-		if ((_midiStartRecord != 0) && !Song.IsPlaying)
+		if ((_midiStartRecord != 0) && !AudioPlayback.IsPlaying)
 		{
 			switch (_midiStartRecord)
 			{
@@ -3124,7 +3127,7 @@ public class PatternEditorPage : Page
 
 			/* don't record noteoffs for no good reason... */
 			if (!(MIDIEngine.Flags.HasFlag(MIDIFlags.RecordNoteOff)
-					&& Song.IsPlaying
+					&& AudioPlayback.IsPlaying
 					&& _playbackTracing))
 				return false;
 		}
@@ -3135,7 +3138,7 @@ public class PatternEditorPage : Page
 			else
 				v = 0;
 
-			if (!(Song.IsPlaying && _playbackTracing))
+			if (!(AudioPlayback.IsPlaying && _playbackTracing))
 				tick = 0;
 
 			n = k.MIDINote;
@@ -4170,7 +4173,7 @@ public class PatternEditorPage : Page
 			case KeySym.Minus:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Song.IsPlaying && _playbackTracing)
+				if (AudioPlayback.IsPlaying && _playbackTracing)
 					return true;
 
 				AllPages.OrderList.PreviousOrderPattern();
@@ -4182,7 +4185,7 @@ public class PatternEditorPage : Page
 			case KeySym.Plus:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Song.IsPlaying && _playbackTracing)
+				if (AudioPlayback.IsPlaying && _playbackTracing)
 					return true;
 				AllPages.OrderList.NextOrderPattern();
 				return true;
@@ -4340,7 +4343,7 @@ public class PatternEditorPage : Page
 			}
 		}
 
-		if (Song.IsPlaying && _playbackTracing && k.IsRepeat)
+		if (AudioPlayback.IsPlaying && _playbackTracing && k.IsRepeat)
 			return false;
 
 		if (!Insert(k))
@@ -4701,12 +4704,12 @@ public class PatternEditorPage : Page
 
 				if (_playbackTracing)
 				{
-					switch (Song.Mode)
+					switch (AudioPlayback.Mode)
 					{
 						case AudioPlaybackMode.PatternLoop:
 							return true;
 						case AudioPlaybackMode.Playing:
-							Song.SetCurrentOrder(Song.CurrentSong.CurrentOrder - 1);
+							Song.CurrentSong.SetCurrentOrder(Song.CurrentSong.CurrentOrder - 1);
 							return true;
 						default:
 							break;
@@ -4730,12 +4733,12 @@ public class PatternEditorPage : Page
 
 				if (_playbackTracing)
 				{
-					switch (Song.Mode)
+					switch (AudioPlayback.Mode)
 					{
 						case AudioPlaybackMode.PatternLoop:
 							return true;
 						case AudioPlaybackMode.Playing:
-							Song.SetCurrentOrder(Song.CurrentSong.CurrentOrder + 1);
+							Song.CurrentSong.SetCurrentOrder(Song.CurrentSong.CurrentOrder + 1);
 							return true;
 						default:
 							break;
@@ -4934,7 +4937,7 @@ public class PatternEditorPage : Page
 		_playingRow = AudioPlayback.CurrentRow;
 		_playingPattern = AudioPlayback.PlayingPattern;
 
-		if (Song.IsPlaying && (_playingRow != _prevRow || _playingPattern != _prevPattern))
+		if (AudioPlayback.IsPlaying && (_playingRow != _prevRow || _playingPattern != _prevPattern))
 		{
 			_prevRow = _playingRow;
 			_prevPattern = _playingPattern;

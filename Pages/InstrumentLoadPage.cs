@@ -1,12 +1,11 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
-using ChasmTracker.Widgets;
-
-public class AboutPa1ge : Page
+public class InstrumentLoadPage : InstrumentFileListPageBase
 {
-	public AboutPa1ge()
-		: base("About", PageNumbers.About)
-	{
+	protected override bool IsLibraryMode => false;
 
+	public InstrumentLoadPage()
+		: base(PageNumbers.InstrumentLoad, "Load Instrument")
+	{
 	}
 }
