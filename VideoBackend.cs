@@ -19,6 +19,7 @@ public abstract class VideoBackend
 	public abstract bool IsWindowManagerAvailable();
 	public abstract bool IsHardware();
 	public abstract void Setup(VideoInterpolationMode interpolation);
+	public abstract bool IsFullScreen();
 	public abstract void Fullscreen(bool? newFSFlag);
 	public abstract bool IsScreenSaverEnabled();
 	public abstract void ToggleScreenSaver(bool enabled);
@@ -34,4 +35,5 @@ public abstract class VideoBackend
 	public abstract WMData? GetWMData();
 	public abstract void ShowCursor(bool enabled);
 	public abstract void NotifyMouseCursorChanged();
+	public abstract void SetPalette(int[] colours);
 }

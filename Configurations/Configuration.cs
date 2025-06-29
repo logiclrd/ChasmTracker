@@ -51,7 +51,7 @@ public class Configuration
 		}
 	}
 
-	public void Save()
+	public static void Save()
 	{
 		// TODO
 	}

@@ -3,6 +3,7 @@ using System.Text;
 
 namespace ChasmTracker.VGA;
 
+using ChasmTracker.Configurations;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -21,7 +22,18 @@ public static class VGAMem
 
 	public static byte[] Overlay = new byte[Constants.NativeScreenWidth * Constants.NativeScreenHeight];
 
-	public static Palette CurrentPalette = Palettes.UserDefined;
+	static Palette _currentPalette = Palettes.UserDefined;
+
+	public static Palette CurrentPalette
+	{
+		get => _currentPalette;
+		set
+		{
+			_currentPalette = value;
+			Configuration.General.CurrentPalette = _currentPalette.Index;
+			Configuration.Save();
+		}
+	}
 
 	static void CheckInvert(ref byte tl, ref byte br)
 	{
@@ -61,7 +73,7 @@ public static class VGAMem
 	 * whole program (the audio crap doesn't even come close)
 	 * In a normal session, this function will probably amount
 	 * for ~80% of all processing that Schism does. */
-	public static unsafe void Scan8(int ry, byte* @out, byte[] tc, int[] mouseLine, int[] mouseLineMask)
+	public static unsafe void Scan8(int ry, byte *@out, ref ChannelData tc, int[] mouseLine, int[] mouseLineMask)
 	{
 		/* constants */
 		int y = (ry >> 3), yl = (ry & 7);
@@ -114,14 +126,14 @@ public static class VGAMem
 				}
 				case FontTypes.Overlay:
 					/* raw pixel data, needs special code ;) */
-					*@out++ = tc[(Overlay[q + 0] | (((mouseLine[x] & 0x80) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 1] | (((mouseLine[x] & 0x40) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 2] | (((mouseLine[x] & 0x20) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 3] | (((mouseLine[x] & 0x10) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 4] | (((mouseLine[x] & 0x08) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 5] | (((mouseLine[x] & 0x04) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 6] | (((mouseLine[x] & 0x02) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 7] | (((mouseLine[x] & 0x1) != 0) ? 15 : 0)) & 0xFF];
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 0] | (((mouseLine[x] & 0x80) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 1] | (((mouseLine[x] & 0x40) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 2] | (((mouseLine[x] & 0x20) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 3] | (((mouseLine[x] & 0x10) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 4] | (((mouseLine[x] & 0x08) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 5] | (((mouseLine[x] & 0x04) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 6] | (((mouseLine[x] & 0x02) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((byte)(tc[(Overlay[q + 7] | (((mouseLine[x] & 0x1) != 0) ? 15 : 0)) & 0xFF]));
 					continue;
 				case FontTypes.Unicode:
 				{
@@ -156,18 +168,18 @@ public static class VGAMem
 			dg = unchecked((byte)(dg | mouseLine[x]));
 			dg = unchecked((byte)(dg & ~(mouseLineMask[x] ^ mouseLine[x])));
 
-			*@out++ = tc[((dg & 0x80) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x40) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x20) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x10) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x8) != 0) ? fg2 : bg2];
-			*@out++ = tc[((dg & 0x4) != 0) ? fg2 : bg2];
-			*@out++ = tc[((dg & 0x2) != 0) ? fg2 : bg2];
-			*@out++ = tc[((dg & 0x1) != 0) ? fg2 : bg2];
+			*@out++ = unchecked((byte)(tc[((dg & 0x80) != 0) ? fg : bg]));
+			*@out++ = unchecked((byte)(tc[((dg & 0x40) != 0) ? fg : bg]));
+			*@out++ = unchecked((byte)(tc[((dg & 0x20) != 0) ? fg : bg]));
+			*@out++ = unchecked((byte)(tc[((dg & 0x10) != 0) ? fg : bg]));
+			*@out++ = unchecked((byte)(tc[((dg & 0x8) != 0) ? fg2 : bg2]));
+			*@out++ = unchecked((byte)(tc[((dg & 0x4) != 0) ? fg2 : bg2]));
+			*@out++ = unchecked((byte)(tc[((dg & 0x2) != 0) ? fg2 : bg2]));
+			*@out++ = unchecked((byte)(tc[((dg & 0x1) != 0) ? fg2 : bg2]));
 		}
 	}
 
-	public static unsafe void Scan16(int ry, short* @out, short[] tc, int[] mouseLine, int[] mouseLineMask)
+	public static unsafe void Scan16(int ry, short *@out, ref ChannelData tc, int[] mouseLine, int[] mouseLineMask)
 	{
 		/* constants */
 		int y = (ry >> 3), yl = (ry & 7);
@@ -220,14 +232,14 @@ public static class VGAMem
 				}
 				case FontTypes.Overlay:
 					/* raw pixel data, needs special code ;) */
-					*@out++ = tc[(Overlay[q + 0] | (((mouseLine[x] & 0x80) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 1] | (((mouseLine[x] & 0x40) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 2] | (((mouseLine[x] & 0x20) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 3] | (((mouseLine[x] & 0x10) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 4] | (((mouseLine[x] & 0x08) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 5] | (((mouseLine[x] & 0x04) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 6] | (((mouseLine[x] & 0x02) != 0) ? 15 : 0)) & 0xFF];
-					*@out++ = tc[(Overlay[q + 7] | (((mouseLine[x] & 0x1) != 0) ? 15 : 0)) & 0xFF];
+					*@out++ = unchecked((short)(tc[(Overlay[q + 0] | (((mouseLine[x] & 0x80) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((short)(tc[(Overlay[q + 1] | (((mouseLine[x] & 0x40) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((short)(tc[(Overlay[q + 2] | (((mouseLine[x] & 0x20) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((short)(tc[(Overlay[q + 3] | (((mouseLine[x] & 0x10) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((short)(tc[(Overlay[q + 4] | (((mouseLine[x] & 0x08) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((short)(tc[(Overlay[q + 5] | (((mouseLine[x] & 0x04) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((short)(tc[(Overlay[q + 6] | (((mouseLine[x] & 0x02) != 0) ? 15 : 0)) & 0xFF]));
+					*@out++ = unchecked((short)(tc[(Overlay[q + 7] | (((mouseLine[x] & 0x1) != 0) ? 15 : 0)) & 0xFF]));
 					continue;
 				case FontTypes.Unicode:
 				{
@@ -262,18 +274,18 @@ public static class VGAMem
 			dg = unchecked((byte)(dg | mouseLine[x]));
 			dg = unchecked((byte)(dg & ~(mouseLineMask[x] ^ mouseLine[x])));
 
-			*@out++ = tc[((dg & 0x80) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x40) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x20) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x10) != 0) ? fg : bg];
-			*@out++ = tc[((dg & 0x8) != 0) ? fg2 : bg2];
-			*@out++ = tc[((dg & 0x4) != 0) ? fg2 : bg2];
-			*@out++ = tc[((dg & 0x2) != 0) ? fg2 : bg2];
-			*@out++ = tc[((dg & 0x1) != 0) ? fg2 : bg2];
+			*@out++ = unchecked((short)(tc[((dg & 0x80) != 0) ? fg : bg]));
+			*@out++ = unchecked((short)(tc[((dg & 0x40) != 0) ? fg : bg]));
+			*@out++ = unchecked((short)(tc[((dg & 0x20) != 0) ? fg : bg]));
+			*@out++ = unchecked((short)(tc[((dg & 0x10) != 0) ? fg : bg]));
+			*@out++ = unchecked((short)(tc[((dg & 0x8) != 0) ? fg2 : bg2]));
+			*@out++ = unchecked((short)(tc[((dg & 0x4) != 0) ? fg2 : bg2]));
+			*@out++ = unchecked((short)(tc[((dg & 0x2) != 0) ? fg2 : bg2]));
+			*@out++ = unchecked((short)(tc[((dg & 0x1) != 0) ? fg2 : bg2]));
 		}
 	}
 
-	public static unsafe void Scan32(int ry, int* @out, int[] tc, int[] mouseLine, int[] mouseLineMask)
+	public static unsafe void Scan32(int ry, int *@out, ref ChannelData tc, int[] mouseLine, int[] mouseLineMask)
 	{
 		/* constants */
 		int y = (ry >> 3), yl = (ry & 7);

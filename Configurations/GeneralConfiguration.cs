@@ -11,4 +11,7 @@ public class GeneralConfiguration
 
 	public bool MetaIsCtrl;
 	public bool AltGrIsAlt;
+
+	[ConfigurationKey("palette_cur")]
+	public int CurrentPalette;
 }

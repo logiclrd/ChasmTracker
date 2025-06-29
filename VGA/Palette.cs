@@ -71,6 +71,15 @@ public class Palette
 
 	public void Apply()
 	{
-		// TODO
+		Video.Colours(VGAMem.CurrentPalette);
+
+		/* is the "light" border color actually darker than the "dark" color? */
+		int lightBorderIntensity = VGAMem.CurrentPalette[3, 0] + VGAMem.CurrentPalette[3, 1] + VGAMem.CurrentPalette[3, 2];
+		int darkBorderIntensity = VGAMem.CurrentPalette[1, 0] + VGAMem.CurrentPalette[1, 1] + VGAMem.CurrentPalette[1, 2];
+
+		if (darkBorderIntensity > lightBorderIntensity)
+			Status.Flags |= StatusFlags.InvertedPalette;
+		else
+			Status.Flags &= ~StatusFlags.InvertedPalette;
 	}
 }

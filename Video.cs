@@ -16,6 +16,8 @@ public class Video
 	static IntPtr s_renderer; // SDL_Renderer *
 	static IntPtr s_texture; // SDL_Texture *
 
+	static int[] s_tcBGR32 = new int[256];
+
 	public static int Width => 640; // TODO
 	public static int Height => 400;
 
@@ -25,7 +27,12 @@ public class Video
 		public MouseCursorShapes Shape;
 	}
 
-	public static readonly MouseFields Mouse = new MouseFields();
+	public static readonly MouseFields Mouse =
+		new MouseFields()
+		{
+			Visible = MouseCursorState.Emulated,
+			Shape = MouseCursorShapes.Arrow,
+		};
 
 	public static bool Startup()
 	{
@@ -58,6 +65,11 @@ public class Video
 	public static void Fullscreen(bool? newFSFlag = null)
 	{
 		s_backend.Fullscreen(newFSFlag);
+	}
+
+	public static bool IsFullScreen()
+	{
+		return s_backend.IsFullScreen();
 	}
 
 	public static bool IsInputGrabbed()
@@ -195,5 +207,52 @@ public class Video
 	public static void WarpMouse(double x, double y)
 	{
 		s_backend.WarpMouse(new Point((int)x, (int)y));
+	}
+
+	// was: video_colors
+	public static void SetPalette(Palette palette)
+	{
+		GenerateColours(
+			palette,
+			(idx, rgb) => s_tcBGR32[idx] = rgb | unchecked((int)0xFF000000));
+
+		s_backend.SetPalette(s_tcBGR32);
+	}
+
+	/* calls back to a function receiving all the colors :) */
+	// was: video_colors_iterate
+	public static void GenerateColours(Palette palette, Action<int, int> fun)
+	{
+		/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
+
+		/* make our "base" space */
+		for (int i = 0; i < 16; i++)
+		{
+			int rgb =
+				(palette[i, 0] << 0) |
+				(palette[i, 1] << 8) |
+				(palette[i, 2] << 16);
+
+			fun(i, rgb);
+		}
+
+		/* make our "gradient" space; this is used exclusively for the waterfall page (Alt-F12) */
+		int[] lastmap = new[] { 0, 1, 2, 3, 5 };
+
+		for (int i = 0; i < 128; i++)
+		{
+			int p = lastmap[i >> 5];
+
+			byte r = unchecked((byte)((palette[p].Red + (palette[p + 1].Red - palette[p].Red) * (i & 0x1F)) / 0x20));
+			byte g = unchecked((byte)((palette[p].Green + (palette[p + 1].Green - palette[p].Green) * (i & 0x1F)) / 0x20));
+			byte b = unchecked((byte)((palette[p].Blue + (palette[p + 1].Blue - palette[p].Blue) * (i & 0x1F)) / 0x20));
+
+			int rgb =
+				(r << 0) |
+				(g << 8) |
+				(b << 16);
+
+			fun(i + 128, rgb);
+		}
 	}
 }

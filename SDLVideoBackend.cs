@@ -8,6 +8,7 @@ namespace ChasmTracker;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.Events;
+using ChasmTracker.Input;
 using ChasmTracker.Interop;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -212,6 +213,12 @@ public class SDLVideoBackend : VideoBackend
 	}
 
 	public override string? DriverName => SDL.GetCurrentVideoDriver();
+
+	public override void SetPalette(int[] colours)
+	{
+		for (int i = 0; i < 256; i++)
+			_pal[i] = colours[i];
+	}
 
 	void RedrawTexture()
 	{
@@ -518,7 +525,7 @@ public class SDLVideoBackend : VideoBackend
 	/* --------------------------------------------------------------- */
 	/* blitters */
 
-	void video_blitUV(IntPtr pixels, int pitch, ref ChannelData tpal)
+	unsafe void video_blitUV(IntPtr pixelsPtr, int pitch, ref ChannelData tpal)
 	{
 		var mouse = GetMouseCoordinates();
 
@@ -527,6 +534,8 @@ public class SDLVideoBackend : VideoBackend
 
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
+
+		byte *pixels = (byte *)pixelsPtr;
 
 		for (int y = 0; y < Constants.NativeScreenHeight; y++)
 		{
@@ -537,42 +546,34 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
-	void video_blitTV(IntPtr pixels, int pitch, ref ChannelData tpal)
+	unsafe void video_blitTV(IntPtr pixels, int pitch, ref ChannelData tpal)
 	{
 		var mouse = GetMouseCoordinates();
 
 		int mouseLineX = mouse.X / 8;
 		int mouseLineV = mouse.X % 8;
 
-		byte[] cv8Backing = new byte[Constants.NativeScreenWidth];
+		byte[] cv8BackingBuffer = new byte[Constants.NativeScreenWidth];
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
 
-		var cv8BackingPin = GCHandle.Alloc(cv8Backing, GCHandleType.Pinned);
-
-		try
+		fixed (byte *cv8Backing = &cv8BackingBuffer[0])
+		for (int y = 0; y < Constants.NativeScreenHeight; y += 2)
 		{
-			for (int y = 0; y < Constants.NativeScreenHeight; y += 2)
+			MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
+			VGAMem.Scan8(y, cv8Backing, ref tpal, mouseLine, mouseLineMask);
+
+			for (int x = 0; x < pitch; x += 2)
 			{
-				MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
-				VGAMem.Scan8(y, cv8BackingPin.AddrOfPinnedObject(), ref tpal, mouseLine, mouseLineMask);
-
-				for (int x = 0; x < pitch; x += 2)
-				{
-					Marshal.WriteByte(pixels, unchecked((byte)(cv8Backing[x + 1] | (cv8Backing[x] << 4))));
-					pixels++;
-				}
+				Marshal.WriteByte(pixels, unchecked((byte)(cv8BackingBuffer[x + 1] | (cv8BackingBuffer[x] << 4))));
+				pixels++;
 			}
-		}
-		finally
-		{
-			cv8BackingPin.Free();
 		}
 	}
 
-	void video_blit11(int bpp, IntPtr pixels, int pitch, ref ChannelData tpal)
+	unsafe void video_blit11(int bpp, byte *pixels, int pitch, ref ChannelData tpal)
 	{
-		uint[] cv32Backing = new uint[Constants.NativeScreenWidth];
+		int[] cv32BackingBuffer = new int[Constants.NativeScreenWidth];
 
 		var mouse = GetMouseCoordinates();
 
@@ -582,43 +583,35 @@ public class SDLVideoBackend : VideoBackend
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
 
-		var cv32BackingPin = GCHandle.Alloc(cv32Backing, GCHandleType.Pinned);
-
-		try
+		fixed (int *cv32Backing = &cv32BackingBuffer[0])
+		for (int y = 0; y < Constants.NativeScreenHeight; y++)
 		{
-			for (int y = 0; y < Constants.NativeScreenHeight; y++)
+			MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
+
+			switch (bpp)
 			{
-				MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
+				case 1:
+					VGAMem.Scan8(y, pixels, ref tpal, mouseLine, mouseLineMask);
+					break;
+				case 2:
+					VGAMem.Scan16(y, (short *)pixels, ref tpal, mouseLine, mouseLineMask);
+					break;
+				case 3:
+					VGAMem.Scan32(y, cv32Backing, ref tpal, mouseLine, mouseLineMask);
 
-				switch (bpp)
-				{
-					case 1:
-						VGAMem.Scan8(y, pixels, ref tpal, mouseLine, mouseLineMask);
-						break;
-					case 2:
-						VGAMem.Scan16(y, pixels, ref tpal, mouseLine, mouseLineMask);
-						break;
-					case 3:
-						VGAMem.Scan32(y, cv32BackingPin.AddrOfPinnedObject(), ref tpal, mouseLine, mouseLineMask);
-
-						for (int x = 0; x < Constants.NativeScreenWidth; x++)
-						{
-							Marshal.WriteByte(pixels, x * 3 + 0, unchecked((byte)(cv32Backing[x] & 0xFF)));
-							Marshal.WriteByte(pixels, x * 3 + 1, unchecked((byte)((cv32Backing[x] >> 8) & 0xFF)));
-							Marshal.WriteByte(pixels, x * 3 + 2, unchecked((byte)((cv32Backing[x] >> 16) & 0xFF)));
-						}
-						break;
-					case 4:
-						VGAMem.Scan32(y, pixels, ref tpal, mouseLine, mouseLineMask);
-						break;
-				}
-
-				pixels += pitch;
+					for (int x = 0; x < Constants.NativeScreenWidth; x++)
+					{
+						pixels[x * 3 + 0] = unchecked((byte)(cv32Backing[x] & 0xFF));
+						pixels[x * 3 + 1] = unchecked((byte)((cv32Backing[x] >> 8) & 0xFF));
+						pixels[x * 3 + 2] = unchecked((byte)((cv32Backing[x] >> 16) & 0xFF));
+					}
+					break;
+				case 4:
+					VGAMem.Scan32(y, (int *)pixels, ref tpal, mouseLine, mouseLineMask);
+					break;
 			}
-		}
-		finally
-		{
-			cv32BackingPin.Free();
+
+			pixels += pitch;
 		}
 	}
 
@@ -643,7 +636,7 @@ public class SDLVideoBackend : VideoBackend
 
 	void SDLPal(int i, Colour rgb)
 	{
-		_pal[i] = SDL.MapRGB(_pixelFormat, IntPtr.Zero, rgb.R, rgb.G, rgb.B);
+		_pal[i] = unchecked((int)SDL.MapRGB(_pixelFormat, IntPtr.Zero, rgb.R, rgb.G, rgb.B));
 	}
 
 	/* calls back to a function receiving all the colors :) */
@@ -699,6 +692,13 @@ public class SDLVideoBackend : VideoBackend
 	}
 
 	/* --------------------------------------------------------------- */
+
+	public override bool IsFullScreen()
+	{
+		var flags = SDL.GetWindowFlags(_window);
+
+		return flags.HasFlag(SDL.WindowFlags.Fullscreen);
+	}
 
 	public override void Fullscreen(bool? newFSFlag)
 	{
@@ -837,7 +837,7 @@ public class SDLVideoBackend : VideoBackend
 			DoTheToggle();
 	}
 
-	public override void Blit()
+	public unsafe override void Blit()
 	{
 		SDL.FRect dstRect = default;
 
@@ -871,7 +871,7 @@ public class SDLVideoBackend : VideoBackend
 				video_blitTV(pixels, pitch, ref _palU);
 				break;
 			default:
-				video_blit11(_bpp, pixels, pitch, ref _pal);
+				video_blit11(_bpp, (byte *)pixels, pitch, ref _pal);
 				break;
 		}
 
@@ -907,7 +907,7 @@ public class SDLVideoBackend : VideoBackend
 		if (wProps == 0)
 			return null;
 
-		string driver = SDL.GetCurrentVideoDriver();
+		string driver = SDL.GetCurrentVideoDriver() ?? "unknown";
 
 		if (driver == "windows")
 		{

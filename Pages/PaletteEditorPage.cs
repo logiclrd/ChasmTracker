@@ -225,9 +225,10 @@ public class PaletteEditorPage : Page
 			return false;
 		}
 
-		_selectedPalette = 0;
+		VGAMem.CurrentPalette = Palettes.UserDefined;
+		VGAMem.CurrentPalette.Apply();
 
-		Palettes.Presets[_selectedPalette].Apply();
+		_selectedPalette = VGAMem.CurrentPalette.Index;
 
 		UpdateThumbBars();
 
@@ -513,7 +514,8 @@ public class PaletteEditorPage : Page
 
 			if (loadSelectedPalette)
 			{
-				Palettes.Presets[_selectedPalette].Apply();
+				VGAMem.CurrentPalette = Palettes.Presets[_selectedPalette];
+				VGAMem.CurrentPalette.Apply();
 				UpdateThumbBars();
 			}
 
