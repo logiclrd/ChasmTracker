@@ -16,7 +16,7 @@ public class Dialog
 	public Point Position;
 	public Size Size;
 	public List<Widget> Widgets = new List<Widget>();
-	public SharedInt SelectedWidgetIndex = new SharedInt();
+	public Shared<int> SelectedWidgetIndex = new Shared<int>();
 
 	public string? Text;
 	public int TextX;

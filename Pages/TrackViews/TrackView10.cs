@@ -13,7 +13,7 @@ public class TrackView10 : TrackView
 		VGAMem.DrawText($"Channel {chan:d2}", position, (fg, 1));
 	}
 
-	public override void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours)
+	public override void DrawNote(Point position, ref SongNote note, int cursorPos, VGAMemColours colours)
 	{
 		string noteBuf = note.NoteString;
 		string instrumentBuf = note.InstrumentString;

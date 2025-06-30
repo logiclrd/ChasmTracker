@@ -13,7 +13,7 @@ public class NumberEntryWidget : Widget
 
 	public int Minimum;
 	public int Maximum;
-	public SharedInt CursorPosition;
+	public Shared<int> CursorPosition;
 	public event Action<KeyEvent>? HandleUnknownKey;
 	public bool Reverse;
 
@@ -28,7 +28,7 @@ public class NumberEntryWidget : Widget
 		}
 	}
 
-	public NumberEntryWidget(Point position, int width, int min, int max, SharedInt cursorPosition)
+	public NumberEntryWidget(Point position, int width, int min, int max, Shared<int> cursorPosition)
 		: base(position, width)
 	{
 		Minimum = min;

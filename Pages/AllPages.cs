@@ -55,8 +55,8 @@ public static class AllPages
 	public static ModuleSavePage ModuleSave;
 	public static ModuleExportPage ModuleExport;
 
-	public static OrderListPanningPage OrderListPanning;
-	public static OrderListVolumesPage OrderListVolumes;
+	public static OrderListPanningPage OrderListPanning = new OrderListPanningPage();
+	public static OrderListVolumesPage OrderListVolumes = new OrderListVolumesPage();
 
 	public static SongVariablesPage SongVariables;
 	public static MessagePage Message;
@@ -69,15 +69,15 @@ public static class AllPages
 	public static InstrumentListPanningPage InstrumentListPanning = new InstrumentListPanningPage();
 	public static InstrumentListPitchPage InstrumentListPitch = new InstrumentListPitchPage();
 
-	public static SampleLoadPage SampleLoad;
-	public static SampleLibraryPage SampleLibrary;
-	public static InstrumentLoadPage InstrumentLoad;
-	public static InstrumentLibraryPage InstrumentLibrary;
+	public static SampleLoadPage SampleLoad = new SampleLoadPage();
+	public static SampleLibraryPage SampleLibrary = new SampleLibraryPage();
+	public static InstrumentLoadPage InstrumentLoad = new InstrumentLoadPage();
+	public static InstrumentLibraryPage InstrumentLibrary = new InstrumentLibraryPage();
 
-	public static PaletteEditorPage PaletteEditor;
-	public static FontEditorPage FontEditor;
+	public static PaletteEditorPage PaletteEditor = new PaletteEditorPage();
+	public static FontEditorPage FontEditor = new FontEditorPage();
 
-	public static WaterfallPage Waterfall;
+	public static WaterfallPage Waterfall = new WaterfallPage();
 
 	// Updated dynamically every time an InstrumentList__ page is set.
 	public static InstrumentListPage InstrumentList = InstrumentListGeneral;

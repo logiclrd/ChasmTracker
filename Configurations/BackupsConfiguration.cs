@@ -1,6 +1,6 @@
 namespace ChasmTracker.Configurations;
 
-public class BackupsConfiguration
+public class BackupsConfiguration : ConfigurationSection
 {
 	public bool MakeBackups;
 	public bool NumberedBackups;

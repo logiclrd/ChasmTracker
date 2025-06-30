@@ -1,5 +1,7 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
+using ChasmTracker.Input;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
 /* It's lo-og, lo-og, it's big, it's heavy, it's wood!
@@ -17,10 +19,10 @@ public class LogPage : Page
 	public override void DrawConst()
 	{
 		VGAMem.DrawBox(new Point(1, 12), new Point(78, 48), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
-		VGAMem.DrawFillChars(new Point(2, 13), new Point(77, 47), VGAMem.DefaultForeground, 0);
+		VGAMem.DrawFillCharacters(new Point(2, 13), new Point(77, 47), (VGAMem.DefaultForeground, 0));
 	}
 
-	public override bool HandleKey(KeyEvent k)
+	public override bool? HandleKey(KeyEvent k)
 	{
 		switch (k.Sym)
 		{
@@ -88,9 +90,9 @@ public class LogPage : Page
 			var line = Log.Lines[i];
 
 			if (line.BIOSFont)
-				VGAMem.DrawTextBIOSLen(line.Text, 74, new Point(3, 14 + n), line.Colour, 0);
+				VGAMem.DrawTextBIOSLen(line.Text, 74, new Point(3, 14 + n), (line.Colour, 0));
 			else
-				VGAMem.DrawTextLen(line.Text, 74, new Point(3, 14 + n), line.Colour, 0);
+				VGAMem.DrawTextLen(line.Text, 74, new Point(3, 14 + n), (line.Colour, 0));
 		}
 	}
 }

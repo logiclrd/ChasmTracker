@@ -25,7 +25,7 @@ public class FileList
 		_files.RemoveAt(fileIndex);
 	}
 
-	public SharedInt SelectedIndexRef = new SharedInt();
+	public Shared<int> SelectedIndexRef = new Shared<int>();
 
 	public int SelectedIndex
 	{

@@ -24,8 +24,8 @@ public class TimeJumpDialog : Dialog
 
 	protected override void Initialize()
 	{
-		numEntryMinute = new NumberEntryWidget(new Point(44, 26), 2, 0, 21, new SharedInt());
-		numEntrySecond = new NumberEntryWidget(new Point(47, 26), 2, 0, 59, new SharedInt());
+		numEntryMinute = new NumberEntryWidget(new Point(44, 26), 2, 0, 21, new Shared<int>());
+		numEntrySecond = new NumberEntryWidget(new Point(47, 26), 2, 0, 59, new Shared<int>());
 		buttonOK = new ButtonWidget(new Point(30, 29), 8, "OK", 4);
 		buttonCancel = new ButtonWidget(new Point(42, 29), 8, "Cancel", 2);
 

@@ -23,10 +23,10 @@ public abstract class Page
 	public readonly PageNumbers PageNumber;
 	public readonly string Title;
 	public readonly HelpTexts HelpText;
-	public readonly SharedInt SelectedWidgetIndex = new SharedInt();
+	public readonly Shared<int> SelectedWidgetIndex = new Shared<int>();
 
 	public static List<Widget>? ActiveWidgets;
-	public static SharedInt? SelectedActiveWidgetIndex;
+	public static Shared<int>? SelectedActiveWidgetIndex;
 
 	public Widget? SelectedWidget
 	{

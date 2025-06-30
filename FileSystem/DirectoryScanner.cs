@@ -17,11 +17,11 @@ public class DirectoryScanner
 	public static int CurrentFile = 0;
 	public static FileList? CurrentFileList = null;
 	public static Func<FileReference, bool>? CurrentFilter = null;
-	public static SharedInt? CurrentFilePointer = null;
+	public static Shared<int>? CurrentFilePointer = null;
 	public static Action? OnMove = null;
 
 	// dmoz_filter_filelist
-	public static void SetAsynchronousFileListParameters(FileList fileList, Func<FileReference, bool> grep, SharedInt pointer, Action? fn = null)
+	public static void SetAsynchronousFileListParameters(FileList fileList, Func<FileReference, bool> grep, Shared<int> pointer, Action? fn = null)
 	{
 		CurrentFileList = fileList;
 		CurrentFilter = grep;

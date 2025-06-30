@@ -35,7 +35,7 @@ public struct SongVoice
 
 	public int ROfs, LOfs; // ?
 	public int RampLength;
-	public uint VUMeter; // moved this up -paper
+	public int VUMeter; // moved this up -paper
 											 // Information not used in the mixer
 	public int RightVolumeNew, LeftVolumeNew; // ?
 	public int FinalVolume; // range 0-16384 (?), accounting for sample+channel+global+etc. volumes

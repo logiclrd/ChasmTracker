@@ -1,4 +1,4 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 public class BlankPage : Page
 {

@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
+using System.Reflection.Metadata.Ecma335;
 using ChasmTracker.Dialogs;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
@@ -455,6 +456,13 @@ public class Song
 	public SongFlags Flags;
 
 	public bool IsInstrumentMode => Flags.HasFlag(SongFlags.InstrumentMode);
+	public bool IsStereo => !Flags.HasFlag(SongFlags.NoStereo);
+
+	public void ToggleStereo()
+	{
+		Flags ^= SongFlags.NoStereo;
+		AllPages.SongVariables.SyncStereo();
+	}
 
 	public Song()
 	{
@@ -532,6 +540,19 @@ public class Song
 		return Samples[n];
 	}
 
+	public int GetSampleNumber(SongSample? samp)
+	{
+		if (samp == null)
+			return 0;
+
+		int number = Samples.IndexOf(samp);
+
+		if (number < 0)
+			number = 0;
+
+		return number;
+	}
+
 	public SongInstrument? GetInstrument(int n)
 	{
 		if (n >= Constants.MaxInstruments)
@@ -542,6 +563,19 @@ public class Song
 			Instruments[n] = new SongInstrument(this);
 
 		return Instruments[n];
+	}
+
+	public int GetInstrumentNumber(SongInstrument? inst)
+	{
+		if (inst == null)
+			return 0;
+
+		int number = Instruments.IndexOf(inst);
+
+		if (number < 0)
+			number = 0;
+
+		return number;
 	}
 
 	public int[] GetMixState(out int numActiveVoices)

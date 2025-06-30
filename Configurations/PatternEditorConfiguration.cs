@@ -2,7 +2,7 @@ using ChasmTracker.Pages;
 
 namespace ChasmTracker.Configurations;
 
-public class PatternEditorConfiguration
+public class PatternEditorConfiguration : ConfigurationSection
 {
 	[ConfigurationKey("keyjazz_noteoff")]
 	public bool KeyjazzNoteOff = false;

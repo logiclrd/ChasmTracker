@@ -9,12 +9,12 @@ public class BitSetWidget : Widget
 {
 	public int NumberOfBits;
 	public int Value;
-	public SharedInt CursorPosition;
+	public Shared<int> CursorPosition;
 	public string[] BitsOn;
 	public string[] BitsOff;
 	public char[] ActivationKeys;
 
-	public BitSetWidget(Point position, int width, int nbits, string[] bitsOn, string[] bitsOff, SharedInt cursorPos)
+	public BitSetWidget(Point position, int width, int nbits, string[] bitsOn, string[] bitsOff, Shared<int> cursorPos)
 		: base(position, width)
 	{
 		NumberOfBits = nbits;

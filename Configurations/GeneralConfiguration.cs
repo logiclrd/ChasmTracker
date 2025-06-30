@@ -1,6 +1,6 @@
 namespace ChasmTracker.Configurations;
 
-public class GeneralConfiguration
+public class GeneralConfiguration : ConfigurationSection
 {
 	public int KeyRepeatDelay;
 	public int KeyRepeatRate;

@@ -3,7 +3,7 @@ using ChasmTracker.Utility;
 
 namespace ChasmTracker.Configurations;
 
-public class VideoConfiguration
+public class VideoConfiguration : ConfigurationSection
 {
 	public VideoInterpolationMode Interpolation = VideoInterpolationMode.NearestNeighbour;
 	public string? Format;

@@ -1,6 +1,6 @@
 namespace ChasmTracker.Configurations;
 
-public class DiskwriterConfiguration
+public class DiskwriterConfiguration : ConfigurationSection
 {
 	public int Rate;
 	public int Bits;

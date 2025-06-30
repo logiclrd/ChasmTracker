@@ -10,7 +10,7 @@ public abstract class TrackView
 	public abstract int Width { get; }
 
 	public abstract void DrawChannelHeader(int chan, Point position, byte fg);
-	public abstract void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours);
+	public abstract void DrawNote(Point position, ref SongNote note, int cursorPos, VGAMemColours colours);
 	public abstract void DrawMask(Point position, PatternEditorMask mask, int cursorPos, VGAMemColours colours);
 
 	/* --------------------------------------------------------------------- */

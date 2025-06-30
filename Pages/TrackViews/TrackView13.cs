@@ -15,7 +15,7 @@ public class TrackView13 : TrackView
 
 	readonly int[] CursorPosMap = { 0, 2, 4, 5, 7, 8, 10, 11, 12 };
 
-	public override void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours)
+	public override void DrawNote(Point position, ref SongNote note, int cursorPos, VGAMemColours colours)
 	{
 		string noteText = $"{note.NoteString} {note.InstrumentString} {note.VolumeString} {note.EffectString}";
 

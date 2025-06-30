@@ -31,6 +31,11 @@ public class AudioPlayback
 		}
 	}
 
+	public static void FlipStereo()
+	{
+		MixFlags ^= MixFlags.ReverseStereo;
+	}
+
 	static int s_currentPlayChannel;
 	static bool s_multichannelMode;
 
@@ -39,7 +44,16 @@ public class AudioPlayback
 
 	public static int CurrentRow;
 	public static int PlayingPattern;
-	public static int CurrentOrder; // TODO: accessors (song_set_current_order)
+
+	public static int CurrentOrder
+	{
+		get => Song.CurrentSong.CurrentOrder;
+		set
+		{
+			lock (LockScope())
+				Song.CurrentSong.CurrentOrder = value;
+		}
+	}
 
 	public static int SamplesPlayed;
 	public static int MaxChannelsUsed;
@@ -60,6 +74,8 @@ public class AudioPlayback
 	static string? s_driverName;
 
 	public static string AudioDriver => s_driverName ?? "unknown";
+
+	public static int PlayingChannels => Math.Min(NumVoices, Song.CurrentSong.MaxVoices);
 
 	public static void InitializeModPlug()
 	{

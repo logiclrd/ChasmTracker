@@ -38,7 +38,7 @@ public class AboutPage : Page
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
-	public override bool PreHandleKey(KeyEvent k)
+	public override bool? PreHandleKey(KeyEvent k)
 	{
 		if ((k.Mouse != MouseState.None) && (k.MousePosition.Y > 20))
 			return false;

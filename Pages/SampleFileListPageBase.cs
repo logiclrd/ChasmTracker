@@ -111,7 +111,7 @@ public class SampleFileListPageBase : Page
 			new Point(64, 14),
 			7,
 			0, 9999999,
-			new SharedInt());
+			new Shared<int>());
 
 		menuToggleLoop = new MenuToggleWidget(
 			new Point(64, 15),
@@ -120,12 +120,12 @@ public class SampleFileListPageBase : Page
 			new Point(64, 16),
 			7,
 			0, 9999999,
-			new SharedInt());
+			new Shared<int>());
 		numberEntryLoopEnd = new NumberEntryWidget(
 			new Point(64, 17),
 			7,
 			0, 9999999,
-			new SharedInt());
+			new Shared<int>());
 
 		menuToggleSustainLoop = new MenuToggleWidget(
 			new Point(64, 18),
@@ -134,12 +134,12 @@ public class SampleFileListPageBase : Page
 			new Point(64, 19),
 			7,
 			0, 9999999,
-			new SharedInt());
+			new Shared<int>());
 		numberEntrySustainLoopEnd = new NumberEntryWidget(
 			new Point(64, 20),
 			7,
 			0, 9999999,
-			new SharedInt());
+			new Shared<int>());
 
 		thumbBarGlobalVolume = new ThumbBarWidget(
 			new Point(63, 33),

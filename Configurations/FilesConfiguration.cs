@@ -1,6 +1,6 @@
 namespace ChasmTracker.Configurations;
 
-public class FilesConfiguration
+public class FilesConfiguration : ConfigurationSection
 {
 	public string? InitialSong;
 	public string? Font;

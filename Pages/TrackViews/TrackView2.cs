@@ -13,7 +13,7 @@ public class TrackView2 : TrackView
 		VGAMem.DrawText(chan.ToString("d2"), position, (fg, 1));
 	}
 
-	void DrawEffect(Point position, SongNote note, int cursorPos, byte bg)
+	void DrawEffect(Point position, ref SongNote note, int cursorPos, byte bg)
 	{
 		VGAMemColours colours = (2, bg);
 		VGAMemColours colours1 = (10, bg);
@@ -46,7 +46,7 @@ public class TrackView2 : TrackView
 			position.Advance(1), colours1, colours2);
 	}
 
-	public override void DrawNote(Point position, SongNote note, int cursorPos, VGAMemColours colours)
+	public override void DrawNote(Point position, ref SongNote note, int cursorPos, VGAMemColours colours)
 	{
 		byte vfg = 6;
 
@@ -115,7 +115,7 @@ public class TrackView2 : TrackView
 			case 7:
 			case 8:
 			case 9:
-				DrawEffect(position, note, cursorPos, colours.BG);
+				DrawEffect(position, ref note, cursorPos, colours.BG);
 				return;
 			default:
 				/* bleh */
@@ -152,7 +152,7 @@ public class TrackView2 : TrackView
 		else if (note.VolumeEffect != VolumeEffects.None)
 			VGAMem.DrawText(note.VolumeString, position, (vfg, colours.BG));
 		else if ((note.Effect != 0) || (note.Parameter != 0))
-			DrawEffect(position, note, cursorPos, colours.BG);
+			DrawEffect(position, ref note, cursorPos, colours.BG);
 		else
 		{
 			VGAMem.DrawCharacter('\xAD', position, colours);

@@ -8,4 +8,9 @@ public class OrderListPanningPage : OrderListPage
 		: base(PageNumbers.OrderListPanning, HelpTexts.OrderListPanning)
 	{
 	}
+
+	public void RecheckMutedChannels()
+	{
+		// TODO
+	}
 }

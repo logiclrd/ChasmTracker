@@ -1,8 +1,8 @@
 using System;
-using System.Diagnostics.Metrics;
-using System.Net.NetworkInformation;
 
 namespace ChasmTracker.Songs;
+
+using ChasmTracker.Utility;
 
 public struct SongNote
 {

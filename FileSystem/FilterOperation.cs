@@ -9,12 +9,12 @@ public class FilterOperation
 	FileList _fileList;
 	Func<FileReference, bool> _filter;
 	int _nextFileIndex = 0;
-	SharedInt? _filePointer;
+	Shared<int>? _filePointer;
 	bool _finished;
 
 	public event Action? ChangeMade;
 
-	public FilterOperation(FileList fileList, Func<FileReference, bool> filter, SharedInt? filePointer = null)
+	public FilterOperation(FileList fileList, Func<FileReference, bool> filter, Shared<int>? filePointer = null)
 	{
 		_fileList = fileList;
 		_filter = filter;

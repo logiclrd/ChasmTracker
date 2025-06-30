@@ -2,7 +2,7 @@ namespace ChasmTracker.Configurations;
 
 using ChasmTracker.FileSystem;
 
-public class DirectoriesConfiguration
+public class DirectoriesConfiguration : ConfigurationSection
 {
 	public string InitialDirectory = "";
 	public string DiskWriteToDirectory = "";
