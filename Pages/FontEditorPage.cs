@@ -5,6 +5,7 @@ namespace ChasmTracker;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.FileSystem;
+using ChasmTracker.Input;
 using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -12,6 +13,8 @@ using ChasmTracker.Widgets;
 
 public class FontEditorPage : Page
 {
+	OtherWidget otherSink;
+
 	FontEditorListMode _fontListMode;
 	FontEditorItem _selectedItem;
 	byte _currentCharacter;
@@ -19,7 +22,8 @@ public class FontEditorPage : Page
 	int _impulseTrackerFontMapPosition;
 	byte[] _clipboard = new byte[8];
 	FileList _fontList;
-	int _fontListTopFont = 0, _fontListCurFont = 0;
+	int _fontListTopFont = 0;
+	Shared<int> _fontListCurFont = new Shared<int>();
 
 	public PageNumbers ReturnPageNumber;
 
@@ -27,6 +31,10 @@ public class FontEditorPage : Page
 		: base(PageNumbers.FontEditor, "", HelpTexts.Global)
 	{
 		_fontList = new FileList(); // TODO
+
+		otherSink = new OtherWidget();
+
+
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -105,9 +113,9 @@ public class FontEditorPage : Page
 	void Reposition()
 	{
 		if (_fontListCurFont < 0)
-			_fontListCurFont = 0; /* weird! */
+			_fontListCurFont.Value = 0; /* weird! */
 		if (_fontListCurFont < _fontListTopFont)
-			_fontListCurFont = _fontListTopFont;
+			_fontListCurFont.Value = _fontListTopFont;
 		else if (_fontListCurFont > _fontListTopFont + (FontListVisibleFonts - 1))
 			_fontListTopFont = _fontListCurFont - (FontListVisibleFonts - 1);
 	}
@@ -116,7 +124,7 @@ public class FontEditorPage : Page
 	{
 		if (f.SortOrder == -100)
 			return true; /* this is our font.cfg, at the top of the list */
-		if (f.Type.HasFlag(FileTypes.BrowsableMask))
+		if (f.Type.HasFlag(FileSystem.FileTypes.BrowsableMask))
 			return false; /* we don't care about directories and stuff */
 
 		string ext = Path.GetExtension(f.BaseName);
@@ -128,9 +136,10 @@ public class FontEditorPage : Page
 
 	void LoadFontList()
 	{
-		_fontListTopFont = _fontListCurFont = 0;
+		_fontListTopFont = 0;
+		_fontListCurFont.Value = 0;
 
-		string fontDir = Path.Combine(Configuration.ConfigurationDirectoryDotSchism, "fonts");
+		string fontDir = Path.Combine(Configuration.Directories.DotSchism, "fonts");
 
 		Directory.CreateDirectory(fontDir);
 
@@ -147,7 +156,7 @@ public class FontEditorPage : Page
 			Log.AppendException(e);
 		}
 
-		var filterOperation = _fontList.BeginFilter(FontGrep, _currentFont);
+		var filterOperation = _fontList.BeginFilter(FontGrep, _fontListCurFont);
 
 		while (filterOperation.TakeStep())
 			;
@@ -578,7 +587,7 @@ public class FontEditorPage : Page
 				 * back to it every time f10 is pressed. */
 				if (_fontListMode != FontEditorListMode.Save)
 				{
-					_fontListCurFont = _fontListTopFont = 0;
+					_fontListCurFont.Value = _fontListTopFont = 0;
 					LoadFontList();
 					_fontListMode = FontEditorListMode.Save;
 				}

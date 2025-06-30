@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -7,27 +8,26 @@ using System.Text;
 
 namespace ChasmTracker.FileSystem;
 
-using System.Collections.Generic;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
 public class DirectoryScanner
 {
-	public static int CurrentFile = 0;
-	public static FileList? CurrentFileList = null;
-	public static Func<FileReference, bool>? CurrentFilter = null;
-	public static Shared<int>? CurrentFilePointer = null;
-	public static Action? OnMove = null;
+	public static FilterOperation? CurrentFilterOperation = null;
 
 	// dmoz_filter_filelist
 	public static void SetAsynchronousFileListParameters(FileList fileList, Func<FileReference, bool> grep, Shared<int> pointer, Action? fn = null)
-	{
-		CurrentFileList = fileList;
-		CurrentFilter = grep;
-		CurrentFile = 0;
-		CurrentFilePointer = pointer;
-		OnMove = fn;
+{
+		CurrentFilterOperation = fileList.BeginFilter(grep, pointer);
+		CurrentFilterOperation.ChangeMade +=
+			() =>
+			{
+				if (CurrentFilterOperation.IsFinished)
+					CurrentFilterOperation = null;
+
+				fn?.Invoke();
+			};
 	}
 
 	// thunk
@@ -38,42 +38,10 @@ public class DirectoryScanner
 	// this is called by main to actually do some dmoz work. returns 0 if there is no dmoz work to do...
 	public static bool TakeAsynchronousFileListStep()
 	{
-		if ((CurrentFileList == null) || (CurrentFilter == null))
+		if (CurrentFilterOperation == null)
 			return false;
 
-		if (CurrentFile >= CurrentFileList.NumFiles)
-		{
-			CurrentFileList = null;
-			CurrentFilter = null;
-			OnMove?.Invoke();
-			return false;
-		}
-
-		if (!CurrentFilter(CurrentFileList[CurrentFile]))
-		{
-			CurrentFileList.RemoveAt(CurrentFile);
-
-			if (CurrentFilePointer != null)
-			{
-				if (CurrentFilePointer >= CurrentFile)
-				{
-					CurrentFilePointer.Value--;
-					OnMove?.Invoke();
-				}
-
-				if (CurrentFilePointer >= CurrentFileList.NumFiles)
-				{
-					CurrentFilePointer.Value = CurrentFileList.NumFiles - 1;
-					OnMove?.Invoke();
-				}
-			}
-
-			Status.Flags |= StatusFlags.NeedUpdate;
-		}
-		else
-			CurrentFile++;
-
-		return true;
+		return CurrentFilterOperation.TakeStep();
 	}
 
 	public static void AddPlatformDirs(FileList fileList, DirectoryList? dirList)

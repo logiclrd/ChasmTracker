@@ -1,5 +1,6 @@
+using System;
 using System.Collections.Generic;
-using System.IO;
+
 using ChasmTracker.Utility;
 
 namespace ChasmTracker.FileSystem;
@@ -71,5 +72,10 @@ public class FileList
 	public void Sort()
 	{
 		_files.Sort();
+	}
+
+	public FilterOperation BeginFilter(Func<FileReference, bool> filter, Shared<int> filePointer)
+	{
+		return new FilterOperation(this, filter, filePointer);
 	}
 }

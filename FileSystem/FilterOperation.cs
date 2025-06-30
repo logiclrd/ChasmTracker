@@ -12,6 +12,8 @@ public class FilterOperation
 	Shared<int>? _filePointer;
 	bool _finished;
 
+	public bool IsFinished => _finished;
+
 	public event Action? ChangeMade;
 
 	public FilterOperation(FileList fileList, Func<FileReference, bool> filter, Shared<int>? filePointer = null)
@@ -54,13 +56,13 @@ public class FilterOperation
 
 			if (_filePointer != null)
 			{
-				if (_filePointer.Value >= _nextFileIndex)
+				if (_filePointer >= _nextFileIndex)
 				{
 					_filePointer.Value--;
 					ChangeMade?.Invoke();
 				}
 
-				if (_filePointer.Value >= _fileList.NumFiles)
+				if (_filePointer >= _fileList.NumFiles)
 				{
 					_filePointer.Value = _fileList.NumFiles - 1;
 					ChangeMade?.Invoke();
