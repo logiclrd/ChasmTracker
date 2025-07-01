@@ -4,6 +4,7 @@ using System.IO;
 namespace ChasmTracker;
 
 using ChasmTracker.Configurations;
+using ChasmTracker.Dialogs;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Input;
 using ChasmTracker.Pages;
@@ -41,30 +42,63 @@ public class FontEditorPage : Page
 	/* statics & local constants
 	note: x/y are for the top left corner of the frame, but w/h define the size of its *contents* */
 
-	static readonly Rect EditBoxBounds = new Rect(0, 0, 9, 11);
-	static readonly Rect CharacterMapBounds = new Rect(17, 0, 16, 16);
-	static readonly Rect ImpulseTrackerFontMapBounds = new Rect(41, 0, 16, 15);
 	static readonly Point FontListPosition = new Point(65, 0);
 
 	const int FontListVisibleFonts = 22; /* this should be called FontListHeight... */
 
+	static readonly Rect EditBoxBounds = new Rect(0, 0, 9, 11);
+	static readonly Rect CharacterMapBounds = new Rect(17, 0, 16, 16);
+	static readonly Rect ImpulseTrackerFontMapBounds = new Rect(41, 0, 16, 15);
+	static readonly Rect FontListBounds = new Rect(FontListPosition, new Size(9, FontListVisibleFonts));
+
 	static readonly Point HelpTextPosition = new Point(0, 31);
 
+	static readonly Rect HelpTextBounds = new Rect(HelpTextPosition, new Size(74, 12));
+
 	/* don't randomly mess with these for obvious reasons */
-	int InnerX(Rect bounds) => bounds.TopLeft.X + 3;
-	int InnerY(Rect bounds) => bounds.TopLeft.Y + 4;
+	static int InnerX(Point pt) => pt.X + 3;
+	static int InnerY(Point pt) => pt.Y + 4;
+
+	static int InnerX(Rect bounds) => InnerX(bounds.TopLeft);
+	static int InnerY(Rect bounds) => InnerX(bounds.TopLeft);
+
+	static Point Inner(Point p) => p.Advance(3, 4);
+	static Point Inner(Rect bounds) => Inner(bounds.TopLeft);
 
 	static readonly Size FrameBottomRight = new Size(3, 3);
 
-	bool Within(int n, int l, int u) => (n >= l) && (n < u);
+	static bool Within(int n, int l, int u) => (n >= l) && (n < u);
 
-	bool PointIn(Point pt, Rect bounds)
+	static bool PointIn(Point pt, Rect bounds)
 		=> Within(pt.X, InnerX(bounds), InnerX(bounds) + bounds.Size.Width)
 		&& Within(pt.Y, InnerY(bounds), InnerY(bounds) + bounds.Size.Height);
 
-	bool PointInFrame(Point pt, Rect bounds)
+	static bool PointInFrame(Point pt, Rect bounds)
 		=> Within(pt.X, bounds.TopLeft.X, InnerX(bounds) + bounds.Size.Width + FrameBottomRight.Width)
 		&& Within(pt.Y, bounds.TopLeft.Y, InnerY(bounds) + bounds.Size.Height + FrameBottomRight.Height);
+
+	static bool PointIn(Point pt, FontEditorItem item)
+	{
+		return PointIn(pt, GetItemBounds(item));
+	}
+
+	static bool PointInFrame(Point pt, FontEditorItem item)
+	{
+		return PointInFrame(pt, GetItemBounds(item));
+	}
+
+	static ref readonly Rect GetItemBounds(FontEditorItem item)
+	{
+		switch (item)
+		{
+			case FontEditorItem.EditBox: return ref EditBoxBounds;
+			case FontEditorItem.CharacterMap: return ref CharacterMapBounds;
+			case FontEditorItem.ImpulseTrackerFontMap: return ref ImpulseTrackerFontMapBounds;
+			case FontEditorItem.FontList: return ref FontListBounds;
+			default:
+				throw new Exception("Internal error: Unrecognized font editor item " + item);
+		}
+	}
 
 	/* --------------------------------------------------------------------- */
 
@@ -110,7 +144,50 @@ public class FontEditorPage : Page
 			193, 194, 195, 196, 197, 198, 199, 200, 201, ___, ___, ___, ___, ___, ___, ___,
 		};
 
-	void Reposition()
+	const char A8 = '\xA8';
+
+	static readonly string HelpTextGeneral =
+$@"Tab         Next box   {A8} Alt-C  Copy
+Shift-Tab   Prev. box  {A8} Alt-P  Paste
+F2-F4       Switch box {A8} Alt-M  Mix paste
+{"\x18\x19\x1a\x1b"}        Dump core  {A8} Alt-Z  Clear
+Ctrl-S/F10  Save font  {A8} Alt-H  Flip horiz
+Ctrl-R/F9   Load font  {A8} Alt-V  Flip vert
+Backspace   Reset font {A8} Alt-I  Invert
+Ctrl-Bksp   BIOS font  {A8} Alt-Bk Reset text
+                       {A8} 0-9    Palette
+Ctrl-Q      Exit       {A8}  (+10 with shift)
+";
+
+	static readonly string HelpTextEditBox =
+$@"Space       Plot/clear point
+Ins/Del     Fill/clear horiz.
+...w/Shift  Fill/clear vert.
+
++/-         Next/prev. char.
+PgUp/PgDn   Next/previous row
+Home/End    Top/bottom corner
+
+Shift-{"\x18\x19\x1a\x1b"}  Shift character
+[/]         Rotate 90{'\xF8'}
+";
+
+	static readonly string HelpTextCharacterMap =
+$@"Home/End    First/last char.
+";
+
+	static readonly string HelpTextFontList =
+$@"Home/End    First/last font
+Enter       Load/save file
+Escape      Hide font list
+
+{"\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a\x9a"}
+
+Remember to save as font.cfg
+to change the default font!
+";
+
+	void FontListReposition()
 	{
 		if (_fontListCurFont < 0)
 			_fontListCurFont.Value = 0; /* weird! */
@@ -161,19 +238,41 @@ public class FontEditorPage : Page
 		while (filterOperation.TakeStep())
 			;
 
-		Reposition();
-
-		/* p is freed by dmoz_free */
-
+		FontListReposition();
 	}
 
 	public override void DrawFull()
 	{
-		page->draw_full = draw_screen;
-		base.DrawFull();
+		VGAMem.DrawFillCharacters(new Point(0,0), new Point(79,49), (VGAMem.DefaultForeground,0));
+		DrawFrame("Edit Box", EditBoxBounds, _selectedItem == FontEditorItem.EditBox);
+		DrawEditBox();
+
+		DrawFrame("Current Font", CharacterMapBounds, _selectedItem == FontEditorItem.CharacterMap);
+		DrawCharacterMap();
+
+		DrawFrame("Preview", ImpulseTrackerFontMapBounds, _selectedItem == FontEditorItem.ImpulseTrackerFontMap);
+		DrawImpulseTrackerFontMap();
+
+		switch (_fontListMode)
+		{
+			case FontEditorListMode.Load:
+			case FontEditorListMode.Save:
+				DrawFrame(
+					(_fontListMode == FontEditorListMode.Load) ? "Load/Browse" : "Save As...",
+					FontListBounds, _selectedItem == FontEditorItem.FontList);
+				DrawFontList();
+				break;
+			default: /* Off? (I sure hope so!) */
+				break;
+		}
+
+		DrawFrame("Quick Help", HelpTextBounds, ActiveState.Disabled);
+		DrawHelpText();
+
+		DrawTime();
 	}
 
-	public override bool PreHandleKey(KeyEvent k)
+	public override bool? PreHandleKey(KeyEvent k)
 	{
 		switch (k.Sym)
 		{
@@ -216,91 +315,398 @@ public class FontEditorPage : Page
 		return false;
 	}
 
+	void HandleKeyEditBox(KeyEvent k)
+	{
+		int ci = _currentCharacter << 3;
+		var ptr = Font.Data.Slice(ci, 8);
+
+		switch (k.Sym)
+		{
+			case KeySym.Up:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					var s = ptr[0];
+					for (int n = 0; n < 7; n++)
+						ptr[n] = ptr[n + 1];
+					ptr[7] = s;
+				}
+				else
+				{
+					if (--_editPosition.Y < 0)
+						_editPosition.Y = 7;
+				}
+				break;
+			case KeySym.Down:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					var s = ptr[7];
+					for (int n = 7; n > 0; n--)
+						ptr[n] = ptr[n - 1];
+					ptr[0] = s;
+				}
+				else
+					_editPosition.Y = (_editPosition.Y + 1) % 8;
+				break;
+			case KeySym.Left:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					for (int n = 0; n < 8; n++)
+						ptr[n] = unchecked((byte)((ptr[n] >> 7) | (ptr[n] << 1)));
+				}
+				else
+				{
+					if (--_editPosition.X < 0)
+						_editPosition.X = 7;
+				}
+				break;
+			case KeySym.Right:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					for (int n = 0; n < 8; n++)
+						ptr[n] = unchecked((byte)((ptr[n] << 7) | (ptr[n] >> 1)));
+				} else {
+					_editPosition.X = (_editPosition.X + 1) % 8;
+				}
+				break;
+			case KeySym.Home:
+				_editPosition.X = _editPosition.Y = 0;
+				break;
+			case KeySym.End:
+				_editPosition.X = _editPosition.Y = 7;
+				break;
+			case KeySym.Space:
+				ptr[_editPosition.Y] = unchecked((byte)(ptr[_editPosition.Y] ^ (128 >> _editPosition.X)));
+				break;
+			case KeySym.Insert:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					for (int n = 0; n < 8; n++)
+						ptr[n] = unchecked((byte)(ptr[n] | (128 >> _editPosition.X)));
+				}
+				else
+					ptr[_editPosition.Y] = 255;
+				break;
+			case KeySym.Delete:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
+					for (int n = 0; n < 8; n++)
+						ptr[n] = unchecked((byte)(ptr[n] & ~(128 >> _editPosition.X)));
+				}
+				else
+					ptr[_editPosition.Y] = 0;
+				break;
+			case KeySym.LeftBracket:
+			case KeySym.RightBracket:
+			{
+				var tmp = new byte[8];
+
+				switch (k.Sym)
+				{
+					case KeySym.LeftBracket:
+						for (int n = 0; n < 8; n++)
+							for (int bit = 0; bit < 8; bit++)
+								if ((ptr[n] & (1 << bit)) != 0)
+									tmp[bit] = unchecked((byte)(tmp[bit] | 1 << (7 - n)));
+						break;
+					case KeySym.RightBracket:
+						for (int n = 0; n < 8; n++)
+							for (int bit = 0; bit < 8; bit++)
+								if ((ptr[n] & (1 << bit)) != 0)
+									tmp[7 - bit] = unchecked((byte)(tmp[7 - bit] | 1 << n));
+						break;
+				}
+
+				tmp.CopyTo(ptr);
+				break;
+			}
+			case KeySym.Plus:
+			case KeySym.Equals:
+				_currentCharacter++;
+				break;
+			case KeySym.Minus:
+			case KeySym.Underscore:
+				_currentCharacter--;
+				break;
+			case KeySym.PageUp:
+				_currentCharacter -= 16;
+				break;
+			case KeySym.PageDown:
+				_currentCharacter += 16;
+				break;
+			default:
+				return;
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
+	void HandleKeyCharacterMap(KeyEvent k)
+	{
+		switch (k.Sym)
+		{
+			case KeySym.Up:
+				_currentCharacter -= 16;
+				break;
+			case KeySym.Down:
+				_currentCharacter += 16;
+				break;
+			case KeySym.Left:
+				_currentCharacter = DecrWrapped(_currentCharacter);
+				break;
+			case KeySym.Right:
+				_currentCharacter = IncrWrapped(_currentCharacter);
+				break;
+			case KeySym.Home:
+				_currentCharacter = 0;
+				break;
+			case KeySym.End:
+				_currentCharacter = 255;
+				break;
+			default:
+				return;
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
+	void HandleKeyImpulseTrackerMap(KeyEvent k)
+	{
+		switch (k.Sym)
+		{
+			case KeySym.Up:
+				if (_impulseTrackerFontMapPosition < 0)
+					_impulseTrackerFontMapPosition = 224;
+				else
+				{
+					_impulseTrackerFontMapPosition -= 16;
+					if (_impulseTrackerFontMapPosition < 0)
+						_impulseTrackerFontMapPosition += 240;
+				}
+				_currentCharacter = ImpulseTrackerFontMapCharacters[_impulseTrackerFontMapPosition];
+				break;
+			case KeySym.Down:
+				if (_impulseTrackerFontMapPosition < 0)
+					_impulseTrackerFontMapPosition = 16;
+				else
+					_impulseTrackerFontMapPosition = (_impulseTrackerFontMapPosition + 16) % 240;
+				_currentCharacter = ImpulseTrackerFontMapCharacters[_impulseTrackerFontMapPosition];
+				break;
+			case KeySym.Left:
+				if (_impulseTrackerFontMapPosition < 0)
+					_impulseTrackerFontMapPosition = 15;
+				else
+					_impulseTrackerFontMapPosition = DecrWrapped(_impulseTrackerFontMapPosition);
+				_currentCharacter = ImpulseTrackerFontMapCharacters[_impulseTrackerFontMapPosition];
+				break;
+			case KeySym.Right:
+				if (_impulseTrackerFontMapPosition < 0)
+					_impulseTrackerFontMapPosition = 0;
+				else
+					_impulseTrackerFontMapPosition = IncrWrapped(_impulseTrackerFontMapPosition);
+				_currentCharacter = ImpulseTrackerFontMapCharacters[_impulseTrackerFontMapPosition];
+				break;
+			case KeySym.Home:
+				_currentCharacter = ImpulseTrackerFontMapCharacters[0];
+				_impulseTrackerFontMapPosition = 0;
+				break;
+			case KeySym.End:
+				_currentCharacter = ImpulseTrackerFontMapCharacters[239];
+				_impulseTrackerFontMapPosition = 239;
+				break;
+			default:
+				return;
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
+	void HandleKeyFontList(KeyEvent k)
+	{
+		int newFont = _fontListCurFont;
+
+		switch (k.Sym)
+		{
+			case KeySym.Home:
+				newFont = 0;
+				break;
+			case KeySym.End:
+				newFont = _fontList.NumFiles - 1;
+				break;
+			case KeySym.Up:
+				newFont--;
+				break;
+			case KeySym.Down:
+				newFont++;
+				break;
+			case KeySym.PageUp:
+				newFont -= FontListVisibleFonts;
+				break;
+			case KeySym.PageDown:
+				newFont += FontListVisibleFonts;
+				break;
+			case KeySym.Escape:
+				_selectedItem = FontEditorItem.EditBox;
+				_fontListMode = FontEditorListMode.Off;
+				break;
+			case KeySym.Return:
+				if (k.State == KeyState.Press)
+					return;
+
+				switch (_fontListMode)
+				{
+					case FontEditorListMode.Load:
+						if (_fontListCurFont < _fontList.NumFiles
+						&& !Font.Load(_fontList[_fontListCurFont].BaseName))
+							Font.Reset();
+						break;
+					case FontEditorListMode.Save:
+						if (_fontListCurFont < _fontList.NumFiles)
+						{
+							string fontFileName = _fontList[_fontListCurFont].BaseName;
+
+							if (!fontFileName.Equals("font.cfg", StringComparison.InvariantCultureIgnoreCase))
+							{
+								var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite font file?");
+
+								dialog.ActionYes =
+									_ => DoSave();
+
+								return;
+							}
+
+							DoSave();
+
+							void DoSave()
+							{
+								if (Font.Save(fontFileName))
+									_selectedItem = FontEditorItem.EditBox;
+							}
+						}
+
+						_selectedItem = FontEditorItem.EditBox;
+						/* _fontListMode = FontEditorListMode.Off; */
+						break;
+					default:
+						/* should never happen */
+						return;
+				}
+
+				break;
+			default:
+				return;
+		}
+
+		if (newFont != _fontListCurFont) {
+			newFont = newFont.Clamp(0, _fontList.NumFiles - 1);
+
+			if (newFont == _fontListCurFont)
+				return;
+
+			_fontListCurFont.Value = newFont;
+
+			FontListReposition();
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
+	static byte IncrWrapped(int n)
+	{
+		return unchecked((byte)((n & 0xF0) | ((n + 1) & 0x0F)));
+	}
+
+	static byte DecrWrapped(int n)
+	{
+		return unchecked((byte)((n & 0xF0) | ((n - 1) & 0x0F)));
+	}
+
 	/* --------------------------------------------------------------------- */
 
 	void HandleMouseEditBox(KeyEvent k)
 	{
 		int ci = _currentCharacter << 3;
 
-		int xRel = k.MousePosition.X - InnerX(EditBoxPosition.X);
-		int yRel = k.MousePosition.Y - InnerY(EditBoxPosition.Y);
+		int xRel = k.MousePosition.X - InnerX(EditBoxBounds);
+		int yRel = k.MousePosition.Y - InnerY(EditBoxBounds);
 
-		if (xrel > 0 && yrel > 2)
+		var ptr = new Span<byte>(Font.Data, ci, 8);
+
+		if (xRel > 0 && yRel > 2)
 		{
-			edit_x = xrel - 1;
-			edit_y = yrel - 3;
-			switch (k->mouse_button)
+			int editX = xRel - 1;
+			int editY = yRel - 3;
+			switch (k.MouseButton)
 			{
-				case MOUSE_BUTTON_LEFT: /* set */
-					ptr[edit_y] |= (128 >> edit_x);
+				case MouseButton.Left: /* set */
+					ptr[editY] |= (byte)(128 >> editX);
 					break;
-				case MOUSE_BUTTON_MIDDLE: /* invert */
-					if (k->state == KEY_RELEASE)
+				case MouseButton.Middle: /* invert */
+					if (k.State == KeyState.Release)
 						return;
-					ptr[edit_y] ^= (128 >> edit_x);
+					ptr[editY] ^= (byte)(128 >> editX);
 					break;
-				case MOUSE_BUTTON_RIGHT: /* clear */
-					ptr[edit_y] &= ~(128 >> edit_x);
+				case MouseButton.Right: /* clear */
+					ptr[editY] &= (byte)~(128 >> editX);
 					break;
 			}
 		}
-		else if (xrel == 0 && yrel == 2)
+		else if (xRel == 0 && yRel == 2)
 		{
 			/* clicking at the origin modifies the entire character */
-			switch (k->mouse_button)
+			switch (k.MouseButton)
 			{
-				case MOUSE_BUTTON_LEFT: /* set */
-					for (n = 0; n < 8; n++)
+				case MouseButton.Left: /* set */
+					for (int n = 0; n < 8; n++)
 						ptr[n] = 255;
 					break;
-				case MOUSE_BUTTON_MIDDLE: /* invert */
-					if (k->state == KEY_RELEASE)
+				case MouseButton.Middle: /* invert */
+					if (k.State == KeyState.Release)
 						return;
-					for (n = 0; n < 8; n++)
+					for (int n = 0; n < 8; n++)
 						ptr[n] ^= 255;
 					break;
-				case MOUSE_BUTTON_RIGHT: /* clear */
-					for (n = 0; n < 8; n++)
+				case MouseButton.Right: /* clear */
+					for (int n = 0; n < 8; n++)
 						ptr[n] = 0;
 					break;
 			}
 		}
-		else if (xrel == 0 && yrel > 2)
+		else if (xRel == 0 && yRel > 2)
 		{
-			edit_y = yrel - 3;
-			switch (k->mouse_button)
+			int editY = yRel - 3;
+			switch (k.MouseButton)
 			{
-				case MOUSE_BUTTON_LEFT: /* set */
-					ptr[edit_y] = 255;
+				case MouseButton.Left: /* set */
+					ptr[editY] = 255;
 					break;
-				case MOUSE_BUTTON_MIDDLE: /* invert */
-					if (k->state == KEY_RELEASE)
+				case MouseButton.Middle: /* invert */
+					if (k.State == KeyState.Release)
 						return;
-					ptr[edit_y] ^= 255;
+					ptr[editY] ^= 255;
 					break;
-				case MOUSE_BUTTON_RIGHT: /* clear */
-					ptr[edit_y] = 0;
+				case MouseButton.Right: /* clear */
+					ptr[editY] = 0;
 					break;
 			}
 		}
-		else if (yrel == 2 && xrel > 0)
+		else if (yRel == 2 && xRel > 0)
 		{
-			edit_x = xrel - 1;
-			switch (k->mouse_button)
+			int editX = xRel - 1;
+			switch (k.MouseButton)
 			{
-				case MOUSE_BUTTON_LEFT: /* set */
-					for (n = 0; n < 8; n++)
-						ptr[n] |= (128 >> edit_x);
+				case MouseButton.Left: /* set */
+					for (int n = 0; n < 8; n++)
+						ptr[n] |= (byte)(128 >> editX);
 					break;
-				case MOUSE_BUTTON_MIDDLE: /* invert */
-					if (k->state == KEY_RELEASE)
+				case MouseButton.Middle: /* invert */
+					if (k.State == KeyState.Release)
 						return;
-					for (n = 0; n < 8; n++)
-						ptr[n] ^= (128 >> edit_x);
+					for (int n = 0; n < 8; n++)
+						ptr[n] ^= (byte)(128 >> editX);
 					break;
-				case MOUSE_BUTTON_RIGHT: /* clear */
-					for (n = 0; n < 8; n++)
-						ptr[n] &= ~(128 >> edit_x);
+				case MouseButton.Right: /* clear */
+					for (int n = 0; n < 8; n++)
+						ptr[n] &= (byte)~(128 >> editX);
 					break;
 			}
 		}
@@ -311,8 +717,8 @@ public class FontEditorPage : Page
 		if (k.Mouse == MouseState.None)
 			return;
 
-		int xRel = k.MousePosition.X - InnerX(CharacterMapPosition.X);
-		int yRel = k.MousePosition.Y - InnerY(CharacterMapPosition.Y);
+		int xRel = k.MousePosition.X - InnerX(CharacterMapBounds);
+		int yRel = k.MousePosition.Y - InnerY(CharacterMapBounds);
 
 		_currentCharacter = (byte)(16 * yRel + xRel);
 	}
@@ -322,8 +728,8 @@ public class FontEditorPage : Page
 		if (k.Mouse == MouseState.None)
 			return;
 
-		int xRel = k.MousePosition.X - InnerX(ImpulseTrackerFontMapPosition.X);
-		int yRel = k.MousePosition.Y - InnerY(ImpulseTrackerFontMapPosition.Y);
+		int xRel = k.MousePosition.X - InnerX(ImpulseTrackerFontMapBounds);
+		int yRel = k.MousePosition.Y - InnerY(ImpulseTrackerFontMapBounds);
 
 		_impulseTrackerFontMapPosition = 16 * yRel + xRel;
 		_currentCharacter = ImpulseTrackerFontMapCharacters[_impulseTrackerFontMapPosition];
@@ -358,7 +764,7 @@ public class FontEditorPage : Page
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
-	public override bool HandleKey(KeyEvent k)
+	public override bool? HandleKey(KeyEvent k)
 	{
 		int ci = _currentCharacter << 3;
 
@@ -394,8 +800,8 @@ public class FontEditorPage : Page
 				int n = k.Sym - KeySym.KP_1;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 					n += 10;
-				Palette.LoadPreset(n);
-				Palette.Apply();
+				VGAMem.CurrentPalette = Palettes.Presets[n];
+				VGAMem.CurrentPalette.Apply();
 				Status.Flags |= StatusFlags.NeedUpdate;
 				return true;
 		}
@@ -422,8 +828,8 @@ public class FontEditorPage : Page
 				int n = k.Sym - KeySym._1;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 					n += 10;
-				Palette.LoadPreset(n);
-				Palette.Apply();
+				VGAMem.CurrentPalette = Palettes.Presets[n];
+				VGAMem.CurrentPalette.Apply();
 				Status.Flags |= StatusFlags.NeedUpdate;
 				return true;
 			case KeySym.F2:
@@ -637,5 +1043,289 @@ public class FontEditorPage : Page
 		}
 
 		return true;
+	}
+
+	enum ActiveState
+	{
+		Disabled = -1,
+		Inactive = 0,
+		Active = 1,
+	}
+
+	void DrawFrame(string name, Rect bounds, ActiveState active)
+		=> DrawFrame(name, bounds.TopLeft, bounds.Size, active);
+
+	void DrawFrame(string name, Rect bounds, bool active)
+		=> DrawFrame(name, bounds.TopLeft, bounds.Size, active ? ActiveState.Active : ActiveState.Inactive);
+
+	/* if this is nonzero, the screen will be redrawn. none of the functions
+	 * except main should call draw_anything -- set this instead. */
+	void DrawFrame(string name, Point position, Size innerSize, ActiveState active)
+	{
+		int len = name.Length;
+
+		if (len > innerSize.Width + 2)
+			len = innerSize.Width + 2;
+
+		int c = Status.Flags.HasFlag(StatusFlags.InvertedPalette) ? 1 : 3;
+
+		VGAMem.DrawBox(position.Advance(0, 1), position.Advance(innerSize).Advance(5, 6),
+			BoxTypes.Thick | BoxTypes.Corner | BoxTypes.Outset);
+		VGAMem.DrawBox(position.Advance(1, 2), position.Advance(innerSize).Advance(4, 5),
+			BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
+
+		VGAMem.DrawCharacter(128, position, (c, 2));
+		for (int n = 0; n < len + 1; n++)
+			VGAMem.DrawCharacter(129, position.Advance(n + 1), (c, 2));
+		VGAMem.DrawCharacter(130, position.Advance(len + 1), (c, 2));
+		VGAMem.DrawCharacter(131, position.Advance(0, 1), (c, 2));
+		VGAMem.DrawCharacter(137, position.Advance(len + 1, 1), (c, 2));
+
+		switch (active)
+		{
+			case ActiveState.Inactive:
+				c = 0;
+				break;
+			case ActiveState.Disabled:
+				c = 1;
+				break;
+			default: /* Active */
+				c = 3;
+				break;
+		}
+
+		VGAMem.DrawTextLen(name, len, position.Advance(1, 1), (c, 2));
+	}
+
+	/* --------------------------------------------------------------------- */
+
+	void DrawEditBox()
+	{
+		int ci = _currentCharacter << 3;
+
+		for (int i = 0; i < 8; i++)
+		{
+			VGAMem.DrawCharacter((char)('1' + i), Inner(EditBoxBounds).Advance(i + 1, 2),
+						i == _editPosition.X ? (3, 0) : (1, 0));
+			VGAMem.DrawCharacter((char)('1' + i), Inner(EditBoxBounds).Advance(0, i + 3),
+						i == _editPosition.Y ? (3, 0) : (1, 0));
+
+			for (int j = 0; j < 8; j++)
+			{
+				byte c;
+				int fg;
+
+				if ((Font.Data[ci + j] & (128 >> i)) != 0)
+				{
+					c = 15;
+					fg = 6;
+				}
+				else
+				{
+					c = 173;
+					fg = 1;
+				}
+
+				if (_selectedItem == FontEditorItem.EditBox && (i, j) == _editPosition)
+					VGAMem.DrawCharacter(c, Inner(EditBoxBounds).Advance(1 + i, 3 + j), (0, 3));
+				else
+					VGAMem.DrawCharacter(c, Inner(EditBoxBounds).Advance(1 + i, 3 + j), (fg, 0));
+			}
+		}
+
+		string buf = ((int)_currentCharacter) + " $" + ((int)_currentCharacter).ToString("X2");
+
+		VGAMem.DrawCharacter(_currentCharacter, Inner(EditBoxBounds), (5, 0));
+		VGAMem.DrawText(buf, Inner(EditBoxBounds).Advance(2), (5, 0));
+	}
+
+	void DrawCharacterMap()
+	{
+		int n = 256;
+
+		if (_selectedItem == FontEditorItem.CharacterMap)
+		{
+			while (n > 0)
+			{
+				n--;
+				VGAMem.DrawCharacter((byte)n, Inner(CharacterMapBounds).Advance(n % 16, n / 16),
+					n == _currentCharacter ? (0, 3) : (1, 0));
+			}
+		}
+		else
+		{
+			while (n > 0)
+			{
+				n--;
+				VGAMem.DrawCharacter((char)n, Inner(CharacterMapBounds).Advance(n % 16, n / 16),
+					n == _currentCharacter ? (3, 0) : (1, 0));
+			}
+		}
+	}
+
+	void DrawImpulseTrackerFontMap()
+	{
+		if (_impulseTrackerFontMapPosition < 0
+		 || ImpulseTrackerFontMapCharacters[_impulseTrackerFontMapPosition] != _currentCharacter)
+			_impulseTrackerFontMapPosition = Array.IndexOf(ImpulseTrackerFontMapCharacters, _currentCharacter);
+
+		for (int n = 0; n < 240; n++)
+		{
+			int fg = 1;
+			int bg = 0;
+
+			if (n == _impulseTrackerFontMapPosition)
+			{
+				if (_selectedItem == FontEditorItem.ImpulseTrackerFontMap)
+				{
+					fg = 0;
+					bg = 3;
+				}
+				else
+					fg = 3;
+			}
+
+			VGAMem.DrawCharacter(ImpulseTrackerFontMapCharacters[n],
+				Inner(ImpulseTrackerFontMapBounds).Advance(n % 16, n / 16), (fg, bg));
+		}
+	}
+
+	void DrawFontList()
+	{
+		int pos = 0;
+
+		int cfg, cbg;
+
+		if (_selectedItem == FontEditorItem.FontList)
+		{
+			cfg = 0;
+			cbg = 3;
+		}
+		else
+		{
+			cfg = 3;
+			cbg = 0;
+		}
+
+		if (_fontListTopFont < 0) _fontListTopFont = 0;
+
+		int n = _fontListTopFont;
+
+		while (n < _fontList.NumFiles && pos < FontListVisibleFonts)
+		{
+			int x = 1;
+			var f = _fontList[n];
+
+			if (f == null)
+				break;
+
+			int ptr = 0;
+
+			if (n == _fontListCurFont)
+			{
+				VGAMem.DrawCharacter(183, Inner(FontListBounds).Advance(0, pos), (cfg, cbg));
+
+				while (x < 9 && (ptr < f.BaseName.Length) && (n == 0 || f.BaseName[ptr] != '.'))
+				{
+					VGAMem.DrawCharacter(f.BaseName[ptr],
+						Inner(FontListBounds).Advance(x, pos),
+						(cfg, cbg));
+					x++;
+					ptr++;
+				}
+
+				while (x < 9)
+				{
+					VGAMem.DrawCharacter(0,
+						Inner(FontListBounds).Advance(x, pos),
+						(cfg, cbg));
+					x++;
+				}
+			}
+			else
+			{
+				VGAMem.DrawCharacter(173, Inner(FontListBounds).Advance(0, pos), (2, 0));
+				while (x < 9 && (ptr < f.BaseName.Length) && (n == 0 || f.BaseName[ptr] != '.'))
+				{
+					VGAMem.DrawCharacter(f.BaseName[ptr],
+						Inner(FontListBounds).Advance(x, pos), (5, 0));
+					x++;
+					ptr++;
+				}
+				while (x < 9)
+				{
+					VGAMem.DrawCharacter(0, Inner(FontListBounds).Advance(x, pos), (5, 0));
+					x++;
+				}
+			}
+
+			n++;
+			pos++;
+		}
+	}
+
+	void DrawHelpText()
+	{
+		var ptr = HelpTextGeneral.AsSpan();
+
+		for (int line = InnerY(HelpTextBounds); ptr.Length > 0; line++)
+		{
+			int eol = ptr.IndexOf('\n');
+
+			if (eol < 0)
+				eol = ptr.IndexOf('\0');
+
+			if (eol < 0)
+				eol = ptr.Length;
+
+			for (int column = InnerX(HelpTextBounds); eol > 0; ptr = ptr.Slice(1), eol--, column++)
+				VGAMem.DrawCharacter(ptr[0], new Point(column, line), (12, 0));
+
+			ptr = ptr.Slice(1);
+		}
+
+		for (int line = 0; line < 10; line++)
+			VGAMem.DrawCharacter(168, Inner(HelpTextBounds).Advance(43, line), (12, 0));
+
+		/* context sensitive stuff... oooh :) */
+		switch (_selectedItem)
+		{
+			case FontEditorItem.EditBox:
+				ptr = HelpTextEditBox.AsSpan();
+				break;
+			case FontEditorItem.CharacterMap:
+			case FontEditorItem.ImpulseTrackerFontMap:
+				ptr = HelpTextCharacterMap.AsSpan();
+				break;
+			case FontEditorItem.FontList:
+				ptr = HelpTextFontList.AsSpan();
+				break;
+		}
+
+		for (int line = InnerY(HelpTextBounds); ptr.Length > 0; line++)
+		{
+			int eol = ptr.IndexOf('\n');
+
+			if (eol < 0)
+				eol = ptr.IndexOf('\0');
+
+			if (eol < 0)
+				eol = ptr.Length;
+
+			VGAMem.DrawCharacter(168, new Point(InnerX(HelpTextBounds) + 43, line), (12, 0));
+
+			for (int column = InnerX(HelpTextBounds) + 45; eol > 0; ptr = ptr.Slice(1), eol--, column++)
+				VGAMem.DrawCharacter(ptr[0], new Point(column, line), (12, 0));
+
+			ptr = ptr.Slice(1);
+		}
+
+		VGAMem.DrawText(Copyright.ShortCopyright, new Point(77 - Copyright.ShortCopyright.Length, 46), (1, 0));
+	}
+
+	void DrawTime()
+	{
+		string buf = DateTime.Now.ToString("HH:mm:ss");
+		VGAMem.DrawText(buf, new Point(3, 46), (1, 0));
 	}
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Principal;
+using X11;
 
 namespace ChasmTracker.Utility;
 
@@ -67,6 +69,16 @@ public struct Point
 	public static bool operator ==(Point a, Point b)
 		=> (a.X == b.X) && (a.Y == b.Y);
 	public static bool operator !=(Point a, Point b)
+		=> (a.X != b.X) || (a.Y != b.Y);
+
+	public static bool operator ==(Point a, (int X, int Y) b)
+		=> (a.X == b.X) && (a.Y == b.Y);
+	public static bool operator !=(Point a, (int X, int Y) b)
+		=> (a.X != b.X) || (a.Y != b.Y);
+
+	public static bool operator ==((int X, int Y) a, Point b)
+		=> (a.X == b.X) && (a.Y == b.Y);
+	public static bool operator !=((int X, int Y) a, Point b)
 		=> (a.X != b.X) || (a.Y != b.Y);
 
 	public override bool Equals([NotNullWhen(true)] object? obj)

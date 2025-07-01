@@ -1,4 +1,4 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;

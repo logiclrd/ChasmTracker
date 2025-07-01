@@ -4,6 +4,7 @@ using System.IO;
 namespace ChasmTracker.VGA;
 
 using ChasmTracker.Configurations;
+using ChasmTracker.Utility;
 
 public class Font
 {
@@ -154,7 +155,7 @@ public class Font
 	/* Hmm. I could've done better with this one. */
 	public static bool Load(string filename)
 	{
-		filename = Path.Combine(Configuration.ConfigurationDirectoryDotSchism, "fonts", filename);
+		filename = Path.Combine(Configuration.Directories.DotSchism, "fonts", filename);
 
 		try
 		{
@@ -207,7 +208,7 @@ public class Font
 
 	public static bool Save(string filename)
 	{
-		filename = Path.Combine(Configuration.ConfigurationDirectoryDotSchism, "fonts", filename);
+		filename = Path.Combine(Configuration.Directories.DotSchism, "fonts", filename);
 
 		try
 		{
