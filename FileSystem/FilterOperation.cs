@@ -29,6 +29,12 @@ public class FilterOperation
 	- add a 'num_unfiltered' variable to the struct that indicates the total number
 	*/
 
+	public void RunToCompletion()
+	{
+		while (TakeStep())
+			;
+	}
+
 	public bool TakeStep()
 	{
 		if (_finished)

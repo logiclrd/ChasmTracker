@@ -358,8 +358,141 @@ public class AIFF : SampleFileConverter
 		}
 	}
 
+	class AIFFWriteData
+	{
+		public long COMMFramesOffset; // seek position for writing header data
+		public long SSNDSizeOffset; // seek position for writing header data
+		public long NumBytes; // how many bytes have been written
+		public int BytesPerSample; // bytes per sample
+		public bool BigEndian; // should be byteswapped?
+	}
+
+	static int WriteAIFFHeader(Stream fp, int bits, int channels, int rate,
+			string? name, int length, AIFFWriteData? awd /* out */)
+		{
+			int bps = ((bits + 7) / 8);
+
+			/* note: channel multiply is done below -- need single-channel value for the COMM chunk */
+			var writer = new BinaryWriter(fp, Encoding.ASCII, leaveOpen: true);
+
+			writer.WritePlain("FORM");
+
+			/* write a very large size for now */
+			writer.Write(uint.MaxValue);
+
+			writer.WritePlain("AIFF");
+
+			if (!string.IsNullOrEmpty(name))
+			{
+				writer.WritePlain("NAME");
+
+				int tlen = name.Length;
+
+				int ul = (tlen + 1) & ~1; /* must be even */
+
+				ul = ByteSwap.Swap(ul);
+
+				writer.Write(ul);
+
+				writer.WritePlain(name);
+
+				if ((tlen & 1) != 0)
+					writer.Write(default(byte));
+			}
+
+			/* Common Chunk
+				The Common Chunk describes fundamental parameters of the sampled sound.
+			typedef struct {
+				ID              ckID;           // 'COMM'
+				long            ckSize;         // 18
+				short           numChannels;
+				unsigned long   numSampleFrames;
+				short           sampleSize;
+				extended        sampleRate;
+			} CommonChunk; */
+			writer.WritePlain("COMM");
+			writer.Write(ByteSwap.Swap(18)); /* chunk size -- won't change */
+			writer.Write(ByteSwap.Swap((short)channels));
+
+			if (awd != null)
+			{
+				writer.Flush();
+				awd.COMMFramesOffset = fp.Position;
+			}
+
+			writer.Write(ByteSwap.Swap(length)); /* num sample frames */
+			writer.Write(ByteSwap.Swap((short)bits));
+			writer.Write(Float80.ToIEEE80Bytes(rate));
+
+			/* NOW do this (sample size in AIFF is indicated per channel, not per frame) */
+			bps *= channels; /* == number of bytes per (stereo) sample */
+
+			/* Sound Data Chunk
+				The Sound Data Chunk contains the actual sample frames.
+			typedef struct {
+				ID              ckID;           // 'SSND'
+				long            ckSize;         // data size in bytes, *PLUS EIGHT* (for offset and blockSize)
+				unsigned long   offset;         // just set this to 0...
+				unsigned long   blockSize;      // likewise
+				unsigned char   soundData[];
+			} SoundDataChunk; */
+			writer.WritePlain("SSND");
+
+			if (awd != null)
+			{
+				writer.Flush();
+				awd.SSNDSizeOffset = fp.Position;
+			}
+
+			writer.Write(ByteSwap.Swap(length * bps + 8));
+			writer.Write(0);
+			writer.Write(0);
+
+			return bps;
+		}
+
 	public override SongSample LoadSample(Stream stream)
 	{
 		return ReadIFF(stream, null, true) ?? throw new NotSupportedException();
+	}
+
+	public override SaveResult SaveSample(Stream stream, SongSample smp)
+	{
+		long startPosition = stream.Position;
+
+		if (smp.Flags.HasFlag(SampleFlags.Adlib))
+			return SaveResult.Unsupported;
+
+		SampleFormat flags = SampleFormat.BigEndian | SampleFormat.PCMSigned;
+
+		flags |= smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
+		flags |= smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono;
+
+		int bps = WriteAIFFHeader(stream, smp.Flags.HasFlag(SampleFlags._16Bit) ? 16 : 8, smp.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1,
+			smp.C5Speed, smp.Name, smp.Length, null);
+
+		if (WriteSample(stream, smp, flags, uint.MaxValue) != smp.Length * bps)
+		{
+			Log.Append(4, "AIFF: unexpected data size written");
+			return SaveResult.InternalError;
+		}
+
+		/* TODO: loop data */
+
+		/* fix the length in the file header */
+		long endPosition = stream.Position;
+
+		int chunkContentLength = (int)(endPosition - startPosition - 8);
+
+		chunkContentLength = ByteSwap.Swap(chunkContentLength);
+
+		stream.Position = startPosition + 4;
+
+		var writer = new BinaryWriter(stream, Encoding.ASCII, leaveOpen: true);
+
+		writer.Write(chunkContentLength);
+		writer.Flush();
+
+		return SaveResult.Success;
 	}
 }

@@ -93,7 +93,7 @@ public class _669 : SongFileConverter
 	{
 		string tid;
 
-		var reader = new BinaryReader(stream);
+		var reader = new BinaryReader(stream, Encoding.ASCII, leaveOpen: true);
 
 		switch (reader.ReadInt16())
 		{

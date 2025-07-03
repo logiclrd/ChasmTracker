@@ -13,6 +13,11 @@ public class DirectoryList
 
 	public int NumDirectories => _directories.Count;
 
+	public void Clear()
+	{
+		_directories.Clear();
+	}
+
 	public void SelectDirectoryByName(string? directoryName)
 	{
 		if (directoryName == null)

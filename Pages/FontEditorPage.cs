@@ -235,8 +235,7 @@ to change the default font!
 
 		var filterOperation = _fontList.BeginFilter(FontGrep, _fontListCurFont);
 
-		while (filterOperation.TakeStep())
-			;
+		filterOperation.RunToCompletion();
 
 		FontListReposition();
 	}

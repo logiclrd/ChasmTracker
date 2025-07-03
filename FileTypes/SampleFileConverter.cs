@@ -4,13 +4,18 @@ using System.Linq;
 
 namespace ChasmTracker.FileTypes;
 
+using System.Collections;
+using System.Text;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
+using X11;
 
 public abstract class SampleFileConverter : FileInfoReader
 {
+	public virtual bool CanSave => false;
+
 	public abstract SongSample LoadSample(Stream stream);
-	//public abstract void SaveSample(SongSample sample);
+	public abstract SaveResult SaveSample(Stream stream, SongSample sample);
 
 	static Type[] s_converterTypes =
 		typeof(SampleFileConverter).Assembly.GetTypes()
@@ -756,5 +761,540 @@ public abstract class SampleFileConverter : FileInfoReader
 		sample.AdjustLoop();
 
 		return sampleBytes;
+	}
+
+	public static int WriteSample(Stream fp, SongSample sample, SampleFormat flags, uint maxLengthMask)
+	{
+		try
+		{
+			int len = sample.Length;
+
+			if (maxLengthMask != uint.MaxValue)
+				len = (int)((len > maxLengthMask) ? maxLengthMask : (len & maxLengthMask));
+
+			// validate the write flags, and set up the save params
+			switch (flags & SampleFormat.ChannelMask)
+			{
+				case SampleFormat.StereoInterleaved:
+				case SampleFormat.StereoSplit:
+					if (!sample.Flags.HasFlag(SampleFlags.Stereo))
+						throw new NotSupportedException("channel mask " + (flags & SampleFormat.ChannelMask));
+					break;
+				case SampleFormat.Mono:
+					if (sample.Flags.HasFlag(SampleFlags.Stereo))
+						throw new NotSupportedException("channel mask " + (flags & SampleFormat.ChannelMask));
+					break;
+				default:
+					throw new NotSupportedException("channel mask " + (flags & SampleFormat.ChannelMask));
+			}
+
+			// TODO allow converting bit width, this will be useful
+			if ((flags & SampleFormat.BitMask) != (sample.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8))
+				throw new NotSupportedException("bit width " + (flags & SampleFormat.BitMask));
+
+			switch (flags & SampleFormat.EncodingMask)
+			{
+				case SampleFormat.PCMUnsigned:
+				case SampleFormat.PCMSigned:
+				case SampleFormat.PCMDeltaEncoded: break;
+				default: throw new NotSupportedException("ENCODING " + (flags & SampleFormat.EncodingMask));
+			}
+
+			if (flags.HasAnyFlag(~(SampleFormat.BitMask | SampleFormat.ChannelMask | SampleFormat.EndiannessMask | SampleFormat.EncodingMask)))
+				throw new NotSupportedException("extra flag " + (flags & ~(SampleFormat.BitMask | SampleFormat.ChannelMask | SampleFormat.EndiannessMask | SampleFormat.EncodingMask)));
+
+			if (sample.Length < 1 || sample.Length > Constants.MaxSampleLength || !sample.HasData)
+				return 0;
+
+			var writer = new BinaryWriter(fp, Encoding.ASCII, leaveOpen: true);
+
+			/* ------------------------------------------------------------------------ */
+
+			// No point buffering the processing here -- the disk output already has a buffer
+			// NOTE: These use unsigned integers for a reason (signed integer overflow is undefined)
+			// Please don't change them back to signed ;)
+			unchecked
+			{
+				switch (flags)
+				{
+					/* TODO: for signed PCM stereo interleaved and mono, we can
+					* simply write the entire buffer to disk, which will definitely
+					* be faster than what we're doing right now :) */
+					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.LittleEndian | SampleFormat.PCMSigned:
+					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMSigned:
+					{
+						var data = sample.Data8;
+
+						for (int pos = 0; pos < len; pos++)
+							writer.Write(data[pos]);
+
+						break;
+					}
+					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.LittleEndian | SampleFormat.PCMUnsigned:
+					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMUnsigned:
+					{
+						var data = sample.Data8;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							x = (sbyte)(x ^ 128);
+
+							writer.Write(x);
+						}
+
+						break;
+					}
+					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded:
+					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						var data = sample.Data8;
+						sbyte delta = 0;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos] - delta;
+
+							writer.Write(x);
+
+							delta = data[pos];
+						}
+						break;
+					}
+
+					case SampleFormat._8 | SampleFormat.StereoSplit | SampleFormat.LittleEndian | SampleFormat.PCMSigned:
+					case SampleFormat._8 | SampleFormat.StereoSplit | SampleFormat.BigEndian | SampleFormat.PCMSigned:
+					{
+						len *= 2;
+
+						for (int i = 0; i < 2; i++)
+						{
+							var data = sample.Data8.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+								writer.Write(data[pos]);
+						}
+
+						break;
+					}
+					case SampleFormat._8 | SampleFormat.StereoSplit | SampleFormat.LittleEndian | SampleFormat.PCMUnsigned:
+					case SampleFormat._8 | SampleFormat.StereoSplit | SampleFormat.BigEndian | SampleFormat.PCMUnsigned:
+					{
+						len *= 2;
+
+						for (int i = 0; i < 2; i++)
+						{
+							var data = sample.Data8.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+							{
+								var x = data[pos];
+
+								x = (sbyte)(x ^ 128);
+
+								writer.Write(x);
+							}
+						}
+
+						break;
+					}
+					case SampleFormat._8 | SampleFormat.StereoSplit | SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded:
+					case SampleFormat._8 | SampleFormat.StereoSplit | SampleFormat.BigEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						len *= 2;
+
+						for (int i = 0; i < 2; i++)
+						{
+							var data = sample.Data8.Slice(i);
+
+							sbyte delta = 0;
+
+							for (int pos = 0; pos < len; pos += 2)
+							{
+								var x = data[pos];
+
+								x -= delta;
+
+								writer.Write(x);
+
+								delta = data[pos];
+							}
+						}
+						break;
+					}
+					case SampleFormat._8 | SampleFormat.StereoInterleaved | SampleFormat.LittleEndian | SampleFormat.PCMSigned:
+					case SampleFormat._8 | SampleFormat.StereoInterleaved | SampleFormat.BigEndian | SampleFormat.PCMSigned:
+					{
+						var data = sample.Data8;
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+							writer.Write(data[pos]);
+
+						break;
+					}
+					case SampleFormat._8 | SampleFormat.StereoInterleaved | SampleFormat.LittleEndian | SampleFormat.PCMUnsigned:
+					case SampleFormat._8 | SampleFormat.StereoInterleaved | SampleFormat.BigEndian | SampleFormat.PCMUnsigned:
+					{
+						var data = sample.Data8;
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							x = (sbyte)(x ^ 128);
+
+							writer.Write(x);
+						}
+
+						break;
+					}
+					case SampleFormat._8 | SampleFormat.StereoInterleaved | SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded:
+					case SampleFormat._8 | SampleFormat.StereoInterleaved | SampleFormat.BigEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						var data = sample.Data8;
+						sbyte[] delta = new sbyte[2];
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							int deltaPos = pos % 2;
+
+							var x = data[pos];
+
+							x -= delta[deltaPos];
+
+							writer.Write(x);
+
+							delta[deltaPos] = data[pos];
+						}
+						break;
+					}
+
+					case SampleFormat._16 | SampleFormat.Mono | SampleFormat.LittleEndian | SampleFormat.PCMSigned:
+					{
+						var data = sample.Data16;
+
+						for (int pos = 0; pos < len; pos++)
+							writer.Write(data[pos]);
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.Mono | SampleFormat.LittleEndian | SampleFormat.PCMUnsigned:
+					{
+						var data = sample.Data16;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							x ^= -32768;
+
+							writer.Write(x);
+						}
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.Mono | SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						var data = sample.Data16;
+
+						short delta = 0;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							x -= delta;
+
+							writer.Write(x);
+
+							delta = data[pos];
+						}
+
+						break;
+					}
+
+					case SampleFormat._16 | SampleFormat.StereoSplit | SampleFormat.LittleEndian | SampleFormat.PCMSigned:
+					{
+						len *= 2;
+
+						for (int i = 0; i < 2; i++)
+						{
+							var data = sample.Data16.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+								writer.Write(data[pos]);
+						}
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoSplit | SampleFormat.LittleEndian | SampleFormat.PCMUnsigned:
+					{
+
+						len *= 2;
+
+						for (int i = 0; i < 2; i++)
+						{
+							var data = sample.Data16.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+							{
+								var x = data[pos];
+
+								x ^= -32768;
+
+								writer.Write(x);
+							}
+						}
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoSplit | SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						int i;
+						short delta = 0;
+
+						len *= 2;
+
+						for (i = 0; i < 2; i++)
+						{
+							var data = sample.Data16.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+							{
+								var x = data[pos];
+
+								x -= delta;
+
+								writer.Write(x);
+
+								delta = data[pos];
+							}
+						}
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoInterleaved | SampleFormat.LittleEndian | SampleFormat.PCMSigned:
+					{
+						var data = sample.Data16;
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+							writer.Write(data[pos]);
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoInterleaved | SampleFormat.LittleEndian | SampleFormat.PCMUnsigned:
+					{
+						var data = sample.Data16;
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							short x = data[pos];
+
+							x ^= -32768;
+
+							writer.Write(x);
+						}
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoInterleaved | SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						var data = sample.Data16;
+
+						short[] delta = new short[2];
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							int deltaPos = pos % 2;
+							x -= delta[deltaPos];
+
+							writer.Write(x);
+
+							delta[deltaPos] = data[pos];
+						}
+
+						break;
+					}
+
+					case SampleFormat._16 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMSigned:
+					{
+						var data = sample.Data16;
+
+						for (int pos = 0; pos < len; pos++)
+							writer.Write(ByteSwap.Swap(data[pos]));
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMUnsigned:
+					{
+						var data = sample.Data16;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							x ^= -32768;
+
+							writer.Write(ByteSwap.Swap(x));
+						}
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						var data = sample.Data16;
+
+						short delta = 0;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							x -= delta;
+
+							writer.Write(ByteSwap.Swap(x));
+
+							delta = data[pos];
+						}
+
+						break;
+					}
+
+					case SampleFormat._16 | SampleFormat.StereoSplit | SampleFormat.BigEndian | SampleFormat.PCMSigned:
+					{
+						len *= 2;
+
+						for (int i = 0; i < 2; i++)
+						{
+							var data = sample.Data16.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+								writer.Write(ByteSwap.Swap(data[pos]));
+						}
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoSplit | SampleFormat.BigEndian | SampleFormat.PCMUnsigned:
+					{
+
+						len *= 2;
+
+						for (int i = 0; i < 2; i++)
+						{
+							var data = sample.Data16.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+							{
+								var x = data[pos];
+
+								x ^= -32768;
+
+								writer.Write(ByteSwap.Swap(x));
+							}
+						}
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoSplit | SampleFormat.BigEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						int i;
+						short delta = 0;
+
+						len *= 2;
+
+						for (i = 0; i < 2; i++)
+						{
+							var data = sample.Data16.Slice(i);
+
+							for (int pos = 0; pos < len; pos += 2)
+							{
+								var x = data[pos];
+
+								x -= delta;
+
+								writer.Write(ByteSwap.Swap(x));
+
+								delta = data[pos];
+							}
+						}
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoInterleaved | SampleFormat.BigEndian | SampleFormat.PCMSigned:
+					{
+						var data = sample.Data16;
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+							writer.Write(ByteSwap.Swap(data[pos]));
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoInterleaved | SampleFormat.BigEndian | SampleFormat.PCMUnsigned:
+					{
+						var data = sample.Data16;
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							short x = data[pos];
+
+							x ^= -32768;
+
+							writer.Write(ByteSwap.Swap(x));
+						}
+
+						break;
+					}
+					case SampleFormat._16 | SampleFormat.StereoInterleaved | SampleFormat.BigEndian | SampleFormat.PCMDeltaEncoded:
+					{
+						var data = sample.Data16;
+
+						short[] delta = new short[2];
+
+						len *= 2;
+
+						for (int pos = 0; pos < len; pos++)
+						{
+							var x = data[pos];
+
+							int deltaPos = pos % 2;
+							x -= delta[deltaPos];
+
+							writer.Write(ByteSwap.Swap(x));
+
+							delta[deltaPos] = data[pos];
+						}
+
+						break;
+					}
+
+					default:
+						throw new NotSupportedException("unknown flags " + flags);
+				}
+			}
+
+			writer.Flush();
+
+			return len;
+		}
+		catch (NotSupportedException e)
+		{
+			Log.Append(4, "WriteSample: internal error: insupported " + e.Message);
+			return 0;
+		}
 	}
 }

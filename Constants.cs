@@ -34,4 +34,6 @@ public class Constants
 	public const int MixingClipMax = 0x03FFFFFF;
 	public const int VolumeRampPrecision = 12;
 	public const int FilterPrecision = (sizeof(int) * 8) - 8; /* faithfully stolen from openmpt */
+
+	public const int MaxPathLength = 8192; // 8 KiB (should be more than enough)
 }

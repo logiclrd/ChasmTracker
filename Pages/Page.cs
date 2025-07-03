@@ -1394,7 +1394,7 @@ public abstract class Page
 		return false;
 	}
 
-	static void ShowLengthDialog(string label, TimeSpan length)
+	protected static void ShowLengthDialog(string label, TimeSpan length)
 	{
 		MessageBox.Show(
 			MessageBoxTypes.OK,

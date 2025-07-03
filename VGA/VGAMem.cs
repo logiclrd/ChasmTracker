@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace ChasmTracker.VGA;
 
+using System.Linq;
+using System.Security.Cryptography;
 using ChasmTracker.Configurations;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
@@ -521,6 +524,19 @@ public static class VGAMem
 	{
 		for (int n = offset, o = 0; (n < text.Length) && (o < len); n++, o++)
 			DrawCharacterBIOS(text[n], position.Advance(o), colours);
+	}
+
+	public static void DrawTextBIOSLen(StringBuilder text, int offset, int len, Point position, VGAMemColours colours)
+	{
+		for (int i=0; i < len; i++)
+		{
+			int o = offset + i;
+
+			if (o >= text.Length)
+				break;
+
+			DrawCharacterBIOS(text[o], position.Advance(i), colours);
+		}
 	}
 
 	public static void DrawTextUTF8Len(byte[] text, int len, Point position, VGAMemColours colours)
