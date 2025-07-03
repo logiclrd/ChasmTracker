@@ -7,7 +7,7 @@ using ChasmTracker.Utility;
 namespace ChasmTracker.FileTypes.Exporters;
 
 /* wav is like aiff's ret**ded cousin */
-public class WAVExporter : Exporter
+public class WAV : SampleExporter
 {
 	public override string Label => "WAV";
 	public override string Description => "WAV";

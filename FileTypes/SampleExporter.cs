@@ -3,7 +3,7 @@ using System.IO;
 
 namespace ChasmTracker.FileTypes;
 
-public abstract class Exporter
+public abstract class SampleExporter
 {
 	public abstract string Label { get; }
 	public abstract string Description { get; }
