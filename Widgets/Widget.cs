@@ -4,6 +4,7 @@ namespace ChasmTracker.Widgets;
 
 using ChasmTracker.Events;
 using ChasmTracker.Input;
+using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 
 public abstract class Widget

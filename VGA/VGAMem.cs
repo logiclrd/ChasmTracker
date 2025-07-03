@@ -515,6 +515,19 @@ public static class VGAMem
 			DrawCharacter(text[n], position.Advance(o), colours);
 	}
 
+	public static void DrawTextLen(StringBuilder text, int offset, int len, Point position, VGAMemColours colours)
+	{
+		for (int i=0; i < len; i++)
+		{
+			int o = offset + i;
+
+			if (o >= text.Length)
+				break;
+
+			DrawCharacter(text[o], position.Advance(i), colours);
+		}
+	}
+
 	public static void DrawTextBIOSLen(string text, int len, Point position, VGAMemColours colours)
 	{
 		DrawTextBIOSLen(text, 0, len, position, colours);

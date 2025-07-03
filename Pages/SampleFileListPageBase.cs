@@ -565,7 +565,7 @@ public class SampleFileListPageBase : Page
 			var dialog = MessageBox.Show(MessageBoxTypes.YesNo, "Create host instrument?");
 
 			if (isUsed)
-				dialog.SelectedWidgetIndex.Value = 1;
+				dialog.ChangeFocusTo(1);
 
 			dialog.ActionYes =
 				_ =>
@@ -788,15 +788,8 @@ public class SampleFileListPageBase : Page
 				_haveSearch = false;
 				if (_flist.NumFiles > 0)
 				{
-					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Delete file?");
-
-					dialog.SelectedWidgetIndex.Value = 1;
-
-					dialog.ActionYes =
-						_ =>
-						{
-							// do_delete_files
-						};
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete file?", accept: _ => DoDeleteFiles())
+						.ChangeFocusTo(1);
 				}
 				return true;
 			case KeySym.Backspace:

@@ -59,7 +59,7 @@ public static class AllPages
 	public static OrderListVolumesPage OrderListVolumes = new OrderListVolumesPage();
 
 	public static SongVariablesPage SongVariables = new SongVariablesPage();
-	public static MessagePage Message;
+	public static MessagePage Message = new MessagePage();
 
 	public static TimeInformationPage TimeInformation = new TimeInformationPage();
 

@@ -256,7 +256,7 @@ public abstract class InstrumentFileListPageBase : Page
 				{
 					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Delete file?");
 
-					dialog.SelectedWidgetIndex.Value = 1;
+					dialog.ChangeFocusTo(1);
 
 					dialog.ActionYes =
 						_ =>

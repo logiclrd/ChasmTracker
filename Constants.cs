@@ -18,6 +18,7 @@ public class Constants
 	public const int MaxChannels = 64;
 	public const int MaxEnvelopePoints = 80;
 	public const int MaxEQBands = 6;
+	public const int MaxMessage = 8000;
 	public const int MaxInterpolationLookahead = 4;
 	public const int MaxInterpolationLookaheadBufferSize = 16;
 	public const int MaxSamplingPointSize = 4;

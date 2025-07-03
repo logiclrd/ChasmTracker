@@ -1,4 +1,5 @@
 using ChasmTracker.Input;
+using ChasmTracker.Pages;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;

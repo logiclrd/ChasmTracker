@@ -50,14 +50,15 @@ public class Dialog
 		}
 	}
 
-	public void ChangeFocusTo(int newWidgetIndex)
+	public Dialog ChangeFocusTo(int newWidgetIndex)
 	{
 		if ((newWidgetIndex == SelectedWidgetIndex)
 		 || (newWidgetIndex < 0)
 		 || (newWidgetIndex >= Widgets.Count))
-			return;
+			return this;
 
-		ActiveWidget.IsDepressed = false;
+		if ((SelectedWidgetIndex >= 0) && (SelectedWidgetIndex < Widgets.Count))
+			ActiveWidget.IsDepressed = false;
 
 		SelectedWidgetIndex.Value = newWidgetIndex;
 
@@ -67,6 +68,8 @@ public class Dialog
 			textEntry.CursorPosition = textEntry.Text.Length;
 
 		Status.Flags |= StatusFlags.NeedUpdate;
+
+		return this;
 	}
 
 	public static void Destroy()

@@ -106,7 +106,10 @@ public abstract class Page
 	public static void SetPage(PageNumbers newPageNumber)
 	{
 		if (Status.CurrentPageNumber != newPageNumber)
+		{
 			Status.PreviousPageNumber = Status.CurrentPageNumber;
+			Status.CurrentPage.UnsetPage();
+		}
 
 		var newPage = AllPages.ByPageNumber(newPageNumber);
 
@@ -116,6 +119,7 @@ public abstract class Page
 		SelectedActiveWidgetIndex = newPage.SelectedWidgetIndex;
 
 		Status.CurrentPageNumber = newPageNumber;
+		Status.CurrentPage.SetPage();
 	}
 
 	public static void NotifySongChangedGlobal()
@@ -185,6 +189,8 @@ public abstract class Page
 	/* called when the page is set. this is for reloading the
 	 * directory in the file browsers. */
 	public virtual void SetPage() { }
+	/* called when the page is losing focus to another page */
+	public virtual void UnsetPage() { }
 
 	/* called when the song-mode changes */
 	public virtual void NotifySongModeChanged() { }

@@ -186,7 +186,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 			{
 				var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?");
 
-				dialog.SelectedWidgetIndex.Value = 1;
+				dialog.ChangeFocusTo(1);
 				dialog.ActionYes = _ => DoSaveSongOverwrite(name);
 			}
 			else
