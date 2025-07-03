@@ -44,9 +44,6 @@ public class SongInstrument
 
 		FadeOut = default;
 		Flags = default;
-		VolumeEnvelope = default;
-		PanningEnvelope = default;
-		PitchEnvelope = default;
 		NewNoteAction = default;
 		DuplicateCheckTypes = default;
 		DuplicateCheckActions = default;
@@ -79,21 +76,26 @@ public class SongInstrument
 
 	public void InitializeFromSample(int sampleNumber, SongSample sample)
 	{
-		if (!IsEmpty)
+		if (!sample.HasData)
 			return;
 
-		if (!sample.HasData)
+		InitializeFromSample(sampleNumber);
+
+		// IT doesn't set instrument filenames unless loading an instrument from disk
+		//FileName = sample.FileName;
+
+		Name = sample.Name;
+	}
+
+	public void InitializeFromSample(int sampleNumber)
+	{
+		if (!IsEmpty)
 			return;
 
 		Initialize();
 
 		for (int i = 0; i < SampleMap.Length; i++)
 			SampleMap[i] = (byte)sampleNumber;
-
-		// IT doesn't set instrument filenames unless loading an instrument from disk
-		//FileName = sample.FileName;
-
-		Name = sample.Name;
 	}
 
 	public SongSample? TranslateKeyboard(int note, SongSample? def = default)

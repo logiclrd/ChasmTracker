@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 
 namespace ChasmTracker.Widgets;
@@ -56,6 +57,25 @@ public class ToggleButtonWidget : Widget
 		Text = text;
 		Padding = padding;
 		GroupNumber = groupNumber;
+	}
+
+	public static void BuildGroups(IEnumerable<Widget> widgets)
+	{
+		var toggleButtonGroups = widgets
+			.Select((widget, index) => (Widget: widget, Index: index))
+			.Where(p => p.Widget is ToggleButtonWidget)
+			.Select(p => (ToggleButton: (ToggleButtonWidget)p.Widget, p.Index))
+			.GroupBy(p => p.ToggleButton.GroupNumber);
+
+		foreach (var toggleButtonGroup in toggleButtonGroups)
+		{
+			var group = new WidgetGroup(
+				toggleButtonGroup.Select(p => p.Index).ToArray(),
+				toggleButtonGroup.Select(p => p.ToggleButton).ToArray());
+
+			foreach (var pair in toggleButtonGroup)
+				pair.ToggleButton.Group = group;
+		}
 	}
 
 	protected override void DrawWidget(bool isSelected, int tfg, int tbg)

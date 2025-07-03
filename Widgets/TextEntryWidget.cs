@@ -14,7 +14,16 @@ public class TextEntryWidget : Widget
 	public int FirstCharacter; /* first visible character (generally 0) */
 	public int CursorPosition; /* 0 = first character */
 
-	public string Text => new string(TextCharacters, 0, TextLength);
+	public string Text
+	{
+		get => new string(TextCharacters, 0, TextLength);
+		set
+		{
+			Array.Clear(TextCharacters);
+			for (int i = 0; (i < value.Length) && (i < TextCharacters.Length); i++)
+				TextCharacters[i] = value[i];
+		}
+	}
 
 	public int TextLength
 	{

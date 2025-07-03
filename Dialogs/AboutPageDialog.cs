@@ -2,6 +2,9 @@ using System;
 
 namespace ChasmTracker.Dialogs;
 
+using ChasmTracker.Input;
+using ChasmTracker.Playback;
+using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 

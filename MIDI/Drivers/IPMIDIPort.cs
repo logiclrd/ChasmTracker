@@ -12,12 +12,10 @@ public class IPMIDIPort : MIDIPort
 		return false;
 	}
 
-	public override bool CanEnable => true;
-
 	public override bool Enable()
 	{
 		throw new System.NotImplementedException();
-		/*
+		/* TODO
 	int n = INT_SHAPED_PTR(p->userdata);
 	mt_mutex_lock(blocker);
 	if (p->io & MIDI_INPUT)
@@ -30,12 +28,10 @@ public class IPMIDIPort : MIDIPort
 		*/
 	}
 
-	public override bool CanDisable => true;
-
 	public override bool Disable()
 	{
 		throw new System.NotImplementedException();
-		/*
+		/* TODO
 	int n = INT_SHAPED_PTR(p->userdata);
 	mt_mutex_lock(blocker);
 	if (p->io & MIDI_INPUT)

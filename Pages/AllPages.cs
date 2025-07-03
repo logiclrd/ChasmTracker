@@ -51,17 +51,17 @@ public static class AllPages
 	public static MIDIPage MIDI;
 	public static MIDIOutputPage MIDIOutput;
 
-	public static ModuleLoadPage ModuleLoad;
-	public static ModuleSavePage ModuleSave;
-	public static ModuleExportPage ModuleExport;
+	public static ModuleLoadPage ModuleLoad = new ModuleLoadPage();
+	public static ModuleSavePage ModuleSave = new ModuleSavePage();
+	public static ModuleExportPage ModuleExport = new ModuleExportPage();
 
 	public static OrderListPanningPage OrderListPanning = new OrderListPanningPage();
 	public static OrderListVolumesPage OrderListVolumes = new OrderListVolumesPage();
 
-	public static SongVariablesPage SongVariables;
+	public static SongVariablesPage SongVariables = new SongVariablesPage();
 	public static MessagePage Message;
 
-	public static TimeInformationPage TimeInformation;
+	public static TimeInformationPage TimeInformation = new TimeInformationPage();
 
 	/* don't use these directly with set_page */
 	public static InstrumentListGeneralPage InstrumentListGeneral = new InstrumentListGeneralPage();

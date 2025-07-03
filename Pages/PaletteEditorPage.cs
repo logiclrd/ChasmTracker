@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Clipboard;
 using ChasmTracker.Configurations;

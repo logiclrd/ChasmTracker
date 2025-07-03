@@ -5,7 +5,6 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
-using System.Reflection.Metadata.Ecma335;
 using ChasmTracker.Dialogs;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
@@ -47,6 +46,31 @@ public class Song
 	static Random s_rnd = new Random();
 
 	public int CurrentTick => TickCount % CurrentSpeed;
+
+	public void SetInitialSpeed(int newSpeed)
+	{
+		InitialSpeed = newSpeed.Clamp(1, 255);
+	}
+
+	public void SetInitialTempo(int newTempo)
+	{
+		InitialTempo = newTempo.Clamp(31, 255);
+	}
+
+	public void SetInitialGlobalVolume(int newVol)
+	{
+		InitialGlobalVolume = newVol.Clamp(0, 128);
+	}
+
+	public void SetMixingVolume(int newVol)
+	{
+		MixingVolume = newVol.Clamp(0, 128);
+	}
+
+	public void SetSeparation(int newSep)
+	{
+		PanSeparation = newSep.Clamp(0, 128);
+	}
 
 	public void PromptEnableInstrumentMode()
 	{
@@ -90,6 +114,26 @@ public class Song
 		}
 		else
 			Flags &= ~SongFlags.InstrumentMode;
+	}
+
+	public void InitializeInstrumentFromSample(int insN, int samp)
+	{
+		var instrument = GetInstrument(insN);
+
+		if ((instrument == null) || !instrument.IsEmpty)
+			return;
+
+		instrument.InitializeFromSample(samp);
+
+		instrument.Name = CurrentSong.Samples[samp]?.Name ?? "";
+	}
+
+	/* -1 for all */
+	public void InitializeInstruments(int qq = -1)
+	{
+		for (int n = 1; n < Instruments.Count; n++)
+			if ((qq == -1) || (qq == n))
+				InitializeInstrumentFromSample(n, n);
 	}
 
 	public static void InitializeMIDI(IMIDISink midiSink)
@@ -456,12 +500,62 @@ public class Song
 	public SongFlags Flags;
 
 	public bool IsInstrumentMode => Flags.HasFlag(SongFlags.InstrumentMode);
-	public bool IsStereo => !Flags.HasFlag(SongFlags.NoStereo);
+
+	public bool IsStereo
+	{
+		get => !Flags.HasFlag(SongFlags.NoStereo);
+		set
+		{
+			if (value)
+				Flags &= ~SongFlags.NoStereo;
+			else
+				Flags |= SongFlags.NoStereo;
+
+			if (this == CurrentSong)
+				AllPages.SongVariables.SyncStereo(value);
+		}
+	}
 
 	public void ToggleStereo()
 	{
 		Flags ^= SongFlags.NoStereo;
 		AllPages.SongVariables.SyncStereo();
+	}
+
+	public bool ITOldEffects
+	{
+		get => Flags.HasFlag(SongFlags.ITOldEffects);
+		set
+		{
+			if (value)
+				Flags |= SongFlags.ITOldEffects;
+			else
+				Flags &= ~SongFlags.ITOldEffects;
+		}
+	}
+
+	public bool CompatibleGXX
+	{
+		get => Flags.HasFlag(SongFlags.CompatibleGXX);
+		set
+		{
+			if (value)
+				Flags |= SongFlags.CompatibleGXX;
+			else
+				Flags &= ~SongFlags.CompatibleGXX;
+		}
+	}
+
+	public bool LinearPitchSlides
+	{
+		get => Flags.HasFlag(SongFlags.LinearSlides);
+		set
+		{
+			if (value)
+				Flags |= SongFlags.LinearSlides;
+			else
+				Flags &= ~SongFlags.LinearSlides;
+		}
 	}
 
 	public Song()
