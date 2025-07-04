@@ -6,6 +6,14 @@ using ChasmTracker.MIDI;
 
 public class IPMIDIPort : MIDIPort
 {
+	public IPMIDIPort(int number)
+	{
+		Number = number;
+	}
+
+	public override string Name => "Multicast/IP MIDI " + (Number + 1);
+	public override string Provider => "IP";
+
 	public static bool Setup()
 	{
 		// TODO

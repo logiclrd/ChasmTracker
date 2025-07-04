@@ -48,8 +48,8 @@ public static class AllPages
 	public static ConfigPage Config;
 	public static PreferencesPage Preferences;
 
-	public static MIDIPage MIDI;
-	public static MIDIOutputPage MIDIOutput;
+	public static MIDIPage MIDI = new MIDIPage();
+	public static MIDIOutputPage MIDIOutput = new MIDIOutputPage();
 
 	public static ModuleLoadPage ModuleLoad = new ModuleLoadPage();
 	public static ModuleSavePage ModuleSave = new ModuleSavePage();

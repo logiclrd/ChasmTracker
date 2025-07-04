@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 
 namespace ChasmTracker;
@@ -8,6 +9,7 @@ using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
 using ChasmTracker.Events;
+using ChasmTracker.FileSystem;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Menus;
@@ -38,7 +40,7 @@ public class Program
 		MouseButton button = MouseButton.Unknown;
 		KeyEvent kk = new KeyEvent();
 
-		int keyboard_focus = 0;
+		bool keyboardFocus = false;
 
 		fixNumLockKey = Status.FixNumLockSetting;
 
@@ -92,14 +94,14 @@ public class Program
 						Status.Flags |= StatusFlags.NeedUpdate;
 						break;
 					case TextInputEvent textEvent:
-						handle_text_input(textEvent.Text);
+						Page.MainHandleTextInput(textEvent.Text);
 						break;
 					case KeyboardEvent keyboardEvent:
 						if (keyboardEvent.IsPressEvent)
 						{
 							if (keyboardEvent.IsRepeat)
 							{
-								if (kbd_key_repeat_enabled())
+								if (Keyboard.RepeatEnabled)
 									break;
 
 								kk.IsRepeat = true;
@@ -107,7 +109,7 @@ public class Program
 						}
 
 						// grab the keymod
-						Status.KeyMod = keyboardEvent.Mod;
+						Status.KeyMod = keyboardEvent.Modifiers;
 						// fix it
 						OS.GetModKey(ref Status.KeyMod);
 
@@ -132,9 +134,9 @@ public class Program
 
 						kk.Text = keyboardEvent.Text;
 
-						kbd_key_translate(kk);
+						kk.TranslateKey();
 
-						handle_key(kk);
+						Page.MainHandleKey(kk);
 
 						if (keyboardEvent.IsReleaseEvent)
 						{
@@ -170,17 +172,27 @@ public class Program
 							kk.Mouse = (mouseWheelEvent.WheelDelta.Y > 0) ? MouseState.ScrollUp : MouseState.ScrollDown;
 						}
 
+						bool captureStartPosition = false;
+						bool isMouseReleaseEvent = false;
+
 						if ((mouseEvent is MouseButtonEvent mouseButtonEvent) && mouseButtonEvent.IsPressEvent)
 						{
-							// we also have to update the current button
-							if (Status.KeyMod.HasAnyFlag(KeyMod.Control)
-							 || (mouseButtonEvent.Button == MouseButton.Right))
-								button = MouseButton.Right;
-							else if (status.KeyMod.HasAnyFlag(KeyMod.Alt | KeyMod.GUI)
-							 || (mouseButtonEvent.Button == MouseButton.Middle))
-								button = MouseButton.Middle;
+							if (mouseButtonEvent.IsReleaseEvent)
+								isMouseReleaseEvent = true;
 							else
-								button = MouseButton.Left;
+							{
+								// we also have to update the current button
+								if (Status.KeyMod.HasAnyFlag(KeyMod.Control)
+								 || (mouseButtonEvent.Button == MouseButton.Right))
+									button = MouseButton.Right;
+								else if (Status.KeyMod.HasAnyFlag(KeyMod.Alt | KeyMod.GUI)
+								 || (mouseButtonEvent.Button == MouseButton.Middle))
+									button = MouseButton.Middle;
+								else
+									button = MouseButton.Left;
+
+								captureStartPosition = true;
+							}
 						}
 
 						/* character resolution */
@@ -190,11 +202,11 @@ public class Program
 
 						if (se is MouseWheelEvent)
 						{
-							handle_key(kk);
+							Page.MainHandleKey(kk);
 							break; /* nothing else to do here */
 						}
 
-						if ((se is MouseButtonEvent mouseButtonEvent) && mouseButtonEvent.IsPressEvent)
+						if (captureStartPosition)
 							kk.StartPosition = kk.MousePosition;
 
 						// what?
@@ -227,9 +239,9 @@ public class Program
 							else
 								kk.Mouse = MouseState.Click;
 
-							if (Status.DialogType == MessageBoxTypes.None)
+							if (Status.DialogType == DialogTypes.None)
 							{
-								if (kk.MousePosition.Y <= 9 && (Status.CurrentPage is not FontEditPage))
+								if (kk.MousePosition.Y <= 9 && (Status.CurrentPage is not FontEditorPage))
 								{
 									if ((kk.State == KeyState.Release) && (kk.MouseButton == MouseButton.Right))
 									{
@@ -244,13 +256,13 @@ public class Program
 
 							kk.OnTarget = widget_change_focus_to_xy(kk.MousePosition);
 
-							if ((se is MouseButtonEvent mouseButtonEvent) && mouseButtonEvent.IsReleaseEvent && downTrip)
+							if (isMouseReleaseEvent && downTrip)
 							{
 								downTrip = false;
 								break;
 							}
 
-							handle_key(kk);
+							Page.MainHandleKey(kk);
 						}
 
 						break;
@@ -260,20 +272,20 @@ public class Program
 						switch (windowEvent.EventType)
 						{
 							case WindowEventType.FocusGained:
-								keyboard_focus = 1;
+								keyboardFocus = true;
 								goto case WindowEventType.Shown;
 
 							case WindowEventType.Shown:
-								video_mousecursor(MOUSE_RESET_STATE);
+								Video.SetMouseCursor(MouseCursorMode.ResetState);
 								break;
 
 							case WindowEventType.Enter:
-								if (keyboard_focus)
-									video_mousecursor(MOUSE_RESET_STATE);
+								if (keyboardFocus)
+									Video.SetMouseCursor(MouseCursorMode.ResetState);
 								break;
 
 							case WindowEventType.FocusLost:
-								keyboard_focus = false;
+								keyboardFocus = false;
 								goto case WindowEventType.Leave;
 
 							case WindowEventType.Leave:
@@ -293,15 +305,12 @@ public class Program
 					case FileDropEvent fileDropEvent:
 						Dialog.Destroy();
 
-						if (Status.CurrentPage is IDropTarget dropTarget)
-							dropTarget.Drop(fileDropEvent);
-
 						switch (Status.CurrentPage)
 						{
 							case SampleListPage:
 							case SampleLoadPage:
 							case SampleLibraryPage:
-								Song.CurrentSong?.LoadSample(fileDropEvent.FilePath);
+								Song.CurrentSong?.LoadSample(AllPages.SampleList.CurrentSample, fileDropEvent.FilePath);
 								MemoryUsage.NotifySongChanged();
 								Status.Flags |= StatusFlags.SongNeedsSave;
 								Page.SetPage(PageNumbers.SampleList);
@@ -312,7 +321,7 @@ public class Program
 							case InstrumentListPitchPage:
 							case InstrumentLoadPage:
 							case InstrumentLibraryPage:
-								Song.CurrentSong?.LoadInstrumentWithPrompt(fileDropEvent.FilePath);
+								Song.CurrentSong?.LoadInstrumentWithPrompt(AllPages.InstrumentList.CurrentInstrument, fileDropEvent.FilePath);
 								MemoryUsage.NotifySongChanged();
 								Status.Flags |= StatusFlags.SongNeedsSave;
 								Page.SetPage(PageNumbers.SampleList);
@@ -333,7 +342,7 @@ public class Program
 						/* this is the sound thread */
 						MIDIEngine.SendFlush();
 						if (!Status.Flags.HasAnyFlag(StatusFlags.DiskWriterActive | StatusFlags.DiskWriterActiveForPattern))
-							Page.PlaybackUpdate();
+							Status.CurrentPage.PlaybackUpdate();
 						break;
 
 					case ClipboardPasteEvent clipboardPasteEvent:
@@ -343,7 +352,7 @@ public class Program
 						if (Page.DoClipboardPaste(clipboardPasteEvent))
 							break;
 
-						handle_text_input(clipboardPasteEvent.Clipboard);
+						Page.MainHandleTextInput(Encoding.ASCII.GetString(clipboardPasteEvent.Clipboard ?? Array.Empty<byte>()));
 
 						break;
 
@@ -370,11 +379,11 @@ public class Program
 							case "variables": Page.SetPage(PageNumbers.SongVariables); break;
 							case "message_edit": Page.SetPage(PageNumbers.Message); break;
 							case "info": Page.SetPage(PageNumbers.Info); break;
-							case "play": Song.Start(); break;
-							case "play_pattern": Song.LoopPattern(AllPages.PatternEditor.CurrentPattern); break;
-							case "play_order": Song.StartAtOrder(AllPages.OrderList.CurrentOrder); break;
+							case "play": AudioPlayback.Start(); break;
+							case "play_pattern": Song.CurrentSong?.LoopPattern(AllPages.PatternEditor.CurrentPattern, 0); break;
+							case "play_order": AudioPlayback.StartAtOrder(AllPages.OrderList.CurrentOrder, 0); break;
 							case "play_mark": AllPages.PatternEditor.PlaySongFromMark(); break;
-							case "stop": Song.Stop(); break;
+							case "stop": AudioPlayback.Stop(); break;
 							case "calc_length": Page.ShowSongLength(); break;
 							case "sample_page": Page.SetPage(PageNumbers.SampleList); break;
 							case "sample_library": Page.SetPage(PageNumbers.SampleLibrary); break;
@@ -387,6 +396,8 @@ public class Program
 							case "palette_page": Page.SetPage(PageNumbers.PaletteEditor); break;
 							case "fullscreen": Video.ToggleDisplayFullscreen(); break;
 						}
+
+						break;
 				}
 			}
 
@@ -396,7 +407,7 @@ public class Program
 			/* now we can do whatever we need to do */
 			Status.Now = DateTime.UtcNow;
 
-			if ((Status.DialogType == MessageBoxTypes.None)
+			if ((Status.DialogType == DialogTypes.None)
 			 && (startDown != default)
 			 && (Status.Now - startDown > TimeSpan.FromSeconds(1)))
 			{
@@ -420,14 +431,14 @@ public class Program
 				case AudioPlaybackMode.PatternLoop:
 					if (screensaver)
 					{
-						s_video.ToggleScreenSaver(false);
+						Video.ToggleScreenSaver(false);
 						screensaver = false;
 					}
 					break;
 				default:
 					if (!screensaver)
 					{
-						s_video.ToggleScreenSaver(true);
+						Video.ToggleScreenSaver(true);
 						screensaver = true;
 					}
 					break;
@@ -446,7 +457,7 @@ public class Program
 			{
 				var q = DiskWriter.Sync();
 
-				while (q == SyncResult.More && !Events.HaveEvent)
+				while (q == SyncResult.More && !EventHub.HaveEvent())
 				{
 					Video.CheckUpdate();
 					q = DiskWriter.Sync();
@@ -456,7 +467,7 @@ public class Program
 				{
 					Hooks.DiskWriterOutputComplete();
 
-					if (s_args.DiskwriteTo != null)
+					if (s_args?.DiskwriteTo != null)
 					{
 						Console.WriteLine("Diskwrite complete, exiting...\n");
 						Exit(0);
@@ -467,11 +478,11 @@ public class Program
 			/* let dmoz build directory lists, etc
 			 *
 			 * as long as there's no user-event going on... */
-			while (!Status.Flags.HasFlag(StatusFlags.NeedUpdate) && dmoz_worker() && !Events.HaveEvent)
+			while (!Status.Flags.HasFlag(StatusFlags.NeedUpdate) && DirectoryScanner.TakeAsynchronousFileListStep() && !EventHub.HaveEvent())
 				;
 
 			/* sleep for a little bit to not hog CPU time */
-			if (!Events.HaveEvent())
+			if (!EventHub.HaveEvent())
 				Thread.Sleep(5);
 		}
 	}
@@ -504,8 +515,7 @@ public class Program
 
 		MIDIEngine.Stop();
 
-		DMOZ.Quit();
-		s_audio.Quit();
+		Audio.Quit();
 		Clippy.Quit();
 		Events.Quit();
 		Timer.Quit();

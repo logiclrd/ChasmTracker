@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace ChasmTracker.Songs;
 
+using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
@@ -463,6 +464,9 @@ public class Song
 	// TODO: song_s3m_channel_info_t midi_s3m_chans[MAX_VOICES];
 	/* This helps reduce the MIDI traffic, also does some encapsulation */
 	// TODO: song_midi_state_t midi_chans[MAX_MIDI_CHANNELS];
+
+	public MIDIConfiguration MIDIConfig = MIDIConfiguration.GetDefault();
+
 	double MIDILastSongCounter;
 
 	uint MIDIRunningStates;
@@ -518,8 +522,7 @@ public class Song
 
 	public void ToggleStereo()
 	{
-		Flags ^= SongFlags.NoStereo;
-		AllPages.SongVariables.SyncStereo();
+		IsStereo = !IsStereo;
 	}
 
 	public bool ITOldEffects

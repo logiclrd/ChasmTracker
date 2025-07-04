@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 
 using ChasmTracker.FileSystem;
+using ChasmTracker.MIDI;
 
 namespace ChasmTracker.Configurations;
 
@@ -17,13 +19,14 @@ public class Configuration
 	public static VideoConfiguration Video = new VideoConfiguration();
 	public static BackupsConfiguration Backups = new BackupsConfiguration();
 	public static GeneralConfiguration General = new GeneralConfiguration();
-	[ConfigurationKey("Pattern Editor")]
 	public static PatternEditorConfiguration PatternEditor = new PatternEditorConfiguration();
 	public static FilesConfiguration Files = new FilesConfiguration();
 	public static DirectoriesConfiguration Directories = new DirectoriesConfiguration();
 	public static KeyboardConfiguration Keyboard = new KeyboardConfiguration();
-	[ConfigurationKey("Info Page")]
 	public static InfoPageConfiguration InfoPage = new InfoPageConfiguration();
+	public static MIDIConfiguration MIDI = new MIDIConfiguration();
+	[ConfigurationKey("MIDI Port %d")] // TODO: lists
+	public static List<MIDIPortConfiguration> MIDIPorts = new List<MIDIPortConfiguration>();
 
 	public static StartupFlags StartupFlags;
 
@@ -125,5 +128,10 @@ public class Configuration
 			return @override.Key;
 
 		return ConvertPascalCaseToWords(member.Name, forceLower: true, wordSeparator: '_');
+	}
+
+	public static void LoadMIDIPortConfiguration(MIDIPort port)
+	{
+
 	}
 }

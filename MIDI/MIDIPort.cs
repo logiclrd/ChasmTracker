@@ -6,11 +6,14 @@ public abstract class MIDIPort
 {
 	public MIDIIO IO;
 	public MIDIIO IOCap;
-	public string? Name;
 	public int Number;
 
 	public byte[]? UserData;
 
+	public abstract string Name { get; }
+	public abstract string Provider { get; }
+
+	public virtual bool CanDisable => false;
 	public virtual bool CanSendNow => false;
 	public virtual bool CanSendLater => false;
 	public virtual bool CanDrain => false;

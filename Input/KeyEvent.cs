@@ -1,3 +1,4 @@
+using System;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
@@ -76,17 +77,110 @@ public struct KeyEvent
 
 	/* --------------------------------------------------------------------- */
 
-	/* return values:
-	*      < 0 = invalid note
-	*        0 = clear field ('.' in qwerty)
-	*    1-120 = note
-	* NOTE_CUT = cut ("^^^")
-	* NOTE_OFF = off ("===")
-	* NOTE_FADE = fade ("~~~")
-	*         i haven't really decided on how to display this.
-	*         and for you people who might say 'hey, IT doesn't do that':
-	*         yes it does. read the documentation. it's not in the editor,
-	*         but it's in the player. */
+	public void TranslateKey()
+	{
+		/* This assumes a US keyboard layout. There's no real "easy" way
+		 * to solve this besides possibly using system-specific translate
+		 * functions, but that's clunky and a lot of systems don't even
+		 * provide that IIRC. */
+
+		OriginalSym = Sym;
+
+		switch (Text)
+		{
+			/* there are likely more cases than this...*/
+			case "<": Sym = KeySym.Less; break;
+			case ">": Sym = KeySym.Greater; break;
+			case "$": Sym = KeySym.Dollar; break;
+
+			case "+": Sym = KeySym.Plus; break;
+			case ":": Sym = KeySym.Colon; break;
+
+			case "*": Sym = KeySym.Asterisk; break;
+
+			default: break;
+		}
+
+		if (Modifiers.HasAnyFlag(KeyMod.GUI))
+		{
+			Modifiers = (Modifiers & ~KeyMod.GUI)
+				| (Status.Flags.HasFlag(StatusFlags.MetaIsControl)
+					? KeyMod.Control : KeyMod.Alt);
+		}
+
+		if (Modifiers.HasFlag(KeyMod.Mode) && Status.Flags.HasFlag(StatusFlags.AltGrIsAlt))
+		{
+			/* Treat AltGr as Alt (delt) */
+			Modifiers = (Modifiers & ~KeyMod.Mode) | KeyMod.Alt;
+		}
+
+		if (Modifiers.HasFlag(KeyMod.Num))
+		{
+			switch (Sym)
+			{
+				case KeySym.KP_0: Sym = KeySym._0; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_1: Sym = KeySym._1; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_2: Sym = KeySym._2; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_3: Sym = KeySym._3; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_4: Sym = KeySym._4; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_5: Sym = KeySym._5; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_6: Sym = KeySym._6; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_7: Sym = KeySym._7; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_8: Sym = KeySym._8; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_9: Sym = KeySym._9; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_Period: Sym = KeySym.Period; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_Divide: Sym = KeySym.Slash; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_Multiply: Sym = KeySym.Asterisk; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_Minus: Sym = KeySym.Minus; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_Plus: Sym = KeySym.Plus; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_Enter: Sym = KeySym.Return; Modifiers &= ~KeyMod.Num; break;
+				case KeySym.KP_Equals: Sym = KeySym.Equals; Modifiers &= ~KeyMod.Num; break;
+				default:
+					break;
+			}
+		}
+		else
+		{
+			switch (Sym)
+			{
+				case KeySym.KP_0: Sym = KeySym.Insert; break;
+				case KeySym.KP_4: Sym = KeySym.Left; break;
+				case KeySym.KP_6: Sym = KeySym.Right; break;
+				case KeySym.KP_2: Sym = KeySym.Down; break;
+				case KeySym.KP_8: Sym = KeySym.Up; break;
+
+				case KeySym.KP_9: Sym = KeySym.PageUp; break;
+				case KeySym.KP_3: Sym = KeySym.PageDown; break;
+
+				case KeySym.KP_7: Sym = KeySym.Home; break;
+				case KeySym.KP_1: Sym = KeySym.End; break;
+
+				case KeySym.KP_Period: Sym = KeySym.Delete; break;
+
+				case KeySym.KP_Divide: Sym = KeySym.Slash; break;
+				case KeySym.KP_Multiply: Sym = KeySym.Asterisk; break;
+				case KeySym.KP_Minus: Sym = KeySym.Minus; break;
+				case KeySym.KP_Plus: Sym = KeySym.Plus; break;
+				case KeySym.KP_Enter: Sym = KeySym.Return; break;
+				case KeySym.KP_Equals: Sym = KeySym.Equals; break;
+			}
+		}
+		// do nothing
+	}
+
+	/* --------------------------------------------------------------------- */
+
+		/* return values:
+		*      < 0 = invalid note
+		*        0 = clear field ('.' in qwerty)
+		*    1-120 = note
+		* NOTE_CUT = cut ("^^^")
+		* NOTE_OFF = off ("===")
+		* NOTE_FADE = fade ("~~~")
+		*         i haven't really decided on how to display this.
+		*         and for you people who might say 'hey, IT doesn't do that':
+		*         yes it does. read the documentation. it's not in the editor,
+		*         but it's in the player. */
 	public int NoteValue
 	{
 		get

@@ -1407,7 +1407,7 @@ public abstract class Page
 			$"{label}: {length.Hours,3}:{length.Minutes:d2}:{length.Seconds:d2}");
 	}
 
-	static void ShowSongLength()
+	public static void ShowSongLength()
 	{
 		ShowLengthDialog("Total song time", Song.CurrentSong.GetLength());
 	}

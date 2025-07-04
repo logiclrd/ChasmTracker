@@ -8,6 +8,9 @@ namespace ChasmTracker.MIDI;
 using ChasmTracker.Configurations;
 using ChasmTracker.Events;
 using ChasmTracker.Input;
+using ChasmTracker.MIDI.Drivers;
+using ChasmTracker.Pages;
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
@@ -60,10 +63,10 @@ public class MIDIEngine : IMIDISink
 
 	public static void PollPorts()
 	{
-		if (s_mutex == null)
+		if (s_portMutex == null)
 			return;
 
-		lock (s_mutex)
+		lock (s_portMutex)
 			foreach (var port in s_ports.OfType<MIDIPort>())
 				port.Poll();
 	}
@@ -119,6 +122,34 @@ public class MIDIEngine : IMIDISink
 	public static int GetPortCount()
 		=> s_ports.OfType<MIDIPort>().Count();
 
+	public static int GetIPPortCount()
+		=> s_ports.OfType<IPMIDIPort>().Count();
+
+	public static void SetIPPortCount(int newCount)
+	{
+		lock (s_portMutex)
+		{
+			int portNumber = 0;
+
+			for (int i = 0; i < s_ports.Count; i++)
+			{
+				if (s_ports[i] is IPMIDIPort)
+				{
+					if (portNumber < newCount)
+						portNumber++;
+					else
+						UnregisterPort(i);
+				}
+			}
+
+			while (portNumber < newCount)
+			{
+				RegisterPort(new IPMIDIPort(portNumber));
+				portNumber++;
+			}
+		}
+	}
+
 	/* midi engines list ports this way */
 	public static int RegisterPort(MIDIPort p)
 	{
@@ -146,7 +177,7 @@ public class MIDIEngine : IMIDISink
 			}
 		}
 
-		Configuration.MIDI.Load(p);
+		Configuration.LoadMIDIPortConfiguration(p);
 
 		p.Received += port_Received;
 
