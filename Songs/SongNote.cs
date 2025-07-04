@@ -39,7 +39,34 @@ public struct SongNote
 		set => VolumeEffectByte = (byte)value;
 	}
 
+	// kbd_sharp_flat_state
 	public static AccidentalsMode AccidentalsMode;
+
+	// kbd_sharp_flat_toggle
+	public void ToggleAccidentalsMode(AccidentalsMode? newMode)
+	{
+		if (newMode == null)
+		{
+			switch (AccidentalsMode)
+			{
+				case AccidentalsMode.Flats: newMode = AccidentalsMode.Sharps; break;
+				case AccidentalsMode.Sharps: newMode = AccidentalsMode.Flats; break;
+			}
+		}
+
+		switch (newMode)
+		{
+			default:
+			case AccidentalsMode.Sharps:
+				Status.FlashText("Displaying accidentals as sharps (#)");
+				AccidentalsMode = AccidentalsMode.Sharps;
+				break;
+			case AccidentalsMode.Flats:
+				Status.FlashText("Displaying accidentals as flats (b)");
+				AccidentalsMode = AccidentalsMode.Flats;
+				break;
+		}
+	}
 
 	public string NoteString
 	{

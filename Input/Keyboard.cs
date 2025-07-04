@@ -3,6 +3,7 @@ using System;
 namespace ChasmTracker.Input;
 
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public class Keyboard
 {
@@ -22,6 +23,9 @@ public class Keyboard
 		set
 		{
 			s_currentOctave = value.Clamp(0, 8);
+
+			/* a full screen update for one lousy letter... */
+			Status.Flags |= StatusFlags.NeedUpdate;
 		}
 	}
 
