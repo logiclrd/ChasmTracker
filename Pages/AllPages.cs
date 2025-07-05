@@ -5,36 +5,10 @@ using System.Reflection;
 
 namespace ChasmTracker.Pages;
 
+using ChasmTracker.Widgets;
+
 public static class AllPages
 {
-	public static Page ByPageNumber(PageNumbers pageNumber)
-	{
-		foreach (var field in typeof(AllPages).GetFields(BindingFlags.Public | BindingFlags.Static))
-		{
-			if ((field.GetValue(default) is Page page)
-			 && (page.PageNumber == pageNumber))
-				return page;
-		}
-
-		throw new Exception("Invalid page number: " + pageNumber);
-	}
-
-	static Page[]? s_pages;
-
-	public static IEnumerable<Page> EnumeratePages()
-	{
-		if (s_pages == null)
-		{
-			s_pages = typeof(AllPages).GetFields(BindingFlags.Public | BindingFlags.Static)
-				.Where(field => typeof(Page).IsAssignableFrom(field.FieldType))
-				.Select(field => field.GetValue(null))
-				.OfType<Page>()
-				.ToArray();
-		}
-
-		return s_pages;
-	}
-
 	public static BlankPage Blank = new BlankPage();
 	public static HelpPage Help = new HelpPage();
 	public static AboutPage About = new AboutPage();
@@ -46,7 +20,7 @@ public static class AllPages
 	public static InfoPage Info = new InfoPage();
 
 	public static ConfigPage Config;
-	public static PreferencesPage Preferences;
+	public static PreferencesPage Preferences = new PreferencesPage();
 
 	public static MIDIPage MIDI = new MIDIPage();
 	public static MIDIOutputPage MIDIOutput = new MIDIOutputPage();
@@ -82,4 +56,37 @@ public static class AllPages
 	// Updated dynamically every time an InstrumentList__ page is set.
 	public static InstrumentListPage InstrumentList = InstrumentListGeneral;
 	public static OrderListPage OrderList = OrderListPanning;
+
+	static Page[] s_pages;
+	static Dictionary<PageNumbers, Page> s_byPageNumber;
+
+	static AllPages()
+	{
+		s_pages = typeof(AllPages).GetFields(BindingFlags.Public | BindingFlags.Static)
+			.Where(field => typeof(Page).IsAssignableFrom(field.FieldType))
+			.Select(field => field.GetValue(null))
+			.OfType<Page>()
+			.ToArray();
+
+		s_byPageNumber = s_pages.ToDictionary(page => page.PageNumber);
+
+		foreach (var page in s_pages)
+		{
+			ToggleButtonWidget.BuildGroups(page.Widgets);
+			WidgetNext.Initialize(page.Widgets);
+		}
+	}
+
+	public static IEnumerable<Page> EnumeratePages()
+	{
+		return s_pages;
+	}
+
+	public static Page ByPageNumber(PageNumbers pageNumber)
+	{
+		if (s_byPageNumber.TryGetValue(pageNumber, out var page))
+			return page;
+
+		throw new Exception("Invalid page number: " + pageNumber);
+	}
 }

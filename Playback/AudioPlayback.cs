@@ -14,6 +14,7 @@ public class AudioPlayback
 	public static string SongBaseName = "";
 	public static AudioPlaybackMode Mode;
 	public static MixFlags MixFlags;
+	public static int AudioDeviceID;
 
 	public static bool IsPlaying => Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop);
 

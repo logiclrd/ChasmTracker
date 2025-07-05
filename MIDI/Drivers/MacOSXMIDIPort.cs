@@ -4,6 +4,11 @@ using ChasmTracker.MIDI;
 
 public class MacOSXMIDIPort : MIDIPort
 {
+	string _name = "";
+
+	public override string Name => _name;
+	public override string Provider => "Win32MM";
+
 	public static bool Setup()
 	{
 		// TODO

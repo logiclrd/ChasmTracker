@@ -17,8 +17,7 @@ public class AudioSettings
 
 	public static bool SurroundEffect;
 
-	public static readonly int[] EQFreq = new int[4];
-	public static readonly int[] EQGain = new int[4];
+	public static EQBand[] EQBands = new EQBand[4];
 
 	public static bool NoRamping;
 }

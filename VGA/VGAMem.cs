@@ -491,6 +491,9 @@ public static class VGAMem
 			DrawCharacterUnicode(composed[n], position.Advance(n), colours);
 	}
 
+	public static void DrawFillCharacters(Rect bounds, VGAMemColours colours)
+		=> DrawFillCharacters(bounds.TopLeft, bounds.BottomRight, colours);
+
 	public static void DrawFillCharacters(Point s, Point e, VGAMemColours colours)
 	{
 		for (int y = s.Y; y <= e.Y; y++)

@@ -21,4 +21,21 @@ public struct Rect
 	}
 
 	public Point BottomRight => TopLeft.Advance(Size);
+
+	public bool Contains(Point pt)
+	{
+		if (pt.X < TopLeft.X)
+			return false;
+		if (pt.Y < TopLeft.Y)
+			return false;
+
+		var bottomRight = BottomRight;
+
+		if (pt.X >= bottomRight.X)
+			return false;
+		if (pt.Y >= bottomRight.Y)
+			return false;
+
+		return true;
+	}
 }

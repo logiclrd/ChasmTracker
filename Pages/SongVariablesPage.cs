@@ -103,8 +103,6 @@ public class SongVariablesPage : Page
 		Widgets.Add(textEntrySamplesDirectory);
 		Widgets.Add(textEntryInstrumentsDirectory);
 		Widgets.Add(buttonSaveAllPreferences);
-
-		ToggleButtonWidget.BuildGroups(Widgets);
 	}
 
 	public override void DrawConst()

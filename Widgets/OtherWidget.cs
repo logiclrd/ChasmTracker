@@ -21,7 +21,12 @@ public class OtherWidget : Widget
 
 	// Position and size for navigation discovery
 	public OtherWidget(Point position, Size size)
-		: base(new Point(-1, -1), 0)
+		: base(position, size)
+	{
+	}
+
+	public OtherWidget(Rect bounds)
+		: this(bounds.TopLeft, bounds.Size)
 	{
 	}
 
