@@ -19,15 +19,24 @@ using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
+using ChasmTracker.Widgets;
 
 /* The all-important pattern editor. The code here is a general mess, so
  * don't look at it directly or, uh, you'll go blind or something. */
 
 public class PatternEditorPage : Page
 {
+	/* only one widget, but MAN is it complicated :) */
+	OtherWidget otherEditorView;
+
 	public PatternEditorPage()
 		: base(PageNumbers.PatternEditor, "Pattern Editor (F2)", HelpTexts.PatternEditor)
 	{
+		otherEditorView = new OtherWidget();
+
+		otherEditorView.OtherHandleKey += otherEditorView_HandleKey;
+		otherEditorView.OtherRedraw += otherEditorView_Redraw;
+
 		MemoryUsage.RegisterMemoryPressure("Clipboard", ClipboardMemoryUsage);
 		MemoryUsage.RegisterMemoryPressure("History", HistoryMemoryUsage);
 
@@ -41,12 +50,235 @@ public class PatternEditorPage : Page
 			_undoHistory.Add(new PatternSnap() { SnapOp = "Empty" });
 	}
 
+	bool otherEditorView_HandleKey(KeyEvent k)
+	{
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		if (pattern == null)
+			return false;
+
+		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+		{
+			switch (k.Sym)
+			{
+				case KeySym.Left:
+				case KeySym.Right:
+				case KeySym.Up:
+				case KeySym.Down:
+				case KeySym.Home:
+				case KeySym.End:
+				case KeySym.PageUp:
+				case KeySym.PageDown:
+					if (k.State == KeyState.Release)
+						return false;
+					if (!_shiftSelection.InProgress)
+						ShiftSelectionBegin();
+					break;
+			}
+		}
+
+		bool? ret;
+
+		if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
+			ret = HandleAltKey(k);
+		else if (k.Modifiers.HasAnyFlag(KeyMod.Control))
+			ret = HandleControlKey(k);
+		else
+			ret = HandleKey(k);
+
+		if (ret != null)
+			return ret.Value;
+
+		_currentRow = _currentRow.Clamp(0, pattern.Rows.Count - 1);
+
+		if (_currentPosition > 8)
+		{
+			if (_currentChannel < Constants.MaxChannels)
+			{
+				_currentPosition = 0;
+				_currentChannel++;
+			}
+			else
+				_currentPosition = 8;
+		}
+		else if (_currentPosition < 0)
+		{
+			if (_currentChannel > 1)
+			{
+				_currentPosition = 8;
+				_currentChannel--;
+			}
+			else
+				_currentPosition = 0;
+		}
+
+		_currentChannel = _currentChannel.Clamp(1, Constants.MaxChannels);
+		Reposition();
+		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+			ShiftSelectionUpdate();
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+		return true;
+	}
+
+	SongNote EmptyNote = SongNote.Empty;
+
+	void otherEditorView_Redraw()
+	{
+		int chanDrawPos = 5;
+
+		int maskColour = Status.Flags.HasFlag(StatusFlags.InvertedPalette) ? 1 : 3; /* mask colour */
+
+		bool patternIsPlaying = AudioPlayback.IsPlaying && (_currentPattern == _playingPattern);
+
+		if (_templateMode != TemplateMode.Off)
+			VGAMem.DrawTextLen(_templateMode.GetDescription(), 60, new Point(2, 12), (3, 2));
+
+		/* draw the outer box around the whole thing */
+		VGAMem.DrawBox(new Point(4, 14), new Point(5 + _visibleWidth, 47), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
+
+		/* how many rows are there? */
+		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
+
+		pattern ??= Pattern.Empty;
+
+		int totalRows = pattern.Rows.Count;
+
+		for (int chan = _topDisplayChannel, chanPos = 0; chanPos < _visibleChannels; chan++, chanPos++)
+		{
+			var trackView = TrackViews[_trackViewScheme[chanPos]];
+
+			/* maybe i'm retarded but the pattern editor should be dealing
+				with the same concept of "channel" as the rest of the
+				interface. the mixing channels really could be any arbitrary
+				number -- modplug just happens to reserve the first 64 for
+				"real" channels. i'd rather pm not replicate this cruft and
+				more or less hide the mixer from the interface... */
+			trackView.DrawChannelHeader(chan, new Point(chanDrawPos, 14),
+				(Song.CurrentSong.GetChannel(chan - 1)?.Flags.HasFlag(ChannelFlags.Mute) ?? false)
+				? (byte)0 : (byte)3);
+
+			int row, rowPos;
+
+			for (row = _topDisplayRow, rowPos = 0; rowPos < 32 && row < totalRows; row++, rowPos++)
+			{
+				ref var note = ref pattern[row][chan];
+
+				int fg, bg;
+
+				if (chanPos == 0)
+				{
+					fg = patternIsPlaying && row == _playingRow ? 3 : 0;
+					bg = (_currentPattern == _markedPattern && row == _markedRow) ? 11 : 2;
+					VGAMem.DrawText(row.ToString("d3"), new Point(1, 15 + rowPos), (fg, bg));
+				}
+
+				if (IsInSelection(chan, row))
+				{
+					fg = 3;
+					bg = RowIsHighlight(row) ? 9 : 8;
+				}
+				else
+				{
+					fg = ((Status.Flags & (StatusFlags.CrayolaMode | StatusFlags.ClassicMode)) == StatusFlags.CrayolaMode)
+						? ((note.Instrument + 3) % 4 + 3)
+						: 6;
+
+					if (_highlightCurrentRow && row == _currentRow)
+						bg = 1;
+					else if (RowIsMajor(row))
+						bg = 14;
+					else if (RowIsMinor(row))
+						bg = 15;
+					else
+						bg = 0;
+				}
+
+				int cpos;
+
+				/* draw the cursor if on the current row, and:
+				drawing the current channel, regardless of position
+				OR: when the template is enabled,
+					and the channel fits within the template size,
+					AND shift is not being held down.
+				(oh god it's lisp) */
+				bool cursorIsOnCurrentRow = (row == _currentRow);
+				bool cursorIsInsideColumn = (_currentPosition > 0); // not just on the note value
+				bool templateIsEnabled = (_templateMode != TemplateMode.Off);
+				bool shiftIsPressed = Status.KeyMod.HasAnyFlag(KeyMod.Shift);
+				int clipboardDataWidth = (_clipboard.Data != null ? _clipboard.Channels : 1);
+
+				if (cursorIsOnCurrentRow
+						&& ((cursorIsInsideColumn || !templateIsEnabled || shiftIsPressed)
+							? (chan == _currentChannel)
+							: ((chan >= _currentChannel) && (chan < _currentChannel + clipboardDataWidth))))
+				{
+					// yes! do write the cursor
+					cpos = _currentPosition;
+					if (cpos == 6 && _linkEffectColumn && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+						cpos = 9; // highlight full effect and value
+				}
+				else
+					cpos = -1;
+
+				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), ref note, cpos, (fg, bg));
+
+				if (_drawDivisions && chanPos < _visibleChannels - 1)
+				{
+					if (IsInSelection(chan, row))
+						bg = 0;
+
+					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), (2, bg));
+				}
+			}
+
+			// hmm...?
+			for (; rowPos < 32; row++, rowPos++)
+			{
+				int bg;
+
+				if (RowIsMajor(row))
+					bg = 14;
+				else if (RowIsMinor(row))
+					bg = 15;
+				else
+					bg = 0;
+
+				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), ref EmptyNote, -1, (6, bg));
+
+				if (_drawDivisions && chanPos < _visibleChannels - 1)
+				{
+					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), (2, bg));
+				}
+			}
+
+			if (chan == _currentChannel)
+				trackView.DrawMask(new Point(chanDrawPos, 47), _editCopyMask, _currentPosition, (maskColour, 2));
+
+			/* blah */
+			if (_channelMulti[chan - 1])
+			{
+				if (_trackViewScheme[chanPos] == 0)
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 3, 47), (maskColour, 2));
+				else if (_trackViewScheme[chanPos] < 3)
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 2, 47), (maskColour, 2));
+				else if (_trackViewScheme[chanPos] == 3)
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 1, 47), (maskColour, 2));
+				else if (_currentPosition < 2)
+					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos, 47), (maskColour, 2));
+			}
+
+			chanDrawPos += trackView.Width + (_drawDivisions ? 1 : 0);
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
+	/* --------------------------------------------------------------------- */
+
 	bool RowIsMajor(int r) => (Song.CurrentSong.RowHighlightMajor != 0) && ((r % Song.CurrentSong.RowHighlightMajor) == 0);
 	bool RowIsMinor(int r) => (Song.CurrentSong.RowHighlightMinor != 0) && ((r % Song.CurrentSong.RowHighlightMinor) == 0);
 	bool RowIsHighlight(int r) => RowIsMinor(r) || RowIsMajor(r);
-
-	/* this is actually used by pattern-view.c */
-	bool _showDefaultVolumes = false;
 
 	int CurrentInstrument
 	{
@@ -895,7 +1127,6 @@ public class PatternEditorPage : Page
 
 	public override void SetPage()
 	{
-		/* only one widget, but MAN is it complicated :) */
 		// TODO: other widget??
 		base.SetPage();
 	}
@@ -2594,158 +2825,6 @@ public class PatternEditorPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	public override void Redraw()
-	{
-		int chanDrawPos = 5;
-
-		int maskColour = Status.Flags.HasFlag(StatusFlags.InvertedPalette) ? 1 : 3; /* mask colour */
-
-		bool patternIsPlaying = AudioPlayback.IsPlaying && (_currentPattern == _playingPattern);
-
-		if (_templateMode != TemplateMode.Off)
-			VGAMem.DrawTextLen(_templateMode.GetDescription(), 60, new Point(2, 12), (3, 2));
-
-		/* draw the outer box around the whole thing */
-		VGAMem.DrawBox(new Point(4, 14), new Point(5 + _visibleWidth, 47), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
-
-		/* how many rows are there? */
-		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
-
-		pattern ??= Pattern.Empty;
-
-		int totalRows = pattern.Rows.Count;
-
-		for (int chan = _topDisplayChannel, chanPos = 0; chanPos < _visibleChannels; chan++, chanPos++)
-		{
-			var trackView = TrackViews[_trackViewScheme[chanPos]];
-
-			/* maybe i'm retarded but the pattern editor should be dealing
-				with the same concept of "channel" as the rest of the
-				interface. the mixing channels really could be any arbitrary
-				number -- modplug just happens to reserve the first 64 for
-				"real" channels. i'd rather pm not replicate this cruft and
-				more or less hide the mixer from the interface... */
-			trackView.DrawChannelHeader(chan, new Point(chanDrawPos, 14),
-				(Song.CurrentSong.GetChannel(chan - 1)?.Flags.HasFlag(ChannelFlags.Mute) ?? false)
-				? (byte)0 : (byte)3);
-
-			int row, rowPos;
-
-			for (row = _topDisplayRow, rowPos = 0; rowPos < 32 && row < totalRows; row++, rowPos++)
-			{
-				ref var note = ref pattern[row][chan];
-
-				int fg, bg;
-
-				if (chanPos == 0)
-				{
-					fg = patternIsPlaying && row == _playingRow ? 3 : 0;
-					bg = (_currentPattern == _markedPattern && row == _markedRow) ? 11 : 2;
-					VGAMem.DrawText(row.ToString("d3"), new Point(1, 15 + rowPos), (fg, bg));
-				}
-
-				if (IsInSelection(chan, row))
-				{
-					fg = 3;
-					bg = RowIsHighlight(row) ? 9 : 8;
-				}
-				else
-				{
-					fg = ((Status.Flags & (StatusFlags.CrayolaMode | StatusFlags.ClassicMode)) == StatusFlags.CrayolaMode)
-						? ((note.Instrument + 3) % 4 + 3)
-						: 6;
-
-					if (_highlightCurrentRow && row == _currentRow)
-						bg = 1;
-					else if (RowIsMajor(row))
-						bg = 14;
-					else if (RowIsMinor(row))
-						bg = 15;
-					else
-						bg = 0;
-				}
-
-				int cpos;
-
-				/* draw the cursor if on the current row, and:
-				drawing the current channel, regardless of position
-				OR: when the template is enabled,
-					and the channel fits within the template size,
-					AND shift is not being held down.
-				(oh god it's lisp) */
-				bool cursorIsOnCurrentRow = (row == _currentRow);
-				bool cursorIsInsideColumn = (_currentPosition > 0); // not just on the note value
-				bool templateIsEnabled = (_templateMode != TemplateMode.Off);
-				bool shiftIsPressed = Status.KeyMod.HasAnyFlag(KeyMod.Shift);
-				int clipboardDataWidth = (_clipboard.Data != null ? _clipboard.Channels : 1);
-
-				if (cursorIsOnCurrentRow
-						&& ((cursorIsInsideColumn || !templateIsEnabled || shiftIsPressed)
-							? (chan == _currentChannel)
-							: ((chan >= _currentChannel) && (chan < _currentChannel + clipboardDataWidth))))
-				{
-					// yes! do write the cursor
-					cpos = _currentPosition;
-					if (cpos == 6 && _linkEffectColumn && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
-						cpos = 9; // highlight full effect and value
-				}
-				else
-					cpos = -1;
-
-				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), note, cpos, (fg, bg));
-
-				if (_drawDivisions && chanPos < _visibleChannels - 1)
-				{
-					if (IsInSelection(chan, row))
-						bg = 0;
-
-					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), (2, bg));
-				}
-			}
-
-			// hmm...?
-			for (; rowPos < 32; row++, rowPos++)
-			{
-				int bg;
-
-				if (RowIsMajor(row))
-					bg = 14;
-				else if (RowIsMinor(row))
-					bg = 15;
-				else
-					bg = 0;
-
-				trackView.DrawNote(new Point(chanDrawPos, 15 + rowPos), SongNote.Empty, -1, (6, bg));
-
-				if (_drawDivisions && chanPos < _visibleChannels - 1)
-				{
-					VGAMem.DrawCharacter((char)168, new Point(chanDrawPos + trackView.Width, 15 + rowPos), (2, bg));
-				}
-			}
-
-			if (chan == _currentChannel)
-				trackView.DrawMask(new Point(chanDrawPos, 47), _editCopyMask, _currentPosition, (maskColour, 2));
-
-			/* blah */
-			if (_channelMulti[chan - 1])
-			{
-				if (_trackViewScheme[chanPos] == 0)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 3, 47), (maskColour, 2));
-				else if (_trackViewScheme[chanPos] < 3)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 2, 47), (maskColour, 2));
-				else if (_trackViewScheme[chanPos] == 3)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos + 1, 47), (maskColour, 2));
-				else if (_currentPosition < 2)
-					VGAMem.DrawCharacter((char)172, new Point(chanDrawPos, 47), (maskColour, 2));
-			}
-
-			chanDrawPos += trackView.Width + (_drawDivisions ? 1 : 0);
-		}
-
-		Status.Flags |= StatusFlags.NeedUpdate;
-	}
-
-	/* --------------------------------------------------------------------- */
 	/* kill all humans */
 
 	void TransposeNotes(int amount)
@@ -4251,8 +4330,8 @@ public class PatternEditorPage : Page
 			case KeySym.v:
 				if (k.State == KeyState.Release)
 					return true;
-				_showDefaultVolumes = !_showDefaultVolumes;
-				Status.FlashText(_showDefaultVolumes ? "Default volumes enabled" : "Default volumes disabled");
+				Status.ShowDefaultVolumes = !Status.ShowDefaultVolumes;
+				Status.FlashText(Status.ShowDefaultVolumes ? "Default volumes enabled" : "Default volumes disabled");
 				return true;
 			case KeySym.x:
 			case KeySym.z:
@@ -4852,82 +4931,6 @@ public class PatternEditorPage : Page
 	}
 
 	/* --------------------------------------------------------------------- */
-	/* this function name's a bit confusing, but this is just what gets
-	* called from the main key handler.
-	* pattern_editor_handle_*_key above do the actual work. */
-
-	bool HandleKeyCB(KeyEvent k)
-	{
-		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
-
-		if (pattern == null)
-			return false;
-
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-		{
-			switch (k.Sym)
-			{
-				case KeySym.Left:
-				case KeySym.Right:
-				case KeySym.Up:
-				case KeySym.Down:
-				case KeySym.Home:
-				case KeySym.End:
-				case KeySym.PageUp:
-				case KeySym.PageDown:
-					if (k.State == KeyState.Release)
-						return false;
-					if (!_shiftSelection.InProgress)
-						ShiftSelectionBegin();
-					break;
-			}
-		}
-
-		bool? ret;
-
-		if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
-			ret = HandleAltKey(k);
-		else if (k.Modifiers.HasAnyFlag(KeyMod.Control))
-			ret = HandleControlKey(k);
-		else
-			ret = HandleKey(k);
-
-		if (ret != null)
-			return ret.Value;
-
-		_currentRow = _currentRow.Clamp(0, pattern.Rows.Count - 1);
-
-		if (_currentPosition > 8)
-		{
-			if (_currentChannel < Constants.MaxChannels)
-			{
-				_currentPosition = 0;
-				_currentChannel++;
-			}
-			else
-				_currentPosition = 8;
-		}
-		else if (_currentPosition < 0)
-		{
-			if (_currentChannel > 1)
-			{
-				_currentPosition = 8;
-				_currentChannel--;
-			}
-			else
-				_currentPosition = 0;
-		}
-
-		_currentChannel = _currentChannel.Clamp(1, Constants.MaxChannels);
-		Reposition();
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-			ShiftSelectionUpdate();
-
-		Status.Flags |= StatusFlags.NeedUpdate;
-		return true;
-	}
-
-	/* --------------------------------------------------------------------- */
 
 	int _prevRow = -1;
 	int _prevPattern = -1;
@@ -4966,8 +4969,6 @@ public class PatternEditorPage : Page
 
 	public override bool? PreHandleKey(KeyEvent k)
 	{
-		// _fix_f7
-
 		if (k.Sym == KeySym.F7)
 		{
 			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))

@@ -121,7 +121,7 @@ public class SDLVideoBackend : VideoBackend
 		if (Configuration.Video.WantFixed)
 			SDL.SetRenderLogicalPresentation(_renderer, Configuration.Video.WantFixedSize.Width, Configuration.Video.WantFixedSize.Height, SDL.RendererLogicalPresentation.Letterbox);
 
-		if (HaveMenu() && !_fullscreen)
+		if (HaveMenu && !_fullscreen)
 		{
 			SDL.SetWindowSize(_window, _size.Width, _size.Height);
 			SDL.SetWindowPosition(_window, _savedPosition.X, _savedPosition.Y);
@@ -275,7 +275,7 @@ public class SDLVideoBackend : VideoBackend
 		SetUp(Configuration.Video.Interpolation); // ew
 	}
 
-	public void SetHardware(bool hardware)
+	public override void SetHardware(bool hardware)
 	{
 		SDL.DestroyTexture(_texture);
 
@@ -479,10 +479,8 @@ public class SDLVideoBackend : VideoBackend
 
 	const string SoftwareRendererName = "software";
 
-	public override bool IsHardware()
-	{
-		return SDL.GetRendererName(_renderer) != SoftwareRendererName;
-	}
+	public override bool IsHardware
+		=> SDL.GetRendererName(_renderer) != SoftwareRendererName;
 
 	void SetIcon()
 	{
@@ -693,16 +691,19 @@ public class SDLVideoBackend : VideoBackend
 
 	/* --------------------------------------------------------------- */
 
-	public override bool IsFullScreen()
+	public override bool IsFullScreen
 	{
-		var flags = SDL.GetWindowFlags(_window);
+		get
+		{
+			var flags = SDL.GetWindowFlags(_window);
 
-		return flags.HasFlag(SDL.WindowFlags.Fullscreen);
+			return flags.HasFlag(SDL.WindowFlags.Fullscreen);
+		}
 	}
 
 	public override void Fullscreen(bool? newFSFlag)
 	{
-		bool haveMenu = HaveMenu();
+		bool haveMenu = HaveMenu;
 		/* positive newFSFlag == set, negative == toggle */
 		_fullscreen = newFSFlag.HasValue ? newFSFlag.Value : !_fullscreen;
 
@@ -803,14 +804,12 @@ public class SDLVideoBackend : VideoBackend
 		return _mousePosition;
 	}
 
-	public override bool HaveMenu()
-	{
-		return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-	}
+	public override bool HaveMenu
+		=> RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
 	public override void ToggleMenu(bool on)
 	{
-		if (!HaveMenu())
+		if (!HaveMenu)
 			return;
 
 		var flags = SDL.GetWindowFlags(_window);

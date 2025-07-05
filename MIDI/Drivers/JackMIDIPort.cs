@@ -9,4 +9,7 @@ public class JackMIDIPort : MIDIPort
 		// TODO
 		return false;
 	}
+
+	public override string Name => throw new System.NotImplementedException();
+	public override string Provider => throw new System.NotImplementedException();
 }

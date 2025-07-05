@@ -414,7 +414,6 @@ public class InfoPage : Page
 	/* window setup */
 
 	int _selectedWindow = 0;
-	int _numWindows = 3;
 	Shared<int> _selectedChannel = new Shared<int>(1);
 
 	/* five, because that's Impulse Tracker's maximum */

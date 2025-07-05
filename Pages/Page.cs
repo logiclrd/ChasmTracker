@@ -558,21 +558,21 @@ public abstract class Page
 				{
 					Song.CurrentSong.CurrentSpeed--;
 					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
-					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
 				{
 					Song.CurrentSong.CurrentTempo--;
 					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
-					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
 					Song.CurrentSong.CurrentGlobalVolume--;
 					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
-					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
 				}
 				return;
@@ -583,21 +583,21 @@ public abstract class Page
 				{
 					Song.CurrentSong.CurrentSpeed++;
 					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
-					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
 				{
 					Song.CurrentSong.CurrentTempo++;
 					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
-					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
 					Song.CurrentSong.CurrentGlobalVolume++;
 					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
-					if (!AudioPlayback.Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop))
+					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
 				}
 

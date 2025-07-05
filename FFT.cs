@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using ChasmTracker.Utility;
 
 namespace ChasmTracker;
@@ -110,6 +111,11 @@ public class FFT
 #endif
 	}
 
+	public static void ClearData()
+	{
+		Array.Clear(s_currentFFTData);
+	}
+
 	/*
 	* Understanding In and Out:
 	* input is the samples (so, it is amplitude). The scale is expected to be signed 16bits.
@@ -117,7 +123,7 @@ public class FFT
 	* output is a value between 0 and 128 representing 0 = noisefloor variable
 	*    and 128 = 0dBFS (deciBell, FullScale) for each band.
 	*/
-	public static void DataWork(short[] output, short[] input)
+	public static void DataWork(int outputChannel, short[] input)
 	{
 		int ex = 1;
 		int ff = OutputSize;
@@ -168,17 +174,15 @@ public class FFT
 			* dB is = 20 * log10(in) */
 			var @out = s_stateReal[n] * s_stateReal[n] + s_stateImag[n] * s_stateImag[n];
 			/* +0.0000000001f is -100dB of power. Used to prevent evaluating powerdB(0.0) */
-			output[n] = Decibel.pdB_s(NoiseFloor, @out + 0.0000000001, dBInvBufSize);
+			s_currentFFTData[outputChannel, n] = Decibel.pdB_s(NoiseFloor, @out + 0.0000000001, dBInvBufSize);
 		}
 	}
 
-	public static void GetColumns(byte[] @out, int chan)
+	public static void GetColumns(Span<byte> @out, int chan)
 	{
-		int width = @out.Length;
-
 		for (int i = 0, a = 0; i < @out.Length && a < OutputSize; i++)
 		{
-			int fftLogI = i * BandsSize / width;
+			int fftLogI = i * BandsSize / @out.Length;
 
 			int ax = s_fftLog[fftLogI];
 

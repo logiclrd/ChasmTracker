@@ -13,6 +13,7 @@ public class VGAMemOverlay
 	public Point BottomRight;
 	public Size Size; /* in pixels */
 
+	public Span<byte> Q => VGAMem.Overlay.Slice(_q);
 	public int Skip => _skip;
 
 	int _q; /* offset to points inside ovl */
