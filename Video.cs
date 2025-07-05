@@ -4,6 +4,7 @@ using SDL3;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Configurations;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -67,9 +68,29 @@ public class Video
 		s_backend.Fullscreen(newFSFlag);
 	}
 
-	public static bool IsFullScreen()
+	public static bool IsFullScreen
+		=> s_backend.IsFullScreen;
+
+	public static void SetHardware(bool newHWFlag)
 	{
-		return s_backend.IsFullScreen();
+		s_backend.SetHardware(newHWFlag);
+	}
+
+	public static bool IsHardware
+		=> s_backend.IsHardware;
+
+	public static void SetUp(VideoInterpolationMode interpolation)
+	{
+		Configuration.Video.Interpolation = interpolation;
+		s_backend.SetUp(interpolation);
+	}
+
+	public static bool HaveMenu
+		=> s_backend.HaveMenu;
+
+	public static void ToggleMenu(bool on)
+	{
+		s_backend.ToggleMenu(on);
 	}
 
 	public static bool IsInputGrabbed()

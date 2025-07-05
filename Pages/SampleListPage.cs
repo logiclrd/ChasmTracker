@@ -5,7 +5,7 @@ namespace ChasmTracker.Pages;
 public class SampleListPage : Page
 {
 	public SampleListPage()
-		: base("Samples", PageNumbers.SampleList)
+		: base(PageNumbers.SampleList, "Samples", HelpTexts.SampleList)
 	{
 
 	}

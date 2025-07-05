@@ -1,6 +1,7 @@
+using System;
+
 namespace ChasmTracker.Widgets;
 
-using System;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;

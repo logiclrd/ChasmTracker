@@ -207,7 +207,7 @@ public class PaletteEditorPage : Page
 			n = n.Clamp(0, 48);
 
 		if (n != SelectedWidgetIndex)
-			SetFocus(Widgets[n]);
+			ChangeFocusTo(Widgets[n]);
 
 		return null;
 	}
@@ -429,7 +429,7 @@ public class PaletteEditorPage : Page
 					return false;
 				if (--newPalette < 0)
 				{
-					SetFocus(thumbBarBlue[15]);
+					ChangeFocusTo(thumbBarBlue[15]);
 					return true;
 				}
 				break;
@@ -439,7 +439,7 @@ public class PaletteEditorPage : Page
 				// newPalette++;
 				if (++newPalette >= Palettes.Presets.Length)
 				{
-					SetFocus(buttonCopy!);
+					ChangeFocusTo(buttonCopy!);
 					return true;
 				}
 				break;
@@ -453,7 +453,7 @@ public class PaletteEditorPage : Page
 					return false;
 				if (newPalette == 0)
 				{
-					SetFocus(thumbBarRed[15]);
+					ChangeFocusTo(thumbBarRed[15]);
 					return true;
 				}
 				newPalette -= 16;
@@ -480,17 +480,17 @@ public class PaletteEditorPage : Page
 			case KeySym.Tab:
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					SetFocus(FocusBackTabTargets[_selectedPalette + 1]);
+					ChangeFocusTo(FocusBackTabTargets[_selectedPalette + 1]);
 					return true;
 				}
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return false;
-				SetFocus(FocusTabTargets[_selectedPalette + 1]);
+				ChangeFocusTo(FocusTabTargets[_selectedPalette + 1]);
 				return true;
 			case KeySym.Left:
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return false;
-				SetFocus(FocusBackTabTargets[_selectedPalette + 1]);
+				ChangeFocusTo(FocusBackTabTargets[_selectedPalette + 1]);
 				return true;
 			case KeySym.c:
 				/* pasting is handled by the page */

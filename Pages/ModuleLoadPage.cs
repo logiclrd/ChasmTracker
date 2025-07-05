@@ -69,7 +69,7 @@ public class ModuleLoadPage : ModuleLoadSavePageBase
 	public override void SetPage()
 	{
 		if (UpdateDirectory())
-			SetFocus(s_flist.NumFiles > 0 ? otherFileList! : otherDirectoryList!);
+			ChangeFocusTo(s_flist.NumFiles > 0 ? otherFileList! : otherDirectoryList!);
 
 		ResetGlob();
 	}

@@ -699,7 +699,7 @@ public abstract class ModuleLoadSavePageBase : Page
 						ChangeDirectory(s_dlist[s_dlist.SelectedIndex].FullPath);
 
 						if (s_flist.NumFiles > 0)
-							SetFocus((ActiveWidgets ?? Widgets)[0]);
+							ChangeFocusTo((ActiveWidgets ?? Widgets)[0]);
 
 						Status.Flags |= StatusFlags.NeedUpdate;
 						return true;
@@ -749,7 +749,7 @@ public abstract class ModuleLoadSavePageBase : Page
 					ChangeDirectory(s_dlist[s_dlist.SelectedIndex].FullPath);
 
 				if (s_flist.NumFiles > 0)
-					SetFocus((ActiveWidgets ?? Widgets)[0]);
+					ChangeFocusTo((ActiveWidgets ?? Widgets)[0]);
 				Status.Flags |= StatusFlags.NeedUpdate;
 				return true;
 			case KeySym.Backspace:
@@ -844,7 +844,7 @@ public abstract class ModuleLoadSavePageBase : Page
 		if (!ChangeDirectory(@out))
 			return;
 
-		SetFocus(s_flist.NumFiles > 0 ? otherFileList! : otherDirectoryList!);
+		ChangeFocusTo(s_flist.NumFiles > 0 ? otherFileList! : otherDirectoryList!);
 
 		Status.Flags |= StatusFlags.NeedUpdate;
 

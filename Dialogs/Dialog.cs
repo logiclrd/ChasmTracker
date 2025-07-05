@@ -6,6 +6,7 @@ namespace ChasmTracker.Dialogs;
 
 using ChasmTracker.Input;
 using ChasmTracker.Menus;
+using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
@@ -48,6 +49,16 @@ public class Dialog
 
 			return Widgets[0];
 		}
+	}
+
+	public Dialog ChangeFocusTo(Widget widget)
+	{
+		int index = Widgets.IndexOf(widget);
+
+		if (index >= 0)
+			ChangeFocusTo(index);
+
+		return this;
 	}
 
 	public Dialog ChangeFocusTo(int newWidgetIndex)
@@ -374,9 +385,12 @@ public class Dialog
 		ToggleButtonWidget.BuildGroups(Widgets);
 
 		WidgetNext.Initialize(Widgets);
+
+		SetInitialFocus();
 	}
 
 	protected virtual void Initialize() { }
+	protected virtual void SetInitialFocus() { }
 
 	static void DialogButton(string functionName, Func<Dialog, Action<object?>?> getFunctor, object? data)
 	{

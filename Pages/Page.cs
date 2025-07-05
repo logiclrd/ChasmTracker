@@ -23,7 +23,9 @@ public abstract class Page
 	public readonly PageNumbers PageNumber;
 	public readonly string Title;
 	public readonly HelpTexts HelpText;
-	public readonly Shared<int> SelectedWidgetIndex = new Shared<int>();
+	public Shared<int> SelectedWidgetIndex => _selectedWidgetIndex;
+
+	Shared<int> _selectedWidgetIndex = new Shared<int>();
 
 	public static List<Widget>? ActiveWidgets;
 	public static Shared<int>? SelectedActiveWidgetIndex;
@@ -51,6 +53,12 @@ public abstract class Page
 
 			return ActiveWidgets[SelectedActiveWidgetIndex];
 		}
+	}
+
+	protected void InitializeSubPageOf(Page mainPage)
+	{
+		Widgets.AddRange(mainPage.Widgets);
+		_selectedWidgetIndex = mainPage.SelectedWidgetIndex;
 	}
 
 	public static MiniPopState MiniPopActive;
@@ -205,11 +213,6 @@ public abstract class Page
 	public virtual bool ClipboardPaste(byte[]? cptr) { return false; }
 
 	public readonly List<Widget> Widgets = new List<Widget>();
-
-	public void SetFocus(Widget widget)
-	{
-		SelectedWidgetIndex.Value = Widgets.IndexOf(widget);
-	}
 
 	/* HelpTexts.Global if no page-specific help */
 	public HelpTexts HelpIndex;

@@ -17,9 +17,10 @@ public abstract class VideoBackend
 	public abstract bool IsFocused();
 	public abstract bool IsVisible();
 	public abstract bool IsWindowManagerAvailable();
-	public abstract bool IsHardware();
-	public abstract void Setup(VideoInterpolationMode interpolation);
-	public abstract bool IsFullScreen();
+	public abstract bool IsHardware { get; }
+	public abstract void SetHardware(bool newValue);
+	public abstract void SetUp(VideoInterpolationMode interpolation);
+	public abstract bool IsFullScreen { get; }
 	public abstract void Fullscreen(bool? newFSFlag);
 	public abstract bool IsScreenSaverEnabled();
 	public abstract void ToggleScreenSaver(bool enabled);
@@ -29,7 +30,7 @@ public abstract class VideoBackend
 	public abstract void SetInputGrabbed(bool enabled);
 	public abstract void WarpMouse(Point p);
 	public abstract Point GetMouseCoordinates();
-	public abstract bool HaveMenu();
+	public abstract bool HaveMenu { get; }
 	public abstract void ToggleMenu(bool on);
 	public abstract void Blit();
 	public abstract WMData? GetWMData();

@@ -307,7 +307,7 @@ public class PreferencesPage : Page
 					return false;
 				if (--newDevice < 0)
 				{
-					SetFocus(thumbBarMasterVolumeLeft);
+					ChangeFocusTo(thumbBarMasterVolumeLeft);
 					return true;
 				}
 				break;
@@ -316,7 +316,7 @@ public class PreferencesPage : Page
 					return false;
 				if (++newDevice >= AudioBackend.Devices.Length + 1)
 				{
-					SetFocus(otherDriverList);
+					ChangeFocusTo(otherDriverList);
 					return true;
 				}
 				break;
@@ -355,9 +355,9 @@ public class PreferencesPage : Page
 					return false;
 
 				if (_selectedAudioDevice < 2)
-					SetFocus(thumbBarMasterVolumeRight);
+					ChangeFocusTo(thumbBarMasterVolumeRight);
 				else
-					SetFocus(toggleButtonInterpolationModes[0]);
+					ChangeFocusTo(toggleButtonInterpolationModes[0]);
 
 				return true;
 			default:
@@ -467,7 +467,7 @@ public class PreferencesPage : Page
 
 				if (--newDriver < 0)
 				{
-					SetFocus(otherDeviceList);
+					ChangeFocusTo(otherDeviceList);
 					return true;
 				}
 				break;
@@ -476,7 +476,7 @@ public class PreferencesPage : Page
 					return false;
 				if (++newDriver >= AudioBackend.Drivers.Length)
 				{
-					SetFocus(thumbBarEqualizerBands[0].Gain);
+					ChangeFocusTo(thumbBarEqualizerBands[0].Gain);
 					return true;
 				}
 				break;
@@ -514,9 +514,9 @@ public class PreferencesPage : Page
 					return false;
 
 				if (_selectedAudioDriver - _topAudioDriver < 3)
-					SetFocus(toggleButtonInterpolationModes[2]);
+					ChangeFocusTo(toggleButtonInterpolationModes[2]);
 				else
-					SetFocus(toggleButtonInterpolationModes[3]);
+					ChangeFocusTo(toggleButtonInterpolationModes[3]);
 
 				return true;
 			case KeySym.Left:
@@ -525,9 +525,9 @@ public class PreferencesPage : Page
 					return false;
 
 				if (_selectedAudioDriver - _topAudioDriver < 3)
-					SetFocus(toggleButtonInterpolationModes[2]);
+					ChangeFocusTo(toggleButtonInterpolationModes[2]);
 				else
-					SetFocus(toggleButtonInterpolationModes[3]);
+					ChangeFocusTo(toggleButtonInterpolationModes[3]);
 
 				return true;
 			default:

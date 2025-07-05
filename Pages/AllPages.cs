@@ -19,7 +19,7 @@ public static class AllPages
 	// InstrumentList doesn't exist
 	public static InfoPage Info = new InfoPage();
 
-	public static ConfigPage Config;
+	public static ConfigurationPage Config = new ConfigurationPage();
 	public static PreferencesPage Preferences = new PreferencesPage();
 
 	public static MIDIPage MIDI = new MIDIPage();

@@ -3,10 +3,11 @@ using ChasmTracker.Songs;
 
 namespace ChasmTracker.Pages;
 
+/* This is getting almost as disturbing as the pattern editor. */
 public abstract class InstrumentListPage : Page
 {
-	public InstrumentListPage(PageNumbers number, string title, HelpTexts helpText)
-		: base(number, title, helpText)
+	public InstrumentListPage(PageNumbers number)
+		: base(number, "Instrument List (F4)", HelpTexts.InstrumentList)
 	{
 	}
 

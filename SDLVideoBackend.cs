@@ -272,7 +272,7 @@ public class SDLVideoBackend : VideoBackend
 		// ok
 		_bpp = (int)SDL.BytesPerPixel(_format);
 
-		Setup(Configuration.Video.Interpolation); // ew
+		SetUp(Configuration.Video.Interpolation); // ew
 	}
 
 	public void SetHardware(bool hardware)
@@ -677,7 +677,7 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
-	public override void Setup(VideoInterpolationMode interpolation)
+	public override void SetUp(VideoInterpolationMode interpolation)
 	{
 		switch (interpolation)
 		{

@@ -218,7 +218,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 		SetDefaultGlob(false);
 
 		ClearFilenameEntry();
-		SetFocus(textEntryFileName!);
+		ChangeFocusTo(textEntryFileName!);
 
 		CheckIfBlank();
 	}

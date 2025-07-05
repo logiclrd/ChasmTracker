@@ -43,7 +43,7 @@ public struct SongNote
 	public static AccidentalsMode AccidentalsMode;
 
 	// kbd_sharp_flat_toggle
-	public void ToggleAccidentalsMode(AccidentalsMode? newMode)
+	public static void ToggleAccidentalsMode(AccidentalsMode? newMode)
 	{
 		if (newMode == null)
 		{

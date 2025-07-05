@@ -78,7 +78,7 @@ public class HelpPage : Page
 			BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Outset);
 
 		if (Status.MessageBoxType == MessageBoxTypes.None)
-			SetFocus(Widgets[0]);
+			ChangeFocusTo(Widgets[0]);
 	}
 
 	static readonly char[] GraphicChars =
@@ -166,7 +166,7 @@ public class HelpPage : Page
 
 	public override void SetPage()
 	{
-		SetFocus(Widgets[0]);
+		ChangeFocusTo(Widgets[0]);
 
 		if (_classicMode != Status.Flags.HasFlag(StatusFlags.ClassicMode))
 		{
