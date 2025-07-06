@@ -23,7 +23,7 @@ public class TrackView13 : TrackView
 		 && (note.Instrument > 0) && note.NoteIsNote && (Song.CurrentSong != null))
 		{
 			var smp = Song.CurrentSong.IsInstrumentMode
-				? Song.CurrentSong.GetInstrument(note.Instrument)?.TranslateKeyboard(note.Note)
+				? Song.CurrentSong.GetInstrument(note.Instrument).TranslateKeyboard(note.Note)
 				: Song.CurrentSong.GetSample(note.Instrument);
 
 			if (smp != null)

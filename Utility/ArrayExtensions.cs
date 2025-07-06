@@ -22,4 +22,9 @@ public static class ArrayExtensions
 	{
 		return new Span<T>(array, index, length);
 	}
+
+	public static bool Contains<T>(this T[] array, T element)
+	{
+		return Array.IndexOf(array, element) >= 0;
+	}
 }

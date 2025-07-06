@@ -15,7 +15,7 @@ public class TrackView13Window : TrackViewWindowBase
 	protected override int ChannelWidth => 13;
 	protected override bool Separator => true;
 
-	protected override void DrawChannelHeader(int chan, int column, int @base, int fg)
+	protected override void DrawChannelHeader(int chan, int column, int @base, byte fg)
 	{
 		TrackView.DrawChannelHeader(chan, new Point(column, @base), fg);
 	}

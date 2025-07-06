@@ -315,10 +315,10 @@ public class Program
 								Status.Flags |= StatusFlags.SongNeedsSave;
 								Page.SetPage(PageNumbers.SampleList);
 								break;
-							case InstrumentListGeneralPage:
-							case InstrumentListVolumePage:
-							case InstrumentListPanningPage:
-							case InstrumentListPitchPage:
+							case InstrumentListGeneralSubpage:
+							case InstrumentListVolumeSubpage:
+							case InstrumentListPanningSubpage:
+							case InstrumentListPitchSubpage:
 							case InstrumentLoadPage:
 							case InstrumentLibraryPage:
 								Song.CurrentSong?.LoadInstrumentWithPrompt(AllPages.InstrumentList.CurrentInstrument, fileDropEvent.FilePath);

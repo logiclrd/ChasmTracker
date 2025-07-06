@@ -2,6 +2,8 @@ using System;
 
 namespace ChasmTracker.Dialogs;
 
+using ChasmTracker.Pages;
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -50,7 +52,7 @@ public class MiniPopSlideDialog : Dialog
 			/* inst */
 			int n = AllPages.InstrumentListGeneral.CurrentInstrument;
 			if (n > 0)
-				name = Song.CurrentSong?.GetInstrument(n)?.Name ?? "(No Instrument)";
+				name = Song.CurrentSong?.GetInstrument(n).Name ?? "(No Instrument)";
 			else
 				name = "(No Instrument)";
 		}
@@ -66,11 +68,11 @@ public class MiniPopSlideDialog : Dialog
 		else
 			name = _text;
 
-		VGAMem.DrawFillChars(_textPosition, _textPosition.Advance(17), VGAMem.DefaultForeground, 2);
-		VGAMem.DrawTextLen(name, 17, _textPosition, 0, 2);
+		VGAMem.DrawFillCharacters(_textPosition, _textPosition.Advance(17), (VGAMem.DefaultForeground, 2));
+		VGAMem.DrawTextLen(name, 17, _textPosition, (0, 2));
 
 		if (name.Length < 17 && name == _text)
-			VGAMem.DrawCharacter(':', _textPosition.Advance(name.Length), 0, 2);
+			VGAMem.DrawCharacter(':', _textPosition.Advance(name.Length), (0, 2));
 
 		VGAMem.DrawBox(_textPosition.Advance(0, 1), _textPosition.Advance(14, 3),
 			BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
@@ -80,7 +82,7 @@ public class MiniPopSlideDialog : Dialog
 	{
 		SetValue?.Invoke(thumbBarValue.Value);
 
-		if (!Song.IsPlaying)
+		if (!AudioPlayback.IsPlaying)
 			SetValueNoPlay?.Invoke(thumbBarValue.Value);
 
 		MiniPopUsed?.Invoke();

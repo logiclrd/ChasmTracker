@@ -13,6 +13,7 @@ public class SaveFormat
 	public Func<bool>? IsEnabled;
 
 	public SongFileConverter? SongConverter;
+	public InstrumentFileConverter? InstrumentConverter;
 	// TODO: exporter functors
 
 	public SaveFormat(string label, string name, string extension)

@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace ChasmTracker.VGA;
 
-using System.Linq;
-using System.Security.Cryptography;
 using ChasmTracker.Configurations;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
@@ -449,31 +446,39 @@ public static class VGAMem
 		ch.Colours = colours;
 	}
 
-	public static void DrawText(string text, Point position, VGAMemColours colours)
+	public static int DrawText(string text, Point position, VGAMemColours colours)
 	{
 		for (int n = 0; n < text.Length; n++)
 			DrawCharacter(text[n], position.Advance(n), colours);
+
+		return text.Length;
 	}
 
-	public static void DrawText(string text, int offset, Point position, VGAMemColours colours)
+	public static int DrawText(string text, int offset, Point position, VGAMemColours colours)
 	{
 		for (int n = offset; n < text.Length; n++)
 			DrawCharacter(text[n], position.Advance(n - offset), colours);
+
+		return text.Length - offset;
 	}
 
-	public static void DrawTextBIOS(string text, Point position, VGAMemColours colours)
+	public static int DrawTextBIOS(string text, Point position, VGAMemColours colours)
 	{
 		for (int n = 0; n < text.Length; n++)
 			DrawCharacterBIOS(text[n], position.Advance(n), colours);
+
+		return text.Length;
 	}
 
-	public static void DrawTextBIOS(byte[] text, Point position, VGAMemColours colours)
+	public static int DrawTextBIOS(byte[] text, Point position, VGAMemColours colours)
 	{
 		for (int n = 0; n < text.Length; n++)
 			DrawCharacterBIOS(text[n], position.Advance(n), colours);
+
+		return text.Length;
 	}
 
-	public static void DrawTextUTF8(byte[] textBytes, Point position, VGAMemColours colours)
+	public static int DrawTextUTF8(byte[] textBytes, Point position, VGAMemColours colours)
 	{
 		string composed;
 
@@ -483,12 +488,13 @@ public static class VGAMem
 		}
 		catch
 		{
-			DrawTextBIOS(textBytes, position, colours);
-			return;
+			return DrawTextBIOS(textBytes, position, colours);
 		}
 
 		for (int n = 0; n < composed.Length; n++)
 			DrawCharacterUnicode(composed[n], position.Advance(n), colours);
+
+		return composed.Length;
 	}
 
 	public static void DrawFillCharacters(Rect bounds, VGAMemColours colours)
@@ -507,60 +513,76 @@ public static class VGAMem
 			}
 	}
 
-	public static void DrawTextLen(string text, int len, Point position, VGAMemColours colours)
+	public static int DrawTextLen(string text, int len, Point position, VGAMemColours colours)
 	{
-		DrawTextLen(text, 0, len, position, colours);
+		return DrawTextLen(text, 0, len, position, colours);
 	}
 
-	public static void DrawTextLen(string text, int offset, int len, Point position, VGAMemColours colours)
+	public static int DrawTextLen(string text, int offset, int len, Point position, VGAMemColours colours)
 	{
-		for (int n = offset, o = 0; (n < text.Length) && (o < len); n++, o++)
+		int n, o;
+
+		for (n = offset, o = 0; (n < text.Length) && (o < len); n++, o++)
 			DrawCharacter(text[n], position.Advance(o), colours);
+
+		return o;
 	}
 
-	public static void DrawTextLen(StringBuilder text, int offset, int len, Point position, VGAMemColours colours)
+	public static int DrawTextLen(StringBuilder text, int offset, int len, Point position, VGAMemColours colours)
 	{
-		for (int i=0; i < len; i++)
+		int o = 0;
+
+		for (int i = 0; i < len; i++)
 		{
-			int o = offset + i;
+			o = offset + i;
 
 			if (o >= text.Length)
 				break;
 
 			DrawCharacter(text[o], position.Advance(i), colours);
 		}
+
+		return o;
 	}
 
-	public static void DrawTextBIOSLen(string text, int len, Point position, VGAMemColours colours)
+	public static int DrawTextBIOSLen(string text, int len, Point position, VGAMemColours colours)
 	{
-		DrawTextBIOSLen(text, 0, len, position, colours);
+		return DrawTextBIOSLen(text, 0, len, position, colours);
 	}
 
-	public static void DrawTextBIOSLen(string text, int offset, int len, Point position, VGAMemColours colours)
+	public static int DrawTextBIOSLen(string text, int offset, int len, Point position, VGAMemColours colours)
 	{
-		for (int n = offset, o = 0; (n < text.Length) && (o < len); n++, o++)
+		int n, o;
+
+		for (n = offset, o = 0; (n < text.Length) && (o < len); n++, o++)
 			DrawCharacterBIOS(text[n], position.Advance(o), colours);
+
+		return o;
 	}
 
-	public static void DrawTextBIOSLen(StringBuilder text, int offset, int len, Point position, VGAMemColours colours)
+	public static int DrawTextBIOSLen(StringBuilder text, int offset, int len, Point position, VGAMemColours colours)
 	{
-		for (int i=0; i < len; i++)
+		int o = 0;
+
+		for (int i = 0; i < len; i++)
 		{
-			int o = offset + i;
+			o = offset + i;
 
 			if (o >= text.Length)
 				break;
 
 			DrawCharacterBIOS(text[o], position.Advance(i), colours);
 		}
+
+		return o;
 	}
 
-	public static void DrawTextUTF8Len(byte[] text, int len, Point position, VGAMemColours colours)
+	public static int DrawTextUTF8Len(byte[] text, int len, Point position, VGAMemColours colours)
 	{
-		DrawTextUTF8Len(text, 0, len, position, colours);
+		return DrawTextUTF8Len(text, 0, len, position, colours);
 	}
 
-	public static void DrawTextUTF8Len(byte[] textBytes, int offset, int len, Point position, VGAMemColours colours)
+	public static int DrawTextUTF8Len(byte[] textBytes, int offset, int len, Point position, VGAMemColours colours)
 	{
 		string composed;
 
@@ -570,12 +592,15 @@ public static class VGAMem
 		}
 		catch
 		{
-			DrawTextBIOS(textBytes, position, colours);
-			return;
+			return DrawTextBIOS(textBytes, position, colours);
 		}
 
-		for (int n = offset, o = 0; (n < composed.Length) && (o < len); n++, o++)
+		int n, o;
+
+		for (n = offset, o = 0; (n < composed.Length) && (o < len); n++, o++)
 			DrawCharacterUnicode(composed[n], position.Advance(o), colours);
+
+		return o;
 	}
 
 	/* --------------------------------------------------------------------- */

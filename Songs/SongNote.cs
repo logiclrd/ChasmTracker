@@ -68,70 +68,69 @@ public struct SongNote
 		}
 	}
 
-	public string NoteString
+	public string NoteString => GetNoteString(Note);
+
+	public static string GetNoteString(int note)
 	{
-		get
+		if ((note > 120)
+			&& !(note == SpecialNotes.NoteCut
+			|| note == SpecialNotes.NoteOff
+			|| note == SpecialNotes.NoteFade))
 		{
-			if ((Note > 120)
-				&& !(Note == SpecialNotes.NoteCut
-				|| Note == SpecialNotes.NoteOff
-				|| Note == SpecialNotes.NoteFade))
-			{
-				Log.Append(4, "Note {0} out of range", Note);
-				return "???";
-			}
-
-			switch (Note)
-			{
-				case SpecialNotes.None: return "\xAD\xAD\xAD";
-				case SpecialNotes.NoteCut: return "\x5E\x5E\x5E";
-				case SpecialNotes.NoteOff: return "\xCD\xCD\xCD";
-				case SpecialNotes.NoteFade: return "\x7E\x7E\x7E";
-			}
-
-			int noteBase0 = Note - 1;
-
-			int octave = 1 + noteBase0 / 12;
-
-			if (AccidentalsMode == AccidentalsMode.Sharps)
-			{
-				switch (noteBase0 % 12)
-				{
-					case 0: return "C-" + octave;
-					case 1: return "C#" + octave;
-					case 2: return "D-" + octave;
-					case 3: return "D#" + octave;
-					case 4: return "E-" + octave;
-					case 5: return "F-" + octave;
-					case 6: return "F#" + octave;
-					case 7: return "G-" + octave;
-					case 8: return "G#" + octave;
-					case 9: return "A-" + octave;
-					case 10: return "A#" + octave;
-					case 11: return "B-" + octave;
-				}
-			}
-			else
-			{
-				switch (noteBase0 % 12)
-				{
-					case 0: return "C-" + octave;
-					case 1: return "Db" + octave;
-					case 2: return "D-" + octave;
-					case 3: return "Eb" + octave;
-					case 4: return "E-" + octave;
-					case 5: return "F-" + octave;
-					case 6: return "Gb" + octave;
-					case 7: return "G-" + octave;
-					case 8: return "Ab" + octave;
-					case 9: return "A-" + octave;
-					case 10: return "Bb" + octave;
-					case 11: return "B-" + octave;
-				}
-			}
-
+			Log.Append(4, "Note {0} out of range", note);
 			return "???";
 		}
+
+		switch (note)
+		{
+			case SpecialNotes.None: return "\xAD\xAD\xAD";
+			case SpecialNotes.NoteCut: return "\x5E\x5E\x5E";
+			case SpecialNotes.NoteOff: return "\xCD\xCD\xCD";
+			case SpecialNotes.NoteFade: return "\x7E\x7E\x7E";
+		}
+
+		int noteBase0 = note - 1;
+
+		int octave = 1 + noteBase0 / 12;
+
+		if (AccidentalsMode == AccidentalsMode.Sharps)
+		{
+			switch (noteBase0 % 12)
+			{
+				case 0: return "C-" + octave;
+				case 1: return "C#" + octave;
+				case 2: return "D-" + octave;
+				case 3: return "D#" + octave;
+				case 4: return "E-" + octave;
+				case 5: return "F-" + octave;
+				case 6: return "F#" + octave;
+				case 7: return "G-" + octave;
+				case 8: return "G#" + octave;
+				case 9: return "A-" + octave;
+				case 10: return "A#" + octave;
+				case 11: return "B-" + octave;
+			}
+		}
+		else
+		{
+			switch (noteBase0 % 12)
+			{
+				case 0: return "C-" + octave;
+				case 1: return "Db" + octave;
+				case 2: return "D-" + octave;
+				case 3: return "Eb" + octave;
+				case 4: return "E-" + octave;
+				case 5: return "F-" + octave;
+				case 6: return "Gb" + octave;
+				case 7: return "G-" + octave;
+				case 8: return "Ab" + octave;
+				case 9: return "A-" + octave;
+				case 10: return "Bb" + octave;
+				case 11: return "B-" + octave;
+			}
+		}
+
+		return "???";
 	}
 
 	public string NoteStringShort

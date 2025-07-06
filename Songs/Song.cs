@@ -103,14 +103,11 @@ public class Song
 			{
 				var instrument = GetInstrument(i);
 
-				if (instrument != null)
-				{
-					/* fix wiped notes */
-					for (int j = 0; j < instrument.NoteMap.Length; j++)
-						if ((instrument.NoteMap[j] < 1)
-						|| (instrument.NoteMap[j] > 120))
-							instrument.NoteMap[j] = (byte)(j + 1);
-				}
+				/* fix wiped notes */
+				for (int j = 0; j < instrument.NoteMap.Length; j++)
+					if ((instrument.NoteMap[j] < 1)
+					 || (instrument.NoteMap[j] > 120))
+						instrument.NoteMap[j] = (byte)(j + 1);
 			}
 		}
 		else
@@ -121,7 +118,7 @@ public class Song
 	{
 		var instrument = GetInstrument(insN);
 
-		if ((instrument == null) || !instrument.IsEmpty)
+		if (!instrument.IsEmpty)
 			return;
 
 		instrument.InitializeFromSample(samp);
@@ -650,16 +647,16 @@ public class Song
 		return number;
 	}
 
-	public SongInstrument? GetInstrument(int n)
+	public SongInstrument GetInstrument(int n)
 	{
 		if (n >= Constants.MaxInstruments)
-			return null;
+			throw new ArgumentOutOfRangeException();
 
 		// Make a new instrument if it doesn't exist.
 		if (Instruments[n] == null)
 			Instruments[n] = new SongInstrument(this);
 
-		return Instruments[n];
+		return Instruments[n]!;
 	}
 
 	public int GetInstrumentNumber(SongInstrument? inst)
@@ -3781,22 +3778,21 @@ public class Song
 		lock (AudioPlayback.LockScope())
 		{
 			/* 0. delete old samples */
-			if (GetInstrument(target) is SongInstrument existing)
-			{
-				/* init... */
-				var usedSamples = existing.SampleMap.ToHashSet();
+			var existing = GetInstrument(target);
 
-				/* mark... */
-				var nonExclusiveSamples = Instruments
-					.Except([existing])
-					.OfType<SongInstrument>()
-					.SelectMany(instr => instr.SampleMap)
-					.ToHashSet();
+			/* init... */
+			var usedSamples = existing.SampleMap.ToHashSet();
 
-				/* sweep! */
-				foreach (int j in usedSamples.Except(nonExclusiveSamples))
-					Samples[j] = null;
-			}
+			/* mark... */
+			var nonExclusiveSamples = Instruments
+				.Except([existing])
+				.OfType<SongInstrument>()
+				.SelectMany(instr => instr.SampleMap)
+				.ToHashSet();
+
+			/* sweep! */
+			foreach (int j in usedSamples.Except(nonExclusiveSamples))
+				Samples[j] = null;
 
 			if (libf != null) /* file is ignored */
 			{
@@ -4097,9 +4093,9 @@ public class Song
 
 		var insNumber = AllPages.InstrumentList.CurrentInstrument;
 
-		if (SongInstrument.IsNullOrEmpty(GetInstrument(smpNumber)))
+		if (GetInstrument(smpNumber).IsEmpty)
 			insNumber = smpNumber;
-		else if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || !SongInstrument.IsNullOrEmpty(GetInstrument(insNumber)))
+		else if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || !GetInstrument(insNumber).IsEmpty)
 			insNumber = FirstBlankInstrumentNumber(0);
 
 		if (insNumber > 0)
@@ -4121,7 +4117,7 @@ public class Song
 		if (smp == null)
 			return;
 		if (!smp.HasData)
-				return;
+			return;
 
 		for (int i = 0; i < Voices.Length; i++)
 		{
@@ -4144,6 +4140,78 @@ public class Song
 				v.LeftVolume = v.RightVolume = 0;
 				v.LeftVolumeNew = v.RightVolumeNew = 0;
 				v.LeftRamp = v.RightRamp = 0;
+			}
+		}
+	}
+
+	public void GetPlayingInstruments(int[] instruments)
+	{
+		Array.Clear(instruments);
+
+		lock (AudioPlayback.LockScope())
+		{
+			int n = Math.Min(NumVoices, MaxVoices);
+
+			while (n-- > 0)
+			{
+				ref var channel = ref Voices[VoiceMix[n]];
+
+				if (channel.Instrument != null)
+				{
+					int ins = GetInstrumentNumber(channel.Instrument);
+
+					if (ins > 0)
+						instruments[ins] = Math.Max(instruments[ins], 1 + channel.Strike);
+				}
+			}
+		}
+	}
+
+	public void UpdatePlayingInstrument(int i_changed)
+	{
+		using (AudioPlayback.LockScope())
+		{
+			int n = Math.Min(NumVoices, MaxVoices);
+
+			while (n-- > 0)
+			{
+				ref var channel = ref Voices[VoiceMix[n]];
+
+				if ((channel.Instrument != null) && (channel.Instrument == Instruments[i_changed]))
+				{
+					InstrumentChange(ref channel, i_changed, portamento: true, instrumentColumn: 0);
+
+					var inst = channel.Instrument;
+
+					if (inst == null)
+						continue;
+
+					/* special cases;
+						mpt doesn't do this if porta-enabled, */
+					if ((inst.IFResonance & 0x80) != 0)
+						channel.Resonance = inst.IFResonance & 0x7F;
+					else
+					{
+						channel.Resonance = 0;
+						channel.Flags &= ~ChannelFlags.Filter;
+					}
+
+					if ((inst.IFCutoff & 0x80) != 0)
+					{
+						channel.Cutoff = inst.IFCutoff & 0x7F;
+						SetUpChannelFilter(ref channel, reset: false, filterModifier: 256, MixFrequency);
+					}
+					else
+					{
+						channel.Cutoff = 0x7F;
+
+						if ((inst.IFResonance & 0x80) != 0)
+							SetUpChannelFilter(ref channel, reset: false, filterModifier: 256, MixFrequency);
+					}
+
+					/* flip direction */
+					channel.Flags &= ~ChannelFlags.PingPongFlag;
+				}
 			}
 		}
 	}

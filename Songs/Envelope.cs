@@ -1,10 +1,11 @@
 using System.Collections.Generic;
+using ChasmTracker.Utility;
 
 namespace ChasmTracker.Songs;
 
 public class Envelope
 {
-	public readonly List<EnvelopeNode> Nodes = new List<EnvelopeNode>();
+	public readonly ByReferenceList<EnvelopeNode> Nodes = new ByReferenceList<EnvelopeNode>();
 
 	public int LoopStart;
 	public int LoopEnd;
@@ -19,6 +20,20 @@ public class Envelope
 	{
 		Nodes.Add(new EnvelopeNode(0, defaultValue));
 		Nodes.Add(new EnvelopeNode(100, defaultValue));
+	}
+
+	public Envelope Clone() => new Envelope().CopyFrom(this);
+
+	public Envelope CopyFrom(Envelope other)
+	{
+		Nodes.Clear();
+		Nodes.AddRange(other.Nodes);
+		LoopStart = other.LoopStart;
+		LoopEnd = other.LoopEnd;
+		SustainStart = other.SustainStart;
+		SustainEnd = other.SustainEnd;
+
+		return this;
 	}
 
 	public static bool IsNullOrBlank(Envelope? env, int value)

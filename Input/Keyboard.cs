@@ -2,6 +2,7 @@ using System;
 
 namespace ChasmTracker.Input;
 
+using ChasmTracker.Pages;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
@@ -54,7 +55,7 @@ public class Keyboard
 			* change the values of the key_event structure.
 			*
 			* see: issue #465 */
-			Page.HandleKey(CachedKeyEvent);
+			Page.MainHandleKey(CachedKeyEvent);
 			RepeatNextTick = now.AddMilliseconds(RepeatIntervalMilliseconds);
 		}
 	}

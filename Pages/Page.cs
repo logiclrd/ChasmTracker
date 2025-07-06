@@ -55,12 +55,6 @@ public abstract class Page
 		}
 	}
 
-	protected void InitializeSubPageOf(Page mainPage)
-	{
-		Widgets.AddRange(mainPage.Widgets);
-		_selectedWidgetIndex = mainPage.SelectedWidgetIndex;
-	}
-
 	public static MiniPopState MiniPopActive;
 
 	public static void ChangeFocusTo(int newWidgetIndex)

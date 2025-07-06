@@ -214,7 +214,7 @@ public abstract class TrackViewWindowBase : InfoWindow
 		}
 	}
 
-	protected abstract void DrawChannelHeader(int chan, int column, int @base, int fg);
+	protected abstract void DrawChannelHeader(int chan, int column, int @base, byte fg);
 
 	public override void Draw(int @base, int fullHeight, bool isActive)
 	{

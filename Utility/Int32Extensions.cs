@@ -9,4 +9,9 @@ public static class Int32Extensions
 
 	public static int Cycle(this int value, int loopBackAt)
 		=> (value + 1) % loopBackAt;
+
+	public static bool HasFlag(this int value, int flag)
+	{
+		return (value & flag) == flag;
+	}
 }

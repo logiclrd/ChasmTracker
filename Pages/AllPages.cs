@@ -38,10 +38,10 @@ public static class AllPages
 	public static TimeInformationPage TimeInformation = new TimeInformationPage();
 
 	/* don't use these directly with set_page */
-	public static InstrumentListGeneralPage InstrumentListGeneral = new InstrumentListGeneralPage();
-	public static InstrumentListVolumePage InstrumentListVolume = new InstrumentListVolumePage();
-	public static InstrumentListPanningPage InstrumentListPanning = new InstrumentListPanningPage();
-	public static InstrumentListPitchPage InstrumentListPitch = new InstrumentListPitchPage();
+	public static InstrumentListGeneralSubpage InstrumentListGeneral = new InstrumentListGeneralSubpage();
+	public static InstrumentListVolumeSubpage InstrumentListVolume = new InstrumentListVolumeSubpage();
+	public static InstrumentListPanningSubpage InstrumentListPanning = new InstrumentListPanningSubpage();
+	public static InstrumentListPitchSubpage InstrumentListPitch = new InstrumentListPitchSubpage();
 
 	public static SampleLoadPage SampleLoad = new SampleLoadPage();
 	public static SampleLibraryPage SampleLibrary = new SampleLibraryPage();

@@ -37,4 +37,5 @@ public class Constants
 	public const int FilterPrecision = (sizeof(int) * 8) - 8; /* faithfully stolen from openmpt */
 
 	public const int MaxPathLength = 8192; // 8 KiB (should be more than enough)
+	public const int MaxNameLength = MaxPathLength; // SCHISM_PATH_MAX is a safe minimum, i guess
 }

@@ -17,7 +17,7 @@ public class TrackView2Window : TrackViewWindowBase
 	protected override int ChannelWidth => 2;
 	protected override bool Separator => false;
 
-	protected override void DrawChannelHeader(int chan, int column, int @base, int fg)
+	protected override void DrawChannelHeader(int chan, int column, int @base, byte fg)
 	{
 		VGAMem.DrawText(chan.ToString("d2"), new Point(column, @base), (fg, 1));
 	}

@@ -25,4 +25,9 @@ public struct Size
 		=> new Size(size.Width / divisor, size.Height / divisor);
 
 	public bool IsEmpty => (Width | Height) == 0;
+
+	public static Size operator +(Size a, Size b)
+		=> new Size(a.Width + b.Width, a.Height + b.Height);
+	public static Size operator +(Size a, (int Width, int Height) b)
+		=> new Size(a.Width + b.Width, a.Height + b.Height);
 }

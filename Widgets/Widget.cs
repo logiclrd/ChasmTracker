@@ -33,6 +33,11 @@ public abstract class Widget
 		Size = size;
 	}
 
+	public bool ContainsPoint(Point pt)
+	{
+		return new Rect(Position, Size + (1, 1)).Contains(pt);
+	}
+
 	event Action? _changed;
 	event Action? _activated;
 

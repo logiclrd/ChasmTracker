@@ -24,7 +24,7 @@ public class TrackView1Window : TrackViewWindowBase
 		return Status.Flags.HasFlag(StatusFlags.ClassicMode) ? 73 : 64;
 	}
 
-	protected override void DrawChannelHeader(int chan, int column, int @base, int fg)
+	protected override void DrawChannelHeader(int chan, int column, int @base, byte fg)
 	{
 		VGAMem.DrawHalfWidthCharacters("0123456789"[chan / 10], "0123456789"[chan % 10], new Point(column, @base), (fg, 1), (fg, 1));
 	}
