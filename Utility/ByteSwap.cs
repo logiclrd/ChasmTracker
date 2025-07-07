@@ -1,3 +1,5 @@
+using System;
+
 namespace ChasmTracker.Utility;
 
 public class ByteSwap
@@ -36,6 +38,17 @@ public class ByteSwap
 	public static int Swap(int value)
 	{
 		return unchecked((int)Swap((uint)value));
+	}
+
+	public static T Swap<T>(T value)
+		where T : Enum
+	{
+		if (typeof(T).BaseType == typeof(int))
+			return (T)(object)Swap((int)(object)value);
+		if (typeof(T).BaseType == typeof(short))
+			return (T)(object)Swap((short)(object)value);
+
+		throw new NotSupportedException();
 	}
 
 	public static ulong Swap(ulong value)
