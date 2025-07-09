@@ -802,7 +802,7 @@ public abstract class InstrumentListPage : Page
 		if (instrument == null)
 			return;
 
-		var dialog = Dialog.Show(new ExportInstrumentDialog(instrument.FileName ?? "", InstrumentSaveFormats);
+		var dialog = Dialog.Show(new ExportInstrumentDialog(instrument.FileName ?? "", InstrumentSaveFormats));
 
 		dialog.ActionYes += _ => InstrumentSave(dialog.FileName, InstrumentSaveFormats[dialog.ExportFormat].Label);
 	}

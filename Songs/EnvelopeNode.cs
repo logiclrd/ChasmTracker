@@ -45,4 +45,9 @@ public struct EnvelopeNode
 		else
 			return false;
 	}
+
+	public override int GetHashCode()
+	{
+		return Tick ^ Value;
+	}
 }

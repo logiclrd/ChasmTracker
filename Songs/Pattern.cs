@@ -6,11 +6,13 @@ public class Pattern
 {
 	public List<PatternRow> Rows;
 
-	public Pattern()
+	public Pattern() : this(Constants.DefaultPatternLength) { }
+
+	public Pattern(int length)
 	{
 		Rows = new List<PatternRow>();
 
-		for (int i = 0; i < Constants.DefaultPatternLength; i++)
+		for (int i = 0; i < length; i++)
 			Rows.Add(new PatternRow());
 	}
 
