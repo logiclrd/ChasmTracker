@@ -156,7 +156,7 @@ public class AIFF : SampleFileConverter
 					if (nameLength < 0)
 						nameLength = nameBytes.Length;
 
-					string nameValue = Encoding.ASCII.GetString(nameBytes, 0, nameLength);
+					string nameValue = nameBytes.ToStringZ();
 
 					if (file != null)
 						file.Title = nameValue;
@@ -270,7 +270,7 @@ public class AIFF : SampleFileConverter
 					if (nameLength < 0)
 						nameLength = nameBytes.Length;
 
-					string nameValue = Encoding.ASCII.GetString(nameBytes, 0, nameLength);
+					string nameValue = nameBytes.ToStringZ();
 
 					if (file != null)
 						file.Title = nameValue;

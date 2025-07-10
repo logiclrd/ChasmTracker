@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace ChasmTracker.Utility;
 
@@ -26,5 +27,25 @@ public static class ArrayExtensions
 	public static bool Contains<T>(this T[] array, T element)
 	{
 		return Array.IndexOf(array, element) >= 0;
+	}
+
+	public static string ToStringZ(this byte[]? array, Encoding? encoding = null)
+		=> array.ToStringZ(array?.Length ?? 0, encoding);
+
+	public static string ToStringZ(this byte[]? array, int length, Encoding? encoding = null)
+		=> array.ToStringZ(0, length, encoding);
+
+	public static string ToStringZ(this byte[]? array, int offset, int length, Encoding? encoding = null)
+	{
+		if (array == null)
+			return "";
+
+		encoding ??= Encoding.ASCII;
+
+		for (int i = 0; i < length; i++)
+			if (array[i] == 0)
+				return encoding.GetString(array, offset, i);
+
+		return encoding.GetString(array, offset, length);
 	}
 }

@@ -345,4 +345,169 @@ public struct SongNote
 	{
 		return (int)Math.Round(Math.Pow(2.0, rel / 12.0) * hz);
 	}
+
+	public void ImportMODEffect(byte modEffect, byte modParam, bool fromXM)
+	{
+		var effect = Effects.None;
+
+		// strip no-op effect commands that have memory in IT but not MOD/XM.
+		// arpeggio is safe since it's handled in the next switch.
+		if ((modParam == 0) || (modEffect == 0x0E && !modParam.HasAnyFlag(0xF)))
+		{
+			switch (modEffect)
+			{
+				case 0x01:
+				case 0x02:
+				case 0x0A:
+					if (!fromXM) modEffect = 0;
+					break;
+				case 0x0E:
+					switch (modParam & 0xF0)
+					{
+						case 0x10:
+						case 0x20:
+						case 0xA0:
+						case 0xB0:
+							if (fromXM) break;
+							goto case 0x90;
+						case 0x90:
+							modEffect = modParam = 0;
+							break;
+					}
+					break;
+			}
+		}
+
+		switch(modEffect)
+		{
+			case 0x00:      if (modParam != 0) effect = Effects.Arpeggio; break;
+			case 0x01:      effect = Effects.PortamentoUp; break;
+			case 0x02:      effect = Effects.PortamentoDown; break;
+			case 0x03:      effect = Effects.TonePortamento; break;
+			case 0x04:      effect = Effects.Vibrato; break;
+			case 0x05:      effect = Effects.TonePortamentoVolume; if (modParam.HasAnyFlag(0xF0)) modParam &= 0xF0; break;
+			case 0x06:      effect = Effects.VibratoVolume; if (modParam.HasAnyFlag(0xF0)) modParam &= 0xF0; break;
+			case 0x07:      effect = Effects.Tremolo; break;
+			case 0x08:      effect = Effects.Panning; break;
+			case 0x09:      effect = Effects.Offset; break;
+			case 0x0A:
+				effect = Effects.VolumeSlide;
+				if (modParam.HasAnyFlag(0xF0))
+					modParam &= 0xF0;
+				else
+					modParam &= 0x0F;
+
+				// IT does D0F/DF0 on the first tick, while MOD/XM does not.
+				// This is very noticeable in e.g. Dubmood's "FFF keygen intro"
+				// where the chords play much shorter than in FT2.
+				// So, compensate by reducing to D0E/DE0. Hopefully this
+				// doesn't make other mods sound bad in comparison.
+
+				if (modParam == 0xF0) modParam = 0xE0;
+				else if (modParam == 0x0F) modParam = 0x0E;
+
+				break;
+			case 0x0B:      effect = Effects.PositionJump; break;
+			case 0x0C:
+				if (fromXM)
+					effect = Effects.Volume;
+				else
+				{
+					VolumeEffect = VolumeEffects.Volume;
+					VolumeParameter = modParam.Clamp(0, 64);
+					modEffect = modParam = 0;
+				}
+				break;
+			case 0x0D:      effect = Effects.PatternBreak; modParam = (byte)(((modParam >> 4) * 10) + (modParam & 0x0F)); break;
+			case 0x0E:
+				effect = Effects.Special;
+				switch(modParam & 0xF0)
+				{
+					case 0x10: effect = Effects.PortamentoUp; modParam |= 0xF0; break;
+					case 0x20: effect = Effects.PortamentoDown; modParam |= 0xF0; break;
+					case 0x30: modParam = (byte)((modParam & 0x0F) | 0x10); break;
+					case 0x40: modParam = (byte)((modParam & 0x0F) | 0x30); break;
+					case 0x50: modParam = (byte)((modParam & 0x0F) | 0x20); break;
+					case 0x60: modParam = (byte)((modParam & 0x0F) | 0xB0); break;
+					case 0x70: modParam = (byte)((modParam & 0x0F) | 0x40); break;
+					case 0x90: effect = Effects.Retrigger; modParam &= 0x0F; break;
+					case 0xA0:
+						effect = Effects.VolumeSlide;
+						if (modParam.HasAnyFlag(0x0F))
+							modParam = (byte)((modParam << 4) | 0x0F);
+						else
+							modParam = 0;
+						break;
+					case 0xB0:
+						effect = Effects.VolumeSlide;
+						if (modParam.HasAnyFlag(0x0F))
+							modParam = (byte)(0xF0 | Math.Min(modParam & 0x0F, 0x0E));
+						else
+							modParam = 0;
+						break;
+				}
+				break;
+			case 0x0F:
+				// FT2 processes 0x20 as Txx; ST3 loads it as Axx
+				effect = (modParam < (fromXM ? 0x20 : 0x21)) ? Effects.Speed : Effects.Tempo;
+				break;
+			// Extension for XM extended effects
+			case 'G' - 55:
+				effect = Effects.GlobalVolume;
+				modParam = (byte)Math.Min(modParam << 1, 0x80);
+				break;
+			case 'H' - 55:
+				effect = Effects.GlobalVolumeSlide;
+				//if (param & 0xF0) param &= 0xF0;
+				modParam = (byte)(Math.Min((modParam & 0xf0) << 1, 0xf0) | Math.Min((modParam & 0xf) << 1, 0xf));
+				break;
+			case 'K' - 55:  effect = Effects.KeyOff; break;
+			case 'L' - 55:  effect = Effects.SetEnvelopePosition; break;
+			case 'M' - 55:  effect = Effects.ChannelVolume; break;
+			case 'N' - 55:  effect = Effects.ChannelVolumeSlide; break;
+			case 'P' - 55:
+				effect = Effects.PanningSlide;
+				// ft2 does Pxx backwards! skjdfjksdfkjsdfjk
+				if (modParam.HasAnyFlag(0xF0))
+					modParam >>= 4;
+				else
+					modParam = (byte)((modParam & 0xf) << 4);
+				break;
+			case 'R' - 55:  effect = Effects.Retrigger; break;
+			case 'T' - 55:  effect = Effects.Tremor; break;
+			case 'X' - 55:
+				switch (modParam & 0xf0)
+				{
+					case 0x10:
+						effect = Effects.PortamentoUp;
+						modParam = (byte)(0xe0 | (modParam & 0xf));
+						break;
+					case 0x20:
+						effect = Effects.PortamentoDown;
+						modParam = (byte)(0xe0 | (modParam & 0xf));
+						break;
+					case 0x50:
+					case 0x60:
+					case 0x70:
+					case 0x90:
+					case 0xa0:
+						// ModPlug Tracker extensions
+						effect = Effects.Special;
+						break;
+					default:
+						modEffect = modParam = 0;
+						break;
+				}
+				break;
+			case 'Y' - 55:  effect = Effects.Panbrello; break;
+			case 'Z' - 55:  effect = Effects.MIDI;     break;
+			case '[' - 55:
+				// FT2 shows this weird effect as -xx, and it can even be inserted
+				// by typing "-", although it doesn't appear to do anything.
+			default:        modEffect = 0; break;
+		}
+
+		Effect = effect;
+		Parameter = modParam;
+	}
 }

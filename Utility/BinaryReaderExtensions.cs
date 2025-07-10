@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
+using ChasmTracker.Utility;
 
 public static class BinaryReaderExtensions
 {
@@ -22,6 +23,6 @@ public static class BinaryReaderExtensions
 
 	public static string ReadPlainString(this BinaryReader reader, int length)
 	{
-		return GetEncoding(reader).GetString(reader.ReadBytes(length));
+		return reader.ReadBytes(length).ToStringZ(GetEncoding(reader));
 	}
 }

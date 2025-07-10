@@ -352,7 +352,7 @@ public class Program
 						if (Page.DoClipboardPaste(clipboardPasteEvent))
 							break;
 
-						Page.MainHandleTextInput(Encoding.ASCII.GetString(clipboardPasteEvent.Clipboard ?? Array.Empty<byte>()));
+						Page.MainHandleTextInput(clipboardPasteEvent.Clipboard.ToStringZ());
 
 						break;
 

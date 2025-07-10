@@ -628,10 +628,21 @@ public class Song
 
 	public SongSample? GetSample(int n)
 	{
-		if (n > Samples.Count)
+		if (n >= Samples.Count)
 			return null;
 
 		return Samples[n];
+	}
+
+	public SongSample EnsureSample(int n)
+	{
+		if (n > Constants.MaxSamples)
+			throw new ArgumentOutOfRangeException(nameof(n));
+
+		while (n >= Samples.Count)
+			Samples.Add(null);
+
+		return Samples[n] ??= new SongSample();
 	}
 
 	public int GetSampleNumber(SongSample? samp)

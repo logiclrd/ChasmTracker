@@ -333,7 +333,7 @@ public abstract class Page
 						if (unicode >= 32)
 						{
 							Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4} -> {unicode}");
-							MainHandleTextInput(Encoding.ASCII.GetString(new[] { unicode }));
+							MainHandleTextInput(Encoding.Unicode.GetString([unicode, 0]));
 						}
 						else
 							Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4} -> INVALID");

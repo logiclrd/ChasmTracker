@@ -32,7 +32,7 @@ public class AMS : FileInfoReader
 		stream.ReadExactly(titleBytes);
 
 		file.Description = "Velvet Studio";
-		file.Title = Encoding.ASCII.GetString(titleBytes);
+		file.Title = titleBytes.ToStringZ();
 		file.Type = FileSystem.FileTypes.ModuleXM;
 
 		return true;

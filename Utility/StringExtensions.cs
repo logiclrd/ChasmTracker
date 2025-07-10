@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace ChasmTracker.Utility;
@@ -232,5 +233,19 @@ public static class StringExtensions
 			return "";
 		else
 			return str.Replace('\0', ' ').TrimEnd();
+	}
+
+	[return: NotNullIfNotNull(nameof(str))]
+	public static string? TrimZ(this string? str)
+	{
+		if (str == null)
+			return null;
+
+		int ofs = str.IndexOf('\0');
+
+		if (ofs < 0)
+			return str;
+		else
+			return str.Substring(0, ofs);
 	}
 }

@@ -23,8 +23,8 @@ public class _669 : SongFileConverter
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)] public byte[] TempoList;
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 128)] public byte[] Breaks;
 
-		public string SigString => Encoding.ASCII.GetString(Sig);
-		public string SongMessageString => Encoding.ASCII.GetString(SongMessage);
+		public string SigString => Sig.ToStringZ();
+		public string SongMessageString => SongMessage.ToStringZ();
 	}
 
 	Header669 ReadHeader(Stream stream)
@@ -149,7 +149,7 @@ public class _669 : SongFileConverter
 			if (nameLen < 0)
 				nameLen = name.Length;
 
-			sample.Name = Encoding.ASCII.GetString(name);
+			sample.Name = name.ToStringZ();
 			sample.FileName = sample.Name;
 
 			sample.Length = reader.ReadInt32();

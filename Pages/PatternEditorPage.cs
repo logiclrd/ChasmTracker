@@ -803,7 +803,7 @@ public class PatternEditorPage : Page
 		if (data != null)
 		{
 			/* if we actually got some data, send it to the parsers */
-			string dataString = Encoding.ASCII.GetString(data);
+			string dataString = data.ToStringZ();
 
 			foreach (var handler in PasteHandlers)
 				if (handler(dataString, _clipboard))
