@@ -5,6 +5,12 @@ namespace ChasmTracker;
 
 public class Tables
 {
+	// <eightbitbubsy> better than having a table.
+	public static int ShortPanning(int i)
+	{
+		return ((((i) << 4) | (i)) + 2) >> 2;
+	}
+
 	public static readonly byte[] VolumeColumnPortamentoTable =
 		new byte[]
 		{

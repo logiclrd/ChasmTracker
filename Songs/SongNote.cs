@@ -352,7 +352,7 @@ public struct SongNote
 
 		// strip no-op effect commands that have memory in IT but not MOD/XM.
 		// arpeggio is safe since it's handled in the next switch.
-		if ((modParam == 0) || (modEffect == 0x0E && !modParam.HasAnyFlag(0xF)))
+		if ((modParam == 0) || (modEffect == 0x0E && !modParam.HasAnyBitSet(0xF)))
 		{
 			switch (modEffect)
 			{
@@ -385,14 +385,14 @@ public struct SongNote
 			case 0x02:      effect = Effects.PortamentoDown; break;
 			case 0x03:      effect = Effects.TonePortamento; break;
 			case 0x04:      effect = Effects.Vibrato; break;
-			case 0x05:      effect = Effects.TonePortamentoVolume; if (modParam.HasAnyFlag(0xF0)) modParam &= 0xF0; break;
-			case 0x06:      effect = Effects.VibratoVolume; if (modParam.HasAnyFlag(0xF0)) modParam &= 0xF0; break;
+			case 0x05:      effect = Effects.TonePortamentoVolume; if (modParam.HasAnyBitSet(0xF0)) modParam &= 0xF0; break;
+			case 0x06:      effect = Effects.VibratoVolume; if (modParam.HasAnyBitSet(0xF0)) modParam &= 0xF0; break;
 			case 0x07:      effect = Effects.Tremolo; break;
 			case 0x08:      effect = Effects.Panning; break;
 			case 0x09:      effect = Effects.Offset; break;
 			case 0x0A:
 				effect = Effects.VolumeSlide;
-				if (modParam.HasAnyFlag(0xF0))
+				if (modParam.HasAnyBitSet(0xF0))
 					modParam &= 0xF0;
 				else
 					modParam &= 0x0F;
@@ -433,14 +433,14 @@ public struct SongNote
 					case 0x90: effect = Effects.Retrigger; modParam &= 0x0F; break;
 					case 0xA0:
 						effect = Effects.VolumeSlide;
-						if (modParam.HasAnyFlag(0x0F))
+						if (modParam.HasAnyBitSet(0x0F))
 							modParam = (byte)((modParam << 4) | 0x0F);
 						else
 							modParam = 0;
 						break;
 					case 0xB0:
 						effect = Effects.VolumeSlide;
-						if (modParam.HasAnyFlag(0x0F))
+						if (modParam.HasAnyBitSet(0x0F))
 							modParam = (byte)(0xF0 | Math.Min(modParam & 0x0F, 0x0E));
 						else
 							modParam = 0;
@@ -468,7 +468,7 @@ public struct SongNote
 			case 'P' - 55:
 				effect = Effects.PanningSlide;
 				// ft2 does Pxx backwards! skjdfjksdfkjsdfjk
-				if (modParam.HasAnyFlag(0xF0))
+				if (modParam.HasAnyBitSet(0xF0))
 					modParam >>= 4;
 				else
 					modParam = (byte)((modParam & 0xf) << 4);

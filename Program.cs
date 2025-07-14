@@ -5,6 +5,7 @@ using System.Threading;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Clipboard;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
