@@ -249,16 +249,18 @@ public class D00 : SongFileConverter
 
 				for (nOrds = 0; nOrds < ords.Length; /* nothing */)
 				{
+					ushort ord;
+
 					try
 					{
-						stream.ReadExactly(buffer);
+						ord = stream.ReadStructure<ushort>();
 					}
 					catch
 					{
 						break;
 					}
 
-					ords[nOrds] = ByteSwap.Swap(BitConverter.ToUInt16(buffer));
+					ords[nOrds] = ByteSwap.Swap(ord);
 
 					if (ords[nOrds] == 0xFFFF || ords[nOrds] == 0xFFFE)
 						break;
@@ -295,25 +297,23 @@ public class D00 : SongFileConverter
 					/* mental gymnastics to find the pattern paraptr */
 					stream.Position = startPosition + hdr.SequenceParaptr + (ords[n % nOrds] * 2);
 
-					stream.ReadExactly(buffer);
-
-					int patternParaptr = ByteSwap.Swap(BitConverter.ToUInt16(buffer));
+					int patternParaptr = ByteSwap.Swap(stream.ReadStructure<ushort>());
 
 					stream.Position = startPosition + patternParaptr;
 
 					for (; pattern < Constants.MaxPatterns; FixRow(ref pattern, ref row))
 					{
-	D00_readnote: /* this goto is kind of ugly... */
+					D00_readnote: /* this goto is kind of ugly... */
+						int @event;
+
 						try
 						{
-							stream.ReadExactly(buffer);
+							@event = ByteSwap.Swap(stream.ReadStructure<ushort>());
 						}
 						catch
 						{
 							break;
 						}
-
-						int @event = ByteSwap.Swap(BitConverter.ToUInt16(buffer));
 
 						/* end of pattern? */
 						if (@event == 0xFFFF) {
@@ -428,8 +428,7 @@ public class D00 : SongFileConverter
 
 										stream.Position = startPosition + hdr.SpfxParaptr + fxop;
 
-										stream.ReadExactly(buffer);
-										memInstrument = ByteSwap.Swap(BitConverter.ToUInt16(buffer));
+										memInstrument = ByteSwap.Swap(stream.ReadStructure<ushort>());
 										nInst = Math.Max(nInst, memInstrument);
 
 										/* other values:

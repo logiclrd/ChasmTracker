@@ -72,7 +72,7 @@ public class FLAC : SampleFileConverter
 		}
 	}
 
-	public override bool ReadInfo(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		using (var decoder = Load(stream, metaOnly: true))
 		{
