@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace ChasmTracker.FileTypes.Converters;
+namespace ChasmTracker.FileTypes.MetadataReaders;
 
 using ChasmTracker.FileSystem;
 using ChasmTracker.Utility;

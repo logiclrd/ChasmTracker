@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Text;
+
+namespace ChasmTracker.FileTypes.Converters;
+
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
-
-namespace ChasmTracker.FileTypes.Converters;
 
 public class DSM : SongFileConverter
 {

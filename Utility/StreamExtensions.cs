@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ChasmTracker.Utility;
 
@@ -28,5 +29,27 @@ public static class StreamExtensions
 		stream.ReadExactly(slice.Span);
 
 		return StructureSerializer.MarshalFromBytes<T>(slice);
+	}
+
+	public static string ReadString(this Stream stream, int length, Encoding? encoding = null, bool nullTerminated = true)
+	{
+		encoding ??= Encoding.ASCII;
+
+		if ((s_buffer == null) || (s_buffer.Length < length))
+			s_buffer = new byte[length * 2];
+
+		var slice = s_buffer.Slice(0, length);
+
+		stream.ReadExactly(slice);
+
+		if (nullTerminated)
+		{
+			int terminator = slice.IndexOf((byte)0);
+
+			if (terminator >= 0)
+				slice = slice.Slice(0, terminator);
+		}
+
+		return encoding.GetString(slice);
 	}
 }

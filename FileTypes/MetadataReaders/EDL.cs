@@ -1,10 +1,11 @@
 using System.IO;
+
+namespace ChasmTracker.FileTypes.MetadataReaders;
+
 using ChasmTracker.FileSystem;
 using ChasmTracker.Utility;
 
-namespace ChasmTracker.FileTypes.Converters;
-
-public class EDI : IFileInfoReader
+public class EDL : IFileInfoReader
 {
 	bool LoadFile(Stream stream, out MemoryStream memStream)
 	{

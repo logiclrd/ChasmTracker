@@ -1,17 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Net.Http;
 using System.Runtime.InteropServices;
-using System.Text;
-using ChasmTracker.FileSystem;
-using ChasmTracker.Songs;
-using ChasmTracker.Utility;
-using Microsoft.Extensions.FileSystemGlobbing;
 
 namespace ChasmTracker.FileTypes.Converters;
 
+using ChasmTracker.FileSystem;
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public class D00 : SongFileConverter
 {

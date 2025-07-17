@@ -1,10 +1,10 @@
 using System.IO;
 using System.Text;
+
+namespace ChasmTracker.FileTypes.MetadataReaders;
+
 using ChasmTracker.FileSystem;
 using ChasmTracker.Utility;
-using Mono.Unix.Native;
-
-namespace ChasmTracker.FileTypes.Converters;
 
 /* TODO: test this code.
 Modplug seems to have a totally different idea of ams than this.
