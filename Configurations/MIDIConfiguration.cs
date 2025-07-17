@@ -18,6 +18,8 @@ public class MIDIConfiguration
 	public string?[] SFx = new string?[16];
 	public string?[] Zxx = new string?[128];
 
+	public static int SerializedSize => (10 + 16 + 128) * Constants.MaxMIDIMacro;
+
 	public static MIDIConfiguration GetDefault()
 	{
 		var ret = new MIDIConfiguration();

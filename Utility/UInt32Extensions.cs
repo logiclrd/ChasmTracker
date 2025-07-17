@@ -10,13 +10,18 @@ public static class UInt32Extensions
 	public static uint Cycle(this uint value, uint loopBackAt)
 		=> (value + 1) % loopBackAt;
 
-	public static bool HasFlag(this uint value, uint flag)
+	public static bool HasBitSet(this uint value, uint flag)
 	{
 		return (value & flag) == flag;
 	}
 
-	public static bool HasFlag(this uint value, int flag)
+	public static bool HasBitSet(this uint value, int flag)
 	{
 		return (value & flag) == flag;
+	}
+
+	public static bool HasAnyBitSet(this uint value, uint bits)
+	{
+		return (value & bits) != 0;
 	}
 }

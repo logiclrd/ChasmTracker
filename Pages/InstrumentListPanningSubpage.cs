@@ -74,7 +74,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 		else
 			r = EnvelopeHandleKeyViewMode(k, ins.PanningEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PanningEnvelope);
 
-		if (r.HasFlag(2))
+		if (r.HasBitSet(2))
 		{
 			r ^= 2;
 			ins.Flags |= InstrumentFlags.PanningEnvelope;

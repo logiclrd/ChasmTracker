@@ -5,13 +5,13 @@ namespace ChasmTracker.FileTypes.Converters;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Utility;
 
-public class F2R : FileInfoReader
+public class F2R : IFileInfoReader
 {
 	/* --------------------------------------------------------------------- */
 
 	/* TODO: test this code */
 
-	public override bool ReadInfo(Stream stream, FileReference file)
+	public bool FillExtendedData(Stream stream, FileReference file)
 	{
 		byte[] magic = new byte[3];
 

@@ -3264,7 +3264,7 @@ public class PatternEditorPage : Page
 		}
 
 		if (!MIDIEngine.Flags.HasFlag(MIDIFlags.PitchBend)
-		 || MIDIEngine.PitchDepth == 0
+		 || MIDIEngine.PitchWheelDepth == 0
 		 || k.MIDIBend == 0)
 		{
 			if (k.State == KeyState.Release
@@ -3303,7 +3303,7 @@ public class PatternEditorPage : Page
 					MIDIEngine.LastBendHit[c] = k.MIDIBend;
 				}
 
-				pd = (k.MIDIBend - pd) * MIDIEngine.PitchDepth / 8192;
+				pd = (k.MIDIBend - pd) * MIDIEngine.PitchWheelDepth / 8192;
 				pd = pd * speed / 2;
 
 				pd = pd.Clamp(-0x7F, +0x7F);

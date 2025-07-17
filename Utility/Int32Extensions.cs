@@ -10,8 +10,13 @@ public static class Int32Extensions
 	public static int Cycle(this int value, int loopBackAt)
 		=> (value + 1) % loopBackAt;
 
-	public static bool HasFlag(this int value, int flag)
+	public static bool HasBitSet(this int value, int flag)
 	{
 		return (value & flag) == flag;
+	}
+
+	public static bool HasAnyBitSet(this int value, int bits)
+	{
+		return (value & bits) != 0;
 	}
 }

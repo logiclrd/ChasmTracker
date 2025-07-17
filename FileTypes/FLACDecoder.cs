@@ -308,17 +308,12 @@ public class FLACDecoder : IDisposable
 
 				var appFp = new UnmanagedMemoryStream((byte*)application.Data, parsedMetadata.Length - 4);
 
-				byte[] buffer = new byte[4];
-
 				int chunkID, chunkLen;
 
 				try
 				{
-					appFp.ReadExactly(buffer);
-					chunkID = BitConverter.ToInt32(buffer);
-
-					appFp.ReadExactly(buffer);
-					chunkLen = BitConverter.ToInt32(buffer);
+					chunkID = appFp.ReadStructure<int>();
+					chunkLen = appFp.ReadStructure<int>();
 				}
 				catch
 				{

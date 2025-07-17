@@ -345,7 +345,7 @@ public class AIFF : SampleFileConverter
 		return null;
 	}
 
-	public override bool ReadInfo(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		try
 		{

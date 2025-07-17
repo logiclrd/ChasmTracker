@@ -71,7 +71,7 @@ public class AU : SampleFileConverter
 	}
 
 	/* --------------------------------------------------------------------- */
-	public override bool ReadInfo(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		if (!ReadHeader(stream, out var au))
 			return false;

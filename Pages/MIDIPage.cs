@@ -307,7 +307,7 @@ public class MIDIPage : Page
 
 		MIDIEngine.Amplification = thumbBarAmplification.Value;
 		MIDIEngine.C5Note = thumbBarC5NoteValue.Value;
-		MIDIEngine.PitchDepth = thumbBarPitchWheelDepth.Value;
+		MIDIEngine.PitchWheelDepth = thumbBarPitchWheelDepth.Value;
 	}
 
 	void GetMIDIConfiguration()
@@ -323,7 +323,7 @@ public class MIDIPage : Page
 
 		thumbBarAmplification.Value = MIDIEngine.Amplification;
 		thumbBarC5NoteValue.Value = MIDIEngine.C5Note;
-		thumbBarPitchWheelDepth.Value = MIDIEngine.PitchDepth;
+		thumbBarPitchWheelDepth.Value = MIDIEngine.PitchWheelDepth;
 		thumbBarIPMIDIPorts.Value = MIDIEngine.GetIPPortCount();
 	}
 

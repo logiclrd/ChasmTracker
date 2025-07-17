@@ -11,6 +11,12 @@ public static class StructureSerializer
 			return Marshal.PtrToStructure<T>((IntPtr)dataPointer)!;
 	}
 
+	public static unsafe T MarshalFromBytes<T>(Memory<byte> data)
+	{
+		using (var pin = data.Pin())
+			return Marshal.PtrToStructure<T>((IntPtr)pin.Pointer)!;
+	}
+
 	public static unsafe T MarshalFromBytes<T>(byte[] data, int dataLength)
 		where T : struct
 	{
@@ -25,6 +31,22 @@ public static class StructureSerializer
 		where T : notnull
 	{
 		byte[] buffer = new byte[Marshal.SizeOf<T>()];
+
+		fixed (byte *dataPointer = &buffer[0])
+			Marshal.StructureToPtr(structure, (IntPtr)dataPointer, fDeleteOld: false);
+
+		return buffer;
+	}
+
+	public static unsafe byte[] MarshalToBytes<T>(T structure, ref byte[]? buffer)
+		where T : notnull
+	{
+		int size = Marshal.SizeOf<T>();
+
+		if (buffer == null)
+			buffer = new byte[Marshal.SizeOf<T>()];
+		else if (buffer.Length < size)
+			buffer = new byte[Marshal.SizeOf<T>()];
 
 		fixed (byte *dataPointer = &buffer[0])
 			Marshal.StructureToPtr(structure, (IntPtr)dataPointer, fDeleteOld: false);

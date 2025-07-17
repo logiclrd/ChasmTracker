@@ -100,7 +100,7 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 		else
 			r = EnvelopeHandleKeyViewMode(k, ins.PitchEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PitchEnvelope);
 
-		if (r.HasFlag(2))
+		if (r.HasBitSet(2))
 		{
 			r ^= 2;
 			ins.Flags |= InstrumentFlags.PitchEnvelope;

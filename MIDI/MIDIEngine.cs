@@ -52,7 +52,7 @@ public class MIDIEngine : IMIDISink
 		MIDIFlags.RecordAftertouch |
 		MIDIFlags.PitchBend;
 
-	public static int PitchDepth = 12;
+	public static int PitchWheelDepth = 12;
 	public static int Amplification = 100;
 	public static int C5Note = 60;
 

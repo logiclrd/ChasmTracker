@@ -14,8 +14,8 @@ public class SongInstrument
 	public Envelope? PanningEnvelope;
 	public Envelope? PitchEnvelope;
 	public NewNoteActions NewNoteAction;
-	public DuplicateCheckTypes DuplicateCheckTypes;
-	public DuplicateCheckActions DuplicateCheckActions;
+	public DuplicateCheckTypes DuplicateCheckType;
+	public DuplicateCheckActions DuplicateCheckAction;
 	public int PanningSwing;
 	public int VolumeSwing;
 	public int IFCutoff;
@@ -45,8 +45,8 @@ public class SongInstrument
 		FadeOut = default;
 		Flags = default;
 		NewNoteAction = default;
-		DuplicateCheckTypes = default;
-		DuplicateCheckActions = default;
+		DuplicateCheckType = default;
+		DuplicateCheckAction = default;
 		PanningSwing = default;
 		VolumeSwing = default;
 		IFCutoff = default;
@@ -129,8 +129,8 @@ public class SongInstrument
 				string.IsNullOrEmpty(FileName) &&
 				Flags == default && /* No envelopes, loop points, panning, or carry flags set */
 				NewNoteAction == NewNoteActions.NoteCut &&
-				DuplicateCheckTypes == DuplicateCheckTypes.None &&
-				DuplicateCheckActions == DuplicateCheckActions.NoteCut &&
+				DuplicateCheckType == DuplicateCheckTypes.None &&
+				DuplicateCheckAction == DuplicateCheckActions.NoteCut &&
 				Envelope.IsNullOrBlank(VolumeEnvelope, 64) &&
 				GlobalVolume == 128 &&
 				FadeOut == 0 &&

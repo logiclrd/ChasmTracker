@@ -85,11 +85,7 @@ public class IMF : SongFileConverter
 
 	static IMFHeader ReadHeader(Stream fp)
 	{
-		byte[] buffer = new byte[Marshal.SizeOf<IMFChannel>()];
-
-		fp.ReadExactly(buffer);
-
-		var hdr = StructureSerializer.MarshalFromBytes<IMFHeader>(buffer);
+		var hdr = fp.ReadStructure<IMFHeader>();
 
 		if (hdr.IM10.ToStringZ() != "IM10")
 			throw new FormatException();
@@ -123,29 +119,11 @@ public class IMF : SongFileConverter
 		byte _unused1, _unused2, _unused3;
 	};
 
-	static IMFEnvelope ReadEnvelope(Stream fp)
-	{
-		byte[] buffer = new byte[Marshal.SizeOf<IMFEnvelope>()];
-
-		fp.ReadExactly(buffer);
-
-		return StructureSerializer.MarshalFromBytes<IMFEnvelope>(buffer);
-	}
-
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct IMFEnvelopeNode
 	{
 		public ushort Tick;
 		public ushort Value;
-	}
-
-	static IMFEnvelopeNode ReadEnvelopeNode(Stream fp)
-	{
-		byte[] buffer = new byte[Marshal.SizeOf<IMFEnvelopeNode>()];
-
-		fp.ReadExactly(buffer);
-
-		return StructureSerializer.MarshalFromBytes<IMFEnvelopeNode>(buffer);
 	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -190,11 +168,7 @@ public class IMF : SongFileConverter
 
 	static IMFInstrument ReadInstrument(Stream fp)
 	{
-		byte[] buffer = new byte[Marshal.SizeOf<IMFInstrument>()];
-
-		fp.ReadExactly(buffer);
-
-		var inst = StructureSerializer.MarshalFromBytes<IMFInstrument>(buffer);
+		var inst = fp.ReadStructure<IMFInstrument>();
 
 		if (inst.II10.ToStringZ() != "II10")
 			throw new FormatException();
@@ -236,11 +210,7 @@ public class IMF : SongFileConverter
 
 	static IMFSample ReadSample(Stream fp)
 	{
-		byte[] buffer = new byte[Marshal.SizeOf<IMFSample>()];
-
-		fp.ReadExactly(buffer);
-
-		var smpl = StructureSerializer.MarshalFromBytes<IMFSample>(buffer);
+		var smpl = fp.ReadStructure<IMFSample>();
 
 		if (smpl.IS10.ToStringZ() != "IS10")
 			throw new FormatException();
@@ -412,15 +382,8 @@ public class IMF : SongFileConverter
 
 		//long startPos = fp.Position;
 
-		byte[] buffer = new byte[2];
-
-		fp.ReadExactly(buffer);
-
-		int length = BitConverter.ToInt16(buffer);
-
-		fp.ReadExactly(buffer);
-
-		int numRows = BitConverter.ToInt16(buffer);
+		int length = fp.ReadStructure<short>();
+		int numRows = fp.ReadStructure<short>();
 
 		song.Patterns[pat] = new Pattern(numRows);
 
@@ -445,7 +408,7 @@ public class IMF : SongFileConverter
 
 			PatternRow rowData;
 
-			if (ignoreChannels.HasFlag(1 << channel))
+			if (ignoreChannels.HasBitSet(1 << channel))
 			{
 				/* should do this better, i.e. not go through the whole process of deciding
 				what to do with the effects since they're just being thrown out */
@@ -459,7 +422,7 @@ public class IMF : SongFileConverter
 
 			ref var note = ref rowData[channel];
 
-			if (mask.HasFlag(0x20))
+			if (mask.HasBitSet(0x20))
 			{
 				/* read note/instrument */
 				byte noteByte = (byte)fp.ReadByte();
@@ -480,7 +443,7 @@ public class IMF : SongFileConverter
 					}
 				}
 			}
-			if (mask.HasFlag(0xc0))
+			if (mask.HasBitSet(0xc0))
 			{
 				/* read both effects and figure out what to do with them */
 				byte e1c = (byte)fp.ReadByte();
@@ -526,7 +489,7 @@ public class IMF : SongFileConverter
 					note.Parameter = e2d;
 				}
 			}
-			else if (mask.HasFlag(0xc0))
+			else if (mask.HasBitSet(0xc0))
 			{
 				/* there's one effect, just stick it in the effect column */
 				note.EffectByte = (byte)fp.ReadByte();

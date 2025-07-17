@@ -1416,7 +1416,7 @@ public class Song
 			bool applyDNA = false;
 
 			// Duplicate Check Type
-			switch (p.Instrument?.DuplicateCheckTypes)
+			switch (p.Instrument?.DuplicateCheckType)
 			{
 				case DuplicateCheckTypes.Note:
 					applyDNA = (SongNote.IsNote(note) && (p.Note == note) && (instrument == p.Instrument));
@@ -1432,7 +1432,7 @@ public class Song
 			// Duplicate Note Action
 			if (applyDNA)
 			{
-				switch (p.Instrument?.DuplicateCheckActions)
+				switch (p.Instrument?.DuplicateCheckAction)
 				{
 					case DuplicateCheckActions.NoteCut:
 						// TODO: fx_key_off(csf, i);

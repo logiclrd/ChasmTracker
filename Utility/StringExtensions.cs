@@ -248,4 +248,17 @@ public static class StringExtensions
 		else
 			return str.Substring(0, ofs);
 	}
+
+	public static byte[] ToBytes(this string? str, int len, Encoding? encoding = null)
+	{
+		byte[] buffer = new byte[len];
+
+		if (str != null)
+		{
+			encoding ??= Encoding.ASCII;
+			encoding.GetBytes(str, 0, str.Length, buffer, len);
+		}
+
+		return buffer;
+	}
 }

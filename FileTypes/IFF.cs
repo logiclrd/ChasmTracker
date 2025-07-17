@@ -20,15 +20,8 @@ public class IFF
 		{
 			var chunk = new IFFChunk();
 
-			byte[] buffer = new byte[4];
-
-			stream.ReadExactly(buffer);
-
-			chunk.ID = ByteSwap.Swap(Convert.ToUInt32(buffer));
-
-			stream.ReadExactly(buffer);
-
-			chunk.Size = Convert.ToInt32(buffer);
+			chunk.ID = ByteSwap.Swap(stream.ReadStructure<uint>());
+			chunk.Size = stream.ReadStructure<int>();
 
 			if (!flags.HasFlag(ChunkFlags.SizeLittleEndian))
 				chunk.Size = ByteSwap.Swap(chunk.Size);
@@ -128,36 +121,24 @@ public class IFF
 	{
 		try
 		{
-			byte[] buffer = new byte[4];
-
-			stream.ReadExactly(buffer);
-
-			int xtraFlags = Convert.ToInt32(buffer);
+			int xtraFlags = stream.ReadStructure<int>();
 
 			if ((xtraFlags & 0x20) != 0)
 				smp.Flags |= SampleFlags.Panning;
 
-			buffer = new byte[2];
-
-			stream.ReadExactly(buffer);
-
-			int pan = Convert.ToInt16(buffer);
+			int pan = stream.ReadStructure<short>();
 
 			pan = ((pan + 2) / 4) * 4; // round to nearest multiple of 4
 
 			smp.Panning = Math.Min(pan, 256);
 
-			stream.ReadExactly(buffer);
-
-			int vol = Convert.ToInt16(buffer);
+			int vol = stream.ReadStructure<short>();
 
 			vol = ((vol + 2) / 4) * 4; // round to nearest multiple of 4
 
 			smp.Volume = Math.Min(vol, 256);
 
-			stream.ReadExactly(buffer);
-
-			int gbv = Convert.ToInt16(buffer);
+			int gbv = stream.ReadStructure<short>();
 
 			smp.GlobalVolume = Math.Min(gbv, 64);
 
@@ -181,22 +162,12 @@ public class IFF
 	{
 		try
 		{
-			byte[] buffer = new byte[4];
-
 			/* skip "samplerData" and "identifier" */
 			stream.Position += 8;
 
-			stream.ReadExactly(buffer);
-
-			int type = Convert.ToInt32(buffer);
-
-			stream.ReadExactly(buffer);
-
-			int start = Convert.ToInt32(buffer);
-
-			stream.ReadExactly(buffer);
-
-			int end = Convert.ToInt32(buffer);
+			int type = stream.ReadStructure<int>();
+			int start = stream.ReadStructure<int>();
+			int end = stream.ReadStructure<int>();
 
 			/* loop is bogus? */
 			if ((start | end) == 0)

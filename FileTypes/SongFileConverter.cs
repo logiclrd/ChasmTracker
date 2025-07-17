@@ -7,11 +7,13 @@ namespace ChasmTracker.FileTypes;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 
-public abstract class SongFileConverter
+public abstract class SongFileConverter : IFileInfoReader
 {
 	public abstract bool FillExtendedData(Stream stream, FileReference fileReference);
 	public abstract Song LoadSong(Stream stream, LoadFlags flags);
-	// public abstract void SaveSong(Song song);
+	public virtual SaveResult SaveSong(Song song, Stream stream) => throw new NotSupportedException();
+
+	public virtual bool CanSave => false;
 
 	protected string ReadLinedMessage(Stream fp, int len, int lineLen, Encoding? encoding = null)
 	{

@@ -240,18 +240,14 @@ public class D00 : SongFileConverter
 
 				stream.Position = startPosition + ptrs[c];
 
-				byte[] buffer = new byte[2];
-
 				try
 				{
-					stream.ReadExactly(buffer);
+					speeds[c + 1] = ByteSwap.Swap(stream.ReadStructure<short>());
 				}
 				catch
 				{
 					continue;
 				}
-
-				speeds[c + 1] = ByteSwap.Swap(BitConverter.ToInt16(buffer));
 
 				int nOrds;
 
@@ -277,7 +273,7 @@ public class D00 : SongFileConverter
 					{
 						ordTranspose[nOrds] = (ords[nOrds] & 0xff);
 
-						if (ords[nOrds].HasFlag(0x100)) // sign bit
+						if (ords[nOrds].HasBitSet(0x100)) // sign bit
 							ordTranspose[nOrds] = -ordTranspose[nOrds];
 
 						transposeSet = true;
@@ -358,7 +354,7 @@ public class D00 : SongFileConverter
 									break;
 								default:
 									/* 0x80 flag == ignore channel transpose */
-									if (note.HasFlag(0x80))
+									if (note.HasBitSet(0x80))
 										note -= 0x80;
 									else
 										note += ordTranspose[n % nOrds];

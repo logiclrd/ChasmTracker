@@ -69,7 +69,7 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 		else
 			r = EnvelopeHandleKeyViewMode(k, ins.VolumeEnvelope, ref _currentEnvelopeNode, InstrumentFlags.VolumeEnvelope);
 
-		if (r.HasFlag(2))
+		if (r.HasBitSet(2))
 		{
 			r ^= 2;
 			ins.Flags |= InstrumentFlags.VolumeEnvelope;

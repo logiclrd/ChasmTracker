@@ -12,9 +12,9 @@ I don't know what this data's supposed to be for :) */
 
 /* btw: AMS stands for "Advanced Module System" */
 
-public class AMS : FileInfoReader
+public class AMS : IFileInfoReader
 {
-	public override bool ReadInfo(Stream stream, FileReference file)
+	public bool FillExtendedData(Stream stream, FileReference file)
 	{
 		byte[] magicBytes = new byte[7];
 

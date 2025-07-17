@@ -1,19 +1,19 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace ChasmTracker.FileTypes;
 
-using System.Collections;
-using System.Text;
+using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
-using X11;
 
-public abstract class SampleFileConverter : FileInfoReader
+public abstract class SampleFileConverter : IFileInfoReader
 {
 	public virtual bool CanSave => false;
 
+	public abstract bool FillExtendedData(Stream stream, FileReference file);
 	public abstract SongSample LoadSample(Stream stream);
 	public abstract SaveResult SaveSample(Stream stream, SongSample sample);
 

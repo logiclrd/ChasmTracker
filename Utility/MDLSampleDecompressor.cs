@@ -34,17 +34,11 @@ public class MDLSampleDecompressor
 		sbyte dlt = 0;
 
 		// first 4 bytes indicate packed length
-		byte[] buffer = new byte[4];
-
-		fp.ReadExactly(buffer);
-
-		int v = BitConverter.ToInt32(buffer);
+		int v = fp.ReadStructure<int>();
 
 		v = (int)Math.Min(v, fileLen - startPos) + 4;
 
-		fp.ReadExactly(buffer);
-
-		int bitBuf = BitConverter.ToInt32(buffer);
+		int bitBuf = fp.ReadStructure<int>();
 
 		for (int j=0; j<len; j++)
 		{
@@ -83,17 +77,11 @@ public class MDLSampleDecompressor
 		short dlt = 0;
 
 		// first 4 bytes indicate packed length
-		byte[] buffer = new byte[4];
-
-		fp.ReadExactly(buffer);
-
-		int v = BitConverter.ToInt32(buffer);
+		int v = fp.ReadStructure<int>();
 
 		v = (int)Math.Min(v, fileLen - startPos) + 4;
 
-		fp.ReadExactly(buffer);
-
-		int bitBuf = BitConverter.ToInt32(buffer);
+		int bitBuf = fp.ReadStructure<int>();
 
 		for (int j = 0; j < len; j++)
 		{

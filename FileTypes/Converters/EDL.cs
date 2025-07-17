@@ -4,7 +4,7 @@ using ChasmTracker.Utility;
 
 namespace ChasmTracker.FileTypes.Converters;
 
-public class EDI : FileInfoReader
+public class EDI : IFileInfoReader
 {
 	bool LoadFile(Stream stream, out MemoryStream memStream)
 	{
@@ -41,7 +41,7 @@ public class EDI : FileInfoReader
 		return true;
 	}
 
-	public override bool ReadInfo(Stream stream, FileReference file)
+	public bool FillExtendedData(Stream stream, FileReference file)
 	{
 		if (!LoadFile(stream, out var fakeStream))
 			return false;

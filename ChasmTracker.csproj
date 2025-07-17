@@ -4,9 +4,12 @@
 		<OutputType>Exe</OutputType>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("o"))</SourceRevisionId>
+		<GitVersion>false</GitVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="GitInfo" Version="3.5.0" />
 		<PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.6" />
 		<PackageReference Include="Microsoft.MAUI.Essentials" Version="9.0.70" />
 		<PackageReference Include="Mono.Posix" Version="7.1.0-final.1.21458.1" />

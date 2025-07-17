@@ -513,7 +513,7 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 			case NewNoteActions.NoteFade: toggleButtonNewNoteActionNoteFade.SetState(true); break;
 		}
 
-		switch (ins.DuplicateCheckTypes)
+		switch (ins.DuplicateCheckType)
 		{
 			case DuplicateCheckTypes.None: toggleButtonDuplicateCheckTypeDisabled.SetState(true); break;
 			case DuplicateCheckTypes.Note: toggleButtonDuplicateCheckTypeNote.SetState(true); break;
@@ -521,7 +521,7 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 			case DuplicateCheckTypes.Instrument: toggleButtonDuplicateCheckTypeInstrument.SetState(true); break;
 		}
 
-		switch (ins.DuplicateCheckActions)
+		switch (ins.DuplicateCheckAction)
 		{
 			case DuplicateCheckActions.NoteCut: toggleButtonDuplicateCheckActionNoteCut.SetState(true); break;
 			case DuplicateCheckActions.NoteOff: toggleButtonDuplicateCheckActionNoteOff.SetState(true); break;
@@ -574,20 +574,20 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 			ins.NewNoteAction = NewNoteActions.NoteFade;
 
 		if (toggleButtonDuplicateCheckTypeDisabled.State)
-			ins.DuplicateCheckTypes = DuplicateCheckTypes.None;
+			ins.DuplicateCheckType = DuplicateCheckTypes.None;
 		else if (toggleButtonDuplicateCheckTypeNote.State)
-			ins.DuplicateCheckTypes = DuplicateCheckTypes.Note;
+			ins.DuplicateCheckType = DuplicateCheckTypes.Note;
 		else if (toggleButtonDuplicateCheckTypeSample.State)
-			ins.DuplicateCheckTypes = DuplicateCheckTypes.Sample;
+			ins.DuplicateCheckType = DuplicateCheckTypes.Sample;
 		else if (toggleButtonDuplicateCheckTypeInstrument.State)
-			ins.DuplicateCheckTypes = DuplicateCheckTypes.Instrument;
+			ins.DuplicateCheckType = DuplicateCheckTypes.Instrument;
 
 		if (toggleButtonDuplicateCheckActionNoteCut.State)
-			ins.DuplicateCheckActions = DuplicateCheckActions.NoteCut;
+			ins.DuplicateCheckAction = DuplicateCheckActions.NoteCut;
 		else if (toggleButtonDuplicateCheckActionNoteOff.State)
-			ins.DuplicateCheckActions = DuplicateCheckActions.NoteOff;
+			ins.DuplicateCheckAction = DuplicateCheckActions.NoteOff;
 		else if (toggleButtonDuplicateCheckActionNoteFade.State)
-			ins.DuplicateCheckActions = DuplicateCheckActions.NoteFade;
+			ins.DuplicateCheckAction = DuplicateCheckActions.NoteFade;
 	}
 
 	void UpdateFileName()

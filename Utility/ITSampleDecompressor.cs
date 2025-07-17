@@ -104,7 +104,7 @@ public class ITSampleDecompressor
 				{
 					// method 3 (9 bits)
 					// bit 8 set?
-					if (value.HasFlag(0x100))
+					if (value.HasBitSet(0x100))
 					{
 						width = (value + 1) & 0xff; // new width...
 						continue; // ... and next value
@@ -212,7 +212,7 @@ public class ITSampleDecompressor
 				{
 					// method 3 (17 bits)
 					// bit 16 set?
-					if (value.HasFlag(0x10000))
+					if (value.HasBitSet(0x10000))
 					{
 						width = (value + 1) & 0xff; // new width...
 						continue; // ... and next value

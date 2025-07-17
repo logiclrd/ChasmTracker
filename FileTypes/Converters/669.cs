@@ -28,13 +28,7 @@ public class _669 : SongFileConverter
 	}
 
 	Header669 ReadHeader(Stream stream)
-	{
-		byte[] buffer = new byte[Marshal.SizeOf<Header669>()];
-
-		stream.ReadExactly(buffer);
-
-		return StructureSerializer.MarshalFromBytes<Header669>(buffer);
-	}
+		=> stream.ReadStructure<Header669>();
 
 	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
