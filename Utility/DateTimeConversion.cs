@@ -4,6 +4,12 @@ namespace ChasmTracker.Utility;
 
 public class DateTimeConversions
 {
+	public static int LeapYearsBefore(int year)
+		=> ((year - 1) / 4) - ((year - 1) / 100) + ((year - 1) / 400);
+
+	public static int LeapYearsBetween(int start, int end)
+		=> LeapYearsBefore(end) - LeapYearsBefore(start + 1);
+
 	public static TimeSpan DOSTimeToTimeSpan(uint dosTime)
 	{
 		// convert to milliseconds
