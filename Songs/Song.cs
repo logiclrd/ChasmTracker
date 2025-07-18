@@ -48,6 +48,8 @@ public class Song
 
 	public int CurrentTick => TickCount % CurrentSpeed;
 
+	public TimeSpan EditTimeElapsed => DateTime.UtcNow - EditStart.Time;
+
 	public void SetInitialSpeed(int newSpeed)
 	{
 		InitialSpeed = newSpeed.Clamp(1, 255);
@@ -137,6 +139,44 @@ public class Song
 	public static void InitializeMIDI(IMIDISink midiSink)
 	{
 		s_midiSink = midiSink;
+	}
+
+	// Total count of orders in orderlist before end of data
+	public int GetOrderCount()
+	{
+		for (int n = OrderList.Count; n >= 0; n--)
+			if (OrderList[n] != SpecialOrders.Last)
+				return n + 1;
+
+		return 0;
+	}
+
+	// Total number of non-empty patterns in song, according to csf_pattern_is_empty
+	public int GetPatternCount()
+	{
+		for (int n = Patterns.Count; n >= 0; n--)
+			if (!Patterns[n].IsEmpty)
+				return n + 1;
+
+		return 0;
+	}
+
+	public int GetSampleCount()
+	{
+		for (int n = Samples.Count; n >= 0; n--)
+			if (!(Samples[n]?.IsEmpty ?? true))
+				return n + 1;
+
+		return 0;
+	}
+
+	public int GetInstrumentCount()
+	{
+		for (int n = Instruments.Count; n >= 0; n--)
+			if (!(Instruments[n]?.IsEmpty ?? true))
+				return n + 1;
+
+		return 0;
 	}
 
 	public void SetCurrentOrder(int newValue)
@@ -347,7 +387,7 @@ public class Song
 	public readonly int[] VoiceMix = new int[Constants.MaxVoices];
 
 	public readonly List<SongHistory> History = new List<SongHistory>();
-	public SongHistory? EditStart;
+	public SongHistory EditStart = new SongHistory();
 
 	public void InsertRestartPos(int restartOrder) // hax
 	{
@@ -743,6 +783,16 @@ public class Song
 			Patterns[n] = new Pattern();
 
 		return Patterns[n];
+	}
+
+	public Pattern SetPattern(int n, Pattern pattern)
+	{
+		while (n >= Patterns.Count)
+			Patterns.Add(new Pattern());
+
+		Patterns[n] = pattern;
+
+		return pattern;
 	}
 
 	public int GetPatternLength(int n)

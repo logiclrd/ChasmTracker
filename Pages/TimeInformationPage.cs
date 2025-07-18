@@ -155,13 +155,10 @@ public class TimeInformationPage : Page
 
 		{
 			// Current session
-			var runtime = DateTime.UtcNow - Song.CurrentSong.EditStart?.Time;
+			var runtime = DateTime.UtcNow - Song.CurrentSong.EditStart.Time;
 
-			if (runtime.HasValue)
-			{
-				DrawTime(runtime.Value, new Point(18, 14));
-				totalTime += runtime.Value;
-			}
+			DrawTime(runtime, new Point(18, 14));
+			totalTime += runtime;
 		}
 
 		DrawTime(totalTime, new Point(18, 16));

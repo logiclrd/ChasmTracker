@@ -16,6 +16,21 @@ public class Pattern
 			Rows.Add(new PatternRow());
 	}
 
+	public bool IsEmpty
+	{
+		get
+		{
+			if (Rows.Count != 64)
+				return false;
+
+			foreach (var row in Rows)
+				if (!row.IsEmpty)
+					return false;
+
+			return true;
+		}
+	}
+
 	public Pattern Clone()
 	{
 		var clone = new Pattern();

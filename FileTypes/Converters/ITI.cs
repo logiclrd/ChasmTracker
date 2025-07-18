@@ -135,13 +135,6 @@ public class ITI : InstrumentFileConverter, IFileInfoReader
 		}
 	}
 
-	enum EnvelopeType
-	{
-		Volume,
-		Panning,
-		Pitch,
-	}
-
 	[Flags]
 	enum ITEnvelopeFlags : byte
 	{

@@ -6,6 +6,18 @@ public class PatternRow
 {
 	SongNote[] _notes = new SongNote[Constants.MaxChannels];
 
+	public bool IsEmpty
+	{
+		get
+		{
+			for (int i = 0; i < _notes.Length; i++)
+				if (!_notes[i].IsBlank)
+					return false;
+
+			return true;
+		}
+	}
+
 	public PatternRow Clone()
 	{
 		var clone = new PatternRow();

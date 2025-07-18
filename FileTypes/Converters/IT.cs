@@ -261,7 +261,7 @@ public class IT : SongFileConverter
 				patternRow[chan].EffectByte = (byte)(fp.ReadByte() & 0x1f);
 				patternRow[chan].Parameter = (byte)fp.ReadByte();
 
-				ImportS3MEffect(ref patternRow[chan], true);
+				EffectUtility.ImportS3MEffect(ref patternRow[chan], true);
 
 				if (patternRow[chan].Effect == Effects.Special && (patternRow[chan].Parameter & 0xf0) == 0xa0 && createdWithTrackerVersion < 0x0200)
 				{
@@ -785,7 +785,7 @@ public class IT : SongFileConverter
 				// time of a module in the "reserved" field
 				song.History.Clear();
 
-				uint runtime = DecodeEditTimer(hdr.CreatedWithTrackerVersion, hdr.Reserved);
+				uint runtime = DateTimeConversions.DecodeEditTimer(hdr.CreatedWithTrackerVersion, hdr.Reserved);
 
 				song.History.Add(new SongHistory() { Runtime = DateTimeConversions.DOSTimeToTimeSpan(runtime) });
 			}
@@ -924,7 +924,7 @@ public class IT : SongFileConverter
 				if (vol != -1)
 					m |= 4;
 
-				ExportS3MEffect(ref effect, ref param, true);
+				EffectUtility.ExportS3MEffect(ref effect, ref param, true);
 
 				if ((effect != 0) || (param != 0))
 					m |= 8;
@@ -1042,7 +1042,7 @@ public class IT : SongFileConverter
 		case where order 255 has data, writing an extra 0xFF at the end will result in a file that can't be
 		loaded back (for now). Eventually this can be fixed, but at least for a while it's probably a great
 		idea not to save things that other versions won't load. */
-		int nOrd = song.OrderList.Count;
+		int nOrd = song.GetOrderCount();
 
 		nOrd = (nOrd + 1).Clamp(2, Constants.MaxOrders);
 
@@ -1191,7 +1191,7 @@ public class IT : SongFileConverter
 		}
 
 		{
-			var editStart = song.EditStart?.Time ?? DateTime.UtcNow;
+			var editStart = song.EditStart.Time;
 
 			var (fatDate, fatTime) = DateTimeConversions.DateTimeToFATDate(editStart);
 

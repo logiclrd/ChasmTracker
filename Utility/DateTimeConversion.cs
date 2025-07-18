@@ -42,8 +42,23 @@ public class DateTimeConversions
 	public static (ushort FATDate, ushort FATTime) DateTimeToFATDate(DateTime tm)
 	{
 		ushort fatDate = unchecked((ushort)(tm.Day | (tm.Month << 5) | ((tm.Year - 80) << 9)));
-		ushort fatTime = unchecked((ushort)((tm.Second >> 1) | (tm.Minute << 5) | (tm.Hour	 << 11)));
+		ushort fatTime = unchecked((ushort)((tm.Second >> 1) | (tm.Minute << 5) | (tm.Hour << 11)));
 
 		return (fatDate, fatTime);
+	}
+
+	public static uint DecodeEditTimer(ushort cwtv, uint runtime)
+	{
+		if ((cwtv & 0xFFF) >= 0x0208)
+		{
+			// it's the thirstiest time of the year
+			runtime ^= 0x4954524B;  // 'ITRK'
+			runtime = (runtime << (32 - 7)) | (runtime >> 7);
+			runtime = ~runtime + 1;
+			runtime = (runtime >> (32 - 4)) | (runtime << 4);
+			runtime ^= 0x4A54484C;  // 'JTHL'
+		}
+
+		return runtime;
 	}
 }
