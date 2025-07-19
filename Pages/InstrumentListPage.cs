@@ -8,6 +8,7 @@ using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.Instruments;
 using ChasmTracker.Events;
+using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes.Converters;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
@@ -788,9 +789,13 @@ public abstract class InstrumentListPage : Page
 			return;
 		}
 
-		// TODO: S_ISREG, status_text_flash("%s is not a regular file", filename);
 		if (File.Exists(ptr))
-			MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?", accept: DoSaveInstrument, data: data);
+		{
+			if (Paths.IsRegularFile(ptr))
+				MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?", accept: DoSaveInstrument, data: data);
+			else
+				Status.FlashText(filename + " is not a regular file");
+		}
 		else
 			DoSaveInstrument(data);
 	}

@@ -5,6 +5,7 @@ namespace ChasmTracker.Pages;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
+using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -170,7 +171,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 
 	protected override void HandleFileEntered(string name)
 	{
-		bool fileExists = File.Exists(name); // TODO: true only if S_ISREG
+		bool fileExists = File.Exists(name) && Paths.IsRegularFile(name);
 		bool directoryExists = Directory.Exists(name);
 
 		if (!fileExists && !directoryExists)

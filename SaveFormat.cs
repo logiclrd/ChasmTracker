@@ -14,6 +14,7 @@ public class SaveFormat
 
 	public SongFileConverter? SongConverter;
 	public InstrumentFileConverter? InstrumentConverter;
+	public SampleFileConverter? SampleConverter;
 	// TODO: exporter functors
 
 	public SaveFormat(string label, string name, string extension)

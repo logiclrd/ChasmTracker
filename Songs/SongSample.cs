@@ -62,6 +62,29 @@ public class SongSample
 		}
 	}
 
+	public void TakeSubset(int firstSample, int sampleCount)
+	{
+		Length = Math.Min(Length - firstSample, sampleCount);
+
+		if (firstSample > 0)
+		{
+			bool stereo = Flags.HasFlag(SampleFlags.Stereo);
+
+			if (stereo)
+			{
+				firstSample <<= 1;
+				sampleCount <<= 1;
+			}
+
+			bool _16bit = Flags.HasFlag(SampleFlags._16Bit);
+
+			if (_16bit)
+				Buffer.BlockCopy(RawData16!, 2 * (AllocatePrepend + firstSample), RawData16!, 2 * AllocatePrepend, 2 * Length);
+			else
+				Buffer.BlockCopy(RawData8!, AllocatePrepend + firstSample, RawData8!, AllocatePrepend, Length);
+		}
+	}
+
 	public void AdjustLoop()
 	{
 		if (!HasData || (Length < 1))

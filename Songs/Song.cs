@@ -690,6 +690,7 @@ public class Song
 		if (samp == null)
 			return 0;
 
+		// TODO: this makes GetPlayingSamples O(n^2), does this need fix?
 		int number = Samples.IndexOf(samp);
 
 		if (number < 0)
@@ -715,6 +716,7 @@ public class Song
 		if (inst == null)
 			return 0;
 
+		// TODO: this makes GetPlayingInstruments O(n^2), does this need fix?
 		int number = Instruments.IndexOf(inst);
 
 		if (number < 0)
@@ -4201,6 +4203,34 @@ public class Song
 				v.LeftVolume = v.RightVolume = 0;
 				v.LeftVolumeNew = v.RightVolumeNew = 0;
 				v.LeftRamp = v.RightRamp = 0;
+			}
+		}
+	}
+
+	public void GetPlayingSamples(int[] samples)
+	{
+		Array.Clear(samples);
+
+		lock (AudioPlayback.LockScope())
+		{
+			int n = Math.Min(NumVoices, MaxVoices);
+
+			while (n-- > 0)
+			{
+				ref var channel = ref Voices[VoiceMix[n]];
+
+				if ((channel.Sample != null) && (channel.CurrentSampleData != null))
+				{
+					int s = GetSampleNumber(channel.Sample);
+
+					if (s >= 0 && s < Constants.MaxSamples)
+						samples[s] = Math.Max(samples[s], 1 + channel.Strike);
+				}
+				else
+				{
+					// no sample.
+					// (when does this happen?)
+				}
 			}
 		}
 	}
