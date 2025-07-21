@@ -280,7 +280,7 @@ public class AudioPlayback
 
 			Song.CurrentSong.RepeatCount = -1; // FIXME do this right
 
-			GeneralMIDI.SendSongStartCode(Song.CurrentSong)
+			GeneralMIDI.SendSongStartCode(Song.CurrentSong);
 		}
 
 		Page.NotifySongModeChangedGlobal();

@@ -15,6 +15,8 @@ kind of counterproductive, but I can't get Farandole to run in Dosbox to test st
 public class FAR : SongFileConverter
 {
 	public override string Label => "FAR";
+	public override string Description => "Farandole Module";
+	public override string Extension => ".far";
 
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
 	class FARHeader
@@ -111,7 +113,7 @@ public class FAR : SongFileConverter
 			if (!ReadHeader(stream, out var hdr))
 				return false;
 
-			file.Description = "Farandole Module";
+			file.Description = Description;
 			/*file.Extension = "far";*/
 			file.Title = hdr.Title.TrimZ();
 			file.Type = FileSystem.FileTypes.ModuleS3M;

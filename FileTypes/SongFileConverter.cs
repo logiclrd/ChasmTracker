@@ -39,8 +39,8 @@ public abstract class SongFileConverter : FileConverter, IFileInfoReader
 		return msg.ToString();
 	}
 
-	public static IEnumerable<SongFileConverter> EnumerateImplementations()
-		=> EnumerateImplementationsOfType<SongFileConverter>();
+	public static IEnumerable<SongFileConverter> EnumerateImplementations(bool requireWrite = false)
+		=> EnumerateImplementationsOfType<SongFileConverter>().Where(impl => !requireWrite || impl.CanSave);
 	public static SongFileConverter? FindImplementation(string label)
 		=> EnumerateImplementationsOfType<SongFileConverter>(false).FirstOrDefault(t => t.Label == label);
 }

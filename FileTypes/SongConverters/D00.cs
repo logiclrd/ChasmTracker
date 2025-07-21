@@ -12,6 +12,8 @@ using ChasmTracker.Utility;
 public class D00 : SongFileConverter
 {
 	public override string Label => "D00";
+	public override string Description => "EdLib Tracker D00";
+	public override string Extension => ".d00";
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	struct D00Header
@@ -113,7 +115,7 @@ public class D00 : SongFileConverter
 			var hdr = ReadHeader(stream);
 
 			fileReference.Title = hdr.Title;
-			fileReference.Description = "EdLib Tracker D00";
+			fileReference.Description = Description;
 			fileReference.Type = FileSystem.FileTypes.ModuleS3M;
 
 			return true;

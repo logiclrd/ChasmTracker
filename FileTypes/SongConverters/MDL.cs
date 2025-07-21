@@ -13,6 +13,8 @@ using ChasmTracker.Utility;
 public class MDL : SongFileConverter
 {
 	public override string Label => "MDL";
+	public override string Description => "Digitrakker";
+	public override string Extension => ".mdl";
 
 	/* MDL is nice, but it's a pain to read the title... */
 
@@ -46,7 +48,7 @@ public class MDL : SongFileConverter
 					/* hey! we have a winner */
 					file.Title = stream.ReadString(32).TrimZ();
 					file.Artist = stream.ReadString(20).TrimZ();
-					file.Description = "Digitrakker";
+					file.Description = Description;
 					/*file.Extension = "mdl";*/
 					file.Type = FileTypes.ModuleXM;
 

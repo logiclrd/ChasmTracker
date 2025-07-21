@@ -12,6 +12,8 @@ using ChasmTracker.Utility;
 public class IMF : SongFileConverter
 {
 	public override string Label => "IMF";
+	public override string Description => "Imago Orpheus";
+	public override string Extension => ".imf";
 
 	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
@@ -31,7 +33,7 @@ public class IMF : SongFileConverter
 
 			stream.ReadExactly(title);
 
-			file.Description = "Imago Orpheus";
+			file.Description = Description;
 			/*file.Extension = "imf";*/
 			file.Title = title.ToStringZ();
 			file.Type = FileSystem.FileTypes.ModuleIT;

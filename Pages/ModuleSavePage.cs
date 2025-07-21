@@ -17,7 +17,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 {
 	ToggleButtonWidget[] toggleButtonSaveFormat = Array.Empty<ToggleButtonWidget>();
 
-	public static SongFileConverter[] SaveFormats = SongFileConverter.EnumerateImplementations().ToArray();
+	public static SongFileConverter[] SaveFormats = SongFileConverter.EnumerateImplementations(requireWrite: true).ToArray();
 
 	protected virtual FileConverter[] Formats => SaveFormats;
 

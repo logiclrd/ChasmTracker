@@ -12,7 +12,7 @@ public abstract class FileConverter
 
 	public virtual bool IsEnabled => true;
 
-	public abstract int SortOrder { get; }
+	public virtual int SortOrder => 0;
 
 	protected static IEnumerable<T> EnumerateImplementationsOfType<T>(bool sort = true)
 		where T : FileConverter

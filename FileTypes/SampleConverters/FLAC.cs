@@ -15,6 +15,8 @@ using ChasmTracker.Utility;
 public class FLAC : SampleFileConverter
 {
 	public override string Label => "FLAC";
+	public override string Description => "FLAC Audio File";
+	public override string Extension => ".flac";
 
 	public override bool IsEnabled => FLACEncoder.IsWorking;
 
@@ -93,7 +95,7 @@ public class FLAC : SampleFileConverter
 			file.SampleSustainStart = sample.SustainStart;
 			file.SampleSustainEnd = sample.SustainEnd;
 
-			file.Description  = "FLAC Audio File";
+			file.Description  = Description;
 			file.Type         = FileSystem.FileTypes.SampleCompressed;
 			file.SampleFileName = file.BaseName;
 
