@@ -213,7 +213,7 @@ public class PreferencesPage : Page
 			AudioSettings.EQBands[j].Gain = thumbBarEqualizerBands[j].Gain.Value;
 		}
 
-		AudioPlayback.InitializeEQ(true, Song.CurrentSong.MixFrequency);
+		AudioPlayback.InitializeEQ(true, AudioPlayback.MixFrequency);
 	}
 
 	void ChangeMixer()

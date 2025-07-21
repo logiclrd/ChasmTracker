@@ -498,7 +498,7 @@ public class MessagePage : Page
 		var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Clear song message?");
 
 		dialog.ChangeFocusTo(1);
-		dialog.ActionYes = _ => Clear();
+		dialog.ActionYes = () => Clear();
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -800,7 +800,7 @@ public class MessagePage : Page
 				{
 					if (!string.IsNullOrEmpty(k.Text))
 					{
-						HandleTextInputEditMode(new TextInputEvent(k.Text));
+						HandleTextInputEditMode(k.ToTextInputEvent());
 						return true;
 					}
 

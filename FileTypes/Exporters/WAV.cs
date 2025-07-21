@@ -13,6 +13,8 @@ public class WAV : SampleExporter
 	public override string Description => "WAV";
 	public override string Extension => ".wav";
 
+	public override int SortOrder => 1;
+
 	long _fileStartOffset;
 	long _dataSizeOffset; // seek position for writing data size (in bytes)
 	long _numBytes; // how many bytes have been written

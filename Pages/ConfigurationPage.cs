@@ -247,7 +247,7 @@ public class ConfigurationPage : Page
 
 		SongNote.ToggleAccidentalsMode((menuToggleAccidentalsMode.State != 0) ? AccidentalsMode.Flats : AccidentalsMode.Sharps);
 
-		// TODO: GM_Reset(current_song, 0);
+		GeneralMIDI.Reset(Song.CurrentSong, 0);
 
 		if (menuToggleMIDIMode.State != 0)
 			Status.Flags |= StatusFlags.MIDILikeTracker;

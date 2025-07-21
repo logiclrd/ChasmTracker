@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ChasmTracker.Pages;
 
@@ -9,6 +10,7 @@ using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.Instruments;
 using ChasmTracker.Events;
 using ChasmTracker.FileSystem;
+using ChasmTracker.FileTypes;
 using ChasmTracker.FileTypes.Converters;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
@@ -378,7 +380,7 @@ public abstract class InstrumentListPage : Page
 	static void DoCopyInstrument(int n)
 	{
 		if (n >= 1 && n <= LastVisibleInstrumentNumber())
-			Song.CurrentSong.Copyinstrument(s_currentInstrument, n);
+			Song.CurrentSong.CopyInstrument(s_currentInstrument, n);
 	}
 
 	static void DoReplaceInstrument(int n)
@@ -453,11 +455,13 @@ public abstract class InstrumentListPage : Page
 
 	static void otherInstrumentList_HandleText(TextInputEvent evt)
 	{
-		bool success = false;
 		foreach (char ch in evt.Text)
-			if (s_instrumentCursorPos < 25 && InstrumentListAddChar(ch))
-				success = true;
-		//return success;
+		{
+			if (s_instrumentCursorPos >= 25)
+				break;
+
+			InstrumentListAddChar(ch);
+		}
 	}
 
 	static bool otherInstrumentList_HandleKey(KeyEvent k)
@@ -702,7 +706,7 @@ public abstract class InstrumentListPage : Page
 						{
 							if (!string.IsNullOrEmpty(k.Text))
 							{
-								otherInstrumentList_HandleText(new TextInputEvent(k.Text));
+								otherInstrumentList_HandleText(k.ToTextInputEvent());
 								return true;
 							}
 						}
@@ -739,30 +743,24 @@ public abstract class InstrumentListPage : Page
 	{
 		public string Path;
 		/* string Options? */
-		public string Format;
+		public InstrumentFileConverter Converter;
 
-		public InstrumentSaveData(string path, string format)
+		public InstrumentSaveData(string path, InstrumentFileConverter converter)
 		{
 			Path = path;
-			Format = format;
+			Converter = converter;
 		}
 	}
-
-	public static readonly SaveFormat[] InstrumentSaveFormats =
-		{
-			new SaveFormat("ITI", "Impulse Tracker", ".iti") { InstrumentConverter = new ITI() },
-			new SaveFormat("XI", "Fasttracker II", ".xi") { InstrumentConverter = new XI() },
-		};
 
 	void DoSaveInstrument(object? ptr)
 	{
 		var data = (InstrumentSaveData)ptr!;
 
-		Song.SaveInstrument(data.Path, data.Format, Song.CurrentSong.GetInstrument(CurrentInstrument), CurrentInstrument);
+		Song.SaveInstrument(data.Path, data.Converter, Song.CurrentSong.GetInstrument(CurrentInstrument), CurrentInstrument);
 	}
 
 	/* filename can be NULL, in which case the instrument filename is used (quick save) */
-	void InstrumentSave(string? filename, string format)
+	void InstrumentSave(string? filename, InstrumentFileConversionState converter)
 	{
 		var pEnv = Song.CurrentSong.GetInstrument(CurrentInstrument);
 
@@ -781,7 +779,7 @@ public abstract class InstrumentListPage : Page
 			return;
 		}
 
-		var data = new InstrumentSaveData(ptr, format);
+		var data = new InstrumentSaveData(ptr, converter);
 
 		if (Directory.Exists(ptr))
 		{
@@ -807,9 +805,9 @@ public abstract class InstrumentListPage : Page
 		if (instrument == null)
 			return;
 
-		var dialog = Dialog.Show(new ExportInstrumentDialog(instrument.FileName ?? "", InstrumentSaveFormats));
+		var dialog = Dialog.Show(new ExportInstrumentDialog(instrument.FileName ?? "", InstrumentFileConverter.EnumerateImplementations().ToArray()));
 
-		dialog.ActionYes += _ => InstrumentSave(dialog.FileName, InstrumentSaveFormats[dialog.ExportFormat].Label);
+		dialog.ActionYes += () => InstrumentSave(dialog.FileName, dialog.InstrumentConverter);
 	}
 
 	void HandleAltKey(KeyEvent k)
@@ -860,14 +858,14 @@ public abstract class InstrumentListPage : Page
 					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Delete Instrument? (preserve shared samples)");
 
 					dialog.SelectedWidgetIndex.Value = 1;
-					dialog.ActionYes = _ => Song.CurrentSong.DeleteInstrument(CurrentInstrument, preserveSharedSamples: true);
+					dialog.ActionYes = () => Song.CurrentSong.DeleteInstrument(CurrentInstrument, preserveSharedSamples: true);
 				}
 				else
 				{
 					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Delete Instrument?");
 
 					dialog.SelectedWidgetIndex.Value = 1;
-					dialog.ActionYes = _ => Song.CurrentSong.DeleteInstrument(CurrentInstrument, preserveSharedSamples: false);
+					dialog.ActionYes = () => Song.CurrentSong.DeleteInstrument(CurrentInstrument, preserveSharedSamples: false);
 				}
 				return;
 			case KeySym.t:

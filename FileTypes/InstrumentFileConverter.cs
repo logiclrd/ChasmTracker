@@ -1,13 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
 namespace ChasmTracker.FileTypes;
 
-using ChasmTracker.FileTypes;
 using ChasmTracker.Songs;
 
-public abstract class InstrumentFileConverter
+public abstract class InstrumentFileConverter : FileConverter
 {
 	protected InstrumentFileConversionState Init(int slot)
 	{
@@ -24,7 +24,7 @@ public abstract class InstrumentFileConverter
 	public virtual bool CanSave => false;
 
 	public abstract bool LoadInstrument(Stream file, int slot);
-	public virtual void SaveInstrument(Song song, SongInstrument instrument, Stream file) => throw new NotSupportedException();
+	public virtual SaveResult SaveInstrument(Stream file, Song song, SongInstrument instrument) => throw new NotSupportedException();
 
 	static Type[] s_converterTypes =
 		typeof(InstrumentFileConverter).Assembly.GetTypes()
@@ -50,4 +50,9 @@ public abstract class InstrumentFileConverter
 
 		return false;
 	}
+
+	public static IEnumerable<InstrumentFileConverter> EnumerateImplementations()
+		=> EnumerateImplementationsOfType<InstrumentFileConverter>();
+	public static InstrumentFileConverter? FindImplementation(string label)
+		=> EnumerateImplementationsOfType<InstrumentFileConverter>(false).FirstOrDefault(t => t.Label == label);
 }

@@ -10,8 +10,6 @@ using ChasmTracker.Utility;
 
 public class AudioPlayback
 {
-	public static string SongFileName = "";
-	public static string SongBaseName = "";
 	public static AudioPlaybackMode Mode;
 	public static MixFlags MixFlags;
 	public static int AudioDeviceID;
@@ -76,6 +74,21 @@ public class AudioPlayback
 
 	public static string AudioDriver => s_driverName ?? "unknown";
 
+	// mixer stuff -----------------------------------------------------------
+	// TODO: public MixFlags MixFlags;
+	public static int MixFrequency;
+	public static int MixBitsPerSample;
+	public static int MixChannels;
+	public static int RampingSamples; // default: 64
+	public static int MaxVoices;
+	public static int VULeft;
+	public static int VURight;
+	public static int DryROfsVol; /* un-globalized, didn't care enough */
+	public static int DryLOfsVol; /* to find out what these do  -paper */
+	// -----------------------------------------------------------------------
+
+	public const int VolumeRampLength = 146; // 1.46ms == 64 samples at 44.1kHz
+
 	public static int PlayingChannels => Math.Min(NumVoices, Song.CurrentSong.MaxVoices);
 
 	public static void InitializeModPlug()
@@ -96,33 +109,19 @@ public class AudioPlayback
 			Surround = AudioSettings.SurroundEffect;
 
 			// update midi queue configuration
-			MIDIEngine.QueueAlloc(AudioBuffer?.Length ?? 0, AudioSampleSize, Song.CurrentSong.MixFrequency);
+			MIDIEngine.QueueAlloc(AudioBuffer?.Length ?? 0, AudioSampleSize, MixFrequency);
 
 			// timelimit the playback_update() calls when midi isn't actively going on
 			{
 				int divisor = (AudioBuffer?.Length ?? 0) * 8 * AudioSampleSize;
 
-				AudioBuffersPerSecond = (divisor != 0) ? (Song.CurrentSong.MixFrequency / divisor) : 0;
+				AudioBuffersPerSecond = (divisor != 0) ? (MixFrequency / divisor) : 0;
 
 				if (AudioBuffersPerSecond > 1)
 					AudioBuffersPerSecond--;
 			}
 
 			Song.InitializeMIDI(new MIDIEngine());
-		}
-	}
-
-	public static void SetFileName(string? file)
-	{
-		if (!string.IsNullOrEmpty(file))
-		{
-			SongFileName = file;
-			SongBaseName = Path.GetFileName(file);
-		}
-		else
-		{
-			SongFileName = "";
-			SongBaseName = "";
 		}
 	}
 
@@ -281,8 +280,7 @@ public class AudioPlayback
 
 			Song.CurrentSong.RepeatCount = -1; // FIXME do this right
 
-			// TODO
-			//GM_SendSongStartCode(Song.CurrentSong)
+			GeneralMIDI.SendSongStartCode(Song.CurrentSong)
 		}
 
 		Page.NotifySongModeChangedGlobal();
@@ -297,8 +295,7 @@ public class AudioPlayback
 			ResetPlayState();
 			MaxChannelsUsed = 0;
 
-			// TODO
-			//GM_SendSongStartCode(current_song);
+			GeneralMIDI.SendSongStartCode(current_song);
 		}
 
 		Page.NotifySongModeChangedGlobal();
@@ -385,8 +382,8 @@ public class AudioPlayback
 
 		// TODO
 		//OPL_Reset(current_song); // Also stop all OPL sounds
-		//GM_Reset(current_song, quitting);
-		//GM_SendSongStopCode(current_song);
+		GeneralMIDI.Reset(Song.CurrentSong, quitting);
+		GeneralMIDI.SendSongStopCode(Song.CurrentSong);
 
 		Array.Clear(Song.CurrentSong.MIDILastRow);
 		Song.CurrentSong.MIDILastRowNumber = -1;
@@ -437,8 +434,7 @@ public class AudioPlayback
 			Song.CurrentSong.BreakRow = row;
 			MaxChannelsUsed = 0;
 
-			// TODO
-			//GM_SendSongStartCode(current_song);
+			GeneralMIDI.SendSongStartCode(Song.CurrentSong);
 
 			// TODO: GM_SendSongPositionCode(calculate the number of 1/16 notes)
 		}
@@ -489,5 +485,51 @@ public class AudioPlayback
 				v.LeftRamp = v.RightRamp = 0;
 			}
 		}
+	}
+
+	public void InitPlayer(bool reset)
+	{
+		if (MaxVoices > Constants.MaxVoices)
+			MaxVoices = Constants.MaxVoices;
+
+		MixFrequency = MixFrequency.Clamp(4000, Constants.MaxSampleRate);
+		RampingSamples = MixFrequency * VolumeRampLength / 100000;
+
+		if (RampingSamples < 8)
+			RampingSamples = 8;
+
+		if (MixFlags.HasFlag(MixFlags.NoRamping))
+			RampingSamples = 2;
+
+		DryROfsVol = DryLOfsVol = 0;
+
+		if (reset)
+		{
+			VULeft = 0;
+			VURight = 0;
+		}
+
+		InitializeEQ(reset, MixFrequency);
+
+		// I don't know why, but this "if" makes it work at the desired sample rate instead of 4000.
+		// the "4000Hz" value comes from csf_reset, but I don't yet understand why the opl keeps that value, if
+		// each call to Fmdrv_Init generates a new opl.
+		if (MixFrequency != 4000)
+			FMDriver.Initialize(MixFrequency);
+
+		GeneralMIDI.Reset(Song.CurrentSong, 0);
+	}
+
+	public void SetWaveConfig(int rate, int bits, int channels)
+	{
+		bool reset = (MixFrequency != rate)
+			|| (MixBitsPerSample != bits)
+			|| (MixChannels != channels);
+
+		MixChannels = channels;
+		MixFrequency = rate;
+		MixBitsPerSample = bits;
+
+		InitPlayer(reset);
 	}
 }

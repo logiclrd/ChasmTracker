@@ -19,12 +19,22 @@ public class Dialog
 	public List<Widget> Widgets = new List<Widget>();
 	public Shared<int> SelectedWidgetIndex = new Shared<int>();
 
+	public Widget? SelectedWidget
+	{
+		get
+		{
+			if ((SelectedWidgetIndex < 0) || (SelectedWidgetIndex >= Widgets.Count))
+				return null;
+
+			return Widgets[SelectedWidgetIndex];
+		}
+	}
+
 	public string? Text;
 	public int TextX;
-	public object? Data;
-	public Action<object?>? ActionYes;
-	public Action<object?>? ActionNo;
-	public Action<object?>? ActionCancel;
+	public Action? ActionYes;
+	public Action? ActionNo;
+	public Action? ActionCancel;
 
 	static Stack<Dialog> s_activeDialogs = new Stack<Dialog>();
 
@@ -168,7 +178,7 @@ public class Dialog
 					{
 						case MessageBoxTypes.YesNo:
 						case MessageBoxTypes.OKCancel:
-							DialogButtonYes(dialog.Data);
+							DialogButtonYes();
 							return true;
 					}
 					break;
@@ -180,12 +190,12 @@ public class Dialog
 							(results in different behavior on sample quality convert dialog) */
 							if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
 							{
-								DialogButtonNo(dialog.Data);
+								DialogButtonNo();
 								return true;
 							}
 							goto case MessageBoxTypes.OKCancel;
 						case MessageBoxTypes.OKCancel:
-							DialogButtonCancel(dialog.Data);
+							DialogButtonCancel();
 							return true;
 					}
 
@@ -202,7 +212,7 @@ public class Dialog
 
 					goto case KeySym.Escape;
 				case KeySym.Escape:
-					DialogButtonCancel(dialog.Data);
+					DialogButtonCancel();
 					return true;
 				case KeySym.o:
 					switch ((MessageBoxTypes)Status.DialogType)
@@ -216,7 +226,7 @@ public class Dialog
 
 					goto case KeySym.Return;
 				case KeySym.Return:
-					DialogButtonYes(dialog.Data);
+					DialogButtonYes();
 					return true;
 				default:
 					break;
@@ -327,8 +337,8 @@ public class Dialog
 	/* --------------------------------------------------------------------- */
 	/* type can be DialogTypes.OK, DialogTypes.Cancel, or DialogTypes.YesNo
 	 * default_widget: 0 = ok/yes, 1 = cancel/no */
-	protected Dialog(MessageBoxTypes type, string text, Action<object?>? actionYes,
-		Action<object?>? actionNo, int defaultWidget, object? data)
+	protected Dialog(MessageBoxTypes type, string text, Action? actionYes,
+		Action? actionNo, int defaultWidget)
 	{
 		if (!type.HasFlag(MessageBoxDialogTypes.Box))
 		{
@@ -341,7 +351,6 @@ public class Dialog
 			Menu.Hide();
 
 		Text = text;
-		Data = data;
 		ActionYes = actionYes;
 		ActionNo = actionNo;
 		ActionCancel = null; /* ??? */
@@ -392,7 +401,7 @@ public class Dialog
 	protected virtual void Initialize() { }
 	protected virtual void SetInitialFocus() { }
 
-	static void DialogButton(string functionName, Func<Dialog, Action<object?>?> getFunctor, object? data)
+	static void DialogButton(string functionName, Func<Dialog, Action?> getFunctor)
 	{
 		if (!s_activeDialogs.Any())
 		{
@@ -404,32 +413,25 @@ public class Dialog
 
 		var action = getFunctor(dialog);
 
-		if (data == null)
-			data = dialog.Data;
-
 		Dialog.Destroy();
 
-		action?.Invoke(data);
+		action?.Invoke();
 
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
-	public static void DialogButtonYes(object? data)
+	public static void DialogButtonYes()
 	{
-		DialogButton(nameof(DialogButtonYes), d => d.ActionYes, data);
+		DialogButton(nameof(DialogButtonYes), d => d.ActionYes);
 	}
 
-	public static void DialogButtonNo(object? data)
+	public static void DialogButtonNo()
 	{
-		DialogButton(nameof(DialogButtonYes), d => d.ActionNo, data);
+		DialogButton(nameof(DialogButtonYes), d => d.ActionNo);
 	}
 
-	public static void DialogButtonCancel(object? data)
+	public static void DialogButtonCancel()
 	{
-		DialogButton(nameof(DialogButtonYes), d => d.ActionCancel, data);
+		DialogButton(nameof(DialogButtonYes), d => d.ActionCancel);
 	}
-
-	public static void DialogButtonYes() => DialogButtonYes(default);
-	public static void DialogButtonNo() => DialogButtonNo(default);
-	public static void DialogButtonCancel() => DialogButtonCancel(default);
 }

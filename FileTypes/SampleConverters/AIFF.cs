@@ -11,6 +11,12 @@ using ChasmTracker.Utility;
 
 public class AIFF : SampleFileConverter
 {
+	public override string Label => "AIFF";
+	public override string Description => "Audio IFF";
+	public override string Extension => ".aiff";
+
+	public override int SortOrder => 3;
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct AIFFChunkVHDR
 	{

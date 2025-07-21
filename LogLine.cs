@@ -5,6 +5,7 @@ public class LogLine
 	public int Colour;
 	public string Text;
 	public bool BIOSFont;
+	public bool Underline;
 
 	public LogLine(int colour, string text, bool biosFont)
 	{

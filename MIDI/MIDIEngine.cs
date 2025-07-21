@@ -665,7 +665,7 @@ public class MIDIEngine : IMIDISink
 
 #if SCHISM_MIDI_DEBUG
 		/* prints all of the raw midi messages into the terminal; useful for debugging output */
-		//int i = 8000 * AudioPlayback.AudioBufferSamples / Song.CurrentSong.MixFrequency;
+		//int i = 8000 * AudioPlayback.AudioBufferSamples / AudioPlayback.MixFrequency;
 
 		for (int i = 0; i < len; i++)
 			Console.Write("{0:X2} ", data[i]);

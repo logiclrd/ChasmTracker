@@ -259,7 +259,7 @@ public abstract class InstrumentFileListPageBase : Page
 					dialog.ChangeFocusTo(1);
 
 					dialog.ActionYes =
-						_ =>
+						() =>
 						{
 							if (_flist.SelectedIndex < 0 || _flist.SelectedIndex >= _flist.NumFiles)
 								return;
@@ -315,7 +315,7 @@ public abstract class InstrumentFileListPageBase : Page
 				goto default;
 			default:
 				if (!string.IsNullOrEmpty(k.Text))
-					otherFileList!.HandleText(new TextInputEvent(k.Text));
+					otherFileList!.HandleText(k.ToTextInputEvent());
 
 				if (k.Mouse == default)
 					return false;

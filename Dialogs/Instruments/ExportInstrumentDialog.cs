@@ -1,4 +1,4 @@
-using System;
+using ChasmTracker.FileTypes;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -13,15 +13,18 @@ public class ExportInstrumentDialog : Dialog
 	ButtonWidget? buttonCancel;
 	OtherWidget? otherEventSink;
 
-	public string FileName;
-	public int ExportFormat;
+	string _fileName;
+	int _exportFormat;
 
-	SaveFormat[] _saveFormats;
+	InstrumentFileConverter[] _saveFormats;
 
-	public ExportInstrumentDialog(string fileName, SaveFormat[] saveFormats)
+	public string FileName => _fileName;
+	public InstrumentFileConverter InstrumentConverter => _saveFormats[_exportFormat];
+
+	public ExportInstrumentDialog(string fileName, InstrumentFileConverter[] saveFormats)
 		: base(new Point(21, 20), new Size(39, 18))
 	{
-		FileName = fileName;
+		_fileName = fileName;
 
 		_saveFormats = saveFormats;
 	}
@@ -56,12 +59,12 @@ public class ExportInstrumentDialog : Dialog
 		{
 			int fg = 6, bg = 0;
 
-			if (isFocused && n == ExportFormat)
+			if (isFocused && n == _exportFormat)
 			{
 				fg = 0;
 				bg = 3;
 			}
-			else if (n == ExportFormat)
+			else if (n == _exportFormat)
 				bg = 14;
 
 			VGAMem.DrawTextLen(_saveFormats[n].Label, 4, new Point(53, 24 + n), (fg, bg));
@@ -70,7 +73,7 @@ public class ExportInstrumentDialog : Dialog
 
 	bool otherEventSink_HandleKey(KeyEvent k)
 	{
-		int newFormat = ExportFormat;
+		int newFormat = _exportFormat;
 
 		if (k.State == KeyState.Release)
 			return false;
@@ -119,10 +122,10 @@ public class ExportInstrumentDialog : Dialog
 
 		newFormat = newFormat.Clamp(0, _saveFormats.Length - 1);
 
-		if (newFormat != ExportFormat)
+		if (newFormat != _exportFormat)
 		{
 			/* update the option string */
-			ExportFormat = newFormat;
+			_exportFormat = newFormat;
 			Status.Flags |= StatusFlags.NeedUpdate;
 		}
 

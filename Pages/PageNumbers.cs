@@ -2,6 +2,8 @@ namespace ChasmTracker;
 
 public enum PageNumbers
 {
+	None = -1,
+
 	Blank,
 	Help,
 	About,

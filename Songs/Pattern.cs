@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ChasmTracker.Playback;
 
 namespace ChasmTracker.Songs;
 
@@ -72,10 +73,13 @@ public class Pattern
 
 	public void Resize(int numRows)
 	{
-		if (Rows.Count > numRows)
-			Rows.RemoveRange(numRows, Rows.Count - numRows);
+		lock (AudioPlayback.LockScope())
+		{
+			if (Rows.Count > numRows)
+				Rows.RemoveRange(numRows, Rows.Count - numRows);
 
-		while (Rows.Count < numRows)
-			Rows.Add(new PatternRow());
+			while (Rows.Count < numRows)
+				Rows.Add(new PatternRow());
+		}
 	}
 }

@@ -1,4 +1,5 @@
 using System;
+using ChasmTracker.Events;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
@@ -11,6 +12,8 @@ public struct KeyEvent
 	public ScanCode ScanCode; /* Locale-independent key locations */
 	public KeyMod Modifiers; /* current key modifiers */
 	public string? Text; /* text input, if any. can be null */
+
+	public TextInputEvent ToTextInputEvent() => new TextInputEvent(Text ?? "");
 
 	public KeyState State;
 	public MouseState Mouse;

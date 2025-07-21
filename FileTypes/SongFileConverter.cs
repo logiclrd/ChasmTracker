@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace ChasmTracker.FileTypes;
@@ -7,7 +9,7 @@ namespace ChasmTracker.FileTypes;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 
-public abstract class SongFileConverter : IFileInfoReader
+public abstract class SongFileConverter : FileConverter, IFileInfoReader
 {
 	public abstract bool FillExtendedData(Stream stream, FileReference fileReference);
 	public abstract Song LoadSong(Stream stream, LoadFlags flags);
@@ -36,4 +38,9 @@ public abstract class SongFileConverter : IFileInfoReader
 
 		return msg.ToString();
 	}
+
+	public static IEnumerable<SongFileConverter> EnumerateImplementations()
+		=> EnumerateImplementationsOfType<SongFileConverter>();
+	public static SongFileConverter? FindImplementation(string label)
+		=> EnumerateImplementationsOfType<SongFileConverter>(false).FirstOrDefault(t => t.Label == label);
 }

@@ -1,15 +1,21 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using ChasmTracker.FileSystem;
-using ChasmTracker.Songs;
-using ChasmTracker.Utility;
-using Microsoft.Extensions.FileSystemGlobbing;
 
 namespace ChasmTracker.FileTypes.Converters;
 
+using ChasmTracker.FileSystem;
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
+
 public class ITS : SampleFileConverter
 {
+	public override string Label => "ITS";
+	public override string Description => "Impulse Tracker";
+	public override string Extension => ".its";
+
+	public override int SortOrder => 1;
+
 	[Flags]
 	enum ITSampleFlags : byte
 	{

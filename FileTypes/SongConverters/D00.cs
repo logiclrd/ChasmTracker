@@ -11,6 +11,8 @@ using ChasmTracker.Utility;
 
 public class D00 : SongFileConverter
 {
+	public override string Label => "D00";
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	struct D00Header
 	{

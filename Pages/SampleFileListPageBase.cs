@@ -23,20 +23,20 @@ using FileTypes = FileSystem.FileTypes;
 
 public class SampleFileListPageBase : Page
 {
-	OtherWidget? otherFileList;
-	TextEntryWidget? textEntryFileName;
-	NumberEntryWidget? numberEntrySampleSpeed;
-	MenuToggleWidget? menuToggleLoop;
-	NumberEntryWidget? numberEntryLoopStart;
-	NumberEntryWidget? numberEntryLoopEnd;
-	MenuToggleWidget? menuToggleSustainLoop;
-	NumberEntryWidget? numberEntrySustainLoopStart;
-	NumberEntryWidget? numberEntrySustainLoopEnd;
-	ThumbBarWidget? thumbBarDefaultVolume;
-	ThumbBarWidget? thumbBarGlobalVolume;
-	ThumbBarWidget? thumbBarVibratoSpeed;
-	ThumbBarWidget? thumbBarVibratoDepth;
-	ThumbBarWidget? thumbBarVibratoRate;
+	OtherWidget otherFileList;
+	TextEntryWidget textEntryFileName;
+	NumberEntryWidget numberEntrySampleSpeed;
+	MenuToggleWidget menuToggleLoop;
+	NumberEntryWidget numberEntryLoopStart;
+	NumberEntryWidget numberEntryLoopEnd;
+	MenuToggleWidget menuToggleSustainLoop;
+	NumberEntryWidget numberEntrySustainLoopStart;
+	NumberEntryWidget numberEntrySustainLoopEnd;
+	ThumbBarWidget thumbBarDefaultVolume;
+	ThumbBarWidget thumbBarGlobalVolume;
+	ThumbBarWidget thumbBarVibratoSpeed;
+	ThumbBarWidget thumbBarVibratoDepth;
+	ThumbBarWidget thumbBarVibratoRate;
 
 	/* the locals */
 	VGAMemOverlay _sampleImage;
@@ -164,7 +164,7 @@ public class SampleFileListPageBase : Page
 			9,
 			0, 255);
 
-		textEntryFileName.Changed += HandleRenameOp;
+		textEntryFileName.Changed += HandlePreload;
 
 		numberEntrySampleSpeed.Changed += HandleLoadUpdate;
 		menuToggleLoop.Changed += HandleLoadUpdate;
@@ -545,53 +545,6 @@ public class SampleFileListPageBase : Page
 		}
 	}
 
-	bool ShowSampleHostDialog(PageNumbers newPage)
-	{
-		/* Actually IT defaults to No when the sample slot already had a sample in it, rather than checking if
-		it was assigned to an instrument. Maybe this is better, though?
-		(Not to mention, passing around the extra state that'd be required to do it that way would be kind of
-		messy...)
-
-		also the double pointer cast sucks.
-
-		also also, IT says Ok/No here instead of Yes/No... but do I care? */
-
-		if (Song.CurrentSong.IsInstrumentMode)
-		{
-			int currentSample = AllPages.SampleList.CurrentSample;
-
-			bool isUsed = Song.CurrentSong.SampleIsUsedByInstrument(currentSample);
-
-			var dialog = MessageBox.Show(MessageBoxTypes.YesNo, "Create host instrument?");
-
-			if (isUsed)
-				dialog.ChangeFocusTo(1);
-
-			dialog.ActionYes =
-				_ =>
-				{
-					Song.CurrentSong.CreateHostInstrument(currentSample);
-
-					if (newPage >= 0)
-						SetPage(newPage);
-				};
-
-			dialog.ActionNo =
-				_ =>
-				{
-					if (newPage >= 0)
-						SetPage(newPage);
-				};
-
-			return true;
-		}
-
-		if (newPage >= 0)
-			SetPage(newPage);
-
-		return false;
-	}
-
 	void FinishLoad(int cur)
 	{
 		Status.Flags |= StatusFlags.SongNeedsSave;
@@ -605,15 +558,22 @@ public class SampleFileListPageBase : Page
 			dialog.SelectionMade +=
 				selection =>
 				{
-					if (selection != StereoConversionSelection.Both)
-						SampleMono(smp, selection);
+					switch (selection)
+					{
+						case StereoConversionSelection.Left:
+							SampleEditOperations.MonoLeft(smp);
+							break;
+						case StereoConversionSelection.Right:
+							SampleEditOperations.MonoRight(smp);
+							break;
+					}
 
 					MemoryUsage.NotifySongChanged();
 
 					Dialog.Destroy();
 
 					if (selection == StereoConversionSelection.Both)
-						ShowSampleHostDialog(PageNumbers.SampleList);
+						SampleListPage.ShowSampleHostDialog(PageNumbers.SampleList);
 					else
 						FinishLoad(cur);
 				};
@@ -621,7 +581,7 @@ public class SampleFileListPageBase : Page
 			return;
 		}
 
-		ShowSampleHostDialog(PageNumbers.SampleList);
+		SampleListPage.ShowSampleHostDialog(PageNumbers.SampleList);
 	}
 
 	/* on the file list, that is */
@@ -788,7 +748,7 @@ public class SampleFileListPageBase : Page
 				_haveSearch = false;
 				if (_flist.NumFiles > 0)
 				{
-					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete file?", accept: _ => DoDeleteFiles())
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete file?", accept: _ => DoDeleteFile())
 						.ChangeFocusTo(1);
 				}
 				return true;
@@ -816,7 +776,7 @@ public class SampleFileListPageBase : Page
 				goto default;
 			default:
 				if (!string.IsNullOrEmpty(k.Text))
-					FileListHandleTextInput(k.Text);
+					FileListHandleTextInput(k.ToTextInputEvent());
 
 				if (k.Mouse == default) return false;
 
@@ -851,11 +811,7 @@ public class SampleFileListPageBase : Page
 				var dialog = MessageBox.Show(MessageBoxTypes.YesNo,
 					"Discard Changes?");
 
-				dialog.ActionYes =
-					_ =>
-					{
-						// TODO: do_discard_changes_and_move
-					};
+				dialog.ActionYes = DoDiscardChangesAndMove;
 
 				return true;
 				/* support saving? XXX */
@@ -911,10 +867,12 @@ public class SampleFileListPageBase : Page
 		if (_fakeSlot != KeyJazz.NoInstrument)
 		{
 			if (k.State == KeyState.Press)
-				AudioPlayback.KeyDown(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n, v, KeyJazz.CurrentChannel);
+				Song.KeyDown(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n, v, KeyJazz.CurrentChannel);
 			else
-				AudioPlayback.KeyUp(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n);
+				Song.KeyUp(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n);
 		}
+
+		return false;
 	}
 
 	/* --------------------------------------------------------------------------------------------------------- */

@@ -5,9 +5,13 @@ namespace ChasmTracker.FileTypes.Exporters;
 
 public class FLAC : SampleExporter
 {
+	public override bool IsEnabled => FLACEncoder.IsWorking;
+
 	public override string Label => "FLAC";
 	public override string Description => "Free Lossless Audio Codec";
 	public override string Extension => ".flac";
+
+	public override int SortOrder => 5;
 
 	FLACEncoder? _encoder;
 

@@ -11,6 +11,10 @@ using ChasmTracker.Utility;
 
 public class ITI : InstrumentFileConverter, IFileInfoReader
 {
+	public override string Label => "ITI";
+	public override string Description => "Impulse Tracker";
+	public override string Extension => ".iti";
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct ITEnvelopeNode
 	{

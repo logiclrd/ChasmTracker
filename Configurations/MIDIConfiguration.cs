@@ -65,4 +65,17 @@ public class MIDIConfiguration
 
 		return ret;
 	}
+
+	public void CopyFrom(MIDIConfiguration other)
+	{
+		foreach (var field in typeof(MIDIConfiguration).GetFields(BindingFlags.Public | BindingFlags.Instance))
+		{
+			var value = field.GetValue(other);
+
+			if (value is Array array)
+				value = array.Clone();
+
+			field.SetValue(this, value);
+		}
+	}
 }

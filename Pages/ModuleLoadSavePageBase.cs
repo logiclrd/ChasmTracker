@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-using Microsoft.Extensions.FileSystemGlobbing;
+using DQD.Glob;
 
 namespace ChasmTracker.Pages;
 
@@ -39,7 +39,7 @@ public abstract class ModuleLoadSavePageBase : Page
 		_filenameEntry is generally a glob pattern, but typing a file/path name directly and hitting enter
 		will load the file.
 
-		_glob is a Matcher object (Microsoft.Extensions.FileSystemGlobbing) that gets updated if enter is pressed
+		_glob is a Globber object (DQD.Glob) that gets updated if enter is pressed
 		while filename_entry contains a '*' or '?' character.
 
 		_dirnameEntry is copied from the module directory (off the vars page) when this page is loaded, and copied back
@@ -76,7 +76,7 @@ public abstract class ModuleLoadSavePageBase : Page
 
 	protected virtual string DefaultGlobPattern => GlobDefault;
 
-	Matcher? _glob;
+	Globber? _glob;
 	string? _globListSrc; // the pattern used to make glob_list (this is an icky hack)
 
 	protected void ResetGlob()
@@ -129,7 +129,7 @@ public abstract class ModuleLoadSavePageBase : Page
 
 	bool ModGrep(FileReference f)
 	{
-		return _glob?.Match(f.BaseName)?.HasMatches ?? true;
+		return _glob?.IsMatch(f.BaseName);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -203,13 +203,13 @@ public abstract class ModuleLoadSavePageBase : Page
 
 	void SetGlob(string globSpec)
 	{
-		_glob = new Matcher(StringComparison.InvariantCultureIgnoreCase);
+		_glob = new Globber();
 
 		_globListSrc = globSpec;
 
 		foreach (string item in globSpec.Split(';').Select(s => s.Trim()))
 			if (!string.IsNullOrWhiteSpace(item))
-				_glob.AddInclude(item);
+				_glob.AddInclude(item, ignoreCase: true);
 
 		/* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
 		could be done with a "visible" flag, which affects the list's sort order, along with adjusting
@@ -562,7 +562,7 @@ public abstract class ModuleLoadSavePageBase : Page
 				{
 					if (!string.IsNullOrEmpty(k.Text))
 					{
-						FileListHandleTextInput(new TextInputEvent(k.Text));
+						FileListHandleTextInput(k.ToTextInputEvent());
 						return true;
 					}
 
@@ -785,7 +785,7 @@ public abstract class ModuleLoadSavePageBase : Page
 				{
 					if (!string.IsNullOrEmpty(k.Text))
 					{
-						DirectoryListHandleTextInput(new TextInputEvent(k.Text));
+						DirectoryListHandleTextInput(k.ToTextInputEvent());
 						return true;
 					}
 

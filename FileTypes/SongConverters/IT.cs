@@ -15,6 +15,12 @@ using ChasmTracker.Utility;
 
 public class IT : SongFileConverter
 {
+	public override string Label => "IT";
+	public override string Description => "Impulse Tracker";
+	public override string Extension => ".it";
+
+	public override int SortOrder => 1;
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct ITFile
 	{

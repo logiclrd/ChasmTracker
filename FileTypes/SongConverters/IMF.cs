@@ -11,6 +11,8 @@ using ChasmTracker.Utility;
 
 public class IMF : SongFileConverter
 {
+	public override string Label => "IMF";
+
 	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		try

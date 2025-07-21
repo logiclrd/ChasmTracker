@@ -11,6 +11,8 @@ public class AIFF : SampleExporter
 	public override string Description => "Audio IFF";
 	public override string Extension => ".aiff";
 
+	public override int SortOrder => 3;
+
 	AIFFWriteData? _awd;
 
 	public override bool ExportHead(Stream fp, int bits, int channels, int rate, int length)

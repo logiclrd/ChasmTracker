@@ -15,6 +15,23 @@ public class FLACEncoder : IDisposable
 	public Stream? InputStream;
 	public Stream? OutputStream;
 
+	public static bool IsWorking
+	{
+		get
+		{
+			// Only return true if the FLAC library seems to be working.
+			try
+			{
+				NativeMethods.FLAC__stream_encoder_delete(NativeMethods.FLAC__stream_encoder_new());
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+	}
+
 	public bool Initialize(Stream outputStream, int bits, int channels, int rate, long estimateNumSamples)
 	{
 		if (!InitializeSaveHead(outputStream, bits, channels, rate, estimateNumSamples))

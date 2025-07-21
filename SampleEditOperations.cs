@@ -119,7 +119,7 @@ public static class SampleEditOperations
 		}
 	}
 
-	public static void SampleReverse(SongSample sample)
+	public static void Reverse(SongSample sample)
 	{
 		using (AudioPlayback.LockScope())
 		{

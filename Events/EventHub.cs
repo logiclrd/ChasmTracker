@@ -9,6 +9,8 @@ namespace ChasmTracker.Events;
 using ChasmTracker.Configurations;
 using ChasmTracker.Input;
 using ChasmTracker.Interop;
+using ChasmTracker.Pages;
+using ChasmTracker.Utility;
 
 public static class EventHub
 {
@@ -130,7 +132,7 @@ public static class EventHub
 				}
 				case SDL.EventType.TextInput:
 				{
-					var text = Marshal.PtrToStringUTF8(e.Text.Text);
+					var text = Marshal.PtrToStringUTF8(e.Text.Text) ?? "";
 
 					if (_pendingKeyDown != null)
 						PopPendingKeyDown(text);

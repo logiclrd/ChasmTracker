@@ -12,6 +12,8 @@ using ChasmTracker.Utility;
 
 public class MDL : SongFileConverter
 {
+	public override string Label => "MDL";
+
 	/* MDL is nice, but it's a pain to read the title... */
 
 	const int EOF = -1;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -9,8 +10,9 @@ using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public abstract class SampleFileConverter : IFileInfoReader
+public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 {
+	public virtual bool IsEnabled => true;
 	public virtual bool CanSave => false;
 
 	public abstract bool FillExtendedData(Stream stream, FileReference file);
@@ -1297,4 +1299,9 @@ public abstract class SampleFileConverter : IFileInfoReader
 			return 0;
 		}
 	}
+
+	public static IEnumerable<SampleFileConverter> EnumerateImplementations()
+		=> EnumerateImplementationsOfType<SampleFileConverter>();
+	public static SampleFileConverter? FindImplementation(string label)
+		=> EnumerateImplementationsOfType<SampleFileConverter>(false).FirstOrDefault(t => t.Label == label);
 }

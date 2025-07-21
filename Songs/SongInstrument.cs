@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Reflection;
 
 namespace ChasmTracker.Songs;
 
@@ -96,6 +97,17 @@ public class SongInstrument
 
 		for (int i = 0; i < SampleMap.Length; i++)
 			SampleMap[i] = (byte)sampleNumber;
+	}
+
+	public SongInstrument Clone()
+	{
+		var newInstrument = new SongInstrument(Owner);
+
+		foreach (var field in typeof(SongInstrument).GetFields(BindingFlags.Public | BindingFlags.Instance))
+			if (!field.IsInitOnly)
+				field.SetValue(newInstrument, field.GetValue(this));
+
+		return newInstrument;
 	}
 
 	public SongSample? TranslateKeyboard(int note, SongSample? def = default)

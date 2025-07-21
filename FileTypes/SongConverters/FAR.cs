@@ -14,6 +14,8 @@ using ChasmTracker.Utility;
 kind of counterproductive, but I can't get Farandole to run in Dosbox to test stuff */
 public class FAR : SongFileConverter
 {
+	public override string Label => "FAR";
+
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
 	class FARHeader
 	{

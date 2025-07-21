@@ -1,13 +1,17 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
+
+namespace ChasmTracker.Pages;
+
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.Samples;
 using ChasmTracker.Events;
 using ChasmTracker.FileSystem;
+using ChasmTracker.FileTypes;
 using ChasmTracker.FileTypes.Converters;
 using ChasmTracker.Input;
 using ChasmTracker.Playback;
@@ -15,10 +19,6 @@ using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
-using Mono.Posix;
-using Mono.Unix.Native;
-
-namespace ChasmTracker.Pages;
 
 public class SampleListPage : Page
 {
@@ -44,16 +44,7 @@ public class SampleListPage : Page
 	/* playback */
 	static int _lastNote = SpecialNotes.MiddleC;
 
-	static readonly SaveFormat[] SaveFormats =
-		new SaveFormat[]
-		{
-			new SaveFormat("ITS", "Impulse Tracker", ".its") { SampleConverter = new ITS() },
-			new SaveFormat("S3I", "Scream Tracker", ".s3i") { SampleConverter = new S3I() },
-			new SaveFormat("AIFF", "Audio IFF", ".aiff") { SampleConverter = new AIFF() },
-			new SaveFormat("AU", "Sun/NeXT", ".au") { SampleConverter = new AU() },
-			new SaveFormat("WAV", "WAV", ".wav") { SampleConverter = new WAV() },
-			new SaveFormat("RAW", "Raw", ".raw") { SampleConverter = new RAW() },
-		};
+	public static readonly SampleFileConverter[] SaveFormats = SampleFileConverter.EnumerateImplementations().ToArray();
 
 	OtherWidget otherSampleList;
 	ThumbBarWidget thumbBarDefaultVolume;
@@ -99,12 +90,12 @@ public class SampleListPage : Page
 		thumbBarVibratoSpeed = new ThumbBarWidget(new Point(38, 39), 9, 0, 64);
 		thumbBarVibratoDepth = new ThumbBarWidget(new Point(38, 46), 9, 0, 64);
 
-		thumbBarDefaultVolume.Changed += update_values_in_song;
-		thumbBarGlobalVolume.Changed += update_values_in_song;
-		toggleEnableDefaultPan.Changed += update_values_in_song;
-		thumbBarDefaultPan.Changed += update_panning;
-		thumbBarVibratoSpeed.Changed += update_values_in_song;
-		thumbBarVibratoDepth.Changed += update_values_in_song;
+		thumbBarDefaultVolume.Changed += UpdateValuesInSong;
+		thumbBarGlobalVolume.Changed += UpdateValuesInSong;
+		toggleEnableDefaultPan.Changed += UpdateValuesInSong;
+		thumbBarDefaultPan.Changed += UpdatePanning;
+		thumbBarVibratoSpeed.Changed += UpdateValuesInSong;
+		thumbBarVibratoDepth.Changed += UpdateValuesInSong;
 
 		/* 7 -> 14 = top right box */
 		textEntryFileName = new TextEntryWidget(new Point(64, 13), 13, "", 12);
@@ -116,14 +107,14 @@ public class SampleListPage : Page
 		numberEntrySustainLoopStart = new NumberEntryWidget(new Point(64, 19), 7, 0, 9999999, _sampleNumEntryCursorPos);
 		numberEntrySustainLoopEnd = new NumberEntryWidget(new Point(64, 20), 7, 0, 9999999, _sampleNumEntryCursorPos);
 
-		textEntryFileName.Changed += update_filename;
-		numberEntryC5Speed.Changed += update_sample_loop_flags;
-		menuToggleLoopEnable.Changed += update_sample_loop_flags;
-		numberEntryLoopStart.Changed += update_sample_loop_points;
-		numberEntryLoopEnd.Changed += update_sample_loop_points;
-		menuToggleSustainLoopEnable.Changed += update_sample_loop_flags;
-		numberEntrySustainLoopStart.Changed += update_sample_loop_points;
-		numberEntrySustainLoopEnd.Changed += update_sample_loop_points;
+		textEntryFileName.Changed += UpdateFilename;
+		numberEntryC5Speed.Changed += UpdateSampleLoopFlags;
+		menuToggleLoopEnable.Changed += UpdateSampleLoopFlags;
+		numberEntryLoopStart.Changed += UpdateSampleLoopPoints;
+		numberEntryLoopEnd.Changed += UpdateSampleLoopPoints;
+		menuToggleSustainLoopEnable.Changed += UpdateSampleLoopFlags;
+		numberEntrySustainLoopStart.Changed += UpdateSampleLoopPoints;
+		numberEntrySustainLoopEnd.Changed += UpdateSampleLoopPoints;
 
 		/* 15 -> 18 = vibrato waveforms */
 		toggleButtonVibratoSine = new ToggleButtonWidget(new Point(57, 36), "\xB9\xBA", 3, VibratoWaveformsGroup);
@@ -131,15 +122,15 @@ public class SampleListPage : Page
 		toggleButtonVibratoSquare = new ToggleButtonWidget(new Point(57, 39), "\xBB\xBC", 3, VibratoWaveformsGroup);
 		toggleButtonVibratoRandom = new ToggleButtonWidget(new Point(67, 39), "Random", 1, VibratoWaveformsGroup);
 
-		toggleButtonVibratoSine.Changed += update_values_in_song;
-		toggleButtonVibratoRampDown.Changed += update_values_in_song;
-		toggleButtonVibratoSquare.Changed += update_values_in_song;
-		toggleButtonVibratoRandom.Changed += update_values_in_song;
+		toggleButtonVibratoSine.Changed += UpdateValuesInSong;
+		toggleButtonVibratoRampDown.Changed += UpdateValuesInSong;
+		toggleButtonVibratoSquare.Changed += UpdateValuesInSong;
+		toggleButtonVibratoRandom.Changed += UpdateValuesInSong;
 
 		/* 19 = vibrato rate */
 		thumbBarVibratoRate = new ThumbBarWidget(new Point(56, 46), 16, 0, 255);
 
-		thumbBarVibratoRate.Changed += update_values_in_song;
+		thumbBarVibratoRate.Changed += UpdateValuesInSong;
 
 		Widgets.Add(otherSampleList);
 		Widgets.Add(thumbBarDefaultVolume);
@@ -172,7 +163,8 @@ public class SampleListPage : Page
 		{
 			if (k.State == KeyState.Release)
 				Status.Flags |= StatusFlags.ClippyPasteSelection;
-			return 1;
+
+			return true;
 		}
 		else if (k.State == KeyState.Press && k.Mouse != MouseState.None && k.MousePosition.X >= 5 && k.MousePosition.Y >= 13 && k.MousePosition.Y <= 47 && k.MousePosition.X <= 34)
 		{
@@ -200,7 +192,7 @@ public class SampleListPage : Page
 					if (k.Mouse == MouseState.DoubleClick)
 					{
 						/* this doesn't appear to work */
-						SetPage(PageNumbers.LoadSample);
+						SetPage(PageNumbers.SampleLoad);
 						Status.Flags |= StatusFlags.NeedUpdate;
 						return true;
 					}
@@ -301,7 +293,7 @@ public class SampleListPage : Page
 					else
 						newSample -= 16;
 					break;
-				case KeySym.Pagedown:
+				case KeySym.PageDown:
 					if (k.State == KeyState.Release)
 						return false;
 					if (k.Modifiers.HasAnyFlag(KeyMod.Control))
@@ -312,7 +304,7 @@ public class SampleListPage : Page
 				case KeySym.Return:
 					if (k.State == KeyState.Press)
 						return false;
-					SetPage(PageNumbers.LoadSample);
+					SetPage(PageNumbers.SampleLoad);
 					break;
 				case KeySym.Backspace:
 					if (k.State == KeyState.Release)
@@ -336,9 +328,8 @@ public class SampleListPage : Page
 					if (k.State == KeyState.Release)
 						return false;
 					if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAlt)) {
-						if (_sampleListCursorPos < 25) {
-							sample_list_delete_next_char();
-						}
+						if (_sampleListCursorPos < 25)
+							SampleListDeleteNextChar();
 						return true;
 					}
 					return false;
@@ -361,13 +352,13 @@ public class SampleListPage : Page
 						}
 						return false;
 					}
-					else if ((k.Modifiers.HasAnyFlag(KeyMod.Control)) == 0 && _sampleListCursorPos < 25)
+					else if (!k.Modifiers.HasAnyFlag(KeyMod.Control) && _sampleListCursorPos < 25)
 					{
 						if (k.State == KeyState.Release)
 							return true;
 
-						if (k->text)
-							return SampleListHandleTextInput(k->text);
+						if (!string.IsNullOrEmpty(k.Text))
+							return SampleListHandleTextInput(k.Text);
 
 						/* ...uhhhhhh */
 						return false;
@@ -423,9 +414,9 @@ public class SampleListPage : Page
 			bool hasData = sample.HasData;
 
 			if (sample.IsPlayed)
-				VGAMem.DrawCharacter(isPlaying[n] > 1 ? 183 : 173, new Point(1, 13 + pos), isPlaying[n] ? (3, 2) : (1, 2));
+				VGAMem.DrawCharacter((isPlaying[n] > 1) ? (char)183 : (char)173, new Point(1, 13 + pos), (isPlaying[n] > 0) ? (3, 2) : (1, 2));
 
-			VGAMem.DrawText(n.ToString99(), new Point(2, 13 + pos), (sample.FlagsFlags.HasFlag(SampleFlags.Mute)) ? (1, 1) : (0, 2));
+			VGAMem.DrawText(n.ToString99(), new Point(2, 13 + pos), (sample.Flags.HasFlag(SampleFlags.Mute)) ? (1, 1) : (0, 2));
 
 			// wow, this is entirely horrible
 			int pn = (sample.Name.Length >= 25) ? sample.Name[24] : int.MaxValue;
@@ -482,9 +473,52 @@ public class SampleListPage : Page
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
+	/* --------------------------------------------------------------------- */
+	/* wheesh */
+
 	public override void DrawConst()
 	{
-	//page->draw_const = sample_list_draw_const;
+		VGAMem.DrawBox(new Point(4, 12), new Point(35, 48), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(63, 12), new Point(77, 24), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
+
+		VGAMem.DrawBox(new Point(36, 12), new Point(53, 18), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(37, 15), new Point(47, 17), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(36, 19), new Point(53, 25), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(37, 22), new Point(47, 24), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(36, 26), new Point(53, 33), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(37, 29), new Point(47, 32), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(36, 35), new Point(53, 41), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(37, 38), new Point(47, 40), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(36, 42), new Point(53, 48), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(37, 45), new Point(47, 47), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(54, 25), new Point(77, 30), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(54, 31), new Point(77, 41), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(54, 42), new Point(77, 48), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+		VGAMem.DrawBox(new Point(55, 45), new Point(72, 47), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
+
+		VGAMem.DrawFillCharacters(new Point(41, 30), new Point(46, 30), (VGAMem.DefaultForeground, 0));
+		VGAMem.DrawFillCharacters(new Point(64, 13), new Point(76, 23), (VGAMem.DefaultForeground, 0));
+
+		VGAMem.DrawText("Default Volume", new Point(38, 14), (0, 2));
+		VGAMem.DrawText("Global Volume", new Point(38, 21), (0, 2));
+		VGAMem.DrawText("Default Pan", new Point(39, 28), (0, 2));
+		VGAMem.DrawText("Vibrato Speed", new Point(38, 37), (0, 2));
+		VGAMem.DrawText("Vibrato Depth", new Point(38, 44), (0, 2));
+		VGAMem.DrawText("Filename", new Point(55, 13), (0, 2));
+		VGAMem.DrawText("Speed", new Point(58, 14), (0, 2));
+		VGAMem.DrawText("Loop", new Point(59, 15), (0, 2));
+		VGAMem.DrawText("LoopBeg", new Point(56, 16), (0, 2));
+		VGAMem.DrawText("LoopEnd", new Point(56, 17), (0, 2));
+		VGAMem.DrawText("SusLoop", new Point(56, 18), (0, 2));
+		VGAMem.DrawText("SusLBeg", new Point(56, 19), (0, 2));
+		VGAMem.DrawText("SusLEnd", new Point(56, 20), (0, 2));
+		VGAMem.DrawText("Quality", new Point(56, 22), (0, 2));
+		VGAMem.DrawText("Length", new Point(57, 23), (0, 2));
+		VGAMem.DrawText("Vibrato Waveform", new Point(58, 33), (0, 2));
+		VGAMem.DrawText("Vibrato Rate", new Point(60, 44), (0, 2));
+
+		for (int n = 0; n < 13; n++)
+			VGAMem.DrawCharacter(154, new Point(64 + n, 21), (3, 0));
 	}
 
 	public override void PredrawHook()
@@ -559,7 +593,8 @@ public class SampleListPage : Page
 
 	public override bool? HandleKey(KeyEvent k)
 	{
-		//page->handle_key = sample_list_handle_key;
+		SampleListHandleKey(k);
+		return true;
 	}
 
 	public override void SetPage()
@@ -699,7 +734,7 @@ public class SampleListPage : Page
 		if (smp == null)
 			return;
 
-		if (_sampleListCursorPos < smp.Name.Length)
+		if (_sampleListCursorPos < smp.Name?.Length)
 		{
 			_sampleListCursorPos--;
 
@@ -775,7 +810,7 @@ public class SampleListPage : Page
 		if (n >= 1 && n <= LastVisibleSampleNumber())
 		{
 			Song.CurrentSong.CopySample(_currentSample, Song.CurrentSong.EnsureSample(n));
-			ShowSampleHostDialog(-1);
+			ShowSampleHostDialog(PageNumbers.None);
 		}
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
@@ -800,6 +835,327 @@ public class SampleListPage : Page
 				success = true;
 
 		return success;
+	}
+
+	void SampleListHandleAltKey(KeyEvent k)
+	{
+		var sample = Song.CurrentSong.GetSample(_currentSample);
+
+		bool canMod = (sample != null) && sample.HasData && !sample.Flags.HasFlag(SampleFlags.Adlib);
+
+		if (k.State == KeyState.Release)
+			return;
+
+		switch (k.Sym)
+		{
+			case KeySym.a:
+				if (canMod)
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Convert sample?", _ => DoSignConvert());
+				return;
+			case KeySym.b:
+				if (canMod && (sample!.LoopStart > 0
+								|| (sample.Flags.HasFlag(SampleFlags.SustainLoop) && sample.SustainStart > 0)))
+				{
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", _ => DoPreLoopCut())
+						.SelectedWidgetIndex.Value = 1;
+				}
+				return;
+			case KeySym.d:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				{
+					if (canMod && sample!.Flags.HasFlag(SampleFlags.Stereo))
+					{
+						MessageBox.Show(MessageBoxTypes.OKCancel, "Downmix sample to mono?", _ => DoDownmix());
+					}
+				}
+				else
+				{
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete sample?", _ => DoDeleteSample())
+						.SelectedWidgetIndex.Value = 1;
+				}
+				return;
+			case KeySym.e:
+				if (canMod)
+				{
+					if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+						ShowResampleSampleDialog(true);
+					else
+						ShowResizeSampleDialog(true);
+				}
+				break;
+			case KeySym.f:
+				if (canMod)
+				{
+					if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+						ShowResampleSampleDialog(false);
+					else
+						ShowResizeSampleDialog(false);
+				}
+				break;
+			case KeySym.g:
+				if (canMod)
+					SampleEditOperations.Reverse(sample!);
+				break;
+			case KeySym.h:
+				if (canMod)
+					MessageBox.Show(MessageBoxTypes.YesNo, "Centralise sample?", _ => DoCentralise());
+				return;
+			case KeySym.i:
+				if (canMod)
+					SampleEditOperations.Invert(sample!);
+				break;
+			case KeySym.l:
+				if (canMod && (sample!.LoopEnd > 0
+								|| (sample.Flags.HasFlag(SampleFlags.SustainLoop) && sample.SustainEnd > 0)))
+				{
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", _ => DoPostLoopCut())
+						.SelectedWidgetIndex.Value = 1;
+				}
+				return;
+			case KeySym.m:
+				if (canMod)
+					ShowSampleAmplifyDialog();
+				return;
+			case KeySym.n:
+				AudioPlayback.ToggleMultichannelMode();
+				return;
+			case KeySym.o:
+				SaveSample(null, new ITS());
+				return;
+			case KeySym.p:
+			{
+				var dialog = Dialog.Show(new SamplePromptDialog("Sample", "Copy sample:"));
+
+				dialog.Finish += n => DoCopySample(n);
+				return;
+			}
+			case KeySym.q:
+				if (canMod)
+					MessageBox.Show(MessageBoxTypes.YesNo, "Convert sample?", _ => DoQualityConvert(), _ => DoQualityToggle());
+				return;
+			case KeySym.r:
+			{
+				var dialog = Dialog.Show(new SamplePromptDialog("Sample", "Replace sample with:"));
+
+				dialog.Finish += n => DoReplaceSample(n);
+				return;
+			}
+			case KeySym.s:
+			{
+				var dialog = Dialog.Show(new SamplePromptDialog("Sample", "Swap sample with:"));
+
+				dialog.Finish += n => DoSwapSample(n);
+				return;
+			}
+			case KeySym.t:
+				ShowExportSampleDialog();
+				return;
+			case KeySym.v:
+				if (!canMod || (Status.Flags.HasFlag(StatusFlags.ClassicMode)))
+					return;
+
+				if (!sample!.Flags.HasAnyFlag( SampleFlags.Loop | SampleFlags.SustainLoop))
+				{
+					MessageBox.Show(MessageBoxTypes.OK, "Crossfade requires a sample loop to work.");
+					return;
+				}
+
+				if ((sample.LoopStart == 0) && (sample.SustainStart == 0))
+				{
+					MessageBox.Show(MessageBoxTypes.OK, "Crossfade requires data before the sample loop.");
+					return;
+				}
+
+				ShowCrossfadeSampleDialog();
+				return;
+			case KeySym.w:
+				SaveSample(null, new RAW());
+				return;
+			case KeySym.x:
+			{
+				var dialog = Dialog.Show(new SamplePromptDialog("Sample", "Exchange sample with:"));
+
+				dialog.Finish += n => DoExchangeSample(n);
+				return;
+			}
+			case KeySym.y:
+				/* hi virt */
+				ShowTextSynthDialog();
+				return;
+			case KeySym.z:
+			{
+				// uguu~
+				bool doAdlibPatch = k.Modifiers.HasAnyFlag(KeyMod.Shift);
+
+				Action dlg =
+					() =>
+					{
+						if (doAdlibPatch)
+							ShowAdlibPatchDialog();
+						else
+							ShowAdlibConfigDialog();
+					};
+
+				if (canMod)
+				{
+					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "This will replace the current sample.");
+
+					dialog.SelectedWidgetIndex.Value = 1;
+					dialog.ActionYes += dlg;
+				}
+				else
+					dlg();
+				return;
+			}
+			case KeySym.Insert:
+				Song.CurrentSong.InsertSampleSlot(_currentSample);
+				break;
+			case KeySym.Delete:
+				Song.CurrentSong.RemoveSampleSlot(_currentSample);
+				break;
+			case KeySym.F9:
+				ToggleMute(_currentSample);
+				break;
+			case KeySym.F10:
+				ToggleSolo(_currentSample);
+				break;
+			default:
+				return;
+		}
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
+	void SampleListHandleKey(KeyEvent k)
+	{
+		int newSample = _currentSample;
+		var sample = Song.CurrentSong.GetSample(_currentSample);
+
+		switch (k.Sym)
+		{
+			case KeySym.Space:
+				if (k.State == KeyState.Release)
+					return;
+				if (SelectedActiveWidget == otherSampleList)
+					Status.Flags |= StatusFlags.NeedUpdate;
+				return;
+			case KeySym.Equals:
+				if (!k.Modifiers.HasAnyFlag(KeyMod.Shift))
+					return;
+				goto case KeySym.Plus;
+			case KeySym.Plus:
+				if (k.State == KeyState.Release)
+					return;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) {
+					sample = Song.CurrentSong.EnsureSample(_currentSample);
+					sample.C5Speed *= 2;
+					Status.Flags |= StatusFlags.SongNeedsSave;
+				} else if (k.Modifiers.HasAnyFlag(KeyMod.Control)) {
+					sample = Song.CurrentSong.EnsureSample(_currentSample);
+					sample.C5Speed = SongNote.CalculateHalfTone(sample.C5Speed, 1);
+					Status.Flags |= StatusFlags.SongNeedsSave;
+				}
+				Status.Flags |= StatusFlags.NeedUpdate;
+				return;
+			case KeySym.Minus:
+				if (k.State == KeyState.Release)
+					return;
+				if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) {
+					sample = Song.CurrentSong.EnsureSample(_currentSample);
+					sample.C5Speed /= 2;
+					Status.Flags |= StatusFlags.SongNeedsSave;
+				} else if (k.Modifiers.HasAnyFlag(KeyMod.Control)) {
+					sample = Song.CurrentSong.EnsureSample(_currentSample);
+					sample.C5Speed = SongNote.CalculateHalfTone(sample.C5Speed, -1);
+					Status.Flags |= StatusFlags.SongNeedsSave;
+				}
+				Status.Flags |= StatusFlags.NeedUpdate;
+				return;
+
+			case KeySym.Comma:
+			case KeySym.Less:
+				if (k.State == KeyState.Release)
+					return;
+				AudioPlayback.ChangeCurrentPlayChannel(-1, false);
+				return;
+			case KeySym.Period:
+			case KeySym.Greater:
+				if (k.State == KeyState.Release)
+					return;
+				AudioPlayback.ChangeCurrentPlayChannel(+1, false);
+				return;
+			case KeySym.PageUp:
+				if (k.State == KeyState.Release)
+					return;
+				newSample--;
+				break;
+			case KeySym.PageDown:
+				if (k.State == KeyState.Release)
+					return;
+				newSample++;
+				break;
+			case KeySym.Escape:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
+					if (k.State == KeyState.Release)
+						return;
+					_sampleListCursorPos = 25;
+					FixAcceptText();
+					ChangeFocusTo(otherSampleList);
+					Status.Flags |= StatusFlags.NeedUpdate;
+					return;
+				}
+				return;
+			default:
+				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
+				{
+					if (k.State == KeyState.Release)
+						return;
+					SampleListHandleAltKey(k);
+				}
+				else if (!k.IsRepeat)
+				{
+					int n, v;
+
+					if (k.MIDINote > -1)
+					{
+						n = k.MIDINote;
+
+						if (k.MIDIVolume > -1)
+							v = k.MIDIVolume / 2;
+						else
+							v = KeyJazz.DefaultVolume;
+					}
+					else
+					{
+						n = (k.Sym == KeySym.Space)
+							? _lastNote
+							: k.NoteValue;
+
+						if (n <= 0 || n > 120)
+							return;
+
+						v = KeyJazz.DefaultVolume;
+					}
+
+					if (k.State == KeyState.Release)
+						Song.KeyUp(_currentSample, KeyJazz.NoInstrument, n);
+					else
+					{
+						Song.KeyDown(_currentSample, KeyJazz.NoInstrument, n, v, KeyJazz.CurrentChannel);
+						_lastNote = n;
+					}
+				}
+				return;
+		}
+
+		newSample = newSample.Clamp(1, LastVisibleSampleNumber());
+
+		if (newSample != _currentSample)
+		{
+			CurrentSample = newSample;
+			Reposition();
+			Status.Flags |= StatusFlags.NeedUpdate;
+		}
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -850,7 +1206,7 @@ public class SampleListPage : Page
 				? Math.Max(sample.LoopEnd, sample.SustainEnd)
 				: sample.LoopEnd;
 
-			if (pos == 0 || pos >= sample.length)
+			if (pos == 0 || pos >= sample.Length)
 				return;
 
 			Status.Flags |= StatusFlags.SongNeedsSave;
@@ -925,9 +1281,9 @@ public class SampleListPage : Page
 
 	void ShowSampleAmplifyDialog()
 	{
-		var dialog = Dialog.Show<AmplifyDialog>();
+		var dialog = Dialog.Show(new AmplifyDialog(_currentSample));
 
-		dialog.ActionYes += _ => DoAmplify(dialog.Percent);
+		dialog.ActionYes += () => DoAmplify(dialog.Percent);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -940,12 +1296,11 @@ public class SampleListPage : Page
 		if (Song.CurrentSong.GetSample(_currentSample) is SongSample sample)
 		{
 			sample.Flags &= ~(SampleFlags._16Bit | SampleFlags.Stereo);
-			sample.Length = (textSynthEntry.Length + bytesPerFrame - 1) / bytesPerFrame;
 			sample.AllocateData();
 
 			byte[] textSynthEntryBytes = Encoding.ASCII.GetBytes(textSynthEntry);
 
-			Buffer.BlockCopy(textSynthEntryBytes, 0, sample.Buffer, SongSample.AllocatePrepend, textSynthEntryBytes.Length);
+			Buffer.BlockCopy(textSynthEntryBytes, 0, sample.Data!, SongSample.AllocatePrepend, textSynthEntryBytes.Length);
 
 			sample.LoopStart = 0;
 			sample.LoopEnd = sample.Length;
@@ -956,7 +1311,7 @@ public class SampleListPage : Page
 
 			sample.AdjustLoop();
 
-			ShowSampleHostDialog(-1);
+			ShowSampleHostDialog(PageNumbers.None);
 		}
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
@@ -966,7 +1321,7 @@ public class SampleListPage : Page
 	{
 		var dialog = Dialog.Show<TextSynthDialog>();
 
-		dialog.ActionYes = _ => DoTextSynth(dialog.Entry);
+		dialog.ActionYes = () => DoTextSynth(dialog.Entry);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -995,7 +1350,7 @@ public class SampleListPage : Page
 			sample.GlobalVolume = 64;
 		}
 
-		ShowSampleHostDialog(-1);
+		ShowSampleHostDialog(PageNumbers.None);
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}
@@ -1016,7 +1371,7 @@ public class SampleListPage : Page
 				SetPage(PageNumbers.Help);
 			};
 
-		dialog.ActionYes += _ => DoAdlibConfig(dialog.Sample, dialog.AdlibBytes);
+		dialog.ActionYes += () => DoAdlibConfig(dialog.Sample, dialog.AdlibBytes);
 	}
 
 	void ShowAdlibPatchDialog()
@@ -1033,14 +1388,14 @@ public class SampleListPage : Page
 				FMPatches.Apply(sample, n - 1);
 				Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.SongNeedsSave; // redraw the sample
 
-				ShowSampleHostDialog(-1);
+				ShowSampleHostDialog(PageNumbers.None);
 			};
 	}
 
 	/* --------------------------------------------------------------------- */
 
 	/* filename can be NULL, in which case the sample filename is used (quick save) */
-	void SaveSample(string? fileName, string format)
+	void SaveSample(string? fileName, SampleFileConverter converter)
 	{
 		var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
@@ -1085,7 +1440,7 @@ public class SampleListPage : Page
 		{
 			// I guess this function doesn't need to care about the return value,
 			// since Song.SaveSample is handling all the visual feedback...
-			Song.CurrentSong.SaveSample(ptr, format, _currentSample);
+			Song.CurrentSong.SaveSample(ptr, converter, _currentSample);
 		}
 
 		if (Directory.Exists(ptr))
@@ -1096,7 +1451,7 @@ public class SampleListPage : Page
 			{
 				var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?", _ => DoSaveSample());
 
-				dialog.SelectedWidgetIndex = 1;
+				dialog.SelectedWidgetIndex.Value = 1;
 			}
 			else
 				Status.FlashText(fileName + " is not a regular file");
@@ -1107,214 +1462,72 @@ public class SampleListPage : Page
 
 	/* export sample dialog */
 
-	struct widget export_sample_widgets[4];
-	char export_sample_filename[SCHISM_NAME_MAX + 1] = "";
-	int export_sample_format = 0;
-
-	void do_export_sample()
+	void ShowExportSampleDialog()
 	{
-		int exp = export_sample_format;
-		int i, c;
+		SongSample sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-		for (i = 0, c = 0; sample_save_formats[i].label; i++) {
-			if (sample_save_formats[i].enabled && !sample_save_formats[i].enabled())
-				continue;
+		var dialog = Dialog.Show(new ExportSampleDialog(sample.FileName));
 
-			if (c == exp)
-				break;
-
-			c++;
-		}
-
-		if (!sample_save_formats[i].label) return; /* ??? */
-
-		sample_save(export_sample_filename, sample_save_formats[i].label);
-	}
-
-	void export_sample_list_draw(void)
-	{
-		int n, focused = (*selected_widget == 3), c;
-
-		draw_fill_chars(53, 24, 56, 31, DEFAULT_FG, 0);
-		for (c = 0, n = 0; sample_save_formats[n].label; n++) {
-			if (sample_save_formats[n].enabled && !sample_save_formats[n].enabled())
-				continue;
-
-			int fg = 6, bg = 0;
-			if (focused && c == export_sample_format) {
-				fg = 0;
-				bg = 3;
-			} else if (c == export_sample_format) {
-				bg = 14;
-			}
-			draw_text_len(sample_save_formats[n].label, 4, 53, 24 + c, fg, bg);
-			c++;
-		}
-	}
-
-	int export_sample_list_handle_key(struct key_event * k)
-	{
-		int new_format = export_sample_format;
-
-		if (k.State == KeyState.Release)
-			return 0;
-		switch (k.Sym) {
-		case KeySym.Up:
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return 0;
-			new_format--;
-			break;
-		case KeySym.Down:
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return 0;
-			new_format++;
-			break;
-		case KeySym.Pageup:
-		case KeySym.Home:
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return 0;
-			new_format = 0;
-			break;
-		case KeySym.Pagedown:
-		case KeySym.End:
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return 0;
-			new_format = num_save_formats - 1;
-			break;
-		case KeySym.Tab:
-			if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
-				widget_change_focus_to(0);
-				return 1;
-			}
-			/* fall through */
-		case KeySym.Left:
-		case KeySym.Right:
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return 0;
-			widget_change_focus_to(0); /* should focus 0/1/2 depending on what's closest */
-			return 1;
-		default:
-			return 0;
-		}
-
-		new_format = new_format.Clamp(0, num_save_formats - 1);
-		if (new_format != export_sample_format) {
-			/* update the option string */
-			export_sample_format = new_format;
-			Status.Flags |= StatusFlags.NeedUpdate;
-		}
-
-		return 1;
-	}
-
-	void export_sample_draw_const(void)
-	{
-		draw_text("Export Sample", 34, 21, 0, 2);
-
-		draw_text("Filename", 24, 24, 0, 2);
-		draw_box(32, 23, 51, 25, BOX_THICK | BOX_INNER | BOX_INSET);
-
-		draw_box(52, 23, 57, 32, BOX_THICK | BOX_INNER | BOX_INSET);
-	}
-
-	void export_sample_dialog(void)
-	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		struct dialog *dialog;
-
-		widget_create_textentry(export_sample_widgets + 0, 33, 24, 18, 0, 1, 3, NULL,
-				export_sample_filename, ARRAY_SIZE(export_sample_filename) - 1);
-		widget_create_button(export_sample_widgets + 1, 31, 35, 6, 0, 1, 2, 2, 2, dialog_yes_NULL, "OK", 3);
-		widget_create_button(export_sample_widgets + 2, 42, 35, 6, 3, 2, 1, 1, 1, dialog_cancel_NULL, "Cancel", 1);
-		widget_create_other(export_sample_widgets + 3, 0, export_sample_list_handle_key, NULL, export_sample_list_draw);
-
-		strncpy(export_sample_filename, sample.filename, ARRAY_SIZE(export_sample_filename) - 1);
-		export_sample_filename[ARRAY_SIZE(export_sample_filename) - 1] = 0;
-
-		dialog = dialog_create_custom(21, 20, 39, 18, export_sample_widgets, 4, 0,
-								export_sample_draw_const, NULL);
-		dialog->action_yes = do_export_sample;
+		dialog.ActionYes += () => SaveSample(dialog.FileName, dialog.SampleExporter);
 	}
 
 
 	/* resize sample dialog */
-	struct widget resize_sample_widgets[2];
-	int resize_sample_cursor;
-
-	void do_resize_sample_aa()
+	void DoResizeSampleAntiAlias(int sampleNumber, int newLength)
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		uint32_t newlen = resize_sample_widgets[0].d.numentry.value;
-		sample_resize(sample, newlen, 1);
+		var sample = Song.CurrentSong.EnsureSample(sampleNumber);
+
+		SampleEditOperations.Resize(sample, newLength, true);
 	}
 
-	void do_resize_sample()
+	void DoResizeSample(int sampleNumber, int newLength)
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		uint32_t newlen = resize_sample_widgets[0].d.numentry.value;
-		sample_resize(sample, newlen, 0);
+		var sample = Song.CurrentSong.EnsureSample(sampleNumber);
+
+		SampleEditOperations.Resize(sample, newLength, false);
 	}
 
-	void resize_sample_draw_const(void)
+	void ShowResizeSampleDialog(bool antiAlias)
 	{
-		draw_text("Resize Sample", 34, 24, 3, 2);
-		draw_text("New Length", 31, 27, 0, 2);
-		draw_box(41, 26, 49, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-	}
+		var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-	void resize_sample_dialog(int aa)
-	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		struct dialog *dialog;
+		var dialog = Dialog.Show(new ResizeSampleDialog(sample.Length));
 
-		resize_sample_cursor = 0;
-		widget_create_numentry(resize_sample_widgets + 0, 42, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resize_sample_cursor);
-		resize_sample_widgets[0].d.numentry.value = sample.length;
-		widget_create_button(resize_sample_widgets + 1, 36, 30, 6, 0, 1, 1, 1, 1,
-			dialog_cancel_NULL, "Cancel", 1);
-		dialog = dialog_create_custom(26, 22, 29, 11, resize_sample_widgets, 2, 0,
-			resize_sample_draw_const, NULL);
-		dialog->action_yes = aa ? do_resize_sample_aa : do_resize_sample;
+		if (antiAlias)
+			dialog.ActionYes += () => DoResizeSampleAntiAlias(_currentSample, dialog.NewLength);
+		else
+			dialog.ActionYes += () => DoResizeSample(_currentSample, dialog.NewLength);
 	}
 
 	/* resample sample dialog, mostly the same as above */
-	struct widget resample_sample_widgets[2];
-	int resample_sample_cursor;
-
-	void do_resample_sample_aa()
+	void DoResampleSampleAntiAlias(int sampleNumber, int newC5Speed)
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		uint32_t newlen = _muldiv(sample.length, resample_sample_widgets[0].d.numentry.value, sample.c5speed);
-		sample_resize(sample, newlen, 1);
+		var sample = Song.CurrentSong.EnsureSample(sampleNumber);
+
+		int newLen = (int)((long)sample.Length * newC5Speed / sample.C5Speed);
+
+		SampleEditOperations.Resize(sample, newLen, true);
 	}
 
-	void do_resample_sample()
+	void DoResampleSample(int sampleNumber, int newC5Speed)
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		uint32_t newlen = _muldiv(sample.length, resample_sample_widgets[0].d.numentry.value, sample.c5speed);
-		sample_resize(sample, newlen, 0);
+		var sample = Song.CurrentSong.EnsureSample(sampleNumber);
+
+		int newLen = (int)((long)sample.Length * newC5Speed / sample.C5Speed);
+
+		SampleEditOperations.Resize(sample, newLen, false);
 	}
 
-	void resample_sample_draw_const(void)
+	void ShowResampleSampleDialog(bool antiAlias)
 	{
-		draw_text("Resample Sample", 33, 24, 3, 2);
-		draw_text("New Sample Rate", 28, 27, 0, 2);
-		draw_box(43, 26, 51, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-	}
+		var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-	void resample_sample_dialog(int aa)
-	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		struct dialog *dialog;
+		var dialog = Dialog.Show(new ResampleSampleDialog(sample.C5Speed));
 
-		resample_sample_cursor = 0;
-		widget_create_numentry(resample_sample_widgets + 0, 44, 27, 7, 0, 1, 1, NULL, 0, 9999999, &resample_sample_cursor);
-		resample_sample_widgets[0].d.numentry.value = sample.c5speed;
-		widget_create_button(resample_sample_widgets + 1, 37, 30, 6, 0, 1, 1, 1, 1,
-			dialog_cancel_NULL, "Cancel", 1);
-		dialog = dialog_create_custom(26, 22, 28, 11, resample_sample_widgets, 2, 0,
-			resample_sample_draw_const, NULL);
-		dialog->action_yes = aa ? do_resample_sample_aa : do_resample_sample;
+		if (antiAlias)
+			dialog.ActionYes += () => DoResampleSampleAntiAlias(_currentSample, dialog.NewC5Speed);
+		else
+			dialog.ActionYes += () => DoResampleSample(_currentSample, dialog.NewC5Speed);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -1323,603 +1536,319 @@ public class SampleListPage : Page
 	// internally, but it's never actually used or exposed
 	// to the user.
 
-	struct widget crossfade_sample_widgets[6];
-	int crossfade_sample_length_cursor;
-	const int crossfade_sample_loop_group[] = { 0, 1, -1 };
-
-	void do_crossfade_sample()
+	void ShowCrossfadeSampleDialog()
 	{
-		song_sample_t *smp = song_get_sample(_currentSample);
+		var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-		sample_crossfade(smp, crossfade_sample_widgets[2].d.numentry.value, crossfade_sample_widgets[3].d.thumbbar.value + 50, 0, crossfade_sample_widgets[1].d.togglebutton.state);
-	}
+		var dialog = Dialog.Show(new CrossfadeSampleDialog(sample));
 
-	void crossfade_sample_draw_const(void)
-	{
-		draw_text("Crossfade Sample", 32, 22, 3, 2);
-		draw_text("Samples To Fade", 28, 27, 0, 2);
-		draw_text("Volume", 28, 29, 0, 2);
-		draw_text("Power", 47, 29, 0, 2);
-		draw_box(27, 30, 48, 32, BOX_THIN | BOX_INNER | BOX_INSET);
-
-		draw_box(44, 26, 52, 28, BOX_THICK | BOX_INNER | BOX_INSET);
-	}
-
-	// regenerate the sample loop widget based on loop/susloop data
-	void crossfade_sample_loop_changed(void)
-	{
-		song_sample_t *smp = song_get_sample(_currentSample);
-
-		const int sustain = crossfade_sample_widgets[1].d.togglebutton.state;
-
-		const uint32_t loop_start = (sustain) ? smp->sustain_start : smp->loop_start;
-		const uint32_t loop_end = (sustain) ? smp->sustain_end : smp->loop_end;
-
-		const uint32_t max = MIN(loop_end - loop_start, loop_start);
-
-		widget_create_numentry(crossfade_sample_widgets + 2, 45, 27, 7, 0, 3, 3, NULL, 0, max, &crossfade_sample_length_cursor);
-		crossfade_sample_widgets[2].d.numentry.value = max;
-	}
-
-	void crossfade_sample_dialog(void)
-	{
-		song_sample_t *smp = song_get_sample(_currentSample);
-		struct dialog *dialog;
-
-		// Sample Loop/Sustain Loop
-		// FIXME the buttons for loop/sustain ought to be disabled when their respective loops are not valid
-		widget_create_togglebutton(crossfade_sample_widgets + 0, 31, 24, 6, 0, 2, 1, 1, 1, crossfade_sample_loop_changed, "Loop",    2, crossfade_sample_loop_group);
-		widget_create_togglebutton(crossfade_sample_widgets + 1, 41, 24, 7, 2, 2, 0, 0, 2, crossfade_sample_loop_changed, "Sustain", 1, crossfade_sample_loop_group);
-
-		// Default to sustain loop if there is a sustain loop but no regular loop, or the regular loop is not valid
-		crossfade_sample_widgets[((smp->flags & CHN_SUSTAINLOOP) && !((smp->flags & CHN_LOOP) && smp->loop_start && smp->loop_end)) ? 1 : 0].d.togglebutton.state = 1;
-
-		// Samples To Fade; handled in other function to account for differences between
-		// sample loop and sustain loop
-		crossfade_sample_loop_changed();
-
-		// Priority
-		widget_create_thumbbar(crossfade_sample_widgets + 3, 28, 31, 20, 2, 4, 4, NULL, -50, 50);
-		crossfade_sample_widgets[3].d.thumbbar.value = 0;
-
-		// Cancel/OK
-		widget_create_button(crossfade_sample_widgets + 4, 31, 34, 6, 3, 4, 5, 5, 5, dialog_cancel_NULL, "Cancel", 1);
-		widget_create_button(crossfade_sample_widgets + 5, 41, 34, 6, 3, 5, 4, 4, 0, dialog_yes_NULL, "OK", 3);
-
-		dialog = dialog_create_custom(26, 20, 28, 17, crossfade_sample_widgets, 6, 0, crossfade_sample_draw_const, NULL);
-		dialog->action_yes = do_crossfade_sample;
+		dialog.ActionYes +=
+			() =>
+			{
+				SampleEditOperations.CrossFade(sample, dialog.SamplesToFade, dialog.Priority + 50, false, dialog.SustainLoop);
+			};
 	}
 
 	/* --------------------------------------------------------------------- */
 
-	void sample_set_mute(int n, int mute)
+	public static bool ShowSampleHostDialog(PageNumbers newPage)
 	{
-		song_sample_t *smp = song_get_sample(n);
+		/* Actually IT defaults to No when the sample slot already had a sample in it, rather than checking if
+		it was assigned to an instrument. Maybe this is better, though?
+		(Not to mention, passing around the extra state that'd be required to do it that way would be kind of
+		messy...)
 
-		if (mute) {
-			if (smp->flags & CHN_MUTE)
+		also the double pointer cast sucks.
+
+		also also, IT says Ok/No here instead of Yes/No... but do I care? */
+
+		if (Song.CurrentSong.IsInstrumentMode)
+		{
+			int currentSample = AllPages.SampleList.CurrentSample;
+
+			bool isUsed = Song.CurrentSong.SampleIsUsedByInstrument(currentSample);
+
+			var dialog = MessageBox.Show(MessageBoxTypes.YesNo, "Create host instrument?");
+
+			if (isUsed)
+				dialog.ChangeFocusTo(1);
+
+			dialog.ActionYes =
+				() =>
+				{
+					Song.CurrentSong.CreateHostInstrument(currentSample);
+
+					if (newPage >= 0)
+						SetPage(newPage);
+				};
+
+			dialog.ActionNo =
+				() =>
+				{
+					if (newPage >= 0)
+						SetPage(newPage);
+				};
+
+			return true;
+		}
+
+		if (newPage != PageNumbers.None)
+			SetPage(newPage);
+
+		return false;
+	}
+
+	/* --------------------------------------------------------------------- */
+
+	void SetMute(int n, bool mute)
+	{
+		var smp = Song.CurrentSong.EnsureSample(n);
+
+		if (mute)
+		{
+			if (smp.Flags.HasFlag(SampleFlags.Mute))
 				return;
-			smp->globalvol_saved = smp->global_volume;
-			smp->global_volume = 0;
-			smp->flags |= CHN_MUTE;
-		} else {
-			if (!(smp->flags & CHN_MUTE))
+
+			smp.SavedGlobalVolume = smp.GlobalVolume;
+			smp.GlobalVolume = 0;
+			smp.Flags |= SampleFlags.Mute;
+		}
+		else
+		{
+			if (!smp.Flags.HasFlag(SampleFlags.Mute))
 				return;
-			smp->global_volume = smp->globalvol_saved;
-			smp->flags &= ~CHN_MUTE;
+
+			smp.GlobalVolume = smp.SavedGlobalVolume;
+			smp.Flags &= ~SampleFlags.Mute;
 		}
 	}
 
-	void sample_toggle_mute(int n)
+	void ToggleMute(int n)
 	{
-		song_sample_t *smp = song_get_sample(n);
-		sample_set_mute(n, !(smp->flags & CHN_MUTE));
+		var smp = Song.CurrentSong.EnsureSample(n);
+
+		SetMute(n, !smp.Flags.HasFlag(SampleFlags.Mute));
 	}
 
-	void sample_toggle_solo(int n)
+	void ToggleSolo(int n)
 	{
-		int i, solo = 0;
+		bool solo = false;
 
-		if (song_get_sample(n)->flags & CHN_MUTE) {
-			solo = 1;
-		} else {
-			for (i = 1; i < MAX_SAMPLES; i++) {
-				if (i != n && !(song_get_sample(i)->flags & CHN_MUTE)) {
-					solo = 1;
+		if (Song.CurrentSong.EnsureSample(n).Flags.HasFlag(SampleFlags.Mute))
+		{
+			solo = true;
+		}
+		else
+		{
+			for (int i = 1; i < Song.CurrentSong.Samples.Count; i++)
+			{
+				var smp = Song.CurrentSong.GetSample(i);
+
+				if (i != n && (smp != null) && !smp.Flags.HasFlag(SampleFlags.Mute))
+				{
+					solo = true;
 					break;
 				}
 			}
 		}
-		for (i = 1; i < MAX_SAMPLES; i++)
-			sample_set_mute(i, solo && i != n);
-	}
 
-	/* --------------------------------------------------------------------- */
-
-	void dialog_noop(void *x)
-	{
-		(void)x;
-	}
-
-	void sample_list_handle_alt_key(struct key_event * k)
-	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		int canmod = (sample.data != NULL && !(sample.Flags & CHN_ADLIB));
-
-		if (k.State == KeyState.Release)
-			return;
-
-		switch (k.Sym) {
-		case KeySym.a:
-			if (canmod)
-				dialog_create(DIALOG_OK_CANCEL, "Convert sample?", do_sign_convert, NULL, 0, NULL);
-			return;
-		case KeySym.b:
-			if (canmod && (sample.LoopStart > 0
-							|| ((sample.Flags & CHN_SUSTAINLOOP) && sample.SustainStart > 0))) {
-				dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_pre_loop_cut, NULL, 1, NULL);
-			}
-			return;
-		case KeySym.d:
-			Sf F(k.Modifiers.HasAnyFlag(KeyMod.Shift)) && !(status.flags & CLASSIC_MODE)) {
-				if (canmod && sample.Flags & CHN_STEREO) {
-					dialog_create(DIALOG_OK_CANCEL, "Downmix sample to mono?",
-						do_downmix, NULL, 0, NULL);
-				}
-			} else {
-				dialog_create(DIALOG_OK_CANCEL, "Delete sample?", do_delete_sample,
-					NULL, 1, NULL);
-			}
-			return;
-		case KeySym.e:
-			if (canmod) {
-				Sf F(k.Modifiers.HasAnyFlag(KeyMod.Shift)) && !(status.flags & CLASSIC_MODE))
-					resample_sample_dialog(1);
-				else
-					resize_sample_dialog(1);
-			}
-			break;
-		case KeySym.f:
-			if (canmod) {
-				Sf F(k.Modifiers.HasAnyFlag(KeyMod.Shift)) && !(status.flags & CLASSIC_MODE))
-					resample_sample_dialog(0);
-				else
-					resize_sample_dialog(0);
-			}
-			break;
-		case KeySym.g:
-			if (canmod)
-				sample_reverse(sample);
-			break;
-		case KeySym.h:
-			if (canmod)
-				dialog_create(DIALOG_YES_NO, "Centralise sample?", do_centralise, NULL, 0, NULL);
-			return;
-		case KeySym.i:
-			if (canmod)
-				sample_invert(sample);
-			break;
-		case KeySym.l:
-			if (canmod && (sample.LoopEnd > 0
-							|| ((sample.Flags & CHN_SUSTAINLOOP) && sample.SustainEnd > 0))) {
-				dialog_create(DIALOG_OK_CANCEL, "Cut sample?", do_post_loop_cut, NULL, 1, NULL);
-			}
-			return;
-		case KeySym.m:
-			if (canmod)
-				sample_amplify_dialog();
-			return;
-		case KeySym.n:
-			song_toggle_multichannel_mode();
-			return;
-		case KeySym.o:
-			sample_save(NULL, "ITS");
-			return;
-		case KeySym.p:
-			smpprompt_create("Copy sample:", "Sample", do_copy_sample);
-			return;
-		case KeySym.q:
-			if (canmod) {
-				dialog_create(DIALOG_YES_NO, "Convert sample?",
-							do_quality_convert, do_quality_toggle, 0, NULL);
-			}
-			return;
-		case KeySym.r:
-			smpprompt_create("Replace sample with:", "Sample", do_replace_sample);
-			return;
-		case KeySym.s:
-			smpprompt_create("Swap sample with:", "Sample", do_swap_sample);
-			return;
-		case KeySym.t:
-			export_sample_dialog();
-			return;
-		case KeySym.v:
-			Sf F!canmod || (status.flags & CLASSIC_MODE))
-				return;
-
-			if (!(sample.Flags & (CHN_LOOP|CHN_SUSTAINLOOP))) {
-				dialog_create(DIALOG_OK, "Crossfade requires a sample loop to work.", dialog_noop, NULL, 0, NULL);
-				return;
-			}
-
-			if (!sample.LoopStart && !sample.SustainStart) {
-				dialog_create(DIALOG_OK, "Crossfade requires data before the sample loop.", dialog_noop, NULL, 0, NULL);
-				return;
-			}
-
-			crossfade_sample_dialog();
-			return;
-		case KeySym.w:
-			sample_save(NULL, "RAW");
-			return;
-		case KeySym.x:
-			smpprompt_create("Exchange sample with:", "Sample", do_exchange_sample);
-			return;
-		case KeySym.y:
-			/* hi virt */
-			txtsynth_dialog();
-			return;
-		case KeySym.z:
-			{ // uguu~
-				void (*dlg)(void *) = (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-					? sample_adlibpatch_dialog
-					: sample_adlibconfig_dialog;
-				if (canmod) {
-					dialog_create(DIALOG_OK_CANCEL, "This will replace the current sample.",
-									dlg, NULL, 1, NULL);
-				} else {
-					dlg(NULL);
-				}
-			}
-			return;
-		case KeySym.Insert:
-			song_insert_sample_slot(_currentSample);
-			break;
-		case KeySym.Delete:
-			song_remove_sample_slot(_currentSample);
-			break;
-		case KeySym.F9:
-			sample_toggle_mute(_currentSample);
-			break;
-		case KeySym.F10:
-			sample_toggle_solo(_currentSample);
-			break;
-		default:
-			return;
-		}
-
-		Status.Flags |= StatusFlags.NeedUpdate;
-	}
-
-	void sample_list_handle_key(struct key_event * k)
-	{
-		int new_sample = _currentSample;
-		song_sample_t *sample = song_get_sample(_currentSample);
-
-		switch (k.Sym) {
-		case KeySym.Space:
-			if (k.State == KeyState.Release)
-				return;
-			if (selected_widget && *selected_widget == 0) {
-				Status.Flags |= StatusFlags.NeedUpdate;
-			}
-			return;
-		case KeySym.Equals:
-			if (!(k.Modifiers.HasAnyFlag(KeyMod.Shift)))
-				return;
-			SCHISM_FALLTHROUGH;
-		case KeySym.Plus:
-			if (k.State == KeyState.Release)
-				return;
-			if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) {
-				sample.c5speed *= 2;
-				Status.Flags |= StatusFlags.SongNeedsSave;
-			} else if (k.Modifiers.HasAnyFlag(KeyMod.Control)) {
-				sample.c5speed = calc_halftone(sample.c5speed, 1);
-				Status.Flags |= StatusFlags.SongNeedsSave;
-			}
-			Status.Flags |= StatusFlags.NeedUpdate;
-			return;
-		case KeySym.Minus:
-			if (k.State == KeyState.Release)
-				return;
-			if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) {
-				sample.c5speed /= 2;
-				Status.Flags |= StatusFlags.SongNeedsSave;
-			} else if (k.Modifiers.HasAnyFlag(KeyMod.Control)) {
-				sample.c5speed = calc_halftone(sample.c5speed, -1);
-				Status.Flags |= StatusFlags.SongNeedsSave;
-			}
-			Status.Flags |= StatusFlags.NeedUpdate;
-			return;
-
-		case KeySym.Comma:
-		case KeySym.Less:
-			if (k.State == KeyState.Release)
-				return;
-			song_change_current_play_channel(-1, 0);
-			return;
-		case KeySym.Period:
-		case KeySym.Greater:
-			if (k.State == KeyState.Release)
-				return;
-			song_change_current_play_channel(1, 0);
-			return;
-		case KeySym.Pageup:
-			if (k.State == KeyState.Release)
-				return;
-			new_sample--;
-			break;
-		case KeySym.Pagedown:
-			if (k.State == KeyState.Release)
-				return;
-			new_sample++;
-			break;
-		case KeySym.Escape:
-			if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
-				if (k.State == KeyState.Release)
-					return;
-				_sampleListCursorPos = 25;
-				_fix_accept_text();
-				widget_change_focus_to(0);
-				Status.Flags |= StatusFlags.NeedUpdate;
-				return;
-			}
-			return;
-		default:
-			if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) {
-				if (k.State == KeyState.Release)
-					return;
-				sample_list_handle_alt_key(k);
-			} else if (!k.IsRepeat) {
-				int n, v;
-				if (k->midi_note > -1) {
-					n = k->midi_note;
-					if (k->midi_volume > -1) {
-						v = k->midi_volume / 2;
-					} else {
-						v = KEYJAZZ_DEFAULTVOL;
-					}
-				} else {
-					n = (k.Sym == KeySym.Space)
-						? last_note
-						: kbd_get_note(k);
-					if (n <= 0 || n > 120)
-						return;
-					v = KEYJAZZ_DEFAULTVOL;
-				}
-				if (k.State == KeyState.Release) {
-					song_keyup(_currentSample, KEYJAZZ_NOINST, n);
-				} else {
-					song_keydown(_currentSample, KEYJAZZ_NOINST, n, v, KEYJAZZ_CHAN_CURRENT);
-					last_note = n;
-				}
-			}
-			return;
-		}
-
-		new_sample = new_sample.Clamp(1, LastVisibleSampleNumber());
-
-		if (new_sample != _currentSample) {
-			sample_set(new_sample);
-			sample_list_reposition();
-			Status.Flags |= StatusFlags.NeedUpdate;
-		}
-	}
-
-	/* --------------------------------------------------------------------- */
-	/* wheesh */
-
-	void sample_list_draw_const(void)
-	{
-		int n;
-
-		draw_box(4, 12, 35, 48, BOX_THICK | BOX_INNER | BOX_INSET);
-		draw_box(63, 12, 77, 24, BOX_THICK | BOX_INNER | BOX_INSET);
-
-		draw_box(36, 12, 53, 18, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(37, 15, 47, 17, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(36, 19, 53, 25, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(37, 22, 47, 24, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(36, 26, 53, 33, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(37, 29, 47, 32, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(36, 35, 53, 41, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(37, 38, 47, 40, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(36, 42, 53, 48, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(37, 45, 47, 47, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(54, 25, 77, 30, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(54, 31, 77, 41, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(54, 42, 77, 48, BOX_THIN | BOX_INNER | BOX_INSET);
-		draw_box(55, 45, 72, 47, BOX_THIN | BOX_INNER | BOX_INSET);
-
-		draw_fill_chars(41, 30, 46, 30, DEFAULT_FG, 0);
-		draw_fill_chars(64, 13, 76, 23, DEFAULT_FG, 0);
-
-		draw_text("Default Volume", 38, 14, 0, 2);
-		draw_text("Global Volume", 38, 21, 0, 2);
-		draw_text("Default Pan", 39, 28, 0, 2);
-		draw_text("Vibrato Speed", 38, 37, 0, 2);
-		draw_text("Vibrato Depth", 38, 44, 0, 2);
-		draw_text("Filename", 55, 13, 0, 2);
-		draw_text("Speed", 58, 14, 0, 2);
-		draw_text("Loop", 59, 15, 0, 2);
-		draw_text("LoopBeg", 56, 16, 0, 2);
-		draw_text("LoopEnd", 56, 17, 0, 2);
-		draw_text("SusLoop", 56, 18, 0, 2);
-		draw_text("SusLBeg", 56, 19, 0, 2);
-		draw_text("SusLEnd", 56, 20, 0, 2);
-		draw_text("Quality", 56, 22, 0, 2);
-		draw_text("Length", 57, 23, 0, 2);
-		draw_text("Vibrato Waveform", 58, 33, 0, 2);
-		draw_text("Vibrato Rate", 60, 44, 0, 2);
-
-		for (n = 0; n < 13; n++)
-			draw_char(154, 64 + n, 21, 3, 0);
+		for (int i = 1; i < Song.CurrentSong.Samples.Count; i++)
+			SetMute(i, solo && i != n);
 	}
 
 	/* --------------------------------------------------------------------- */
 	/* wow. this got ugly. */
 
 	/* callback for the loop menu toggles */
-	void update_sample_loop_flags(void)
+	void UpdateSampleLoopFlags()
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
+		lock (AudioPlayback.LockScope())
+		{
+			var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-		/* these switch statements fall through */
-		sample.Flags &= ~(CHN_LOOP | CHN_PINGPONGLOOP | CHN_SUSTAINLOOP | CHN_PINGPONGSUSTAIN);
-		switch (widgets_samplelist[9].d.menutoggle.state) {
-		case 2: sample.Flags |= CHN_PINGPONGLOOP; SCHISM_FALLTHROUGH;
-		case 1: sample.Flags |= CHN_LOOP;
+			/* these switch statements fall through */
+			sample.Flags &= ~(SampleFlags.Loop | SampleFlags.PingPongLoop | SampleFlags.SustainLoop | SampleFlags.PingPongSustain);
+			switch (menuToggleLoopEnable.State)
+			{
+				case 2: sample.Flags |= SampleFlags.PingPongLoop; goto case 1;
+				case 1: sample.Flags |= SampleFlags.Loop; break;
+			}
+
+			switch (menuToggleSustainLoopEnable.State)
+			{
+				case 2: sample.Flags |= SampleFlags.PingPongSustain; goto case 1;
+				case 1: sample.Flags |= SampleFlags.SustainLoop; break;
+			}
+
+			if (sample.Flags.HasFlag(SampleFlags.Loop))
+			{
+				if (sample.LoopStart == sample.Length)
+					sample.LoopStart = 0;
+				if (sample.LoopEnd <= sample.LoopStart)
+					sample.LoopEnd = sample.Length;
+			}
+
+			if (sample.Flags.HasFlag(SampleFlags.SustainLoop))
+			{
+				if (sample.SustainStart == sample.Length)
+					sample.SustainStart = 0;
+				if (sample.SustainEnd <= sample.SustainStart)
+					sample.SustainEnd = sample.Length;
+			}
+
+			sample.AdjustLoop();
+
+			/* update any samples currently playing */
+			Song.CurrentSong.UpdatePlayingSample(_currentSample);
 		}
-
-		switch (widgets_samplelist[12].d.menutoggle.state) {
-		case 2: sample.Flags |= CHN_PINGPONGSUSTAIN; SCHISM_FALLTHROUGH;
-		case 1: sample.Flags |= CHN_SUSTAINLOOP;
-		}
-
-		if (sample.Flags & CHN_LOOP) {
-			if (sample.LoopStart == sample.length)
-				sample.LoopStart = 0;
-			if (sample.LoopEnd <= sample.LoopStart)
-				sample.LoopEnd = sample.length;
-		}
-
-		if (sample.Flags & CHN_SUSTAINLOOP) {
-			if (sample.SustainStart == sample.length)
-				sample.SustainStart = 0;
-			if (sample.SustainEnd <= sample.SustainStart)
-				sample.SustainEnd = sample.length;
-		}
-
-		csf_adjust_sample_loop(sample);
-
-		/* update any samples currently playing */
-		song_update_playing_sample(_currentSample);
 
 		Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.SongNeedsSave;
 	}
-ShowSampleHostDialog/* callback for the loop numentries */
-	void update_sample_loop_points(void)
+
+	/* genericized this for both loops */
+	void UpdateSampleLoopPointsImpl(ref int loopStart, ref int loopEnd,
+		MenuToggleWidget loopToggleEntry, NumberEntryWidget loopStartEntry,
+		NumberEntryWidget loopEndEntry, ref bool flagsChanged, int sampleLength)
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
-		int flags_changed = 0;
+		if (loopStartEntry.Value > sampleLength - 1)
+			loopStartEntry.Value = sampleLength - 1;
 
-		/* 9 = loop toggle, 10 = loop start, 11 = loop end */
-		if ((unsigned long) widgets_samplelist[10].d.numentry.value > sample.length - 1)
-			widgets_samplelist[10].d.numentry.value = sample.length - 1;
-		if (widgets_samplelist[11].d.numentry.value <= widgets_samplelist[10].d.numentry.value) {
-			widgets_samplelist[9].d.menutoggle.state = 0;
-			flags_changed = 1;
-		} else if ((unsigned long) widgets_samplelist[11].d.numentry.value > sample.length) {
-			widgets_samplelist[11].d.numentry.value = sample.length;
+		if (loopEndEntry.Value <= loopStartEntry.Value)
+		{
+			loopToggleEntry.State = 0;
+			flagsChanged = true;
 		}
-		if (sample.LoopStart != (unsigned long) widgets_samplelist[10].d.numentry.value
-		|| sample.LoopEnd != (unsigned long) widgets_samplelist[11].d.numentry.value) {
-			flags_changed = 1;
-		}
-		sample.LoopStart = widgets_samplelist[10].d.numentry.value;
-		sample.LoopEnd = widgets_samplelist[11].d.numentry.value;
+		else if (loopEndEntry.Value > sampleLength)
+			loopEndEntry.Value = sampleLength;
 
-		/* 12 = sus toggle, 13 = sus start, 14 = sus end */
-		if ((unsigned long) widgets_samplelist[13].d.numentry.value > sample.length - 1)
-			widgets_samplelist[13].d.numentry.value = sample.length - 1;
-		if (widgets_samplelist[14].d.numentry.value <= widgets_samplelist[13].d.numentry.value) {
-			widgets_samplelist[12].d.menutoggle.state = 0;
-			flags_changed = 1;
-		} else if ((unsigned long) widgets_samplelist[14].d.numentry.value > sample.length) {
-			widgets_samplelist[14].d.numentry.value = sample.length;
-		}
-		if (sample.SustainStart != (unsigned long) widgets_samplelist[13].d.numentry.value
-		|| sample.SustainEnd != (unsigned long) widgets_samplelist[14].d.numentry.value) {
-			flags_changed = 1;
-		}
-		sample.SustainStart = widgets_samplelist[13].d.numentry.value;
-		sample.SustainEnd = widgets_samplelist[14].d.numentry.value;
+		if (loopStart != loopStartEntry.Value
+			|| loopEnd != loopEndEntry.Value)
+			flagsChanged = true;
 
-		if (flags_changed) {
-			update_sample_loop_flags();
-		}
+		loopStart = loopStartEntry.Value;
+		loopEnd = loopEndEntry.Value;
+	}
 
-		csf_adjust_sample_loop(sample);
+	/* callback for the loop numentries */
+	void UpdateSampleLoopPoints()
+	{
+		lock (AudioPlayback.LockScope())
+		{
+			var sample = Song.CurrentSong.EnsureSample(_currentSample);
+
+			bool flagsChanged = false;
+
+			UpdateSampleLoopPointsImpl(ref sample.LoopStart,
+				ref sample.LoopEnd,
+				menuToggleLoopEnable,
+				numberEntryLoopStart,
+				numberEntryLoopEnd,
+				ref flagsChanged, sample.Length);
+			UpdateSampleLoopPointsImpl(ref sample.SustainStart,
+				ref sample.SustainEnd,
+				menuToggleSustainLoopEnable,
+				numberEntrySustainLoopStart,
+				numberEntrySustainLoopEnd,
+				ref flagsChanged, sample.Length);
+
+			if (flagsChanged)
+				UpdateSampleLoopFlags();
+
+			sample.AdjustLoop();
+		}
 
 		Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.SongNeedsSave;
 	}
-ShowSampleHostDialog/* --------------------------------------------------------------------- */
 
-	void update_values_in_song(void)
+	/* --------------------------------------------------------------------- */
+
+	void UpdateValuesInSong()
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
+		var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
 		/* a few more modplug hacks here... */
-		sample.volume = widgets_samplelist[1].d.thumbbar.value * 4;
-		sample.GlobalVolume = widgets_samplelist[2].d.thumbbar.value;
+		sample.Volume = thumbBarDefaultVolume.Value * 4;
+		sample.GlobalVolume = thumbBarGlobalVolume.Value;
 
-		if (widgets_samplelist[3].d.toggle.state)
-			sample.Flags |= CHN_PANNING;
+		if (toggleEnableDefaultPan.State)
+			sample.Flags |= SampleFlags.Panning;
 		else
-			sample.Flags &= ~CHN_PANNING;
-		sample.vib_speed = widgets_samplelist[5].d.thumbbar.value;
-		sample.vib_depth = widgets_samplelist[6].d.thumbbar.value;
+			sample.Flags &= ~SampleFlags.Panning;
 
-		if (widgets_samplelist[15].d.togglebutton.state)
-			sample.VibratoType = VIB_SINE;
-		else if (widgets_samplelist[16].d.togglebutton.state)
-			sample.VibratoType = VIB_RAMP_DOWN;
-		else if (widgets_samplelist[17].d.togglebutton.state)
-			sample.VibratoType = VIB_SQUARE;
+		sample.VibratoSpeed = thumbBarVibratoSpeed.Value;
+		sample.VibratoDepth = thumbBarVibratoDepth.Value;
+
+		if (toggleButtonVibratoSine.State)
+			sample.VibratoType = VibratoType.Sine;
+		else if (toggleButtonVibratoRampDown.State)
+			sample.VibratoType = VibratoType.RampDown;
+		else if (toggleButtonVibratoSquare.State)
+			sample.VibratoType = VibratoType.Square;
 		else
-			sample.VibratoType = VIB_RANDOM;
-		sample.VibratoRate = widgets_samplelist[19].d.thumbbar.value;
+			sample.VibratoType = VibratoType.Random;
+
+		sample.VibratoRate = thumbBarVibratoRate.Value;
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}
 
-	void update_sample_speed(void)
+	void UpdateSampleSpeed()
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
+		var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-		sample.c5speed = widgets_samplelist[8].d.numentry.value;
+		lock (AudioPlayback.LockScope())
+			sample.C5Speed = numberEntryC5Speed.Value;
 
 		Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.SongNeedsSave;
 	}
-ShowSampleHostDialogvoid update_panning(void)
+
+	void UpdatePanning()
 	{
-		song_sample_t *sample = song_get_sample(_currentSample);
+		lock (AudioPlayback.LockScope())
+		{
+			var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-		sample.Flags |= CHN_PANNING;
-		sample.panning = widgets_samplelist[4].d.thumbbar.value * 4;
+			sample.Flags |= SampleFlags.Panning;
+			sample.Panning = thumbBarDefaultPan.Value * 4;
+		}
 
-		widgets_samplelist[3].d.toggle.state = 1;
+		toggleEnableDefaultPan.State = true;
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}
 
-	void update_filename(void)
+	void UpdateFilename()
 	{
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}
 
 	/* --------------------------------------------------------------------- */
 
-	void sample_synchronize_to_instrument(void)
+	public void SynchronizeToInstrument()
 	{
-		song_instrument_t *ins;
-		int instnum = instrument_get_current();
-		int pos, first;
+		int instNum = AllPages.InstrumentList.CurrentInstrument;
 
-		ins = song_get_instrument(instnum);
-		first = 0;
-		for (pos = 0; pos < 120; pos++) {
-			if (first == 0) first = ins->sample_map[pos];
-			if (ins->sample_map[pos] == (unsigned int)instnum) {
-				sample_set(instnum);
+		var ins = Song.CurrentSong.GetInstrument(instNum);
+
+		if (ins == null)
+			return;
+
+		int first = 0;
+
+		for (int pos = 0; pos < ins.SampleMap.Length; pos++)
+		{
+			if (first == 0) first = ins.SampleMap[pos];
+
+			if (ins.SampleMap[pos] == instNum)
+			{
+				CurrentSample = instNum;
 				return;
 			}
 		}
-		if (first > 0) {
-			sample_set(first);
-		} else {
-			sample_set(instnum);
-		}
+
+		if (first > 0)
+			CurrentSample = first;
+		else
+			CurrentSample = instNum;
 	}
 }

@@ -15,8 +15,14 @@ public class Log
 	public static void Append(int colour, string format, params object[] args)
 		=> Append(new LogLine(colour, string.Format(format, args), false));
 
+	public static void AppendWithUnderline(int colour, string format, params object[] args)
+		=> Append(new LogLine(colour, string.Format(format, args), false) { Underline = true });
+
 	public static void Append(bool biosFont, int colour, string format, params object[] args)
 		=> Append(new LogLine(colour, string.Format(format, args), biosFont));
+
+	public static void AppendWithUnderline(bool biosFont, int colour, string format, params object[] args)
+		=> Append(new LogLine(colour, string.Format(format, args), biosFont) { Underline = true });
 
 	public static void Append(LogLine logLine)
 	{
@@ -32,6 +38,9 @@ public class Log
 			if (Status.CurrentPageNumber == PageNumbers.Log)
 				Status.Flags |= StatusFlags.NeedUpdate;
 		}
+
+		if (logLine.Underline)
+			AppendUnderline(logLine.Text.Length);
 	}
 
 	public static void AppendNewLine()

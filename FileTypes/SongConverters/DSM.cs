@@ -12,6 +12,8 @@ using ChasmTracker.Utility;
 
 public class DSM : SongFileConverter
 {
+	public override string Label => "DSM";
+
 	class DSMChunkPattern
 	{
 		public byte[]? Data;

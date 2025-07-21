@@ -251,45 +251,25 @@ public abstract class Widget
 				k.Sym = KeySym.Plus;
 		}
 
-		if (CommonHandleKey(k) is bool commonResult)
+		if (widget.CommonHandleKey(k) is bool commonResult)
 			return commonResult;
 
-		widget.HandleKey(k);
+		bool isHandled = widget.HandleKey(k);
 
-		/* if we're here, that mess didn't completely handle the key (gosh...) so now here's another mess. */
-		switch (current_type) {
-		case WIDGET_MENUTOGGLE:
-			if (widget_menutoggle_handle_key(widget, k))
-				return 1;
-			break;
-		case WIDGET_BITSET:
-			if (widget_bitset_handle_key(widget, k))
-				return 1;
-			break;
-		case WIDGET_THUMBBAR:
-		case WIDGET_PANBAR:
-			if (thumbbar_prompt_value(widget, k))
-				return 1;
-			break;
-		case WIDGET_TEXTENTRY:
-			if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0 &&
-				k->text && widget_textentry_add_text(widget, k->text))
-				return 1;
-			break;
-		case WIDGET_NUMENTRY:
-			if ((k->mod & (SCHISM_KEYMOD_CTRL | SCHISM_KEYMOD_ALT | SCHISM_KEYMOD_GUI)) == 0 &&
-				k->text && widget_numentry_handle_text(widget, k->text))
-				return 1;
-			break;
-		default:
-			break;
+		if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift)
+		 && !string.IsNullOrEmpty(k.Text))
+		{
+			var textEntryEvent = k.ToTextInputEvent();
+
+			widget.HandleText(textEntryEvent);
+
+			isHandled |= textEntryEvent.IsHandled;
 		}
 
-		/* if we got down here the key wasn't handled */
-		return false;
+		return isHandled;
 	}
 
-	static bool? CommonHandleKey(Widget widget, KeyEvent k)
+	bool? CommonHandleKey(KeyEvent k)
 	{
 		if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
 			return false;
@@ -307,7 +287,7 @@ public abstract class Widget
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return false;
 
-				Page.ChangeFocusTo(widget.Next.Up);
+				Page.ChangeFocusTo(Next.Up);
 				return true;
 			}
 			case KeySym.Down:
@@ -315,7 +295,7 @@ public abstract class Widget
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return false;
 
-				Page.ChangeFocusTo(widget.Next.Down);
+				Page.ChangeFocusTo(Next.Down);
 				return true;
 			}
 			case KeySym.Tab:
@@ -324,27 +304,27 @@ public abstract class Widget
 					return false;
 
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-					Page.ChangeFocusTo(widget.Next.BackTab);
+					Page.ChangeFocusTo(Next.BackTab);
 				else
-					Page.ChangeFocusTo(widget.Next.Tab);
+					Page.ChangeFocusTo(Next.Tab);
 
 				return true;
 			}
 			case KeySym.Left:
 			{
-				if (widget.HandleArrow(k) is var arrowOverrideResult)
+				if (HandleArrow(k) is var arrowOverrideResult)
 					return arrowOverrideResult;
 
-				Page.ChangeFocusTo(widget.Next.Left);
+				Page.ChangeFocusTo(Next.Left);
 
 				break;
 			}
 			case KeySym.Right:
 			{
-				if (widget.HandleArrow(k) is var arrowOverrideResult)
+				if (HandleArrow(k) is var arrowOverrideResult)
 					return arrowOverrideResult;
 
-				Page.ChangeFocusTo(widget.Next.Right);
+				Page.ChangeFocusTo(Next.Right);
 
 				break;
 			}

@@ -11,6 +11,12 @@ using ChasmTracker.Utility;
 
 public class AU : SampleFileConverter
 {
+	public override string Label => "AU";
+	public override string Description => "Sun/NeXT";
+	public override string Extension => ".au";
+
+	public override int SortOrder => 4;
+
 	enum AUEncoding
 	{
 		µLaw = 1, /* µ-law */

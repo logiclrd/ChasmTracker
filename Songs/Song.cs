@@ -2,16 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace ChasmTracker.Songs;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
+using ChasmTracker.DiskOutput;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
 using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
+using ChasmTracker.MIDI.Drivers;
 using ChasmTracker.Pages;
+using ChasmTracker.Pages.InfoWindows;
 using ChasmTracker.Playback;
 using ChasmTracker.Utility;
 
@@ -50,6 +54,20 @@ public class Song
 
 	public TimeSpan EditTimeElapsed => DateTime.UtcNow - EditStart.Time;
 
+	public void SetFileName(string? file)
+	{
+		if (!string.IsNullOrEmpty(file))
+		{
+			FileName = file;
+			BaseName = Path.GetFileName(file);
+		}
+		else
+		{
+			FileName = "";
+			BaseName = "";
+		}
+	}
+
 	public void SetInitialSpeed(int newSpeed)
 	{
 		InitialSpeed = newSpeed.Clamp(1, 255);
@@ -80,7 +98,7 @@ public class Song
 		var dialog = MessageBox.Show(MessageBoxTypes.YesNo, "Enable instrument mode?");
 
 		dialog.ActionYes =
-			_ =>
+			() =>
 			{
 				SetInstrumentMode(true);
 				Page.NotifySongChangedGlobal();
@@ -89,7 +107,7 @@ public class Song
 			};
 
 		dialog.ActionNo =
-			_ =>
+			() =>
 			{
 				Page.SetPage(PageNumbers.InstrumentList);
 			};
@@ -367,6 +385,7 @@ public class Song
 	public string Title = "";
 	public string Message = "";
 	public string FileName = "";
+	public string BaseName = "";
 	public string TrackerID = "";
 
 	public int InitialGlobalVolume;
@@ -468,19 +487,6 @@ public class Song
 			}
 		}
 	}
-
-	// mixer stuff -----------------------------------------------------------
-	// TODO: public MixFlags MixFlags;
-	public int MixFrequency;
-	public int MixBitsPerSample;
-	public int MaxChannels;
-	public int RampingSamples; // default: 64
-	public int MaxVoices;
-	public int VULeft;
-	public int VURight;
-	public int DryROfsVol; // un-globalized, didn't care enough
-	public int DryLOfsVol; // to find out what these do  -paper
-												 // -----------------------------------------------------------------------
 
 	// OPL stuff -------------------------------------------------------------
 	// TODO: public OPL OPL;
@@ -697,6 +703,320 @@ public class Song
 			number = 0;
 
 		return number;
+	}
+
+	// instrument, sample, whatever.
+	void SwapInstrumentsInPatterns(int a, int b)
+	{
+		byte ba = (byte)a;
+		byte bb = (byte)b;
+
+		foreach (var pat in Patterns)
+			foreach (var row in pat.Rows)
+				for (int n = 1; n <= Constants.MaxChannels; n++)
+				{
+					ref var note = ref row[n];
+
+					if (note.Instrument == ba)
+						note.Instrument = bb;
+					else if (note.Instrument == bb)
+						note.Instrument = ba;
+				}
+	}
+
+	public void ExchangeSamples(int a, int b)
+	{
+		if (a == b)
+			return;
+
+		lock (AudioPlayback.LockScope())
+		{
+			(Samples[a], Samples[b]) = (Samples[b], Samples[a]);
+			Status.Flags |= StatusFlags.SongNeedsSave;
+		}
+	}
+
+	public void SwapSamples(int a, int b)
+	{
+		if (a == b)
+			return;
+
+		lock (AudioPlayback.LockScope())
+		{
+			if (IsInstrumentMode)
+			{
+				// ... or should this be done even in sample mode?
+				for (int n = 1; n < Constants.MaxInstruments; n++)
+				{
+					var ins = Instruments[n];
+
+					if (ins == null)
+						continue;
+
+					for (int s = 0; s < ins.SampleMap.Length; s++)
+					{
+						if (ins.SampleMap[s] == a)
+							ins.SampleMap[s] = (byte)b;
+						else if (ins.SampleMap[s] == b)
+							ins.SampleMap[s] = (byte)a;
+					}
+				}
+			}
+			else
+				SwapInstrumentsInPatterns(a, b);
+		}
+
+		ExchangeSamples(a, b);
+	}
+
+	public void ReplaceSample(int num, int with)
+	{
+		if (num < 1 || num >= Samples.Count
+				|| with < 1 || with >= Samples.Count)
+			return;
+
+		if (IsInstrumentMode)
+		{
+			// for each instrument, for each note in the keyboard table, replace 'smp' with 'with'
+			for (int i = 1; i < Instruments.Count; i++)
+			{
+				var ins = Instruments[i];
+				if (ins == null)
+					continue;
+				for (int j = 0; j < 128; j++)
+					if (ins.SampleMap[j] == num)
+						ins.SampleMap[j] = (byte)with;
+			}
+		}
+		else
+		{
+			// for each pattern, for each note, replace 'smp' with 'with'
+			foreach (var pattern in Patterns)
+				foreach (var row in pattern.Rows)
+					for (int j = 1; j <= Constants.MaxChannels; j++)
+					{
+						if (row[j].Instrument == num)
+							row[j].Instrument = (byte)with;
+					}
+		}
+	}
+
+	public void CopyInstrument(int dst, int src)
+	{
+		if (src == dst) return;
+
+		using (AudioPlayback.LockScope())
+		{
+			Instruments[dst] = Instruments[src]?.Clone();
+
+			Status.Flags |= StatusFlags.SongNeedsSave;
+		}
+	}
+
+	public void ExchangeInstruments(int a, int b)
+	{
+		if (a == b)
+			return;
+
+		lock (AudioPlayback.LockScope())
+		{
+			(Instruments[a], Instruments[b]) = (Instruments[b], Instruments[a]);
+			Status.Flags |= StatusFlags.SongNeedsSave;
+		}
+	}
+
+	public void SwapInstruments(int a, int b)
+	{
+		if (a == b)
+			return;
+
+		if (IsInstrumentMode)
+		{
+			lock (AudioPlayback.LockScope())
+				SwapInstrumentsInPatterns(a, b);
+		}
+
+		ExchangeInstruments(a, b);
+	}
+
+	void AdjustInstrumentsInPatterns(int start, int delta)
+	{
+		int maxSampleNumber = Samples.Count - 1;
+
+		foreach (var pattern in Patterns)
+			foreach (var row in pattern.Rows)
+				for (int n = 1; n <= Constants.MaxChannels; n++)
+				{
+					ref var note = ref row[n];
+
+					if (note.Instrument >= start)
+						note.Instrument = (byte)(note.Instrument + delta).Clamp(0, maxSampleNumber);
+				}
+	}
+
+	void AdjustSamplesInInstruments(int start, int delta)
+	{
+		int maxSampleNumber = Samples.Count - 1;
+
+		foreach (var instrument in Instruments)
+		{
+			if (instrument == null)
+				continue;
+
+			for (int s = 0; s < instrument.SampleMap.Length; s++)
+			{
+				if (instrument.SampleMap[s] >= start)
+				{
+					instrument.SampleMap[s] = (byte)(instrument.SampleMap[s] + delta).Clamp(0, maxSampleNumber);
+				}
+			}
+		}
+	}
+
+	public void InsertSampleSlot(int n)
+	{
+		var newSample = new SongSample();
+
+		newSample.C5Speed = 8363;
+		newSample.Volume = 64 * 4;
+		newSample.GlobalVolume = 64;
+
+		lock (AudioPlayback.LockScope())
+		{
+			Samples.Insert(n, newSample);
+
+			if (IsInstrumentMode)
+				AdjustSamplesInInstruments(n, 1);
+			else
+				AdjustInstrumentsInPatterns(n, 1);
+		}
+	}
+
+	public void RemoveSampleSlot(int n)
+	{
+		var sample = Samples[n];
+
+		if ((sample != null) && sample.HasData)
+			return;
+
+		lock (AudioPlayback.LockScope())
+		{
+			Status.Flags |= StatusFlags.SongNeedsSave;
+
+			var newSample = new SongSample();
+
+			newSample.C5Speed = 8363;
+			newSample.Volume = 64 * 4;
+			newSample.GlobalVolume = 64;
+
+			Samples.RemoveAt(n);
+			Samples.Add(newSample);
+
+			if (IsInstrumentMode)
+				AdjustSamplesInInstruments(n, -1);
+			else
+				AdjustInstrumentsInPatterns(n, -1);
+		}
+	}
+
+	public void InsertInstrumentSlot(int n)
+	{
+		Status.Flags |= StatusFlags.SongNeedsSave;
+
+		lock (AudioPlayback.LockScope())
+		{
+			Instruments.Insert(n, null);
+			AdjustInstrumentsInPatterns(n, 1);
+		}
+	}
+
+	public void RemoveInstrumentSlot(int n)
+	{
+		if ((Instruments[n] is SongInstrument existingInstrument) && !existingInstrument.IsEmpty)
+			return;
+
+		lock (AudioPlayback.LockScope())
+		{
+			Instruments.RemoveAt(n);
+			Instruments.Add(null);
+			AdjustInstrumentsInPatterns(n, -1);
+		}
+	}
+
+	// Returns 1 if sample `n` is used by the specified instrument; 0 otherwise.
+	bool SampleUsedByInstrument(int n, SongInstrument instrument)
+	{
+		return instrument.SampleMap.Contains((byte)n);
+	}
+
+	// Returns 1 if sample `n` is used by at least two instruments; 0 otherwise.
+	bool SampleUsedByManyInstruments(int n)
+	{
+		bool found = false;
+
+		foreach (var instrument in Instruments)
+		{
+			if (instrument != null)
+			{
+				if (SampleUsedByInstrument(n, instrument))
+				{
+					if (found)
+						return true;
+					else
+						found = true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	// n: The index of the instrument to delete (base-1).
+	// preserve_samples: If 0, delete all samples used by instrument.
+	//                   If 1, only delete samples that no other instruments use.
+	public void DeleteInstrument(int n, bool preserveSharedSamples)
+	{
+		var instrument = Instruments[n];
+
+		if (instrument == null)
+			return;
+
+		for (int i = 0; i < instrument.NoteMap.Length; i++)
+		{
+			int j = instrument.SampleMap[i];
+
+			if (j != 0)
+			{
+				if (!preserveSharedSamples || !SampleUsedByManyInstruments(j))
+					ClearSample(j);
+			}
+		}
+
+		WipeInstrument(n);
+	}
+
+	public void ReplaceInstrument(int num, int with)
+	{
+		if (!IsInstrumentMode)
+			return;
+
+		if ((num < 1) || (num > Instruments.Count))
+			return;
+		if ((with < 1) || (with > Instruments.Count))
+			return;
+
+		byte withByte = (byte)with;
+
+		// for each pattern, for each note, replace 'ins' with 'with'
+		foreach (var pattern in Patterns)
+			foreach (var row in pattern.Rows)
+				for (int j = 1; j <= Constants.MaxChannels; j++)
+				{
+					ref var note = ref row[j];
+
+					if (note.Instrument == num)
+						note.Instrument = withByte;
+				}
 	}
 
 	public SongInstrument GetInstrument(int n)
@@ -1369,7 +1689,7 @@ public class Song
 	{
 		ref SongVoice chan = ref Voices[nchan];
 
-		var penv = IsInstrumentMode ? chan.Instrument : null;
+		var pEnv = IsInstrumentMode ? chan.Instrument : null;
 
 		if (!SongNote.IsNote(note))
 			return;
@@ -1413,9 +1733,8 @@ public class Song
 				//OPL_Touch(csf, nchan, 0);
 			}
 
-			// TODO
-			//GM_KeyOff(csf, nchan);
-			//GM_Touch(csf, nchan, 0);
+			GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
+			GeneralMIDI.Touch(Song.CurrentSong, nchan, 0);
 			return;
 		}
 
@@ -1444,7 +1763,7 @@ public class Song
 				return;
 		}
 
-		if (penv == null)
+		if (pEnv == null)
 			return;
 
 		for (int i = nchan; i < Constants.MaxVoices; i++)
@@ -1596,9 +1915,8 @@ public class Song
 			//OPL_Touch(csf, nchan, 0);
 		}
 
-		// TODO
-		//GM_KeyOff(csf, nchan);
-		//GM_Touch(csf, nchan, 0);
+		GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
+		GeneralMIDI.Touch(Song.CurrentSong, nchan, 0);
 	}
 
 	void EffectKeyOff(int nchan)
@@ -1620,8 +1938,7 @@ public class Song
 			//OPL_NoteOff(csf, nchan);
 		}
 
-		// TODO
-		//GM_KeyOff(csf, nchan);
+		GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
 
 		var pEnv = IsInstrumentMode ? chan.Instrument : null;
 
@@ -3310,9 +3627,8 @@ public class Song
 						//OPL_Touch(csf, nchan, 0);
 					}
 
-					// TODO
-					//GM_KeyOff(csf, nchan);
-					//GM_Touch(csf, nchan, 0);
+					GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
+					GeneralMIDI.Touch(Song.CurrentSong, nchan, 0);
 				}
 
 				int previousNewNote = chan.NewNote;
@@ -3350,10 +3666,14 @@ public class Song
 
 					if (IsInstrumentMode && Instruments[instrumentNumber] != null)
 					{
-						// TODO
-						//GM_DPatch(csf, nchan, csf->instruments[instr]->midi_program,
-						//	csf->instruments[instr]->midi_bank,
-						//	csf->instruments[instr]->midi_channel_mask);
+						var instr = GetInstrument(instrumentNumber);
+
+						if (instr != null)
+						{
+							GeneralMIDI.DPatch(this, nchan, instr.MIDIProgram,
+								instr.MIDIBank,
+								instr.MIDIChannelMask);
+						}
 					}
 
 					if (SongNote.IsNote(note))
@@ -3388,9 +3708,14 @@ public class Song
 							}
 
 							// TODO
-							//GM_DPatch(csf, nchan, csf->instruments[chan->new_instrument]->midi_program,
-							//	csf->instruments[chan->new_instrument]->midi_bank,
-							//	csf->instruments[chan->new_instrument]->midi_channel_mask);
+							var instr = Instruments[chan.NewInstrumentNumber];
+
+							if (instr != null)
+							{
+								GeneralMIDI.DPatch(this, nchan, instr.MIDIProgram,
+									instr.MIDIBank,
+									instr.MIDIChannelMask);
+							}
 						}
 
 						chan.NewNote = note;
@@ -3483,14 +3808,14 @@ public class Song
 					if (data[3] < 0x80)
 					{
 						chan.Cutoff = data[3];
-						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, MixFrequency);
+						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
 					}
 					break;
 				case 0x01: // set resonance
 					if (data[3] < 0x80)
 					{
 						chan.Resonance = data[3];
-						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, MixFrequency);
+						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
 					}
 					break;
 			}
@@ -3641,8 +3966,8 @@ public class Song
 						if (i.MIDIChannelMask != 0)
 						{
 							// TODO:
-							//GM_KeyOff(current_song, chanInternal);
-							//GM_DPatch(current_song, chanInternal, i->midi_program, i->midi_bank, i->midi_channel_mask);
+							GeneralMIDI.KeyOff(this, chanInternal);
+							GeneralMIDI.DPatch(this, chanInternal, i.MIDIProgram, i.MIDIBank, i.MIDIChannelMask);
 						}
 					}
 
@@ -3772,10 +4097,6 @@ public class Song
 		KeyJazz.UnlinkNoteAndChannel(note, chan);
 
 		return KeyDownEx(samp, ins, SpecialNotes.NoteOff, KeyJazz.DefaultVolume, chan, Effects.None, 0);
-	}
-
-	public static Song? CreateLoad(string file)
-	{
 	}
 
 	public bool LoadSample(int n, string file)
@@ -3964,6 +4285,329 @@ public class Song
 		return LoadSample(FakeSlot, file.FullPath) ? FakeSlot : KeyJazz.NoInstrument;
 	}
 
+	public static Song? CreateLoad(string file)
+	{
+		using (var s = File.OpenRead(file))
+		{
+			Song? newSong = null;
+
+			Exception? exception = null;
+
+			foreach (var converter in SongFileConverter.EnumerateImplementations())
+			{
+				s.Position = 0;
+
+				try
+				{
+					newSong = converter.LoadSong(s, LoadFlags.None);
+					break;
+				}
+				catch (Exception e)
+				{
+					exception = e;
+				}
+			}
+
+			if (newSong == null)
+			{
+				if (exception == null)
+					exception = new Exception("Couldn't load file: " + file);
+
+				throw exception;
+			}
+
+			if (CurrentSong != null)
+			{
+				// loaders might override these
+				newSong.RowHighlightMajor = CurrentSong.RowHighlightMajor;
+				newSong.RowHighlightMinor = CurrentSong.RowHighlightMinor;
+
+				newSong.CopyMIDIConfig(CurrentSong.MIDIConfig);
+			}
+
+			newSong.StopAtOrder = newSong.StopAtRow = -1;
+
+			// IT uses \r in song messages; replace errant \n's
+			newSong.Message = newSong.Message.Replace('\n', '\r');
+
+			AllPages.Message.ResetSelection();
+
+			return newSong;
+		}
+	}
+
+	/* ------------------------------------------------------------------------- */
+
+	static string MangleFilename(string @in, string? mid, string? ext)
+	{
+		string inExt = Path.GetExtension(@in);
+		string @base = (inExt != null) ? @in.Substring(0, @in.Length - inExt.Length) : @in;
+
+		var ret = new StringBuilder();
+
+		ret.Append(@base);
+
+		if (mid != null)
+			ret.Append(mid);
+
+		if (!string.IsNullOrEmpty(inExt))
+			ret.Append(inExt);
+		else if (ext != null)
+			ret.Append(ext);
+
+		return ret.ToString();
+	}
+
+	public SaveResult ExportSong(string fileName, string type)
+	{
+		var exporter = SampleExporter.FindImplementation(type);
+
+		if (exporter == null)
+			return SaveResult.InternalError;
+
+		return ExportSong(fileName, exporter);
+	}
+
+	public SaveResult ExportSong(string fileName, SampleExporter exporter)
+	{
+		string? mid = (exporter.IsMulti && !fileName.Contains("%c")) ? ".%c" : null;
+
+		string mangle = MangleFilename(fileName, mid, exporter.Extension);
+
+		Log.AppendNewLine();
+		Log.AppendNewLine();
+		Log.AppendWithUnderline(2, "Exporting to {0}", exporter.Description);
+
+		/* disko does the rest of the log messages itself */
+		var r = DiskWriter.ExportSong(mangle, exporter);
+
+		switch (r)
+		{
+			case DiskWriterStatus.OK:
+				return SaveResult.Success;
+			case DiskWriterStatus.Error:
+				return SaveResult.FileError;
+			default:
+				return SaveResult.InternalError;
+		}
+	}
+
+	public SaveResult SaveSong(string fileName, string type)
+	{
+		var converter = SongFileConverter.FindImplementation(type);
+
+		if (converter == null)
+			return SaveResult.InternalError;
+
+		return SaveSong(fileName, converter);
+	}
+
+	public SaveResult SaveSong(string fileName, SongFileConverter converter)
+	{
+		string mangle = MangleFilename(fileName, null, converter.Extension);
+
+		Log.AppendNewLine();
+		Log.AppendWithUnderline(2, "Saving {0} module", converter.Description);
+
+		/* TODO: add or replace file extension as appropriate
+
+		From IT 2.10 update:
+			- Automatic filename extension replacement on Ctrl-S, so that if you press
+				Ctrl-S after loading a .MOD, .669, .MTM or .XM, the filename will be
+				automatically modified to have a .IT extension.
+
+		In IT, if the filename given has no extension ("basename"), then the extension for the proper file type
+		(IT/S3M) will be appended to the name.
+		A filename with an extension is not modified, even if the extension is blank. (as in "basename.")
+
+		This brings up a rather odd bit of behavior: what happens when saving a file with the deliberately wrong
+		extension? Selecting the IT type and saving as "test.s3m" works just as one would expect: an IT file is
+		written, with the name "test.s3m". No surprises yet, but as soon as Ctrl-S is used, the filename is "fixed",
+		producing a second file called "test.it". The reverse happens when trying to save an S3M named "test.it" --
+		it's rewritten to "test.s3m".
+		Note that in these scenarios, Impulse Tracker *DOES NOT* check if an existing file by that name exists; it
+		will GLADLY overwrite the old "test.s3m" (or .it) with the renamed file that's being saved. Presumably this
+		is NOT intentional behavior.
+
+		Another note: if the file could not be saved for some reason or another, Impulse Tracker pops up a dialog
+		saying "Could not save file". This can be seen rather easily by trying to save a file with a malformed name,
+		such as "abc|def.it". This dialog is presented both when saving from F10 and Ctrl-S.
+		*/
+
+		Stream stream;
+
+		string tempName = Path.GetTempFileName();
+
+		try
+		{
+			stream = File.OpenWrite(tempName);
+		}
+		catch (Exception e)
+		{
+			Log.AppendException(e);
+			return SaveResult.FileError;
+		}
+
+		SaveResult ret;
+
+		try
+		{
+			using (stream)
+				ret = converter.SaveSong(this, stream);
+
+			if (Status.Flags.HasFlag(StatusFlags.MakeBackups))
+				DiskWriter.MakeBackup(mangle, Status.Flags.HasFlag(StatusFlags.NumberedBackups));
+
+			File.Move(tempName, mangle, overwrite: true);
+		}
+		catch (IOException e)
+		{
+			ret = SaveResult.FileError;
+			Log.AppendException(e, mangle);
+		}
+		catch (Exception e)
+		{
+			ret = SaveResult.InternalError;
+			Log.AppendException(e, mangle);
+		}
+
+		switch (ret)
+		{
+			case SaveResult.Success:
+				Status.Flags &= ~StatusFlags.SongNeedsSave;
+				if (!FileName.Equals(mangle, StringComparison.InvariantCultureIgnoreCase))
+					SetFileName(mangle);
+				Log.Append(5, " Done");
+				break;
+			case SaveResult.InternalError:
+			default: // ???
+				Log.Append(4, " Internal error saving song");
+				break;
+		}
+
+		return ret;
+	}
+
+	public SaveResult SaveSample(string fileName, string type, int num)
+	{
+		var format = SampleFileConverter.FindImplementation(type);
+
+		if (format == null)
+			return SaveResult.InternalError;
+
+		return SaveSample(fileName, format, num);
+	}
+
+	public SaveResult SaveSample(string fileName, SampleFileConverter converter, int num)
+	{
+		var smp = Samples[num];
+
+		if (smp == null)
+			smp = new SongSample();
+
+		string errFormat = "Error: Sample {0} NOT saved! ({1})";
+
+		string baseName = Path.GetFileName(fileName);
+
+		if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(baseName))
+		{
+			Status.FlashText(string.Format(errFormat, num, "No Filename?"));
+			return SaveResult.NoFilename;
+		}
+
+		SaveResult ret = SaveResult.InternalError;
+
+		try
+		{
+			using (var stream = File.OpenWrite(fileName))
+				ret = converter.SaveSample(stream, smp);
+		}
+		catch (IOException e)
+		{
+			Status.FlashText(string.Format(errFormat, num, "File Error"));
+			Log.AppendException(e, baseName);
+			ret = SaveResult.FileError;
+		}
+
+		switch (ret)
+		{
+			case SaveResult.Success:
+				Status.FlashText(string.Format("{0} sample saved (sample {1})", converter.Description, num));
+				break;
+			case SaveResult.Unsupported:
+				Status.FlashText("Unsupported Data");
+				break;
+			case SaveResult.InternalError:
+			default: // ???
+				Status.FlashText(string.Format(errFormat, num, "Internal error"));
+				Log.Append(4, "Internal error saving sample");
+				break;
+		}
+
+		return ret;
+	}
+
+	// ------------------------------------------------------------------------
+
+	public SaveResult SaveInstrument(string fileName, string type, int num)
+	{
+		var converter = InstrumentFileConverter.FindImplementation(type);
+
+		if (converter == null)
+			return SaveResult.InternalError;
+
+		return SaveInstrument(fileName, converter, num);
+	}
+
+	public SaveResult SaveInstrument(string fileName, InstrumentFileConverter converter, int num)
+	{
+		var ins = Instruments[num];
+
+		if (ins == null)
+			ins = new SongInstrument(this);
+
+		string err = "Error: Instrument %d NOT saved! (%s)";
+
+		string baseName = Path.GetFileName(fileName);
+
+		if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(baseName))
+		{
+			Status.FlashText(string.Format(err, num, "No Filename?"));
+			return SaveResult.NoFilename;
+		}
+
+		SaveResult ret = SaveResult.InternalError;
+
+		try
+		{
+			using (var stream = File.OpenWrite(fileName))
+				ret = converter.SaveInstrument(stream, this, ins);
+		}
+		catch (IOException e)
+		{
+			Status.FlashText(string.Format(err, num, "File Error"));
+			Log.AppendException(e, baseName);
+			ret = SaveResult.FileError;
+		}
+
+		switch (ret)
+		{
+			case SaveResult.Success:
+				Status.FlashText(string.Format("{0} instrument saved (instrument {1})", converter.Description, num));
+				break;
+			case SaveResult.Unsupported:
+				Status.FlashText(string.Format(err, num, "Unsupported Data"));
+				break;
+			case SaveResult.InternalError:
+			default: // ???
+				Status.FlashText(string.Format(err, num, "Internal error"));
+				Log.Append(4, "Internal error saving sample");
+				break;
+		}
+
+		return ret;
+	}
+
 	public void CopySample(int n, SongSample src)
 	{
 		lock (AudioPlayback.LockScope())
@@ -4079,7 +4723,7 @@ public class Song
 			return null;
 		}
 
-		AudioPlayback.SetFileName(file);
+		newSong.SetFileName(file);
 
 		lock (AudioPlayback.LockScope())
 		{
@@ -4213,7 +4857,7 @@ public class Song
 
 		lock (AudioPlayback.LockScope())
 		{
-			int n = Math.Min(NumVoices, MaxVoices);
+			int n = Math.Min(NumVoices, AudioPlayback.MaxVoices);
 
 			while (n-- > 0)
 			{
@@ -4241,7 +4885,7 @@ public class Song
 
 		lock (AudioPlayback.LockScope())
 		{
-			int n = Math.Min(NumVoices, MaxVoices);
+			int n = Math.Min(NumVoices, AudioPlayback.MaxVoices);
 
 			while (n-- > 0)
 			{
@@ -4258,11 +4902,75 @@ public class Song
 		}
 	}
 
+	public void UpdatePlayingSample(int sampleNumberChanged)
+	{
+		lock (AudioPlayback.LockScope())
+		{
+			int n = Math.Min(NumVoices, AudioPlayback.MaxVoices);
+
+			while (n-- > 0)
+			{
+				ref var channel = ref Voices[VoiceMix[n]];
+
+				if ((channel.Sample != null) && (channel.CurrentSampleData != null))
+				{
+					int s = Samples.IndexOf(channel.Sample);
+					if (s != sampleNumberChanged) continue;
+
+					var inst = channel.Sample;
+
+					if (inst.Flags.HasAnyFlag(SampleFlags.PingPongSustain | SampleFlags.SustainLoop))
+					{
+						channel.LoopStart = inst.SustainStart;
+						channel.LoopEnd = inst.SustainEnd;
+					}
+					else if (inst.Flags.HasAnyFlag(SampleFlags.PingPongFlag | SampleFlags.PingPongLoop | SampleFlags.Loop))
+					{
+						channel.LoopStart = inst.LoopStart;
+						channel.LoopEnd = inst.LoopEnd;
+					}
+
+					if (inst.Flags.HasAnyFlag(SampleFlags.PingPongSustain | SampleFlags.SustainLoop
+								| SampleFlags.PingPongFlag | SampleFlags.PingPongLoop | SampleFlags.Loop))
+					{
+						if (channel.Length != channel.LoopEnd)
+							channel.Length = channel.LoopEnd;
+					}
+
+					if (channel.Length > inst.Length)
+					{
+						channel.CurrentSampleData = inst.Data;
+						channel.Length = inst.Length;
+					}
+
+					channel.Flags &= ~(ChannelFlags.PingPongSustain
+							| ChannelFlags.PingPongLoop
+							| ChannelFlags.PingPongFlag
+							| ChannelFlags.SustainLoop
+							| ChannelFlags.Loop);
+
+					if (inst.Flags.HasFlag(SampleFlags.PingPongSustain))
+						channel.Flags |= ChannelFlags.PingPongSustain;
+					if (inst.Flags.HasFlag(SampleFlags.PingPongLoop))
+						channel.Flags |= ChannelFlags.PingPongLoop;
+					if (inst.Flags.HasFlag(SampleFlags.PingPongFlag))
+						channel.Flags |= ChannelFlags.PingPongFlag;
+					if (inst.Flags.HasFlag(SampleFlags.SustainLoop))
+						channel.Flags |= ChannelFlags.SustainLoop;
+					if (inst.Flags.HasFlag(SampleFlags.Loop))
+						channel.Flags |= ChannelFlags.Loop;
+
+					channel.InstrumentVolume = inst.GlobalVolume;
+				}
+			}
+		}
+	}
+
 	public void UpdatePlayingInstrument(int i_changed)
 	{
 		using (AudioPlayback.LockScope())
 		{
-			int n = Math.Min(NumVoices, MaxVoices);
+			int n = Math.Min(NumVoices, AudioPlayback.MaxVoices);
 
 			while (n-- > 0)
 			{
@@ -4290,14 +4998,14 @@ public class Song
 					if ((inst.IFCutoff & 0x80) != 0)
 					{
 						channel.Cutoff = inst.IFCutoff & 0x7F;
-						SetUpChannelFilter(ref channel, reset: false, filterModifier: 256, MixFrequency);
+						SetUpChannelFilter(ref channel, reset: false, filterModifier: 256, AudioPlayback.MixFrequency);
 					}
 					else
 					{
 						channel.Cutoff = 0x7F;
 
 						if ((inst.IFResonance & 0x80) != 0)
-							SetUpChannelFilter(ref channel, reset: false, filterModifier: 256, MixFrequency);
+							SetUpChannelFilter(ref channel, reset: false, filterModifier: 256, AudioPlayback.MixFrequency);
 					}
 
 					/* flip direction */
@@ -4305,5 +5013,15 @@ public class Song
 				}
 			}
 		}
+	}
+
+	public void ResetMIDIConfig()
+	{
+		MIDIConfig = MIDIConfiguration.GetDefault();
+	}
+
+	public void CopyMIDIConfig(MIDIConfiguration src)
+	{
+		MIDIConfig.CopyFrom(src);
 	}
 }

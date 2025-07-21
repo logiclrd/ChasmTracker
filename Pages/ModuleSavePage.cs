@@ -1,11 +1,13 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace ChasmTracker.Pages;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.FileSystem;
+using ChasmTracker.FileTypes;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -15,15 +17,9 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 {
 	ToggleButtonWidget[] toggleButtonSaveFormat = Array.Empty<ToggleButtonWidget>();
 
-	static SaveFormat[] SaveFormats =
-		new SaveFormat[]
-		{
-			new SaveFormat("IT", "Impulse Tracker", ".it") { SongConverter = new ITSongConverter() },
-			new SaveFormat("S3M", "Scream Tracker 3", ".s3m") { SongConverter = new S3MSongConverter() },
-			new SaveFormat("MOD", "Amiga ProTracker", ".mod") { SongConverter = new MODSongConverter() },
-		};
+	public static SongFileConverter[] SaveFormats = SongFileConverter.EnumerateImplementations().ToArray();
 
-	protected virtual SaveFormat[] Formats => SaveFormats;
+	protected virtual FileConverter[] Formats => SaveFormats;
 
 	public ModuleSavePage()
 		: this(PageNumbers.ModuleSave, "Save Module (F10)")
@@ -68,7 +64,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 		// create filetype widgets
 		for (int c = 0; c < formats.Length; c++)
 		{
-			if (!formats[c].IsEnabled?.Invoke() ?? true)
+			if (!formats[c].IsEnabled)
 				continue;
 
 			toggleButtonSaveFormat[c] = new ToggleButtonWidget(
@@ -111,12 +107,12 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 
 		SetPage(PageNumbers.Log);
 
-		string? selType = null;
+		SongFileConverter? selType = null;
 
-		foreach (var toggleButton in toggleButtonSaveFormat)
-			if (toggleButton.State)
+		for (int i = 0; i < SaveFormats.Length; i++)
+			if (toggleButtonSaveFormat[i].State)
 			{
-				selType = toggleButton.Text;
+				selType = SaveFormats[i];
 				break;
 			}
 
@@ -136,8 +132,8 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 		return ret;
 	}
 
-	protected virtual SaveResult DoSaveAction(string filename, string selType)
-		=> Song.CurrentSong.Save(filename, selType);
+	protected virtual SaveResult DoSaveAction(string filename, FileConverter selType)
+		=> Song.CurrentSong.SaveSong(filename, (SongFileConverter)selType);
 
 	public void SaveSongOrSaveAs()
 	{
@@ -188,7 +184,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 				var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?");
 
 				dialog.ChangeFocusTo(1);
-				dialog.ActionYes = _ => DoSaveSongOverwrite(name);
+				dialog.ActionYes = () => DoSaveSongOverwrite(name);
 			}
 			else
 			{

@@ -8,6 +8,12 @@ using ChasmTracker.Songs;
 
 public class WAV : SampleFileConverter
 {
+	public override string Label => "WAV";
+	public override string Description => "WAV";
+	public override string Extension => ".wav";
+
+	public override int SortOrder => 5;
+
 	public override bool CanSave => true;
 
 	public override SongSample LoadSample(Stream stream)
@@ -20,7 +26,7 @@ public class WAV : SampleFileConverter
 		return WAVFile.Save(stream, sample);
 	}
 
-	public override bool ReadInfo(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		try
 		{

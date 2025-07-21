@@ -14,6 +14,10 @@ using ChasmTracker.Utility;
 
 public class FLAC : SampleFileConverter
 {
+	public override string Label => "FLAC";
+
+	public override bool IsEnabled => FLACEncoder.IsWorking;
+
 	FLACDecoder Load(Stream inputStream, bool metaOnly)
 	{
 		inputStream.Position = 0; /* paranoia */
