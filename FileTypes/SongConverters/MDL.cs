@@ -46,8 +46,8 @@ public class MDL : SongFileConverter
 				if (id.ToStringZ() == "IN")
 				{
 					/* hey! we have a winner */
-					file.Title = stream.ReadString(32).TrimZ();
-					file.Artist = stream.ReadString(20).TrimZ();
+					file.Title = stream.ReadString(32);
+					file.Artist = stream.ReadString(20);
 					file.Description = Description;
 					/*file.Extension = "mdl";*/
 					file.Type = FileTypes.ModuleXM;

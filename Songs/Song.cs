@@ -1725,7 +1725,7 @@ public class Song
 			chan.ROfs = chan.LOfs = 0;
 			chan.LeftVolume = chan.RightVolume = 0;
 
-			if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+			if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 			{
 				//Do this only if really an adlib chan. Important!
 				// TODO
@@ -1808,12 +1808,12 @@ public class Song
 					case DuplicateCheckActions.NoteCut:
 						// TODO: fx_key_off(csf, i);
 						p.Volume = 0;
-						if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+						if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 						{
 							//Do this only if really an adlib chan. Important!
 							//
 							// This isn't very useful really since we can't save
-							// Adlib songs with instruments anyway, but whatever.
+							// AdLib songs with instruments anyway, but whatever.
 							// TODO
 							//OPL_NoteOff(csf, nchan);
 							//OPL_Touch(csf, nchan, 0);
@@ -1907,7 +1907,7 @@ public class Song
 			//chan.Frequency = 0;
 		}
 
-		if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 		{
 			//Do this only if really an adlib chan. Important!
 			// TODO
@@ -1931,7 +1931,7 @@ public class Song
 			(int)chan.Flags);
 		*/
 
-		if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 		{
 			//Do this only if really an adlib chan. Important!\
 			// TODO
@@ -1943,7 +1943,7 @@ public class Song
 		var pEnv = IsInstrumentMode ? chan.Instrument : null;
 
 		/*
-		if (chan.Flags.HasFlag(ChannelFlags.Adlib)
+		if (chan.Flags.HasFlag(ChannelFlags.AdLib)
 		|| ((pEnv != null) && (pEnv.MIDIChannelMask != 0)))
 		{
 			// When in AdLib / MIDI mode, end the sample
@@ -3619,7 +3619,7 @@ public class Song
 				{
 					/* This is required when the instrument changes (KeyOff is not called) */
 					/* Possibly a better bugfix could be devised. --Bisqwit */
-					if (chan.Flags.HasFlag(ChannelFlags.Adlib))
+					if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 					{
 						//Do this only if really an adlib chan. Important!
 						// TODO
@@ -3658,7 +3658,7 @@ public class Song
 
 					var sample = Samples[instrumentNumber];
 
-					if ((sample != null) && sample.Flags.HasFlag(SampleFlags.Adlib))
+					if ((sample != null) && sample.Flags.HasFlag(SampleFlags.AdLib))
 					{
 						// TODO
 						//OPL_Patch(csf, nchan, csf->samples[instr].adlib_bytes);
@@ -3701,7 +3701,7 @@ public class Song
 						{
 							var sample = Samples[chan.NewInstrumentNumber];
 
-							if ((sample != null) && sample.Flags.HasFlag(SampleFlags.Adlib))
+							if ((sample != null) && sample.Flags.HasFlag(SampleFlags.AdLib))
 							{
 								// TODO
 								//OPL_Patch(csf, nchan, csf->samples[chan->new_instrument].adlib_bytes);
@@ -3933,7 +3933,7 @@ public class Song
 
 			if (s != null)
 			{
-				if (c.Flags.HasFlag(ChannelFlags.Adlib))
+				if (c.Flags.HasFlag(ChannelFlags.AdLib))
 				{
 					// TODO:
 					//OPL_NoteOff(current_song, chanInternal);

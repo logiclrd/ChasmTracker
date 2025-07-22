@@ -576,8 +576,10 @@ public class ITI : InstrumentFileConverter, IFileInfoReader
 		}
 	}
 
-	public override void SaveInstrument(Song song, SongInstrument instrument, Stream file)
+	public override SaveResult SaveInstrument(Song song, SongInstrument instrument, Stream file)
 	{
 		SaveInstrument(song, instrument, file, itiFile: true);
+
+		return SaveResult.Success;
 	}
 }

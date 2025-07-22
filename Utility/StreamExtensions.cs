@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -9,6 +10,13 @@ public static class StreamExtensions
 {
 	[ThreadStatic]
 	static byte[]? s_buffer;
+
+	[MemberNotNull(nameof(s_buffer))]
+	static void EnsureBuffer(int size)
+	{
+		if ((s_buffer == null) || (s_buffer.Length < size))
+			s_buffer = new byte[size * 2];
+	}
 
 	public static void WriteStructure<T>(this Stream stream, T data)
 		where T : notnull
@@ -21,8 +29,7 @@ public static class StreamExtensions
 	{
 		int structureSize = Marshal.SizeOf<T>();
 
-		if ((s_buffer == null) || (s_buffer.Length < structureSize))
-			s_buffer = new byte[structureSize * 2];
+		EnsureBuffer(structureSize);
 
 		var slice = s_buffer.AsMemory(0, structureSize);
 
@@ -35,8 +42,7 @@ public static class StreamExtensions
 	{
 		encoding ??= Encoding.ASCII;
 
-		if ((s_buffer == null) || (s_buffer.Length < length))
-			s_buffer = new byte[length * 2];
+		EnsureBuffer(length);
 
 		var slice = s_buffer.Slice(0, length);
 
@@ -51,5 +57,21 @@ public static class StreamExtensions
 		}
 
 		return encoding.GetString(slice);
+	}
+
+	public static void WriteAlign(this Stream stream, int alignment)
+	{
+		long offset = stream.Position % alignment;
+
+		if (offset != 0)
+		{
+			int paddingBytes = (int)(alignment - offset);
+
+			EnsureBuffer(paddingBytes);
+
+			Array.Clear(s_buffer, 0, paddingBytes);
+
+			stream.Write(s_buffer, 0, paddingBytes);
+		}
 	}
 }

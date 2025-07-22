@@ -369,11 +369,11 @@ public class AIFF : SampleFileConverter
 		return ReadIFF(stream, null, true) ?? throw new NotSupportedException();
 	}
 
-	public override SaveResult SaveSample(Stream stream, SongSample smp)
+	public override SaveResult SaveSample(SongSample smp, Stream stream)
 	{
 		long startPosition = stream.Position;
 
-		if (smp.Flags.HasFlag(SampleFlags.Adlib))
+		if (smp.Flags.HasFlag(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		SampleFormat flags = SampleFormat.BigEndian | SampleFormat.PCMSigned;

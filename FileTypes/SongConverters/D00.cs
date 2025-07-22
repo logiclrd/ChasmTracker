@@ -567,22 +567,22 @@ public class D00 : SongFileConverter
 			/* Internally, we expect a different order for the bytes than
 				* what D00 files provide. Shift them around accordingly. */
 
-			smp.AdlibBytes = new byte[11];
+			smp.AdLibBytes = new byte[11];
 
-			smp.AdlibBytes[0] = bytes[8];
-			smp.AdlibBytes[1] = bytes[3];
+			smp.AdLibBytes[0] = bytes[8];
+			smp.AdLibBytes[1] = bytes[3];
 			/* NOTE: AdPlug doesn't use these two bytes. */
-			smp.AdlibBytes[2] = bytes[7];
-			smp.AdlibBytes[3] = bytes[2];
-			smp.AdlibBytes[4] = bytes[5];
-			smp.AdlibBytes[5] = bytes[0];
-			smp.AdlibBytes[6] = bytes[6];
-			smp.AdlibBytes[7] = bytes[1];
-			smp.AdlibBytes[8] = bytes[9];
-			smp.AdlibBytes[9] = bytes[4];
-			smp.AdlibBytes[10] = bytes[10];
+			smp.AdLibBytes[2] = bytes[7];
+			smp.AdLibBytes[3] = bytes[2];
+			smp.AdLibBytes[4] = bytes[5];
+			smp.AdLibBytes[5] = bytes[0];
+			smp.AdLibBytes[6] = bytes[6];
+			smp.AdLibBytes[7] = bytes[1];
+			smp.AdLibBytes[8] = bytes[9];
+			smp.AdLibBytes[9] = bytes[4];
+			smp.AdLibBytes[10] = bytes[10];
 
-			smp.Flags |= SampleFlags.Adlib;
+			smp.Flags |= SampleFlags.AdLib;
 
 			/* dumb hackaround that ought to some day be fixed */
 			smp.Length = 1;

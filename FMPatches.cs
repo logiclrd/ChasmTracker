@@ -148,11 +148,11 @@ public class FMPatches
 			return;
 		}
 
-		sample.AdlibBytes = Patches[patchNum].ToArray();
+		sample.AdLibBytes = Patches[patchNum].ToArray();
 		sample.Name = Tables.MIDIProgramNames[patchNum];
 		sample.FileName = "MIDI#" + (patchNum + 1).ToString("d3");
 
-		sample.Flags |= SampleFlags.Adlib;
+		sample.Flags |= SampleFlags.AdLib;
 
 		sample.Length = 1;
 		sample.AllocateData();

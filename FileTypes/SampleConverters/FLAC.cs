@@ -112,9 +112,9 @@ public class FLAC : SampleFileConverter
 	* currently this is the same size as the buffer length in disko.c */
 	const int SampleBufferLength = 65536;
 
-	public override SaveResult SaveSample(Stream stream, SongSample sample)
+	public override SaveResult SaveSample(SongSample sample, Stream stream)
 	{
-		if (sample.Flags.HasFlag(SampleFlags.Adlib))
+		if (sample.Flags.HasFlag(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		/* metadata structures & the amount */

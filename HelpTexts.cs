@@ -11,7 +11,7 @@ public enum HelpTexts
 	OrderListPanning,
 	OrderListVolume,
 	PatternEditor,
-	AdlibSample,
+	AdLibSample,
 	SampleList,
 	Palettes,
 	TimeInformation,

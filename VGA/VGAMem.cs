@@ -1066,7 +1066,7 @@ public static class VGAMem
 	{
 		r.Clear(0);
 
-		if (sample.Flags.HasFlag(SampleFlags.Adlib))
+		if (sample.Flags.HasFlag(SampleFlags.AdLib))
 		{
 			r.Clear(2);
 
@@ -1079,22 +1079,22 @@ public static class VGAMem
 			DrawTextLen("Mod", 3, new Point(55, y1 + 1), (0, 2));
 			DrawTextLen("Car", 3, new Point(55, y1 + 2), (0, 2));
 
-			if (sample.AdlibBytes != null)
+			if (sample.AdLibBytes != null)
 			{
 				string buf1 = string.Format("{0:X2} {1:X2} {2X2} {3:X2} {4:X2} {5:X2}",
-					sample.AdlibBytes[0],
-					sample.AdlibBytes[2],
-					sample.AdlibBytes[4],
-					sample.AdlibBytes[6],
-					sample.AdlibBytes[8],
-					sample.AdlibBytes[10]);
+					sample.AdLibBytes[0],
+					sample.AdLibBytes[2],
+					sample.AdLibBytes[4],
+					sample.AdLibBytes[6],
+					sample.AdLibBytes[8],
+					sample.AdLibBytes[10]);
 
 				string buf2 = string.Format("{0:X2} {1:X2} {2:X2} {3:X2} {4:X2}",
-					sample.AdlibBytes[1],
-					sample.AdlibBytes[3],
-					sample.AdlibBytes[5],
-					sample.AdlibBytes[7],
-					sample.AdlibBytes[9]);
+					sample.AdLibBytes[1],
+					sample.AdLibBytes[3],
+					sample.AdLibBytes[5],
+					sample.AdLibBytes[7],
+					sample.AdLibBytes[9]);
 
 				DrawTextLen(buf1, 17, new Point(60, y1 + 1), (2, 0));
 				DrawTextLen(buf2, 17, new Point(60, y1 + 2), (2, 0));

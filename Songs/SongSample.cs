@@ -29,7 +29,7 @@ public class SongSample
 	public bool IsPlayed; // for note playback dots
 	public int SavedGlobalVolume; // for muting individual samples
 
-	public byte[]? AdlibBytes;
+	public byte[]? AdLibBytes;
 
 	public sbyte[]? RawData8;
 	public short[]? RawData16;
@@ -362,8 +362,8 @@ public class SongSample
 
 		ret.AllocateData();
 
-		if (AdlibBytes != null)
-			ret.AdlibBytes = (byte[])AdlibBytes.Clone();
+		if (AdLibBytes != null)
+			ret.AdLibBytes = (byte[])AdLibBytes.Clone();
 
 		if (RawData8 != null)
 			Array.Copy(RawData8, ret.RawData8!, RawData8.Length);

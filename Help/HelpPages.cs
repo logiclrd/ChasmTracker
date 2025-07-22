@@ -11,7 +11,7 @@ public enum HelpPages
 	OrderListPanning,
 	OrderListVolumes,
 	PatternEditor,
-	AdlibSample,
+	AdLibSample,
 	SampleList,
 	Palettes,
 	TimeInformation,

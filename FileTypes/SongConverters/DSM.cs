@@ -13,6 +13,8 @@ using ChasmTracker.Utility;
 public class DSM : SongFileConverter
 {
 	public override string Label => "DSM";
+	public override string Description => "Digital Sound Interface Kit";
+	public override string Extension => ".dsm";
 
 	class DSMChunkPattern
 	{

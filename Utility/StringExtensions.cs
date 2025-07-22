@@ -236,6 +236,18 @@ public static class StringExtensions
 	}
 
 	[return: NotNullIfNotNull(nameof(str))]
+	public static string? TrimToLength(this string? str, int length)
+	{
+		if (str == null)
+			return null;
+
+		if (str.Length > length)
+			str = str.Substring(0, length);
+
+		return str;
+	}
+
+	[return: NotNullIfNotNull(nameof(str))]
 	public static string? TrimZ(this string? str)
 	{
 		if (str == null)

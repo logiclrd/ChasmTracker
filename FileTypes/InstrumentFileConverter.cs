@@ -24,7 +24,7 @@ public abstract class InstrumentFileConverter : FileConverter
 	public virtual bool CanSave => false;
 
 	public abstract bool LoadInstrument(Stream file, int slot);
-	public virtual SaveResult SaveInstrument(Stream file, Song song, SongInstrument instrument) => throw new NotSupportedException();
+	public virtual SaveResult SaveInstrument(Song song, SongInstrument instrument, Stream file) => throw new NotSupportedException();
 
 	static Type[] s_converterTypes =
 		typeof(InstrumentFileConverter).Assembly.GetTypes()

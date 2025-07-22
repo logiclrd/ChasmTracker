@@ -14,4 +14,9 @@ public static class Int16Extensions
 	{
 		return (value & flag) == flag;
 	}
+
+	public static bool HasAnyBitSet(this short value, short bits)
+	{
+		return (value & bits) != 0;
+	}
 }

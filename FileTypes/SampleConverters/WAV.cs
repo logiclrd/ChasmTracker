@@ -21,7 +21,7 @@ public class WAV : SampleFileConverter
 		return WAVFile.Load(stream) ?? throw new Exception("Failed to load sample");
 	}
 
-	public override SaveResult SaveSample(Stream stream, SongSample sample)
+	public override SaveResult SaveSample(SongSample sample, Stream stream)
 	{
 		return WAVFile.Save(stream, sample);
 	}

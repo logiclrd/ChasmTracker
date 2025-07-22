@@ -11,6 +11,8 @@ using ChasmTracker.Utility;
 public class MID : SongFileConverter
 {
 	public override string Label => "MID";
+	public override string Description => "MIDI";
+	public override string Extension => ".mid";
 
 	/*
 	some thoughts...
@@ -415,7 +417,7 @@ public class MID : SongFileConverter
 									case 0x6: // marker
 									case 0x7: // cue point
 									{
-										string message = stream.ReadString((int)vlen).TrimZ();
+										string message = stream.ReadString((int)vlen);
 
 										if (x == 3 && !string.IsNullOrEmpty(message) && string.IsNullOrEmpty(song.Title))
 											song.Title = message.Substring(0, Math.Min(message.Length, 25));

@@ -869,13 +869,13 @@ public class IT : SongFileConverter
 	[Flags]
 	enum Warnings
 	{
-		AdlibSamples = 1,
+		AdLibSamples = 1,
 	}
 
 	static Dictionary<Warnings, string> ITWarnings =
 		new Dictionary<Warnings, string>()
 		{
-			{ Warnings.AdlibSamples, "AdLib samples" },
+			{ Warnings.AdLibSamples, "AdLib samples" },
 		};
 
 	// NOBODY expects the Spanish Inquisition!
@@ -1283,8 +1283,8 @@ public class IT : SongFileConverter
 						uint.MaxValue);
 				}
 
-				if (smp.Flags.HasFlag(SampleFlags.Adlib))
-					warn |= Warnings.AdlibSamples;
+				if (smp.Flags.HasFlag(SampleFlags.AdLib))
+					warn |= Warnings.AdLibSamples;
 			}
 		}
 

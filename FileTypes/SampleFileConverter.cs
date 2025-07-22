@@ -12,12 +12,11 @@ using ChasmTracker.Utility;
 
 public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 {
-	public virtual bool IsEnabled => true;
 	public virtual bool CanSave => false;
 
 	public abstract bool FillExtendedData(Stream stream, FileReference file);
 	public abstract SongSample LoadSample(Stream stream);
-	public abstract SaveResult SaveSample(Stream stream, SongSample sample);
+	public abstract SaveResult SaveSample(SongSample sample, Stream stream);
 
 	static Type[] s_converterTypes =
 		typeof(SampleFileConverter).Assembly.GetTypes()
@@ -48,7 +47,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 	{
 		int memSize = (int)(fp.Length - fp.Position);
 
-		if (sample.Flags.HasFlag(SampleFlags.Adlib))
+		if (sample.Flags.HasFlag(SampleFlags.AdLib))
 			return 0; // no sample data
 
 		if ((sample.Length < 1) || !fp.CanRead)

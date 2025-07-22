@@ -686,7 +686,7 @@ public class SampleListPage : Page
 		if (_dialogF1Hack
 				&& Status.CurrentPageNumber == PageNumbers.SampleList
 				&& Status.PreviousPageNumber == PageNumbers.Help)
-			ShowAdlibConfigDialog();
+			ShowAdLibConfigDialog();
 
 		_dialogF1Hack = false;
 	}
@@ -841,7 +841,7 @@ public class SampleListPage : Page
 	{
 		var sample = Song.CurrentSong.GetSample(_currentSample);
 
-		bool canMod = (sample != null) && sample.HasData && !sample.Flags.HasFlag(SampleFlags.Adlib);
+		bool canMod = (sample != null) && sample.HasData && !sample.Flags.HasFlag(SampleFlags.AdLib);
 
 		if (k.State == KeyState.Release)
 			return;
@@ -985,15 +985,15 @@ public class SampleListPage : Page
 			case KeySym.z:
 			{
 				// uguu~
-				bool doAdlibPatch = k.Modifiers.HasAnyFlag(KeyMod.Shift);
+				bool doAdLibPatch = k.Modifiers.HasAnyFlag(KeyMod.Shift);
 
 				Action dlg =
 					() =>
 					{
-						if (doAdlibPatch)
-							ShowAdlibPatchDialog();
+						if (doAdLibPatch)
+							ShowAdLibPatchDialog();
 						else
-							ShowAdlibConfigDialog();
+							ShowAdLibConfigDialog();
 					};
 
 				if (canMod)
@@ -1307,7 +1307,7 @@ public class SampleListPage : Page
 			sample.SustainStart = sample.SustainEnd = 0;
 			sample.Flags |= SampleFlags.Loop;
 			sample.Flags &= ~(SampleFlags.PingPongLoop | SampleFlags.SustainLoop | SampleFlags.PingPongSustain
-						| SampleFlags._16Bit | SampleFlags.Stereo | SampleFlags.Adlib);
+						| SampleFlags._16Bit | SampleFlags.Stereo | SampleFlags.AdLib);
 
 			sample.AdjustLoop();
 
@@ -1326,7 +1326,7 @@ public class SampleListPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	void DoAdlibConfig(SongSample sample, byte[] newAdlibBytes)
+	void DoAdLibConfig(SongSample sample, byte[] newAdLibBytes)
 	{
 		//HelpIndex = HelpTexts.SampleList;
 
@@ -1334,17 +1334,20 @@ public class SampleListPage : Page
 		sample.Length = 1;
 		sample.AllocateData();
 
-		if (!sample.Flags.HasFlag(SampleFlags.Adlib))
+		if (!sample.Flags.HasFlag(SampleFlags.AdLib))
 		{
-			sample.Flags |= SampleFlags.Adlib;
+			sample.Flags |= SampleFlags.AdLib;
 			Status.FlashText("Created adlib sample");
 		}
 
+		sample.AdLibBytes = newAdLibBytes;
 		sample.Flags &= ~(SampleFlags._16Bit | SampleFlags.Stereo
 				| SampleFlags.Loop | SampleFlags.PingPongLoop | SampleFlags.SustainLoop | SampleFlags.PingPongSustain);
 		sample.LoopStart = sample.LoopEnd = 0;
 		sample.SustainStart = sample.SustainEnd = 0;
-		if (sample.C5Speed == 0) {
+
+		if (sample.C5Speed == 0)
+		{
 			sample.C5Speed = 8363;
 			sample.Volume = 64 * 4;
 			sample.GlobalVolume = 64;
@@ -1355,14 +1358,14 @@ public class SampleListPage : Page
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}
 
-	void ShowAdlibConfigDialog()
+	void ShowAdLibConfigDialog()
 	{
-		var dialog = Dialog.Show(new AdlibConfigDialog(_currentSample, _sampleImage));
+		var dialog = Dialog.Show(new AdLibConfigDialog(_currentSample, _sampleImage));
 
 		dialog.F1Pressed +=
 			() =>
 			{
-				Status.CurrentHelpIndex = HelpTexts.AdlibSample;
+				Status.CurrentHelpIndex = HelpTexts.AdLibSample;
 
 				_dialogF1Hack = true;
 
@@ -1371,10 +1374,10 @@ public class SampleListPage : Page
 				SetPage(PageNumbers.Help);
 			};
 
-		dialog.ActionYes += () => DoAdlibConfig(dialog.Sample, dialog.AdlibBytes);
+		dialog.ActionYes += () => DoAdLibConfig(dialog.Sample, dialog.AdLibBytes);
 	}
 
-	void ShowAdlibPatchDialog()
+	void ShowAdLibPatchDialog()
 	{
 		var dialog = Dialog.Show(new NumberPromptDialog("Enter Patch (1-128)", '\0'));
 

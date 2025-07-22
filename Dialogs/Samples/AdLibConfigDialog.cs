@@ -12,7 +12,7 @@ using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class AdlibConfigDialog : Dialog
+public class AdLibConfigDialog : Dialog
 {
 	enum ParameterType
 	{
@@ -163,14 +163,14 @@ public class AdlibConfigDialog : Dialog
 	byte[] _adlibBytes;
 
 	public SongSample Sample => _sample;
-	public byte[] AdlibBytes => _adlibBytes;
+	public byte[] AdLibBytes => _adlibBytes;
 
-	public AdlibConfigDialog(int sampleNumber, VGAMemOverlay sampleImage)
+	public AdLibConfigDialog(int sampleNumber, VGAMemOverlay sampleImage)
 		: base(new Point(9, 30), new Size(61, 15))
 	{
 		_sample = Song.CurrentSong.EnsureSample(sampleNumber);
 		_sampleImage = sampleImage;
-		_adlibBytes = _sample.AdlibBytes?.ToArray() ?? new byte[12];
+		_adlibBytes = _sample.AdLibBytes?.ToArray() ?? new byte[12];
 	}
 
 	protected override void Initialize()

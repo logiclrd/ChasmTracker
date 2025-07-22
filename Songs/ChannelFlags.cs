@@ -38,10 +38,10 @@ public enum ChannelFlags
 	//Reverb              = 0x4000000,
 	//Noreverb            = 0x8000000,
 	NNAMute             = 0x10000000, // turn off mute, but have it reset later
-	Adlib               = 0x20000000, // OPL mode
+	AdLib               = 0x20000000, // OPL mode
 	LoopWrapped         = 0x40000000, // loop has just wrapped to the beginning
 
 	SampleFlags =
 		_16bit | Loop | PingPongLoop | SustainLoop | PingPongSustain |
-		Panning | Stereo | PingPongFlag | Adlib
+		Panning | Stereo | PingPongFlag | AdLib
 }

@@ -185,11 +185,11 @@ public class ITS : SampleFileConverter
 			// OPL instruments in OpenMPT MPTM files (which are essentially extended IT files)
 			fp.Position = its.SamplePointer;
 
-			smp.AdlibBytes = new byte[12];
+			smp.AdLibBytes = new byte[12];
 
-			fp.ReadExactly(smp.AdlibBytes);
+			fp.ReadExactly(smp.AdLibBytes);
 
-			smp.Flags |= SampleFlags.Adlib;
+			smp.Flags |= SampleFlags.AdLib;
 			// dumb hackaround that ought to some day be fixed:
 			smp.Length = 1;
 			smp.AllocateData();
@@ -292,9 +292,9 @@ public class ITS : SampleFileConverter
 		fp.WriteStructure(its);
 	}
 
-	public override SaveResult SaveSample(Stream stream, SongSample smp)
+	public override SaveResult SaveSample(SongSample smp, Stream stream)
 	{
-		if (smp.Flags.HasFlag(SampleFlags.Adlib))
+		if (smp.Flags.HasFlag(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		SaveHeader(smp, stream);

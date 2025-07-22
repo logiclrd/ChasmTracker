@@ -294,7 +294,7 @@ public static class WAVFile
 
 		SampleFormat flags = SampleFormat.LittleEndian;
 
-		if (smp.Flags.HasFlag(SampleFlags.Adlib))
+		if (smp.Flags.HasFlag(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		flags |= smp.Flags.HasFlag(SampleFlags._16Bit) ? (SampleFormat._16 | SampleFormat.PCMSigned) : (SampleFormat._8 | SampleFormat.PCMUnsigned);

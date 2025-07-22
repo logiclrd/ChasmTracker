@@ -14,5 +14,5 @@ public enum SampleFlags
 	Stereo                      = 0x40, // stereo sample
 	PingPongFlag                = 0x80, // when flag is on, sample is processed backwards
 	Mute                        = 0x100, // muted sample
-	Adlib                       = 0x20000000, // OPL mode
+	AdLib                       = 0x20000000, // OPL mode
 }

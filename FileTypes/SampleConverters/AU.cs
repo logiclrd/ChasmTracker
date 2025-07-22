@@ -216,9 +216,9 @@ public class AU : SampleFileConverter
 		return smp;
 	}
 
-	public override SaveResult SaveSample(Stream stream, SongSample smp)
+	public override SaveResult SaveSample(SongSample smp, Stream stream)
 	{
-		if (smp.Flags.HasFlag(SampleFlags.Adlib))
+		if (smp.Flags.HasFlag(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		var au = new AUHeader();
