@@ -41,4 +41,13 @@ public class PatternRow
 		for (int i = 0; i < count; i++)
 			destination[i + destinationOffset] = _notes[i + sourceOffset];
 	}
+
+	public int GetHighestUsedChannel()
+	{
+		for (int i = _notes.Length; i >= 0; i--)
+			if (_notes[i].NoteIsNote)
+				return i;
+
+		return 0;
+	}
 }

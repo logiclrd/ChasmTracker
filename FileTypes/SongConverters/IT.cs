@@ -19,7 +19,8 @@ public class IT : SongFileConverter
 	public override string Description => "Impulse Tracker";
 	public override string Extension => ".it";
 
-	public override int SortOrder => 1;
+	public override int SortOrder => 5;
+	public override int SaveOrder => 1;
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct ITFile

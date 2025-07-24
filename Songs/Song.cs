@@ -5024,4 +5024,8 @@ public class Song
 	{
 		MIDIConfig.CopyFrom(src);
 	}
+
+	// FIXME this function sucks
+	public int GetHighestUsedChannel()
+		=> Patterns.OfType<Pattern>().Max(pattern => pattern.GetHighestUsedChannel());
 }

@@ -15,6 +15,8 @@ public class D00 : SongFileConverter
 	public override string Description => "EdLib Tracker D00";
 	public override string Extension => ".d00";
 
+	public override int SortOrder => 14;
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	struct D00Header
 	{

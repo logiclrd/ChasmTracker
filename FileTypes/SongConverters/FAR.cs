@@ -18,6 +18,8 @@ public class FAR : SongFileConverter
 	public override string Description => "Farandole Module";
 	public override string Extension => ".far";
 
+	public override int SortOrder => 3;
+
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
 	class FARHeader
 	{

@@ -18,6 +18,7 @@ public class S3M : SongFileConverter
 	public override string Extension => ".s3m";
 
 	public override int SortOrder => 2;
+	public override int SaveOrder => 2;
 
 	/* --------------------------------------------------------------------- */
 

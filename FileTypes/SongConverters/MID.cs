@@ -14,6 +14,8 @@ public class MID : SongFileConverter
 	public override string Description => "MIDI";
 	public override string Extension => ".mid";
 
+	public override int SortOrder => 9;
+
 	/*
 	some thoughts...
 

@@ -16,6 +16,8 @@ public class DSM : SongFileConverter
 	public override string Description => "Digital Sound Interface Kit";
 	public override string Extension => ".dsm";
 
+	public override int SortOrder => 13;
+
 	class DSMChunkPattern
 	{
 		public byte[]? Data;

@@ -59,6 +59,19 @@ public static class StreamExtensions
 		return encoding.GetString(slice);
 	}
 
+	public static void WriteString(this Stream stream, string str, int length, Encoding? encoding = null)
+	{
+		encoding ??= Encoding.ASCII;
+
+		EnsureBuffer(length);
+
+		var slice = s_buffer.Slice(0, length);
+
+		encoding.GetBytes(str, slice);
+
+		stream.Write(slice);
+	}
+
 	public static void WriteAlign(this Stream stream, int alignment)
 	{
 		long offset = stream.Position % alignment;

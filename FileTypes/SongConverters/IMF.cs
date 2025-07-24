@@ -15,6 +15,8 @@ public class IMF : SongFileConverter
 	public override string Description => "Imago Orpheus";
 	public override string Extension => ".imf";
 
+	public override int SortOrder => 16;
+
 	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		try

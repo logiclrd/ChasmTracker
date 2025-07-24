@@ -16,6 +16,8 @@ public class MDL : SongFileConverter
 	public override string Description => "Digitrakker";
 	public override string Extension => ".mdl";
 
+	public override int SortOrder => 7;
+
 	/* MDL is nice, but it's a pain to read the title... */
 
 	const int EOF = -1;

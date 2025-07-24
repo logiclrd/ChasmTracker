@@ -16,6 +16,7 @@ public abstract class SongFileConverter : FileConverter, IFileInfoReader
 	public virtual SaveResult SaveSong(Song song, Stream stream) => throw new NotSupportedException();
 
 	public virtual bool CanSave => false;
+	public virtual int SaveOrder => 0;
 
 	protected string ReadLinedMessage(Stream fp, int len, int lineLen, Encoding? encoding = null)
 	{

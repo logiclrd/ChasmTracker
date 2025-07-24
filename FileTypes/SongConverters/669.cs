@@ -15,6 +15,8 @@ public class _669 : SongFileConverter
 	public override string Description => "Composer 669 Module";
 	public override string Extension => ".669";
 
+	public override int SortOrder => 0;
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct Header669
 	{

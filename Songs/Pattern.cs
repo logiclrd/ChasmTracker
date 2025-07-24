@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using ChasmTracker.Playback;
 
 namespace ChasmTracker.Songs;
@@ -82,4 +83,7 @@ public class Pattern
 				Rows.Add(new PatternRow());
 		}
 	}
+
+	public int GetHighestUsedChannel()
+		=> Rows.Max(row => row.GetHighestUsedChannel());
 }

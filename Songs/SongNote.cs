@@ -346,6 +346,32 @@ public struct SongNote
 		return (int)Math.Round(Math.Pow(2.0, rel / 12.0) * hz);
 	}
 
+	byte MODPeriodToNote(int period)
+	{
+		if (period != 0)
+		{
+			for (int n = 0; n <= SpecialNotes.None; n++)
+				if (period >= (32 * Tables.PeriodTable[n % 12] >> (n / 12 + 2)))
+					return (byte)(n + 1);
+		}
+
+		return SpecialNotes.None;
+	}
+
+	// load a .mod-style 4-byte packed note
+	public void ImportMODNote(byte[] noteBytes, bool importEffect = true)
+	{
+		Note = MODPeriodToNote(((noteBytes[0] & 0xf) << 8) + noteBytes[1]);
+		Instrument = (byte)((noteBytes[0] & 0xf0) + (noteBytes[2] >> 4));
+		VolumeEffect = VolumeEffects.None;
+		VolumeParameter = 0;
+		EffectByte = (byte)(noteBytes[2] & 0xf);
+		Parameter = noteBytes[3];
+
+		if (importEffect)
+			ImportMODEffect(EffectByte, Parameter, false);
+	}
+
 	public void ImportMODEffect(byte modEffect, byte modParam, bool fromXM)
 	{
 		var effect = Effects.None;
@@ -378,7 +404,7 @@ public struct SongNote
 			}
 		}
 
-		switch(modEffect)
+		switch (modEffect)
 		{
 			case 0x00:      if (modParam != 0) effect = Effects.Arpeggio; break;
 			case 0x01:      effect = Effects.PortamentoUp; break;
@@ -421,7 +447,7 @@ public struct SongNote
 			case 0x0D:      effect = Effects.PatternBreak; modParam = (byte)(((modParam >> 4) * 10) + (modParam & 0x0F)); break;
 			case 0x0E:
 				effect = Effects.Special;
-				switch(modParam & 0xF0)
+				switch (modParam & 0xF0)
 				{
 					case 0x10: effect = Effects.PortamentoUp; modParam |= 0xF0; break;
 					case 0x20: effect = Effects.PortamentoDown; modParam |= 0xF0; break;
