@@ -1,6 +1,4 @@
-using ChasmTracker.FileTypes;
-
-namespace Chasm.FileTypes.SampleConverters;
+namespace ChasmTracker.FileTypes.SampleConverters;
 
 public class RAW : SampleFileConverter
 {
