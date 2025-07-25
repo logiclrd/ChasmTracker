@@ -11,7 +11,7 @@ using ChasmTracker.Songs;
 
 public abstract class SongFileConverter : FileConverter, IFileInfoReader
 {
-	public abstract bool FillExtendedData(Stream stream, FileReference fileReference);
+	public abstract bool FillExtendedData(Stream stream, FileReference file);
 	public abstract Song LoadSong(Stream stream, LoadFlags flags);
 	public virtual SaveResult SaveSong(Song song, Stream stream) => throw new NotSupportedException();
 
