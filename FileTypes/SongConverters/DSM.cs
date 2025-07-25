@@ -415,7 +415,7 @@ public class DSM : SongFileConverter
 		song.PanSeparation = 128;
 		song.Flags = SongFlags.ITOldEffects | SongFlags.CompatibleGXX;
 
-		song.TrackerID = "Digital Sound Interface Kit";
+		song.TrackerID = Description;
 
 		return song;
 	}

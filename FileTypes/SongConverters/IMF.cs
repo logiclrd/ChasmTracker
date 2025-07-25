@@ -586,7 +586,7 @@ public class IMF : SongFileConverter
 		var song = new Song();
 
 		song.Title = hdr.Title.ToStringZ();
-		song.TrackerID = "Imago Orpheus";
+		song.TrackerID = Description;
 
 		if (hdr.Flags.HasFlag(IMFModuleFlags.LinearSlides))
 			song.Flags |= SongFlags.LinearSlides;

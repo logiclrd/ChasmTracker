@@ -1096,13 +1096,18 @@ public class Song
 		return GetPattern(patternNumber);
 	}
 
-	public Pattern? GetPattern(int n, bool create = true)
+	public Pattern? GetPattern(int n, bool create = true, int rowsInNewPattern = -1)
 	{
 		if (n >= Patterns.Count)
 			return null;
 
 		if (create && (Patterns[n] == null))
-			Patterns[n] = new Pattern();
+		{
+			if (rowsInNewPattern > 0)
+				Patterns[n] = new Pattern(rowsInNewPattern);
+			else
+				Patterns[n] = new Pattern();
+		}
 
 		return Patterns[n];
 	}
