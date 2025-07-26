@@ -111,11 +111,7 @@ public class DSM : SongFileConverter
 			if (chunk.ID == ID_SONG)
 			{
 				/* we only need the title, really */
-				byte[] title = new byte[28];
-
-				IFF.Read(stream, chunk, title);
-
-				fileReference.Title = title.ToStringZ();
+				fileReference.Title = IFF.ReadString(stream, chunk, length: 28);
 
 				break;
 			}

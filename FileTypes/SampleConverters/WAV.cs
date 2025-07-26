@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace ChasmTracker.FileTypes.Converters;
+namespace ChasmTracker.FileTypes.SampleConverters;
 
 using System;
 using ChasmTracker.FileSystem;

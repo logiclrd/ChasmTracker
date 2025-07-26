@@ -1,4 +1,4 @@
-namespace ChasmTracker.FileTypes.Converters;
+namespace ChasmTracker.FileTypes.InstrumentConverters;
 
 public class XI : InstrumentFileConverter
 {

@@ -2,8 +2,6 @@ using System;
 using System.IO;
 using System.Text;
 
-using ChasmTracker.Utility;
-
 namespace ChasmTracker.FileTypes.Exporters;
 
 /* wav is like aiff's ret**ded cousin */

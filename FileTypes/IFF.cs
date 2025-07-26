@@ -1,14 +1,26 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ChasmTracker.FileTypes;
 
-using System.Formats.Asn1;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
 public class IFF
 {
+	[ThreadStatic]
+	static byte[]? s_buffer;
+
+	[MemberNotNull(nameof(s_buffer))]
+	static void EnsureBuffer(int size)
+	{
+		if ((s_buffer == null) || (s_buffer.Length < size))
+			s_buffer = new byte[size * 2];
+	}
+
 	public static IFFChunk? PeekChunk(Stream stream)
 	{
 		return PeekChunkEx(stream, ChunkFlags.Aligned);
@@ -42,6 +54,9 @@ public class IFF
 	}
 
 	/* returns the number of bytes read or zero on error */
+	public static int Read(Stream stream, IFFChunk chunk, Memory<byte> data)
+		=> Read(stream, chunk, data.Span);
+
 	public static int Read(Stream stream, IFFChunk chunk, Span<byte> data)
 	{
 		long savedPosition = stream.Position;
@@ -80,6 +95,52 @@ public class IFF
 
 		return returnValue;
 	}
+
+	public static T ReadStructure<T>(Stream stream, IFFChunk chunk)
+	{
+		int structureSize = Marshal.SizeOf<T>();
+
+		EnsureBuffer(structureSize);
+
+		var slice = s_buffer.AsMemory(0, structureSize);
+
+		int numRead = Read(stream, chunk, slice);
+
+		if (numRead < structureSize)
+			throw new Exception("Failed to read " + structureSize + " bytes from chunk of length " + chunk.Size + " at " + chunk.Offset);
+
+		return StructureSerializer.MarshalFromBytes<T>(slice);
+	}
+
+	public static string ReadString(Stream stream, IFFChunk chunk, int length = -1, Encoding? encoding = null, bool nullTerminated = true)
+	{
+		encoding ??= Encoding.ASCII;
+
+		if (length < 0)
+			length = chunk.Size;
+		if (length > chunk.Size)
+			length = chunk.Size;
+
+		EnsureBuffer(length);
+
+		var slice = s_buffer.Slice(0, length);
+
+		int numRead = Read(stream, chunk, slice);
+
+		if (numRead < length)
+			throw new Exception("Failed to read chunk of length " + length + " at " + chunk.Offset);
+
+		if (nullTerminated)
+		{
+			int terminator = slice.IndexOf((byte)0);
+
+			if (terminator >= 0)
+				slice = slice.Slice(0, terminator);
+		}
+
+		return encoding.GetString(slice);
+	}
+
 
 	public static int Receive(Stream stream, IFFChunk chunk, Func<byte[], int, int>? callback)
 	{

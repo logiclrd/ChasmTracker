@@ -85,11 +85,7 @@ public class PSM : SongFileConverter
 			if (c.ID == ID_TITL)
 			{
 				/* we only need the title, really */
-				byte[] title = new byte[256];
-
-				IFF.Read(fp, c, title);
-
-				file.Title = title.ToStringZ();
+				file.Title = IFF.ReadString(fp, c, length: 256);
 
 				break;
 			}
@@ -502,11 +498,7 @@ public class PSM : SongFileConverter
 		if (titlChunk != null)
 		{
 			/* UNTESTED -- I don't have any PSM files with this chunk. :) */
-			byte[] titleBytes = new byte[titlChunk.Size];
-
-			IFF.Read(stream, titlChunk, titleBytes);
-
-			song.Title = titleBytes.ToStringZ();
+			song.Title = IFF.ReadString(stream, titlChunk);
 		}
 
 		/* need to load patterns; otherwise we won't know

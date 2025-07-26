@@ -6,7 +6,7 @@ using System.Text;
 
 using libFLAC;
 
-namespace ChasmTracker.FileTypes.Converters;
+namespace ChasmTracker.FileTypes.SampleConverters;
 
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;

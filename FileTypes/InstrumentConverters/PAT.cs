@@ -1,7 +1,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace ChasmTracker.FileTypes.SampleConverters;
+namespace ChasmTracker.FileTypes.InstrumentConverters;
 
 using System;
 using ChasmTracker.FileSystem;

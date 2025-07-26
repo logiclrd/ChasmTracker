@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ChasmTracker.FileTypes.Converters;
+namespace ChasmTracker.FileTypes.SampleConverters;
 
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
@@ -80,15 +80,10 @@ public class AIFF : SampleFileConverter
 		if (chunk.ID != ID_FORM)
 			return null;
 
-		byte[] filetypeData = new byte[4];
-
-		if (IFF.Read(stream, chunk, filetypeData) != filetypeData.Length)
-			return null;
-
-		uint filetype = Convert.ToUInt32(filetypeData);
+		uint filetype = IFF.ReadStructure<uint>(stream, chunk);
 
 		// jump "into" the FORM chunk
-		stream.Position = chunk.Offset + filetypeData.Length;
+		stream.Position = chunk.Offset + 4;
 
 		filetype = ByteSwap.Swap(filetype);
 
@@ -153,16 +148,7 @@ public class AIFF : SampleFileConverter
 
 				if (name != null)
 				{
-					byte[] nameBytes = new byte[name.Size];
-
-					IFF.Read(stream, name, nameBytes);
-
-					int nameLength = Array.IndexOf(nameBytes, 0);
-
-					if (nameLength < 0)
-						nameLength = nameBytes.Length;
-
-					string nameValue = nameBytes.ToStringZ();
+					string nameValue = IFF.ReadString(stream, name);
 
 					if (file != null)
 						file.Title = nameValue;
@@ -267,16 +253,7 @@ public class AIFF : SampleFileConverter
 
 				if (name != null)
 				{
-					byte[] nameBytes = new byte[name.Size];
-
-					IFF.Read(stream, name, nameBytes);
-
-					int nameLength = Array.IndexOf(nameBytes, 0);
-
-					if (nameLength < 0)
-						nameLength = nameBytes.Length;
-
-					string nameValue = nameBytes.ToStringZ();
+					string nameValue = IFF.ReadString(stream, name);
 
 					if (file != null)
 						file.Title = nameValue;
