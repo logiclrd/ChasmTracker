@@ -422,4 +422,7 @@ public class Tables
 
 		return 4 * 12;
 	}
+
+	public static int MODFineTune(int b)
+		=> FineTuneTable[(b & 0xF) ^ 8]; ;
 }

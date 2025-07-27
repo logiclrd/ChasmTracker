@@ -146,7 +146,7 @@ public class IFF
 	{
 		var buffer = new byte[chunk.Size];
 
-		int numRead = Read(stream, chunk, buffer);
+		int numRead = Read(stream, chunk, buffer.AsMemory());
 
 		if (numRead == 0)
 			return 0;

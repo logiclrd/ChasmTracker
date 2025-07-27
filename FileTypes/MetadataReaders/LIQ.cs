@@ -1,9 +1,9 @@
 using System.IO;
-using ChasmTracker.FileSystem;
-using ChasmTracker.FileTypes;
-using ChasmTracker.Utility;
 
-namespace ChasmTracker.FileType.MetadataReaders;
+namespace ChasmTracker.FileTypes.MetadataReaders;
+
+using ChasmTracker.FileSystem;
+using ChasmTracker.Utility;
 
 public class LIQ : IFileInfoReader
 {

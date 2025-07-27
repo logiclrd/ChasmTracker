@@ -17,6 +17,7 @@ public class SF2SampleStream : Stream
 	int _current;
 	/* original position from before we mutilated it */
 	long _origPos;
+	bool _disposed;
 
 	public SF2SampleStream(Stream @in, long off1, long len1, long off2, long len2)
 	{
@@ -138,6 +139,10 @@ public class SF2SampleStream : Stream
 
 	protected override void Dispose(bool disposing)
 	{
-		base.Dispose(disposing);
+		if (!_disposed)
+		{
+			_src.Position = _origPos;
+			_disposed = false;
+		}
 	}
 }
