@@ -34,7 +34,7 @@ public class STM : SongFileConverter
 			// KLMNO can be entered in the editor but don't do anything
 		};
 
-	public void ImportSTMEffectParameter(ref SongNote note)
+	protected static void ImportSTMEffectParameter(ref SongNote note)
 	{
 		switch (note.Effect)
 		{
@@ -78,7 +78,7 @@ public class STM : SongFileConverter
 		}
 	}
 
-	public static byte ConvertSTMTempoToBPM(int tempo)
+	protected static byte ConvertSTMTempoToBPM(int tempo)
 	{
 		int tpr = ((tempo >> 4) != 0) ? (tempo >> 4) : 1;
 		int scale = (tempo & 15);
@@ -86,7 +86,7 @@ public class STM : SongFileConverter
 		return Tables.ST2TempoTable[tpr - 1][scale];
 	}
 
-	void HandleSTMTempoPattern(Pattern pattern, int row, int tempo)
+	protected static void HandleSTMTempoPattern(Pattern pattern, int row, int tempo)
 	{
 		for (int i = 1; i <= 32; i++)
 		{
