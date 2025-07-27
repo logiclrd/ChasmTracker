@@ -82,7 +82,7 @@ public class SFX : SongFileConverter
 		{
 			stream.Position = format.TagPosition;
 
-			if (stream.ReadString(format.Tag.Length) == fmt.Tag)
+			if (stream.ReadString(format.Tag.Length) == format.Tag)
 			{
 				fmt = format;
 				break;
