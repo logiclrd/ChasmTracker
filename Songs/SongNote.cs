@@ -536,4 +536,9 @@ public struct SongNote
 		Effect = effect;
 		Parameter = modParam;
 	}
+
+	public void SwapEffects()
+	{
+		(VolumeEffectByte, EffectByte) = (EffectByte, VolumeEffectByte);
+	}
 }
