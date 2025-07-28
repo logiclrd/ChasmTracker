@@ -1,9 +1,9 @@
+using System;
 using System.IO;
 using System.Text;
 
 namespace ChasmTracker.FileTypes;
 
-using System;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
@@ -120,7 +120,7 @@ public static class WAVFile
 			0x00, 0x38, 0x9B, 0x71,
 		};
 
-	static WaveFormat ReadFmtChunk(Stream data)
+	public static WaveFormat ReadFmtChunk(Stream data)
 	{
 		var reader = new BinaryReader(data, Encoding.ASCII, leaveOpen: true);
 
@@ -247,7 +247,7 @@ public static class WAVFile
 			case WaveFormatTypes.PCM:
 				flags |= (fmt.BitsPerSample == 8) ? SampleFormat.PCMUnsigned : SampleFormat.PCMSigned;
 				break;
-			case WaveFormatTypes.IEEEFloat:
+			case WaveFormatTypes.IEEEFloatingPoint:
 				flags |= SampleFormat.IEEEFloatingPoint;
 				break;
 			default: return null; // unsupported

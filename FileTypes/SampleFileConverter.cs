@@ -16,7 +16,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 
 	public abstract bool FillExtendedData(Stream stream, FileReference file);
 	public abstract SongSample LoadSample(Stream stream);
-	public abstract SaveResult SaveSample(SongSample sample, Stream stream);
+	public virtual SaveResult SaveSample(SongSample sample, Stream stream) => throw new NotSupportedException();
 
 	static Type[] s_converterTypes =
 		typeof(SampleFileConverter).Assembly.GetTypes()
