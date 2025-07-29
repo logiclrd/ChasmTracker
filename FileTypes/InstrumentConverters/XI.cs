@@ -9,7 +9,7 @@ using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public class XI : InstrumentFileConverter, IFileInfoReader
+public class XI : InstrumentFileConverter
 {
 	// TODO
 	public override string Label => "XI";
@@ -17,16 +17,6 @@ public class XI : InstrumentFileConverter, IFileInfoReader
 	public override string Extension => ".xi";
 
 	/* --------------------------------------------------------------------- */
-
-	[Flags]
-	enum XMSampleType : byte
-	{
-		Loop = 1,
-		PingPongLoop = 2,
-		LoopMask = Loop | PingPongLoop,
-		_16Bit = 0x10,
-		Stereo = 0x20,
-	}
 
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
 	struct XMSampleHeader
@@ -145,7 +135,7 @@ public class XI : InstrumentFileConverter, IFileInfoReader
 
 	/* --------------------------------------------------------------------- */
 
-	public bool FillExtendedData(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		if (!ReadXIFileHeader(stream, out var xi))
 			return false;

@@ -45,7 +45,7 @@ public class BitSetWidget : Widget
 			2, /* not cursor, not set */
 			3, /* not cursor, is  set */
 			0, /* has cursor, not set */
-			0  /* has cursor, is  set */
+			0, /* has cursor, is  set */
 		};
 
 	static int[] BGSelection =
@@ -54,7 +54,7 @@ public class BitSetWidget : Widget
 			0, /* not cursor, not set */
 			0, /* not cursor, is  set */
 			2, /* has cursor, not set */
-			3  /* has cursor, is  set */
+			3, /* has cursor, is  set */
 		};
 
 	protected override void DrawWidget(bool isSelected, int tfg, int tbg)

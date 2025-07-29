@@ -43,7 +43,7 @@ public class ULT : SongFileConverter
 		_16bit = 4,
 		Loop = 8,
 		PingPongLoop = 16,
-	};
+	}
 
 	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
 	struct ULTSample
@@ -287,7 +287,7 @@ public class ULT : SongFileConverter
 
 		for (n = 0; n < 4; n++)
 		{
-			if (XM.ConvertVolumeEffectOf(ref note, n >> 1))
+			if (EffectUtility.ConvertVolumeEffectOf(ref note, n >= 2))
 			{
 				n = 5;
 				break;
@@ -302,8 +302,8 @@ public class ULT : SongFileConverter
 				note.SwapEffects();
 
 			lostEffects++;
-			//log_appendf(4, "Effect dropped: %c%02X < %c%02X", get_effect_char(note.Voleffect),
-			//        note.Volparam, get_effect_char(note.Effect), note.Param);
+			//Log.Append(4, "Effect dropped: {0}{1:X2} < {2}{3:X2}", SongNote.GetEffectChar(note.VolumeEffectByte),
+			//        note.VolumeParameter, note.EffectChar, note.Parameter);
 
 			note.VolumeEffect = 0;
 		}
@@ -317,7 +317,7 @@ public class ULT : SongFileConverter
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
-	static readonly string[] VersionString = {"<1.4", "1.4", "1.5", "1.6"};
+	static readonly string[] VersionString = { "<1.4", "1.4", "1.5", "1.6" };
 
 	public override Song LoadSong(Stream stream, LoadFlags lflags)
 	{

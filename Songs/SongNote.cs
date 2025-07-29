@@ -233,18 +233,17 @@ public struct SongNote
 
 	const string EffectChars = ".JFEGHLKRXODB!CQATI?SMNVW$UY?P&Z()?";
 
-	public char EffectChar
-	{
-		get
-		{
-			if (EffectByte > 34)
-			{
-				Log.Append(4, "get_effect_char: effect {0} out of range", Effect);
-				return '?';
-			}
+	public char EffectChar => GetEffectChar(EffectByte);
 
-			return EffectChars[EffectByte];
+	public static char GetEffectChar(byte effectByte)
+	{
+		if (effectByte > 34)
+		{
+			Log.Append(4, "GetEffectChar: effect {0} out of range", (Effects)effectByte);
+			return '?';
 		}
+
+		return EffectChars[effectByte];
 	}
 
 	public string EffectString
@@ -540,5 +539,6 @@ public struct SongNote
 	public void SwapEffects()
 	{
 		(VolumeEffectByte, EffectByte) = (EffectByte, VolumeEffectByte);
+		(VolumeParameter, Parameter) = (Parameter, VolumeParameter);
 	}
 }

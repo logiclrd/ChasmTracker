@@ -8,7 +8,7 @@ using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public class PAT : InstrumentFileConverter, IFileInfoReader
+public class PAT : InstrumentFileConverter
 {
 	public override string Label => "PAT";
 	public override string Description => "Gravis Patch File";
@@ -128,7 +128,7 @@ public class PAT : InstrumentFileConverter, IFileInfoReader
 
 	/* --------------------------------------------------------------------- */
 
-	public bool FillExtendedData(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		if (!ReadHeader(stream, out var hdr))
 			return false;

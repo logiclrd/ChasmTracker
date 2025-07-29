@@ -5,24 +5,14 @@ using System.Linq;
 
 namespace ChasmTracker.FileTypes;
 
+using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 
-public abstract class InstrumentFileConverter : FileConverter
+public abstract class InstrumentFileConverter : FileConverter, IFileInfoReader
 {
-	protected InstrumentFileConversionState Init(int slot)
-	{
-		var ii = new InstrumentFileConversionState();
-
-		ii.ExpectSamples = 0;
-		ii.Instrument = Song.CurrentSong.GetInstrument(slot);
-		ii.Slot = slot;
-		ii.BaseX = 1;
-
-		return ii;
-	}
-
 	public virtual bool CanSave => false;
 
+	public abstract bool FillExtendedData(Stream stream, FileReference file);
 	public abstract bool LoadInstrument(Stream file, int slot);
 	public virtual SaveResult SaveInstrument(Song song, SongInstrument instrument, Stream file) => throw new NotSupportedException();
 

@@ -87,7 +87,7 @@ public class IMF : SongFileConverter
 		public IMFChannel[] Channels; /* Channel settings */
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 256)]
 		public byte[] OrderList;      /* Order list (0xff = +++; blank out anything beyond ordnum) */
-	};
+	}
 
 	static IMFHeader ReadHeader(Stream fp)
 	{
@@ -123,7 +123,7 @@ public class IMF : SongFileConverter
 		public byte LoopEnd;        /* Envelope loop end point */
 		public IMFEnvelopeFlags Flags;          /* Envelope flags */
 		byte _unused1, _unused2, _unused3;
-	};
+	}
 
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct IMFEnvelopeNode
@@ -212,7 +212,7 @@ public class IMF : SongFileConverter
 		public uint DRAM;            /* Reserved for internal usage */
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 4)]
 		public byte[] IS10;          /* 'IS10' or 'IW10' */
-	};
+	}
 
 	static IMFSample ReadSample(Stream fp)
 	{

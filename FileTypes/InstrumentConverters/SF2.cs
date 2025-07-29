@@ -9,7 +9,7 @@ using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public class SF2 : InstrumentFileConverter, IFileInfoReader
+public class SF2 : InstrumentFileConverter
 {
 	public override string Label => "SF2";
 	public override string Description => "SoundFont2";
@@ -29,7 +29,7 @@ public class SF2 : InstrumentFileConverter, IFileInfoReader
 		INAM,
 		shdr, /* in pdta */
 		smpl, /* contains raw sample data */
-	};
+	}
 
 	bool Read(Stream stream, Dictionary<SF2ChunkType, IFFChunk> cs)
 	{
@@ -154,7 +154,7 @@ public class SF2 : InstrumentFileConverter, IFileInfoReader
 		return true;
 	}
 
-	public bool FillExtendedData(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		var cs = new Dictionary<SF2ChunkType, IFFChunk>();
 

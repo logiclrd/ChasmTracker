@@ -55,6 +55,13 @@ public class InstrumentLoader
 			if ((cur != null) && cur.HasData)
 				continue;
 
+			if (cur == null)
+			{
+				cur = new SongSample();
+
+				Song.Samples[x] = cur;
+			}
+
 			ExpectSamples++;
 			SampleMap[slot] = x;
 			BaseX = x + 1;

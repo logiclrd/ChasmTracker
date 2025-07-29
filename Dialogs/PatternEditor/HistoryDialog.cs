@@ -22,8 +22,8 @@ public class HistoryDialog : Dialog
 	{
 		_undoHistory = undoHistory;
 
-		ActionYes = _ => { };
-		ActionCancel = _ => { };
+		ActionYes = () => { };
+		ActionCancel = () => { };
 	}
 
 	public Action<int>? RestoreHistory;

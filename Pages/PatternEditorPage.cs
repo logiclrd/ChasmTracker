@@ -317,7 +317,7 @@ public class PatternEditorPage : Page
 		MixClipboardPrecedence,
 		[Description("Template, Notes only")]
 		NotesOnly,
-	};
+	}
 
 	TemplateMode _templateMode = TemplateMode.Off;
 
@@ -617,7 +617,7 @@ public class PatternEditorPage : Page
 		OverwriteGrow,
 		MixNotes,
 		MixFields
-	};
+	}
 
 	PatternCopyInBehaviour _patternCopyInBehaviour = PatternCopyInBehaviour.Invalid;
 
@@ -3981,7 +3981,7 @@ public class PatternEditorPage : Page
 					dialog.ActionYes = MultiChannelClose;
 					dialog.ActionCancel = MultiChannelClose;
 
-					void MultiChannelClose(object? data)
+					void MultiChannelClose()
 					{
 						bool m = false;
 

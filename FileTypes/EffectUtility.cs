@@ -1,11 +1,23 @@
 using System;
-using ChasmTracker.Songs;
-using ChasmTracker.Utility;
 
 namespace ChasmTracker.FileTypes;
 
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
+
 public class EffectUtility
 {
+	public static bool ConvertVolumeEffectOf(ref SongNote note, bool force)
+	{
+		if (ConvertVolumeEffect((Effects)note.VolumeEffect, note.VolumeEffectByte, force, out var converted))
+		{
+			(note.VolumeEffect, note.Parameter) = converted;
+			return true;
+		}
+		else
+			return false;
+	}
+
 	public static bool ConvertVolumeEffect(Effects e, byte p, bool force, out (VolumeEffects Effect, byte Parameter) converted)
 	{
 		VolumeEffects ve = VolumeEffects.None;

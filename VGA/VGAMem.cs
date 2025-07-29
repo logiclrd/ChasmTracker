@@ -704,8 +704,8 @@ public static class VGAMem
 	static readonly byte[,] ThumbChars =
 		new byte[2, 8]
 		{
-			{155, 156, 157, 158, 159, 160, 161, 162},
-			{0, 0, 0, 163, 164, 165, 166, 167}
+			{ 155, 156, 157, 158, 159, 160, 161, 162 },
+			{ 0, 0, 0, 163, 164, 165, 166, 167 },
 		};
 
 	static void DrawThumbBarInternal(int width, Point position, int val, byte fg)

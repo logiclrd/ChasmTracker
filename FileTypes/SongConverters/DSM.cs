@@ -66,7 +66,7 @@ public class DSM : SongFileConverter
 		PCMSigned = 0x02,
 		PCMPacked = 0x04,
 		PCMDeltaEncoded = 0x40,
-	};
+	}
 
 	/* pattern byte flags/masks */
 	enum DSMPatternFlags

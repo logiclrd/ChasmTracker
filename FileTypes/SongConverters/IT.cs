@@ -9,6 +9,8 @@ namespace ChasmTracker.FileTypes.Converters;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.FileSystem;
+using ChasmTracker.FileTypes.InstrumentConverters;
+using ChasmTracker.FileTypes.SampleConverters;
 using ChasmTracker.MIDI;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -52,7 +54,7 @@ public class IT : SongFileConverter
 		public byte[] ChannelPan;
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
 		public byte[] ChannelVolume;
-	};
+	}
 
 	static ITFile LoadHeader(Stream stream)
 	{
@@ -305,7 +307,7 @@ public class IT : SongFileConverter
 		}
 	}
 
-	MIDIConfiguration? ReadMIDIConfig(Stream fp)
+	public static MIDIConfiguration? ReadMIDIConfig(Stream fp)
 	{
 		var midi = new MIDIConfiguration();
 

@@ -10,7 +10,7 @@ using ChasmTracker.FileTypes.SampleConverters;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public class ITI : InstrumentFileConverter, IFileInfoReader
+public class ITI : InstrumentFileConverter
 {
 	public override string Label => "ITI";
 	public override string Description => "Impulse Tracker";
@@ -119,7 +119,7 @@ public class ITI : InstrumentFileConverter, IFileInfoReader
 
 	/* --------------------------------------------------------------------- */
 
-	public bool FillExtendedData(Stream stream, FileReference file)
+	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
 		try
 		{

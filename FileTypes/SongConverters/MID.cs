@@ -60,7 +60,7 @@ public class MID : SongFileConverter
 		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 4)]
 		public string Tag; // MTrk
 		public int Length; // number of bytes of track data following
-	};
+	}
 
 	bool ReadMIDIMThd(Stream stream, ref MIDIFileHeader hdr)
 	{
