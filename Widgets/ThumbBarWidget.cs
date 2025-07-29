@@ -1,6 +1,6 @@
 namespace ChasmTracker.Widgets;
 
-using System.Diagnostics.CodeAnalysis;
+using ChasmTracker.Dialogs;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -145,6 +145,43 @@ public class ThumbBarWidget : Widget
 				ChangeValue(Maximum);
 				return true;
 		}
+
+		if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+		{
+			/* annoying */
+			return false;
+		}
+
+		char c;
+
+		if (k.Sym == KeySym.Minus)
+		{
+			if (Minimum >= 0)
+				return false;
+
+			c = '-';
+		}
+		else
+		{
+			int n = k.NumericValue(false);
+
+			if (n < 0)
+				return false;
+
+			c = (char)('0' + n);
+		}
+
+		var dialog = Dialog.Show(new NumberPromptDialog("Enter Value", c));
+
+		dialog.Finish +=
+			n =>
+			{
+				if ((n >= Minimum) && (n <= Maximum))
+				{
+					Value = n;
+					OnChanged();
+				}
+			};
 
 		return false;
 	}

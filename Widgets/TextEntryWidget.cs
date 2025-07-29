@@ -124,12 +124,7 @@ public class TextEntryWidget : Widget
 	{
 		int len = TextLength;
 
-		if (CursorPosition < FirstCharacter)
-			FirstCharacter = CursorPosition;
-		else if (CursorPosition > len)
-			CursorPosition = len;
-		else if (CursorPosition > FirstCharacter + Size.Width - 1)
-			FirstCharacter = Math.Max(0, CursorPosition - Size.Width + 1);
+		Reposition();
 
 		VGAMem.DrawTextLen(Text, FirstCharacter, Size.Width, Position, (2, 0));
 

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 
 namespace ChasmTracker.Widgets;
@@ -66,18 +67,28 @@ public class MenuToggleWidget : Widget
 		}
 		else
 		{
-			switch (k.Sym)
+			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+				return false;
+
+			int newSelectionIndex;
+
+			if (k.Sym == KeySym.Space)
+				newSelectionIndex = (State + 1) % Choices.Length;
+			else
 			{
-				case KeySym.Space:
-					if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-						return false;
+				char ch = (char)k.Sym;
 
-					State = (State + 1) % Choices.Length;
+				newSelectionIndex = Array.FindIndex(Choices, c => c.ActivationKey == ch);
+			}
 
-					OnChanged();
-					Status.Flags |= StatusFlags.NeedUpdate;
+			if (newSelectionIndex >= 0)
+			{
+				State = newSelectionIndex;
 
-					return true;
+				OnChanged();
+				Status.Flags |= StatusFlags.NeedUpdate;
+
+				return true;
 			}
 		}
 

@@ -119,12 +119,10 @@ public abstract class Widget
 		if (widget == null)
 			return false;
 
-		/*
 		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive)
 				&& (widget is OtherWidget)
 				&& widget.HandleKey(k))
 			return true;
-		*/
 
 		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive) && (k.Mouse != MouseState.None)
 				&& Status.Flags.HasFlag(StatusFlags.ClassicMode))
@@ -253,6 +251,9 @@ public abstract class Widget
 
 		if (widget.CommonHandleKey(k) is bool commonResult)
 			return commonResult;
+
+		if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+			return false;
 
 		bool isHandled = widget.HandleKey(k);
 

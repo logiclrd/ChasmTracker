@@ -255,7 +255,7 @@ public class Program
 								}
 							}
 
-							kk.OnTarget = widget_change_focus_to_xy(kk.MousePosition);
+							kk.OnTarget = Dialog.HasCurrentDialog ? Dialog.ChangeFocusTo(kk.MousePosition) : Page.ChangeFocusTo(kk.MousePosition);
 
 							if (isMouseReleaseEvent && downTrip)
 							{

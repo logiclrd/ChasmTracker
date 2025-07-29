@@ -1,9 +1,10 @@
-using System.Runtime.CompilerServices;
+using System;
+
+namespace ChasmTracker.Widgets;
+
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
-
-namespace ChasmTracker.Widgets;
 
 public class BitSetWidget : Widget
 {
@@ -91,20 +92,28 @@ public class BitSetWidget : Widget
 
 	public override bool HandleKey(KeyEvent k)
 	{
-		switch (k.Sym)
+		if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
+			return false;
+
+		int bitIndex;
+
+		if (k.Sym == KeySym.Space)
+			bitIndex = CursorPosition;
+		else
 		{
-			case KeySym.Space:
-			{
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
+			char ch = (char)k.Sym;
 
-				Value ^= (1 << CursorPosition);
+			bitIndex = Array.IndexOf(ActivationKeys, ch);
+		}
 
-				OnChanged();
-				Status.Flags |= StatusFlags.NeedUpdate;
+		if (bitIndex >= 0)
+		{
+			Value ^= (1 << bitIndex);
 
-				return true;
-			}
+			OnChanged();
+			Status.Flags |= StatusFlags.NeedUpdate;
+
+			return true;
 		}
 
 		return false;

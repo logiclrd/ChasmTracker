@@ -70,7 +70,9 @@ public class NumberEntryWidget : Widget
 
 			int existingDigit = (newValue / cursorPositionDigitValue) % 10;
 
+			/* isolate our digit and subtract it */
 			newValue -= existingDigit * cursorPositionDigitValue;
+			/* add our digit in its place */
 			newValue += (ch - '0') * cursorPositionDigitValue;
 
 			if (Reverse)
@@ -84,6 +86,8 @@ public class NumberEntryWidget : Widget
 				CursorPosition.Value++;
 			}
 		}
+
+		CursorPosition.Value = CursorPosition.Value.Clamp(0, Size.Width - 1);
 
 		Value = newValue;
 

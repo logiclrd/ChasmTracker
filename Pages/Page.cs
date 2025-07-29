@@ -96,6 +96,23 @@ public abstract class Page
 			ChangeFocusTo(-1);
 	}
 
+	public static bool ChangeFocusTo(Point pt)
+	{
+		if (ActiveWidgets == null)
+			return false;
+
+		for (int i = 0; i < ActiveWidgets.Count; i++)
+		{
+			if (ActiveWidgets[i].ContainsPoint(pt))
+			{
+				ChangeFocusTo(i);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	protected Page(PageNumbers pageNumber, string title, HelpTexts helpText)
 	{
 		PageNumber = pageNumber;
