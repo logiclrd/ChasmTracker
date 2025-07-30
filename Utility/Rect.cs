@@ -1,3 +1,6 @@
+using System.ComponentModel;
+using Id3.Frames;
+
 namespace ChasmTracker.Utility;
 
 public struct Rect
@@ -18,6 +21,19 @@ public struct Rect
 	public Rect(int x, int y, int width, int height)
 		: this(new Point(x, y), new Size(width, height))
 	{
+	}
+
+	public Rect Advance(int x, int y)
+		=> Advance(x, y, 0, 0);
+
+	public Rect Advance(int x, int y, int dw, int dh)
+	{
+		return new Rect(TopLeft.Advance(x, y), Size + (dw, dh));
+	}
+
+	public Rect Advance(Size offset, Size deltaSize)
+	{
+		return new Rect(TopLeft.Advance(offset), Size + deltaSize);
 	}
 
 	public Point BottomRight => TopLeft.Advance(Size);

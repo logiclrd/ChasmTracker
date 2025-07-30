@@ -18,11 +18,6 @@ public class DSM : SongFileConverter
 
 	public override int SortOrder => 13;
 
-	class DSMChunkPattern
-	{
-		public byte[]? Data;
-	}
-
 	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
 	class DSMChunkSong
 	{

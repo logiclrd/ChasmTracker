@@ -3,6 +3,8 @@ using System;
 namespace ChasmTracker.Pages;
 
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
+using ChasmTracker.VGA;
 
 public abstract class OrderListPage : Page
 {
@@ -38,7 +40,7 @@ public abstract class OrderListPage : Page
 
 			s_currentOrder = newOrder;
 
-			// TODO: order_list_reposition();
+			Reposition();
 
 			Status.Flags |= StatusFlags.NeedUpdate;
 		}
@@ -56,6 +58,12 @@ public abstract class OrderListPage : Page
 			TopOrder = CurrentOrder;
 		else if (CurrentOrder > TopOrder + 31)
 			TopOrder = CurrentOrder - 31;
+	}
+
+	public void UpdateCurrentOrder()
+	{
+		VGAMem.DrawText(CurrentOrder.ToString("d3"), new Point(12, 5), (5, 0));
+		VGAMem.DrawText(Song.CurrentSong.GetLastOrder().ToString("d3"), new Point(16, 5), (5, 0));
 	}
 
 	/* --------------------------------------------------------------------- */

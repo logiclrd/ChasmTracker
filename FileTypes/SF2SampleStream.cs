@@ -12,7 +12,6 @@ namespace ChasmTracker.FileTypes;
 public class SF2SampleStream : Stream
 {
 	Stream _src;
-	long _pos;
 	Data[] _data = new Data[2];
 	int _current;
 	/* original position from before we mutilated it */

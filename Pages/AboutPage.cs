@@ -30,7 +30,7 @@ public class AboutPage : Page
 		AllPages.ModuleLoad.SetPage();
 	}
 
-	void CloseAbout(object? data)
+	void CloseAbout()
 	{
 		if (Status.CurrentPageNumber == PageNumbers.About)
 			SetPage(PageNumbers.ModuleLoad);

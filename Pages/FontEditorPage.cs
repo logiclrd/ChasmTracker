@@ -26,7 +26,7 @@ public class FontEditorPage : Page
 	int _fontListTopFont = 0;
 	Shared<int> _fontListCurFont = new Shared<int>();
 
-	public PageNumbers ReturnPageNumber;
+	public PageNumbers ReturnPageNumber = PageNumbers.PatternEditor;
 
 	public FontEditorPage()
 		: base(PageNumbers.FontEditor, "", HelpTexts.Global)
@@ -567,8 +567,7 @@ to change the default font!
 							{
 								var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite font file?");
 
-								dialog.ActionYes =
-									_ => DoSave();
+								dialog.ActionYes = DoSave;
 
 								return;
 							}

@@ -57,7 +57,9 @@ public class AudioPlayback
 	public static int SamplesPlayed;
 	public static int MaxChannelsUsed;
 
-	public static short[]? AudioBuffer = null;
+	public static sbyte[]? AudioBuffer8 = null;
+	public static short[]? AudioBuffer16 = null;
+	public static int[]? AudioBuffer32 = null;
 
 	public static int AudioOutputChannels = 2;
 	public static int AudioOutputBits = 16;
@@ -87,15 +89,23 @@ public class AudioPlayback
 	public static int DryLOfsVol; /* to find out what these do  -paper */
 	// -----------------------------------------------------------------------
 
+	public static void GetVUMeter(out int left, out int right)
+	{
+		left = Decibel.dB_s(40, VULeft / 256.0, 0.0);
+		right = Decibel.dB_s(40, VURight / 256.0, 0.0);
+	}
+
 	public const int VolumeRampLength = 146; // 1.46ms == 64 samples at 44.1kHz
 
-	public static int PlayingChannels => Math.Min(NumVoices, Song.CurrentSong.MaxVoices);
+	public static int PlayingChannels => Math.Min(NumVoices, MaxVoices);
+
+	public static TimeSpan CurrentTime => TimeSpan.FromSeconds(SamplesPlayed / (double)MixFrequency);
 
 	public static void InitializeModPlug()
 	{
 		using (LockScope())
 		{
-			Song.CurrentSong.MaxVoices = AudioSettings.ChannelLimit;
+			MaxVoices = AudioSettings.ChannelLimit;
 
 			SetResamplingMode(AudioSettings.InterpolationMode);
 
@@ -109,11 +119,13 @@ public class AudioPlayback
 			Surround = AudioSettings.SurroundEffect;
 
 			// update midi queue configuration
-			MIDIEngine.QueueAlloc(AudioBuffer?.Length ?? 0, AudioSampleSize, MixFrequency);
+			int audioBufferLength = AudioBuffer16?.Length ?? AudioBuffer8?.Length ?? AudioBuffer32?.Length ?? 0;
+
+			MIDIEngine.QueueAlloc(audioBufferLength, AudioSampleSize, MixFrequency);
 
 			// timelimit the playback_update() calls when midi isn't actively going on
 			{
-				int divisor = (AudioBuffer?.Length ?? 0) * 8 * AudioSampleSize;
+				int divisor = audioBufferLength * 8 * AudioSampleSize;
 
 				AudioBuffersPerSecond = (divisor != 0) ? (MixFrequency / divisor) : 0;
 
@@ -402,11 +414,15 @@ public class AudioPlayback
 		// Modplug doesn't actually have a "stop" mode, but if SONG_ENDREACHED is set, csf_read just returns.
 		Song.CurrentSong.Flags |= SongFlags.Paused | SongFlags.EndReached;
 
-		Song.CurrentSong.VULeft = 0;
-		Song.CurrentSong.VURight = 0;
+		VULeft = 0;
+		VURight = 0;
 
-		if (AudioBuffer != null)
-			Array.Clear(AudioBuffer);
+		if (AudioBuffer8 != null)
+			Array.Clear(AudioBuffer8);
+		if (AudioBuffer16 != null)
+			Array.Clear(AudioBuffer16);
+		if (AudioBuffer32 != null)
+			Array.Clear(AudioBuffer32);
 	}
 
 	public static void LoopPattern(int pattern, int row)

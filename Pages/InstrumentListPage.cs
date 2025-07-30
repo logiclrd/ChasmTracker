@@ -12,6 +12,7 @@ using ChasmTracker.Events;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
 using ChasmTracker.FileTypes.Converters;
+using ChasmTracker.FileTypes.InstrumentConverters;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Playback;
@@ -756,11 +757,11 @@ public abstract class InstrumentListPage : Page
 	{
 		var data = (InstrumentSaveData)ptr!;
 
-		Song.SaveInstrument(data.Path, data.Converter, Song.CurrentSong.GetInstrument(CurrentInstrument), CurrentInstrument);
+		Song.CurrentSong.SaveInstrument(data.Path, data.Converter, CurrentInstrument);
 	}
 
 	/* filename can be NULL, in which case the instrument filename is used (quick save) */
-	void InstrumentSave(string? filename, InstrumentFileConversionState converter)
+	void InstrumentSave(string? filename, InstrumentFileConverter converter)
 	{
 		var pEnv = Song.CurrentSong.GetInstrument(CurrentInstrument);
 
@@ -822,7 +823,7 @@ public abstract class InstrumentListPage : Page
 				AudioPlayback.ToggleMultichannelMode();
 				return;
 			case KeySym.o:
-				InstrumentSave(null, "ITI");
+				InstrumentSave(null, new ITI());
 				return;
 			case KeySym.r:
 			{

@@ -1,11 +1,8 @@
 using System;
+using System.Linq;
 
 namespace ChasmTracker.Dialogs.Samples;
 
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Runtime.CompilerServices;
-using ChasmTracker.Help;
 using ChasmTracker.Input;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -153,10 +150,6 @@ public class AdLibConfigDialog : Dialog
 				"", new Point(), // Modulator Volume Vibrato
 				3, 12, ParameterType.Boolean, 0, 7, 1),
 		];
-
-	ButtonWidget ? buttonLeft;
-	ButtonWidget? buttonBoth;
-	ButtonWidget? buttonRight;
 
 	SongSample _sample;
 	VGAMemOverlay _sampleImage;

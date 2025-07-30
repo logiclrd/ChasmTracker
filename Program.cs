@@ -22,6 +22,8 @@ using ChasmTracker.Utility;
 
 public class Program
 {
+	public static readonly DateTime StartTimeUTC = DateTime.UtcNow;
+
 	//VideoDriver s_videoDriver;
 	//AudioDriver s_audioDriver;
 	//AudioDevice s_audioDevice;
@@ -343,7 +345,7 @@ public class Program
 						/* this is the sound thread */
 						MIDIEngine.SendFlush();
 						if (!Status.Flags.HasAnyFlag(StatusFlags.DiskWriterActive | StatusFlags.DiskWriterActiveForPattern))
-							Status.CurrentPage.PlaybackUpdate();
+							Page.MainPlaybackUpdate();
 						break;
 
 					case ClipboardPasteEvent clipboardPasteEvent:
@@ -535,9 +537,9 @@ public class Program
 
 		Ver.Init();
 
-		var args = new CommandLineArguments(); /* shouldn't this be like, first? */
+		s_args = new CommandLineArguments(); /* shouldn't this be like, first? */
 
-		if (args.StartupFlags.HasFlag(StartupFlags.Headless))
+		if (s_args.StartupFlags.HasFlag(StartupFlags.Headless))
 			Status.Flags |= StatusFlags.Headless;
 
 		/* Eh. */
@@ -553,7 +555,7 @@ public class Program
 
 		Configuration.InitializeDirectory();
 
-		if (args.StartupFlags.HasFlag(StartupFlags.Hooks))
+		if (s_args.StartupFlags.HasFlag(StartupFlags.Hooks))
 		{
 			Hooks.Startup();
 			s_shutdownProcess |= ShutdownFlags.RunHook;
@@ -570,28 +572,28 @@ public class Program
 			Log.AppendNewLine();
 		}
 
-		if (args.ClassicModeSpecified)
+		if (s_args.ClassicModeSpecified)
 		{
 			Status.Flags &= ~StatusFlags.ClassicMode;
 
-			if (args.StartupFlags.HasFlag(StartupFlags.Classic))
+			if (s_args.StartupFlags.HasFlag(StartupFlags.Classic))
 				Status.Flags |= StatusFlags.ClassicMode;
 		}
 
-		if (!args.StartupFlags.HasFlag(StartupFlags.Network))
+		if (!s_args.StartupFlags.HasFlag(StartupFlags.Network))
 			Status.Flags |= StatusFlags.NoNetwork;
 
 		s_shutdownProcess |= ShutdownFlags.SaveConfiguration;
 		s_shutdownProcess |= ShutdownFlags.SDLQuit;
 
-		if (args.StartupFlags.HasFlag(StartupFlags.Headless))
+		if (s_args.StartupFlags.HasFlag(StartupFlags.Headless))
 		{
-			if (args.DiskwriteTo == null)
+			if (s_args.DiskwriteTo == null)
 			{
 				Console.Error.WriteLine("Error: --headless requires --diskwrite");
 				return 1;
 			}
-			if (args.InitialSong == null)
+			if (s_args.InitialSong == null)
 			{
 				Console.Error.WriteLine("Error: --headless requires an input song file");
 				return 1;
@@ -601,18 +603,18 @@ public class Program
 			AudioPlayback.InitializeModPlug();
 
 			// Load and export song
-			if (Song.LoadUnchecked(args.InitialSong))
+			if (Song.LoadUnchecked(s_args.InitialSong))
 			{
-				int multiOffset = args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
+				int multiOffset = s_args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
 
-				string driver = args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
+				string driver = s_args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
 					? "AIFF"
 					: "WAV";
 
 				if (multiOffset >= 0)
 					driver = "M" + driver;
 
-				if (Song.Export(args.DiskwriteTo, driver) != SaveResult.Success)
+				if (Song.Export(s_args.DiskwriteTo, driver) != SaveResult.Success)
 					Exit(1);
 
 				// Wait for diskwrite to complete
@@ -633,15 +635,15 @@ public class Program
 			}
 			else
 			{
-				Console.Error.WriteLine("Error: Failed to load song %s", args.InitialSong);
+				Console.Error.WriteLine("Error: Failed to load song %s", s_args.InitialSong);
 				Exit(1);
 			}
 		}
 
 		Assert.IsTrue(() => Video.Startup(), "Failed to initialize video!");
 
-		if (args.WantFullScreenSpecified)
-			Video.Fullscreen(args.WantFullScreen);
+		if (s_args.WantFullScreenSpecified)
+			Video.Fullscreen(s_args.WantFullScreen);
 
 		Palette.Apply();
 		Font.Initialize();
@@ -654,47 +656,47 @@ public class Program
 
 		Page.NotifySongChangedGlobal();
 
-		if ((args.InitialSong != null) && (args.InitialDirectory == null))
-			args.InitialDirectory = Path.GetDirectoryName(Path.GetFullPath(args.InitialSong!));
+		if ((s_args.InitialSong != null) && (s_args.InitialDirectory == null))
+			s_args.InitialDirectory = Path.GetDirectoryName(Path.GetFullPath(s_args.InitialSong!));
 
-		if (args.InitialDirectory != null)
+		if (s_args.InitialDirectory != null)
 		{
-			Configuration.Directories.ModulesDirectory = args.InitialDirectory;
-			Configuration.Directories.SamplesDirectory = args.InitialDirectory;
-			Configuration.Directories.InstrumentsDirectory = args.InitialDirectory;
+			Configuration.Directories.ModulesDirectory = s_args.InitialDirectory;
+			Configuration.Directories.SamplesDirectory = s_args.InitialDirectory;
+			Configuration.Directories.InstrumentsDirectory = s_args.InitialDirectory;
 		}
 
-		if (args.StartupFlags.HasFlag(StartupFlags.FontEdit))
+		if (s_args.StartupFlags.HasFlag(StartupFlags.FontEdit))
 		{
 			Status.Flags |= StatusFlags.StartupFontEdit;
 			Page.SetPage(PageNumbers.FontEditor);
 		}
-		else if (args.InitialSong != null)
+		else if (s_args.InitialSong != null)
 		{
 			Page.SetPage(PageNumbers.Log);
 
-			var song = Song.Load(args.InitialSong);
+			var song = Song.Load(s_args.InitialSong);
 
 			if (song != null)
 			{
 				Song.CurrentSong = song;
 
-				if (args.DiskwriteTo != null)
+				if (s_args.DiskwriteTo != null)
 				{
 					// make a guess?
-					int multiOffset = args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
+					int multiOffset = s_args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
 
-					string driver = args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
+					string driver = s_args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
 						? "AIFF"
 						: "WAV";
 
 					if (multiOffset >= 0)
 						driver = "M" + driver;
 
-					if (Song.Export(args.DiskwriteTo, driver) != SaveResult.Success)
+					if (Song.Export(s_args.DiskwriteTo, driver) != SaveResult.Success)
 						Exit(1);
 				}
-				else if (args.StartupFlags.HasFlag(StartupFlags.Play))
+				else if (s_args.StartupFlags.HasFlag(StartupFlags.Play))
 				{
 					AudioPlayback.Start();
 					Page.SetPage(PageNumbers.Info);
@@ -746,7 +748,7 @@ public class Program
 				Status.Flags.HasFlag(StatusFlags.ClassicMode)
 				? "Exit Impulse Tracker?"
 				: "Exit Schism Tracker?",
-				_ => SaveCheck(_ => Program.Exit(0)));
+				_ => Page.SaveCheck(_ => Program.Exit(0)));
 		}
 	}
 }

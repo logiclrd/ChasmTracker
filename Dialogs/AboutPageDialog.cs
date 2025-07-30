@@ -12,8 +12,7 @@ public class AboutPageDialog : Dialog
 {
 	/* --------------------------------------------------------------------------------------------------------- */
 	/* multichannel dialog */
-	ToggleWidget[]? toggleChannel;
-	ButtonWidget? buttonOK;
+	ButtonWidget? buttonContinue;
 
 	int _fakeDriver;
 
@@ -63,12 +62,14 @@ public class AboutPageDialog : Dialog
 
 	protected override void Initialize()
 	{
-		Widgets.Add(new ButtonWidget(
-			position: new Point(32, 32),
+		buttonContinue = new ButtonWidget(
+			position: new Point(33, 32),
 			width: 12,
 			DialogButtonYes,
 			"Continue",
-			padding: 3));
+			padding: 3);
+
+		Widgets.Add(buttonContinue);
 	}
 
 	public override void DrawConst()

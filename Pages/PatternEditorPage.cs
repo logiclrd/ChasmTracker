@@ -478,7 +478,7 @@ public class PatternEditorPage : Page
 
 	List<PatternSnap> _undoHistory = new List<PatternSnap>();
 
-	int ClipboardMemoryUsage()
+	public int ClipboardMemoryUsage()
 	{
 		int usage = 0;
 
@@ -490,7 +490,7 @@ public class PatternEditorPage : Page
 		return usage;
 	}
 
-	int HistoryMemoryUsage()
+	public int HistoryMemoryUsage()
 	{
 		int usage = 0;
 

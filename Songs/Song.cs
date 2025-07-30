@@ -159,6 +159,17 @@ public class Song
 		s_midiSink = midiSink;
 	}
 
+	// IT-compatible: last order of "main song", or 0
+	public int GetLastOrder()
+	{
+		int n = 0;
+
+		while ((n < OrderList.Count) && (OrderList[n] != SpecialOrders.Last))
+			n++;
+
+		return (n > 0) ? n - 1 : 0;
+	}
+
 	// Total count of orders in orderlist before end of data
 	public int GetOrderCount()
 	{
@@ -4525,7 +4536,7 @@ public class Song
 		try
 		{
 			using (var stream = File.OpenWrite(fileName))
-				ret = converter.SaveSample(stream, smp);
+				ret = converter.SaveSample(smp, stream);
 		}
 		catch (IOException e)
 		{
@@ -4586,7 +4597,7 @@ public class Song
 		try
 		{
 			using (var stream = File.OpenWrite(fileName))
-				ret = converter.SaveInstrument(stream, this, ins);
+				ret = converter.SaveInstrument(this, ins, stream);
 		}
 		catch (IOException e)
 		{

@@ -105,6 +105,7 @@ public class ITI : InstrumentFileConverter
 		public ushort MIDIBank;
 	}
 
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct ITInstrument
 	{
 		public ITInstrumentHeader Header;

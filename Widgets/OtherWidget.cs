@@ -32,6 +32,9 @@ public class OtherWidget : Widget
 
 	public override bool AcceptsText => OtherAcceptsText;
 
+	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
+		=> OtherRedraw?.Invoke();
+
 	public override bool HandleKey(KeyEvent k)
 		=> OtherHandleKey?.Invoke(k) ?? false;
 

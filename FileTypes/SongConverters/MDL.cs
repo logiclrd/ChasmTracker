@@ -203,7 +203,6 @@ public class MDL : SongFileConverter
 	class MDLPattern
 	{
 		public int TrackNumber; // which track to put here
-		public int RowCount; // 1-256
 		public Pattern Pattern;
 		public int Channel;
 		public MDLPattern? Next;
@@ -1270,7 +1269,7 @@ public class MDL : SongFileConverter
 				if (trkNotes == null)
 					continue;
 
-				for (int n = 0; n < pat.RowCount; n++)
+				for (int n = 0; n < pat.Pattern.Rows.Count; n++)
 					pat.Pattern[n][pat.Channel] = trkNotes[n];
 			}
 		}

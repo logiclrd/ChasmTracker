@@ -6,7 +6,7 @@ public enum TrackerVisualizationStyle
 	FakeMem,
 	Oscilloscope,
 	VUMeter,
-	Monoscope,
+	MonoScope,
 	FFT,
 	Sentinel,
 }
