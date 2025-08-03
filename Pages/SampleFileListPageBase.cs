@@ -867,9 +867,9 @@ public class SampleFileListPageBase : Page
 		if (_fakeSlot != KeyJazz.NoInstrument)
 		{
 			if (k.State == KeyState.Press)
-				Song.KeyDown(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n, v, KeyJazz.CurrentChannel);
+				Song.CurrentSong.KeyDown(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n, v, KeyJazz.CurrentChannel);
 			else
-				Song.KeyUp(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n);
+				Song.CurrentSong.KeyUp(KeyJazz.FakeInstrument, KeyJazz.NoInstrument, n);
 		}
 
 		return false;

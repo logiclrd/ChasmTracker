@@ -15,19 +15,19 @@ public class ExportSampleDialog : Dialog
 	ButtonWidget? buttonCancel;
 	OtherWidget? otherFormatList;
 
-	SampleExporter[] _saveFormats;
+	SampleFileConverter[] _saveFormats;
 
 	string _fileName;
 	int _saveFormatIndex;
 
 	public string FileName => _fileName;
-	public SampleExporter SampleExporter => _saveFormats[_saveFormatIndex];
+	public SampleFileConverter SampleConverter => _saveFormats[_saveFormatIndex];
 
 	public ExportSampleDialog(string fileName)
 		: base(new Point(21, 20), new Size(39, 18))
 	{
 		_fileName = fileName;
-		_saveFormats = SampleExporter.EnumerateImplementations().Where(format => format.IsEnabled).ToArray();
+		_saveFormats = SampleFileConverter.EnumerateImplementations().Where(format => format.IsEnabled).ToArray();
 	}
 
 	protected override void Initialize()

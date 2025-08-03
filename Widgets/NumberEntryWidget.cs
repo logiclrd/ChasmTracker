@@ -14,7 +14,6 @@ public class NumberEntryWidget : Widget
 	public int Minimum;
 	public int Maximum;
 	public Shared<int> CursorPosition;
-	public event Action<KeyEvent>? HandleUnknownKey;
 	public bool Reverse;
 
 	public int Value

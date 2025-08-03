@@ -10,6 +10,7 @@ using ChasmTracker.Clipboard;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.PatternEditor;
 using ChasmTracker.DiskOutput;
+using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
@@ -2590,9 +2591,9 @@ public class PatternEditorPage : Page
 		PatternSelectionSystemCopyOut();
 	}
 
-	public override bool ClipboardPaste(byte[]? cptr)
+	public override bool ClipboardPaste(ClipboardPasteEvent cptr)
 	{
-		return PatternSelectionSystemPaste(cptr);
+		return PatternSelectionSystemPaste(cptr.Clipboard);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -3198,7 +3199,7 @@ public class PatternEditorPage : Page
 		}
 		else if (k.State == KeyState.Release)
 		{
-			c = Song.KeyUp(KeyJazz.NoInstrument, KeyJazz.NoInstrument, k.MIDINote);
+			c = Song.CurrentSong.KeyUp(KeyJazz.NoInstrument, KeyJazz.NoInstrument, k.MIDINote);
 
 			/* song_keyup didn't find find note off channel, abort */
 			if (c <= 0)
@@ -3223,7 +3224,7 @@ public class PatternEditorPage : Page
 			n = k.MIDINote;
 
 			if (!quantizeNextRow)
-				c = Song.KeyDown(smp, ins, n, v, c);
+				c = Song.CurrentSong.KeyDown(smp, ins, n, v, c);
 		}
 
 		ref var curNote = ref pattern[r][c];
@@ -3271,7 +3272,7 @@ public class PatternEditorPage : Page
 			 && k.MIDINote > -1
 			 && curNote.Instrument > 0)
 			{
-				Song.KeyRecord(curNote.Instrument, curNote.Instrument, curNote.Note, v, c + 1,
+				Song.CurrentSong.KeyRecord(curNote.Instrument, curNote.Instrument, curNote.Note, v, c + 1,
 					curNote.Effect, curNote.Parameter);
 				PatternSelectionSystemCopyOut();
 			}
@@ -3329,7 +3330,7 @@ public class PatternEditorPage : Page
 				else
 					v = -1;
 
-				Song.KeyRecord(curNote2.Instrument, curNote2.Instrument, curNote2.Note,
+				Song.CurrentSong.KeyRecord(curNote2.Instrument, curNote2.Instrument, curNote2.Note,
 					v, c + 1, curNote2.Effect, curNote2.Parameter);
 			}
 		}
@@ -3383,7 +3384,7 @@ public class PatternEditorPage : Page
 				else
 					newVol = KeyJazz.DefaultVolume;
 
-				Song.KeyRecord(smp, ins, curNote.Note,
+				Song.CurrentSong.KeyRecord(smp, ins, curNote.Note,
 					newVol, _currentChannel, curNote.Effect, curNote.Parameter);
 
 				AdvanceCursor(!k.Modifiers.HasAnyFlag(KeyMod.Shift), true);
@@ -3443,7 +3444,7 @@ public class PatternEditorPage : Page
 				if (_keyjazzNoteOff && SongNote.IsNote(note))
 				{
 					/* coda mode */
-					Song.KeyUp(smp, ins, note);
+					Song.CurrentSong.KeyUp(smp, ins, note);
 				}
 
 				/* it would be weird to have this enabled and keyjazz_noteoff
@@ -3491,7 +3492,7 @@ public class PatternEditorPage : Page
 			It'd be nice to "play" a template when pasting it (maybe only for ones that are one row high)
 			so as to hear the chords being inserted etc., but that's a little complicated to do. */
 			if (SongNote.IsNote(note) && !((_templateMode != TemplateMode.Off) && writeNote))
-				Song.KeyDown(smp, ins, note, vol, _currentChannel);
+				Song.CurrentSong.KeyDown(smp, ins, note, vol, _currentChannel);
 
 			if (writeNote)
 			{
@@ -3522,7 +3523,7 @@ public class PatternEditorPage : Page
 
 				/* try again, now that we have the effect (this is a dumb way to do this...) */
 				if (SongNote.IsNote(note) && (_templateMode == TemplateMode.Off))
-					Song.KeyRecord(smp, ins, note, vol, _currentChannel, curNote2.Effect, curNote2.Parameter);
+					Song.CurrentSong.KeyRecord(smp, ins, note, vol, _currentChannel, curNote2.Effect, curNote2.Parameter);
 
 				/* copy the note back to the mask */
 				_maskNote.Note = (byte)note;

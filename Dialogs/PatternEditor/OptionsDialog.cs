@@ -39,8 +39,6 @@ public class OptionsDialog : Dialog
 	{
 		SelectedWidgetIndex.Value = s_selectedWidgetIndex;
 
-		Data = this;
-
 		ActionYes = Close;
 		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
 			ActionCancel = Close;
@@ -118,12 +116,12 @@ public class OptionsDialog : Dialog
 		VGAMem.DrawBox(new Point(39, 34), new Point(62, 36), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);
 	}
 
-	void CloseCancel(object? data)
+	void CloseCancel()
 	{
 		RevertOptions?.Invoke();
 	}
 
-	void Close(object? data)
+	void Close()
 	{
 		s_selectedWidgetIndex = SelectedWidgetIndex;
 

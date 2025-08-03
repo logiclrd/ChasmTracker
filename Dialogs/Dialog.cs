@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace ChasmTracker.Dialogs;
 
+using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Menus;
 using ChasmTracker.Pages;
@@ -61,22 +63,33 @@ public class Dialog
 		}
 	}
 
-	public Dialog ChangeFocusTo(Widget widget)
+	public bool ChangeFocusToXY(Point pt)
+	{
+		for (int i = 0; i < Widgets.Count; i++)
+			if (Widgets[i].ContainsPoint(pt))
+				return ChangeFocusTo(Widgets[i]);
+
+		return false;
+	}
+
+	public bool ChangeFocusTo(Widget widget)
 	{
 		int index = Widgets.IndexOf(widget);
 
 		if (index >= 0)
-			ChangeFocusTo(index);
+			return ChangeFocusTo(index);
 
-		return this;
+		return false;
 	}
 
-	public Dialog ChangeFocusTo(int newWidgetIndex)
+	public bool ChangeFocusTo(int newWidgetIndex)
 	{
-		if ((newWidgetIndex == SelectedWidgetIndex)
-		 || (newWidgetIndex < 0)
+		if (newWidgetIndex == SelectedWidgetIndex)
+			return true;
+
+		if ((newWidgetIndex < 0)
 		 || (newWidgetIndex >= Widgets.Count))
-			return this;
+			return false;
 
 		if ((SelectedWidgetIndex >= 0) && (SelectedWidgetIndex < Widgets.Count))
 			ActiveWidget.IsDepressed = false;
@@ -90,7 +103,7 @@ public class Dialog
 
 		Status.Flags |= StatusFlags.NeedUpdate;
 
-		return this;
+		return true;
 	}
 
 	public static void Destroy()
@@ -153,7 +166,9 @@ public class Dialog
 		}
 	}
 
+	[MemberNotNullWhen(returnValue: true, member: nameof(CurrentDialog))]
 	public static bool HasCurrentDialog => s_activeDialogs.Any();
+	public static Dialog? CurrentDialog => s_activeDialogs.LastOrDefault();
 
 	public static bool HandleKeyForCurrentDialog(KeyEvent k)
 	{

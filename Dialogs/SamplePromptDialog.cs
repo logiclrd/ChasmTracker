@@ -35,8 +35,8 @@ public class SamplePromptDialog : NumberPromptDialog
 	Point _titlePosition;
 	Point _secondaryPosition;
 
-	public void FinishWithValue99(object? data)
-		=> Finish?.Invoke(textEntryInput.Text.Parse99());
+	public void FinishWithValue99()
+		=> Finish?.Invoke(textEntryInput!.Text.Parse99());
 
 	public override void DrawConst()
 	{
@@ -44,7 +44,7 @@ public class SamplePromptDialog : NumberPromptDialog
 		VGAMem.DrawText(Secondary, _secondaryPosition, (0, 2));
 
 		VGAMem.DrawBox(
-			textEntryInput.Position.Advance(-1, -1),
+			textEntryInput!.Position.Advance(-1, -1),
 			textEntryInput.Position.Advance(textEntryInput.Size.Width, 1),
 			BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 	}

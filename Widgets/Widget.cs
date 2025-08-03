@@ -93,10 +93,6 @@ public abstract class Widget
 	/* called when the enter key is pressed */
 	public virtual void NotifyActivate() { OnActivated(); }
 
-	/* called by the clipboard manager; really, only "other" widgets
-	should "override" this... */
-	public virtual bool ClipboardPaste(byte[]? cptr) { return false; }
-
 	protected virtual void DrawWidget(bool isSelected, int tfg, int tbg) { }
 
 	public void DrawWidget(bool isSelected)

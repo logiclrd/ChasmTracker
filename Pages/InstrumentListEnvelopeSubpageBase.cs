@@ -4,7 +4,7 @@ using System.Linq;
 namespace ChasmTracker.Pages;
 
 using ChasmTracker.Dialogs;
-using ChasmTracker.Dialogs.PatternEditor;
+using ChasmTracker.Dialogs.Instruments;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Songs;
@@ -369,7 +369,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 	{
 		var dialog = Dialog.Show(new EnvelopeResizeDialog(env));
 
-		dialog.ActionYes += _ => EnvelopeResize(env, dialog.NewTickLength);
+		dialog.ActionYes += () => EnvelopeResize(env, dialog.NewTickLength);
 	}
 
 	void EnvelopeADSR(SongInstrument ins, int a, int d, int s, int r)
@@ -409,12 +409,12 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 
 		var dialog = Dialog.Show(new EnvelopeADSRDialog());
 
-		dialog.ActionYes += _ => EnvelopeADSR(ins, dialog.Attack, dialog.Decay, dialog.Sustain, dialog.Release);
+		dialog.ActionYes += () => EnvelopeADSR(ins, dialog.Attack, dialog.Decay, dialog.Sustain, dialog.Release);
 	}
 
 	/* the return value here is actually a bitmask:
 	r & 1 => the key was handled
-	r & 2 => the envelope changed (i.e., it should be enabled) */
+	r & 2 => the envelope ()hanged (i.e., it should be enabled) */
 	protected int EnvelopeHandleKeyViewMode(KeyEvent k, Envelope? env, ref int currentNode, InstrumentFlags sec)
 	{
 		if (env == null)
@@ -472,12 +472,12 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 
 				if (k.State == KeyState.Press)
 				{
-					Song.KeyDown(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote, 64, KeyJazz.CurrentChannel);
+					Song.CurrentSong.KeyDown(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote, 64, KeyJazz.CurrentChannel);
 					return 1;
 				}
 				else if (k.State == KeyState.Release)
 				{
-					Song.KeyUp(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote);
+					Song.CurrentSong.KeyUp(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote);
 					return 1;
 				}
 
@@ -500,7 +500,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Cut envelope?");
 
 					dialog.SelectedWidgetIndex.Value = 1;
-					dialog.ActionYes += _ => DoPostLoopCut(env);
+					dialog.ActionYes += () => DoPostLoopCut(env);
 
 					return 1;
 				}
@@ -515,7 +515,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Cut envelope?");
 
 					dialog.SelectedWidgetIndex.Value = 1;
-					dialog.ActionYes += _ => DoPreLoopCut(env);
+					dialog.ActionYes += () => DoPreLoopCut(env);
 
 					return 1;
 				}
@@ -660,7 +660,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 			}
 
 			if (env.Nodes[currentNode].Tick == x && env.Nodes[currentNode].Tick == y)
-				return 1;
+				return true;
 
 			if (x < 0) x = 0;
 			if (x > s_envelopeTickLimit) x = s_envelopeTickLimit;
@@ -676,7 +676,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 			int bestDistNode = -1;
 
 			if (k.MousePosition.X < 32 || k.MousePosition.Y < 18 || k.MousePosition.X > 32 + 45 || k.MousePosition.Y > 18 + 8)
-				return 0;
+				return false;
 
 			for (int n = 0; n < env.Nodes.Count; n++)
 			{
@@ -723,7 +723,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 					{
 						/* something too close */
 						if (env.Nodes[i].Tick <= x) currentNode = i;
-						if (Math.Abs(env.Nodes[i].Tick - x) < 2) return 0;
+						if (Math.Abs(env.Nodes[i].Tick - x) < 2) return false;
 					}
 
 					bestDistNode = (EnvelopeNodeAdd(env, currentNode, x, y)) + 1;
@@ -731,7 +731,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 					Status.FlashText("Created node " + bestDistNode);
 				}
 
-				if (bestDistNode == -1) return 0;
+				if (bestDistNode == -1) return false;
 			}
 
 			s_envelopeTickLimit = env.Nodes.Last().Tick * 2;
@@ -860,8 +860,8 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 					return 0;
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return 0;
-				Song.KeyUp(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote);
-				Song.KeyDown(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote, 64, KeyJazz.CurrentChannel);
+				Song.CurrentSong.KeyUp(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote);
+				Song.CurrentSong.KeyDown(KeyJazz.NoInstrument, CurrentInstrument, s_lastNote, 64, KeyJazz.CurrentChannel);
 				return 1;
 			case KeySym.Return:
 				if (k.State == KeyState.Press)

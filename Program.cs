@@ -5,6 +5,7 @@ using System.Threading;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Audio;
 using ChasmTracker.Clipboard;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
@@ -19,6 +20,7 @@ using ChasmTracker.Pages;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
+using ChasmTracker.VGA;
 
 public class Program
 {
@@ -27,6 +29,8 @@ public class Program
 	//VideoDriver s_videoDriver;
 	//AudioDriver s_audioDriver;
 	//AudioDevice s_audioDevice;
+
+	static VideoBackend s_video = new SDLVideoBackend();
 
 	static CommandLineArguments? s_args;
 	static ShutdownFlags s_shutdownProcess;
@@ -93,7 +97,7 @@ public class Program
 						ShowExitPrompt();
 						break;
 					case AudioDevicesChangedEvent:
-						refresh_audio_device_list();
+						AudioBackend.RefreshAudioDeviceList();
 						Status.Flags |= StatusFlags.NeedUpdate;
 						break;
 					case TextInputEvent textEvent:
@@ -160,14 +164,14 @@ public class Program
 					case MouseEvent mouseEvent:
 						if (kk.State == KeyState.Press)
 						{
-							Status.KeyMod = events_get_keymod_state();
+							Status.KeyMod = EventHub.CurrentKeyMod;
 							OS.GetModKey(ref Status.KeyMod);
 						}
 
 						kk.Sym = KeySym.None;
 						kk.Modifiers = KeyMod.None;
 
-						video.Translate(mouseEvent.Position, out kk.MousePositionFine);
+						kk.MousePositionFine = s_video.Translate(mouseEvent.Position);
 
 						if (mouseEvent is MouseWheelEvent mouseWheelEvent)
 						{
@@ -257,7 +261,7 @@ public class Program
 								}
 							}
 
-							kk.OnTarget = Dialog.HasCurrentDialog ? Dialog.ChangeFocusTo(kk.MousePosition) : Page.ChangeFocusTo(kk.MousePosition);
+							kk.OnTarget = Dialog.HasCurrentDialog ? Dialog.CurrentDialog.ChangeFocusToXY(kk.MousePosition) : Page.ChangeFocusTo(kk.MousePosition);
 
 							if (isMouseReleaseEvent && downTrip)
 							{
@@ -292,7 +296,7 @@ public class Program
 								goto case WindowEventType.Leave;
 
 							case WindowEventType.Leave:
-								video_show_cursor(1);
+								s_video.ShowCursor(true);
 								break;
 
 							case WindowEventType.SizeChanged: /* tiling window managers */
@@ -350,8 +354,6 @@ public class Program
 
 					case ClipboardPasteEvent clipboardPasteEvent:
 						/* handle clipboard events */
-						if (Dialog.DoClipboardPaste(clipboardPasteEvent))
-							break;
 						if (Page.DoClipboardPaste(clipboardPasteEvent))
 							break;
 
@@ -369,8 +371,8 @@ public class Program
 
 						switch (scriptEvent.Which)
 						{
-							case "new": new_song_dialog(); break;
-							case "save": save_song_or_save_as(); break;
+							case "new": Dialog.Show<NewSongDialog>(); break;
+							case "save": AllPages.ModuleSave.SaveSongOrSaveAs(); break;
 							case "save_as": Page.SetPage(PageNumbers.ModuleSave); break;
 							case "export_song": Page.SetPage(PageNumbers.ModuleExport); break;
 							case "logviewer": Page.SetPage(PageNumbers.Log); break;
@@ -501,8 +503,9 @@ public class Program
 		if (s_shutdownProcess.HasFlag(ShutdownFlags.SDLQuit))
 		{
 			Video.Refresh();
-			Video.Blit();
-			Video.Shutdown();
+
+			s_video.Blit();
+			s_video.Shutdown();
 			/*
 			Don't use this function as atexit handler, because that will cause
 			segfault when MESA runs on Wayland or KMS/DRM: Never call SDL_Quit()
@@ -514,7 +517,7 @@ public class Program
 		}
 
 		using (AudioPlayback.LockScope())
-			Song.StopUnlocked(true);
+			AudioPlayback.StopUnlocked(true);
 
 		MIDIEngine.Stop();
 
@@ -522,7 +525,6 @@ public class Program
 		Clippy.Quit();
 		Events.Quit();
 		Timer.Quit();
-		MT.Quit();
 
 		OS.SysExit();
 
@@ -543,15 +545,8 @@ public class Program
 			Status.Flags |= StatusFlags.Headless;
 
 		/* Eh. */
-		Log.Append(false, 3, ChasmVersion.Banner(false));
+		Log.Append(false, 3, Version.GetBanner(classic: false));
 		Log.AppendNewLine();
-
-		if (!DMOZ.Init())
-		{
-			Log.Append(false, 4, "Failed to initialize a filesystem backend!");
-			Log.Append(false, 4, "Portable mode will not work properly!");
-			Log.AppendNewLine();
-		}
 
 		Configuration.InitializeDirectory();
 
@@ -614,7 +609,7 @@ public class Program
 				if (multiOffset >= 0)
 					driver = "M" + driver;
 
-				if (Song.Export(s_args.DiskwriteTo, driver) != SaveResult.Success)
+				if (Song.CurrentSong.ExportSong(s_args.DiskwriteTo, driver) != SaveResult.Success)
 					Exit(1);
 
 				// Wait for diskwrite to complete
@@ -645,7 +640,7 @@ public class Program
 		if (s_args.WantFullScreenSpecified)
 			Video.Fullscreen(s_args.WantFullScreen);
 
-		Palette.Apply();
+		VGAMem.CurrentPalette.Apply();
 		Font.Initialize();
 		MIDIEngine.Start();
 		Audio.Initialize(audio_driver, audio_device);
@@ -693,7 +688,7 @@ public class Program
 					if (multiOffset >= 0)
 						driver = "M" + driver;
 
-					if (Song.Export(s_args.DiskwriteTo, driver) != SaveResult.Success)
+					if (Song.CurrentSong.ExportSong(s_args.DiskwriteTo, driver) != SaveResult.Success)
 						Exit(1);
 				}
 				else if (s_args.StartupFlags.HasFlag(StartupFlags.Play))

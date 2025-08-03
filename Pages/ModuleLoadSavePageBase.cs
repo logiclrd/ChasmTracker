@@ -129,7 +129,7 @@ public abstract class ModuleLoadSavePageBase : Page
 
 	bool ModGrep(FileReference f)
 	{
-		return _glob?.IsMatch(f.BaseName);
+		return _glob?.IsMatch(f.BaseName) ?? false;
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -209,7 +209,7 @@ public abstract class ModuleLoadSavePageBase : Page
 
 		foreach (string item in globSpec.Split(';').Select(s => s.Trim()))
 			if (!string.IsNullOrWhiteSpace(item))
-				_glob.AddInclude(item, ignoreCase: true);
+				_glob.AddExpression(item, ignoreCase: true);
 
 		/* this is kinda lame. dmoz should have a way to reload the list without rereading the directory.
 		could be done with a "visible" flag, which affects the list's sort order, along with adjusting
@@ -430,7 +430,7 @@ public abstract class ModuleLoadSavePageBase : Page
 		SearchRedraw();
 	}
 
-	void DoDeleteFile(object? data)
+	void DoDeleteFile()
 	{
 		int oldTopFile, oldSelectedFile, oldTopDir, oldSelectedDir;
 

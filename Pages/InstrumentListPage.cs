@@ -154,7 +154,7 @@ public abstract class InstrumentListPage : Page
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
-	void SaveEnvelope(int slot, Envelope e, InstrumentFlags sec)
+	protected void SaveEnvelope(int slot, Envelope e, InstrumentFlags sec)
 	{
 		slot = (int)(unchecked((uint)slot) % 10);
 
@@ -184,7 +184,7 @@ public abstract class InstrumentListPage : Page
 		}
 	}
 
-	void RestoreEnvelope(int slot, Envelope e, InstrumentFlags sec)
+	protected void RestoreEnvelope(int slot, Envelope e, InstrumentFlags sec)
 	{
 		using (AudioPlayback.LockScope())
 		{
@@ -1004,11 +1004,11 @@ public abstract class InstrumentListPage : Page
 
 					if (k.State == KeyState.Release)
 					{
-						Song.KeyUp(KeyJazz.NoInstrument, CurrentInstrument, n);
+						Song.CurrentSong.KeyUp(KeyJazz.NoInstrument, CurrentInstrument, n);
 						Status.LastKeySym = KeySym.None;
 					}
 					else if (!k.IsRepeat)
-						Song.KeyDown(KeyJazz.NoInstrument, CurrentInstrument, n, v, KeyJazz.AutomaticChannel);
+						Song.CurrentSong.KeyDown(KeyJazz.NoInstrument, CurrentInstrument, n, v, KeyJazz.AutomaticChannel);
 
 					s_lastNote = n;
 				}

@@ -54,7 +54,7 @@ public class VolumeAmplifyDialog : Dialog
 
 	public event Action<int>? AcceptDialog;
 
-	void OK(object? data)
+	void OK()
 	{
 		AcceptDialog?.Invoke(thumbBarVolumePercent.Value);
 	}

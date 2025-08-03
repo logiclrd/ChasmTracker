@@ -24,6 +24,16 @@ public static class ArrayExtensions
 		return new Span<T>(array, index, length);
 	}
 
+	public static Span<T> Segment<T>(this T[] array, int index)
+	{
+		return array.Segment(index, array.Length - index);
+	}
+
+	public static ArraySegment<T> Segment<T>(this T[] array, int index, int length)
+	{
+		return new ArraySegment<T>(array, index, length);
+	}
+
 	public static bool Contains<T>(this T[] array, T element)
 	{
 		return Array.IndexOf(array, element) >= 0;

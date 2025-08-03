@@ -67,7 +67,7 @@ public class NewSongDialog : Dialog
 		VGAMem.DrawText("Order List", new Point(24, 33), (0, 2));
 	}
 
-	void OK(object? data)
+	void OK()
 	{
 		var flags = NewSongFlags.ClearAll;
 

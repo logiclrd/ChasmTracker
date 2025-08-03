@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 
@@ -24,18 +25,19 @@ public class MIDIEngine : IMIDISink
 	*/
 	static object s_mutex = new object();
 	static object s_recordMutex = new object();
+	static object s_providerMutex = new object();
 	static object s_portMutex = new object();
 
-	static IEnumerable<Type> EnumeratePortProviders()
-		=> typeof(MIDIEngine).Assembly.GetTypes().Where(t => typeof(MIDIPort).IsAssignableFrom(t));
+	static IEnumerable<Type> EnumerateProviders()
+		=> typeof(MIDIEngine).Assembly.GetTypes().Where(t => typeof(MIDIProvider).IsAssignableFrom(t));
 
 	static void Connect()
 	{
 		if (!s_connected)
 		{
-			foreach (var type in EnumeratePortProviders())
+			foreach (var type in EnumerateProviders())
 			{
-				var setupMethod = type.GetMethod("Setup", BindingFlags.Public | BindingFlags.Static);
+				var setupMethod = type.GetMethod("SetUp", BindingFlags.Public | BindingFlags.Static);
 
 				setupMethod?.Invoke(null, null);
 			}
@@ -63,12 +65,9 @@ public class MIDIEngine : IMIDISink
 
 	public static void PollPorts()
 	{
-		if (s_portMutex == null)
-			return;
-
-		lock (s_portMutex)
-			foreach (var port in s_ports.OfType<MIDIPort>())
-				port.Poll();
+		lock (s_providerMutex)
+			foreach (var provider in s_providers)
+				provider.Poll();
 	}
 
 	public static void Start()
@@ -96,15 +95,51 @@ public class MIDIEngine : IMIDISink
 		{
 			s_connected = false;
 
-			foreach (var type in EnumeratePortProviders())
+			foreach (var provider in s_providers)
 			{
-				foreach (var port in s_ports.Where(p => type.IsAssignableFrom(p!.GetType())))
-					UnregisterPort(port!.Number);
+				provider.UnregisterAllPorts();
 
-				var shutdown = type.GetMethod("Shutdown", BindingFlags.Static | BindingFlags.Public);
-
-				shutdown?.Invoke(null, null);
+				provider.IsCancelled = true;
+				provider.Wake();
 			}
+		}
+	}
+
+	/* ------------------------------------------------------------- */
+	/* PROVIDER registry */
+
+	static List<MIDIProvider> s_providers = new List<MIDIProvider>();
+
+	public static void RegisterProvider(MIDIProvider provider)
+	{
+		lock (s_providerMutex)
+			s_providers.Add(provider);
+	}
+
+	/* ------------------------------------------------------------- */
+
+	/* wankery */
+	public static void SetIPPortCount(int count)
+	{
+		lock (s_providerMutex)
+		{
+			var ipProvider = s_providers.OfType<IPMIDI>().SingleOrDefault();
+
+			if (ipProvider != null)
+				ipProvider.SetPorts(count);
+		}
+	}
+
+	public static int GetIPPortCount()
+	{
+		lock (s_providerMutex)
+		{
+			var ipProvider = s_providers.OfType<IPMIDI>().SingleOrDefault();
+
+			if (ipProvider != null)
+				return ipProvider.Ports.Count;
+
+			return 0;
 		}
 	}
 
@@ -122,40 +157,9 @@ public class MIDIEngine : IMIDISink
 	public static int GetPortCount()
 		=> s_ports.OfType<MIDIPort>().Count();
 
-	public static int GetIPPortCount()
-		=> s_ports.OfType<IPMIDIPort>().Count();
-
-	public static void SetIPPortCount(int newCount)
-	{
-		lock (s_portMutex)
-		{
-			int portNumber = 0;
-
-			for (int i = 0; i < s_ports.Count; i++)
-			{
-				if (s_ports[i] is IPMIDIPort)
-				{
-					if (portNumber < newCount)
-						portNumber++;
-					else
-						UnregisterPort(i);
-				}
-			}
-
-			while (portNumber < newCount)
-			{
-				RegisterPort(new IPMIDIPort(portNumber));
-				portNumber++;
-			}
-		}
-	}
-
 	/* midi engines list ports this way */
 	public static int RegisterPort(MIDIPort p)
 	{
-		if (s_portMutex == null)
-			return -1;
-
 		lock (s_portMutex)
 		{
 			p.Number = -1;
@@ -184,21 +188,15 @@ public class MIDIEngine : IMIDISink
 		return p.Number;
 	}
 
-	public static void UnregisterPort(int num)
+	public static void UnregisterPort(MIDIPort p)
 	{
-		if (s_portMutex == null)
-			return;
-
 		lock (s_portMutex)
 		{
-			if (s_ports[num] is MIDIPort q)
-			{
-				q.Received -= port_Received;
+			p.Received -= port_Received;
 
-				q.Disable();
+			p.Disable();
 
-				s_ports[num] = null;
-			}
+			s_ports[p.Number] = null;
 		}
 	}
 
@@ -242,19 +240,18 @@ public class MIDIEngine : IMIDISink
 
 	/*----------------------------------------------------------------------------------*/
 
-	static void port_Received(MIDIPort src, byte[] data)
+	static void port_Received(MIDIPort src, ArraySegment<byte> data)
 	{
-		if (data.Length == 0)
+		if (data.Count == 0)
 			return;
 
-		int len = data.Length;
+		int len = data.Count;
 
 		if (len < 4)
 		{
 			byte[] d4 = new byte[4];
 
-			Array.Copy(data, d4, len);
-
+			data.CopyTo(d4);
 			data = d4;
 		}
 
@@ -268,7 +265,7 @@ public class MIDIEngine : IMIDISink
 			else
 				Status.LastMIDILength = len;
 
-			Array.Copy(data, Status.LastMIDIEvent, Status.LastMIDILength);
+			data.CopyTo(Status.LastMIDIEvent.Segment(0, Status.LastMIDILength));
 
 			Status.Flags |= StatusFlags.MIDIEventChanged;
 			Status.LastMIDIPort = src;
@@ -278,7 +275,7 @@ public class MIDIEngine : IMIDISink
 		/* pass through midi events when on midi page */
 		if (Status.CurrentPageNumber == PageNumbers.MIDI)
 		{
-			SendNow(data, len);
+			SendNow(data);
 			Status.Flags |= StatusFlags.NeedUpdate;
 		}
 
@@ -304,7 +301,7 @@ public class MIDIEngine : IMIDISink
 			{
 				case 0: /* sysex */
 					if (len <= 2) return;
-					EventSysEx(new ArraySegment<byte>(data, offset: 1, len - 2));
+					EventSysEx(data.Slice(1, len - 2));
 					break;
 				case 6: /* tick */
 					EventTick();
@@ -387,7 +384,7 @@ public class MIDIEngine : IMIDISink
 		EventHub.PushEvent(new MIDITickEvent());
 	}
 
-	public static void EventSysEx(ArraySegment<byte> data)
+	public static void EventSysEx(Span<byte> data)
 	{
 		var @event = new MIDISysExEvent();
 
@@ -519,7 +516,7 @@ public class MIDIEngine : IMIDISink
 		return true;
 	}
 
-	static bool SendUnlocked(byte[] data, int len, TimeSpan delay, MIDIFrom from)
+	static bool SendUnlocked(Span<byte> data, TimeSpan delay, MIDIFrom from)
 	{
 		bool needTimer = false;
 
@@ -540,9 +537,9 @@ public class MIDIEngine : IMIDISink
 					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
 					{
 						if (ptr.CanSendNow)
-							ptr.SendNow(data, len, TimeSpan.Zero);
+							ptr.SendNow(data, TimeSpan.Zero);
 						else if (ptr.CanSendLater)
-							ptr.SendLater(data, len, TimeSpan.Zero);
+							ptr.SendLater(data, TimeSpan.Zero);
 					}
 				}
 				break;
@@ -553,7 +550,7 @@ public class MIDIEngine : IMIDISink
 					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
 					{
 						if (ptr.CanSendNow)
-							ptr.SendNow(data, len, TimeSpan.Zero);
+							ptr.SendNow(data, TimeSpan.Zero);
 					}
 				}
 				break;
@@ -564,7 +561,7 @@ public class MIDIEngine : IMIDISink
 					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
 					{
 						if (ptr.CanSendLater)
-							ptr.SendLater(data, len, delay);
+							ptr.SendLater(data, delay);
 						else if (ptr.CanSendNow)
 							needTimer = true;
 					}
@@ -577,15 +574,15 @@ public class MIDIEngine : IMIDISink
 		return needTimer;
 	}
 
-	public static void SendNow(byte[] seq, int len)
+	public static void SendNow(Span<byte> seq)
 	{
 		if (s_recordMutex == null) return;
 
 		lock (s_recordMutex)
-			SendUnlocked(seq, len, TimeSpan.Zero, MIDIFrom.Immediate);
+			SendUnlocked(seq, TimeSpan.Zero, MIDIFrom.Immediate);
 	}
 
-	static void SendTimerCallback(byte[] msg, int len)
+	static void SendTimerCallback(Span<byte> msg)
 	{
 		// once more
 
@@ -594,10 +591,10 @@ public class MIDIEngine : IMIDISink
 		if ((s_recordMutex == null) || !s_connected) return;
 
 		lock (s_recordMutex)
-			SendUnlocked(msg, len, TimeSpan.Zero, MIDIFrom.Now);
+			SendUnlocked(msg, TimeSpan.Zero, MIDIFrom.Now);
 	}
 
-	void IMIDISink.OutRaw(Song csf, byte[] data, int len, int samplesDelay)
+	void IMIDISink.OutRaw(Song csf, Span<byte> data, int samplesDelay)
 	{
 		Assert.IsTrue(
 			() => Song.CurrentSong == csf,
@@ -612,23 +609,45 @@ public class MIDIEngine : IMIDISink
 		Console.WriteLine(); /* newline */
 #endif
 
-		SendBuffer(data, len, TimeSpan.FromMilliseconds(samplesDelay / s_midiBytesPerMillisecond));
+		SendBuffer(data, TimeSpan.FromMilliseconds(samplesDelay / s_midiBytesPerMillisecond));
 	}
 
-	public static void SendBuffer(byte[] data, int len, TimeSpan pos)
+	// We send little chunks of data, like 4 bytes at a time. I'm hoping this will be grossly
+	// more than enough to handle delayed data sends, since we can't store Span<byte>s.
+	// I also don't know if multiple threads call SendBuffer, so we'll just do this
+	// independently for each thread.
+	[ThreadStatic]
+	static byte[]? s_ringBuffer;
+	[ThreadStatic]
+	static int s_ringBufferNext;
+
+	[MemberNotNull(nameof(s_ringBuffer))]
+	static int AllocateFromRingBuffer(int length)
+	{
+		s_ringBuffer ??= new byte[65536];
+
+		if (s_ringBufferNext + length < s_ringBuffer.Length)
+			s_ringBufferNext += length;
+		else
+			s_ringBufferNext = 0;
+
+		return s_ringBufferNext - length;
+	}
+
+	public static void SendBuffer(Span<byte> data, TimeSpan pos)
 	{
 		lock (s_recordMutex)
 		{
 			/* just for fun... */
 			if (Status.CurrentPageNumber == PageNumbers.MIDI)
 			{
-				Status.LastMIDIRealLength = len;
-				if (len > Status.LastMIDIEvent.Length)
+				Status.LastMIDIRealLength = data.Length;
+				if (data.Length > Status.LastMIDIEvent.Length)
 					Status.LastMIDILength = Status.LastMIDIEvent.Length;
 				else
-					Status.LastMIDILength = len;
+					Status.LastMIDILength = data.Length;
 
-				Array.Copy(data, 0, Status.LastMIDIEvent, 0, Status.LastMIDILength);
+				data.Slice(0, Status.LastMIDILength).CopyTo(Status.LastMIDIEvent);
 
 				Status.LastMIDIPort = null;
 				Status.LastMIDITick = DateTime.UtcNow;
@@ -641,17 +660,22 @@ public class MIDIEngine : IMIDISink
 
 				if (pos > TimeSpan.Zero)
 				{
-					if (SendUnlocked(data, len, pos, MIDIFrom.Later))
+					if (SendUnlocked(data, pos, MIDIFrom.Later))
 					{
 						// ok, we need a timer.
 						// one s'more
-						Timer.Oneshot(pos, () => SendTimerCallback(data, len));
+						int dataLength = data.Length;
+						int bufferOffset = AllocateFromRingBuffer(dataLength);
+
+						data.CopyTo(s_ringBuffer.Slice(bufferOffset, dataLength));
+
+						Timer.Oneshot(pos, () => SendTimerCallback(s_ringBuffer.Slice(bufferOffset, dataLength)));
 					}
 				}
 				else
 				{
 					// put the bread in the basket
-					SendNow(data, len);
+					SendNow(data);
 				}
 			}
 		}
@@ -659,7 +683,7 @@ public class MIDIEngine : IMIDISink
 
 	public static IMIDISink GetMIDISink() => new MIDIEngine();
 
-	public void OutRaw(Song csf, byte[] data, int len, TimeSpan pos)
+	public void OutRaw(Song csf, Span<byte> data, TimeSpan pos)
 	{
 		Assert.IsTrue(() => Song.CurrentSong == csf, "Hardware MIDI out should only be processed for the current playing song"); // AGH!
 
@@ -672,6 +696,6 @@ public class MIDIEngine : IMIDISink
 		Console.WriteLine();
 #endif
 
-		SendBuffer(data, len, pos);
+		SendBuffer(data, pos);
 	}
 }

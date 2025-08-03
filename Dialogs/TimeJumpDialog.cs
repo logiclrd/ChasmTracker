@@ -19,7 +19,7 @@ public class TimeJumpDialog : Dialog
 	public TimeJumpDialog()
 		: base(new Point(26, 24), new Size(30, 8))
 	{
-		ActionYes = _ => AcceptDialog();
+		ActionYes = () => AcceptDialog();
 	}
 
 	protected override void Initialize()
@@ -29,9 +29,7 @@ public class TimeJumpDialog : Dialog
 		buttonOK = new ButtonWidget(new Point(30, 29), 8, "OK", 4);
 		buttonCancel = new ButtonWidget(new Point(42, 29), 8, "Cancel", 2);
 
-		numEntryMinute.HandleUnknownKey += numEntryMinute_HandleUnknownKey;
 		numEntryMinute.Reverse = true;
-
 		numEntrySecond.Reverse = true;
 
 		buttonOK.Clicked += AcceptDialog;
@@ -39,11 +37,6 @@ public class TimeJumpDialog : Dialog
 
 		Widgets.Add(numEntryMinute);
 		Widgets.Add(numEntrySecond);
-	}
-
-	void numEntryMinute_HandleUnknownKey(KeyEvent k)
-	{
-		HandleKey(k);
 	}
 
 	public override void DrawConst()

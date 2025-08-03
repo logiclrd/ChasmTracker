@@ -22,8 +22,8 @@ public class FLACDecoder : IDisposable
 	public int StreamBits; /* actual bitsize of the stream */
 	public int Offset; /* used while decoding */
 
-	public Stream InputStream;
-	public MemoryStream OutputStream;
+	public Stream? InputStream;
+	public MemoryStream? OutputStream;
 
 	byte[] _readBuffer = new byte[8192];
 	bool _isEOF;
@@ -59,6 +59,8 @@ public class FLACDecoder : IDisposable
 	{
 		if (bytes <= 0)
 			return StreamDecoderReadStatus.Abort;
+		if (InputStream == null)
+			return StreamDecoderReadStatus.Abort;
 
 		try
 		{
@@ -87,6 +89,8 @@ public class FLACDecoder : IDisposable
 
 	StreamDecoderSeekStatus OnSeek(IntPtr decoder, long absoluteByteOffset, IntPtr clientData)
 	{
+		if (InputStream == null)
+			return StreamDecoderSeekStatus.Error;
 		if (!InputStream.CanSeek)
 			return StreamDecoderSeekStatus.Unsupported;
 
@@ -106,6 +110,12 @@ public class FLACDecoder : IDisposable
 
 	StreamDecoderTellStatus OnTell(IntPtr decoder, out long absoluteByteOffset, IntPtr clientData)
 	{
+		if (InputStream == null)
+		{
+			absoluteByteOffset = -1;
+			return StreamDecoderTellStatus.Error;
+		}
+
 		try
 		{
 			absoluteByteOffset = InputStream.Position;
@@ -120,6 +130,12 @@ public class FLACDecoder : IDisposable
 
 	StreamDecoderLengthStatus OnLength(IntPtr decoder, out long streamLength, IntPtr clientData)
 	{
+		if (InputStream == null)
+		{
+			streamLength = -1;
+			return StreamDecoderLengthStatus.Error;
+		}
+
 		try
 		{
 			streamLength = InputStream.Length;
@@ -137,11 +153,9 @@ public class FLACDecoder : IDisposable
 		return _isEOF;
 	}
 
-	byte[]? _data;
-
 	StreamDecoderWriteStatus OnWrite(IntPtr decoder, Frame frame, [MarshalAs(UnmanagedType.LPArray, SizeConst = FLACConstants.MaxChannels)] IntPtr[] buffer, IntPtr clientData)
 	{
-		if (Sample == null)
+		if ((Sample == null) || (OutputStream == null))
 			return StreamDecoderWriteStatus.Abort;
 
 		if (frame.Header.Channels < Channels)

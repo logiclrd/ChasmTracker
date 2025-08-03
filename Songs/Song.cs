@@ -54,6 +54,16 @@ public class Song
 
 	public TimeSpan EditTimeElapsed => DateTime.UtcNow - EditStart.Time;
 
+	public static void Initialize()
+	{
+		CurrentSong = new Song();
+		CurrentSong.LinearPitchSlides = true;
+
+		New(NewSongFlags.ClearAll);
+
+		AudioPlayback.MixFlags |= MixFlags.MuteChannelMode;
+	}
+
 	public void SetFileName(string? file)
 	{
 		if (!string.IsNullOrEmpty(file))
@@ -515,15 +525,15 @@ public class Song
 
 	// MIDI stuff ------------------------------------------------------------
 	/* This maps S3M concepts into MIDI concepts */
-	// TODO: song_s3m_channel_info_t midi_s3m_chans[MAX_VOICES];
+	public SongS3MChannelInfo[] MIDIS3MChannels = new SongS3MChannelInfo[Constants.MaxVoices];
 	/* This helps reduce the MIDI traffic, also does some encapsulation */
-	// TODO: song_midi_state_t midi_chans[MAX_MIDI_CHANNELS];
+	public SongMIDIState[] MIDIChannels = new SongMIDIState[Constants.MaxMIDIChannels];
 
 	public MIDIConfiguration MIDIConfig = MIDIConfiguration.GetDefault();
 
-	double MIDILastSongCounter;
+	public double MIDILastSongCounter;
 
-	uint MIDIRunningStates;
+	public uint MIDIRunningStatus;
 
 	/* for midi translation, memberized from audio_playback.c */
 	public int[] MIDINoteTracker = new int[Constants.MaxChannels];
@@ -1749,8 +1759,8 @@ public class Song
 				//OPL_Touch(csf, nchan, 0);
 			}
 
-			GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
-			GeneralMIDI.Touch(Song.CurrentSong, nchan, 0);
+			GeneralMIDI.KeyOff(CurrentSong, nchan);
+			GeneralMIDI.Touch(CurrentSong, nchan, 0);
 			return;
 		}
 
@@ -1931,8 +1941,8 @@ public class Song
 			//OPL_Touch(csf, nchan, 0);
 		}
 
-		GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
-		GeneralMIDI.Touch(Song.CurrentSong, nchan, 0);
+		GeneralMIDI.KeyOff(CurrentSong, nchan);
+		GeneralMIDI.Touch(CurrentSong, nchan, 0);
 	}
 
 	void EffectKeyOff(int nchan)
@@ -1954,7 +1964,7 @@ public class Song
 			//OPL_NoteOff(csf, nchan);
 		}
 
-		GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
+		GeneralMIDI.KeyOff(CurrentSong, nchan);
 
 		var pEnv = IsInstrumentMode ? chan.Instrument : null;
 
@@ -3643,8 +3653,8 @@ public class Song
 						//OPL_Touch(csf, nchan, 0);
 					}
 
-					GeneralMIDI.KeyOff(Song.CurrentSong, nchan);
-					GeneralMIDI.Touch(Song.CurrentSong, nchan, 0);
+					GeneralMIDI.KeyOff(CurrentSong, nchan);
+					GeneralMIDI.Touch(CurrentSong, nchan, 0);
 				}
 
 				int previousNewNote = chan.NewNote;
@@ -3686,8 +3696,8 @@ public class Song
 
 						if (instr != null)
 						{
-							GeneralMIDI.DPatch(this, nchan, instr.MIDIProgram,
-								instr.MIDIBank,
+							GeneralMIDI.DPatch(this, nchan, (byte)instr.MIDIProgram,
+								(byte)instr.MIDIBank,
 								instr.MIDIChannelMask);
 						}
 					}
@@ -3728,8 +3738,8 @@ public class Song
 
 							if (instr != null)
 							{
-								GeneralMIDI.DPatch(this, nchan, instr.MIDIProgram,
-									instr.MIDIBank,
+								GeneralMIDI.DPatch(this, nchan, (byte)instr.MIDIProgram,
+									(byte)instr.MIDIBank,
 									instr.MIDIChannelMask);
 							}
 						}
@@ -3800,11 +3810,11 @@ public class Song
 	// ------------------------------------------------------------------------------------------------------------
 
 	// Send exactly one MIDI message
-	public void MIDISend(byte[] data, int len, int nchan, bool fake)
+	public void MIDISend(Span<byte> data, int nchan, bool fake)
 	{
 		ref var chan = ref Voices[nchan];
 
-		if (len >= 1 && (data[0] == 0xFA || data[0] == 0xFC || data[0] == 0xFF))
+		if (data.Length >= 1 && (data[0] == 0xFA || data[0] == 0xFC || data[0] == 0xFF))
 		{
 			// Start Song, Stop Song, MIDI Reset
 
@@ -3815,7 +3825,7 @@ public class Song
 			}
 		}
 
-		if (len >= 4 && data[0] == 0xF0 && data[1] == 0xF0)
+		if (data.Length >= 4 && data[0] == 0xF0 && data[1] == 0xF0)
 		{
 			// impulse tracker filter control (mfg. 0xF0)
 			switch (data[2])
@@ -3848,7 +3858,7 @@ public class Song
 			fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
 
 			*/
-			s_midiSink?.OutRaw(this, data, len, BufferCount);
+			s_midiSink?.OutRaw(this, data, BufferCount);
 		}
 	}
 
@@ -3857,7 +3867,7 @@ public class Song
 	/* These return the channel that was used for the note. */
 
 	/* **** chan ranges from 1 to MAX_CHANNELS   */
-	static int KeyDownEx(int samp, int ins, int note, int vol, int chan, Effects effect, int param)
+	int KeyDownEx(int samp, int ins, int note, int vol, int chan, Effects effect, int param)
 	{
 		int midiNote = note; /* note gets overwritten, possibly SpecialNotes.None */
 
@@ -3983,7 +3993,7 @@ public class Song
 						{
 							// TODO:
 							GeneralMIDI.KeyOff(this, chanInternal);
-							GeneralMIDI.DPatch(this, chanInternal, i.MIDIProgram, i.MIDIBank, i.MIDIChannelMask);
+							GeneralMIDI.DPatch(this, chanInternal, (byte)i.MIDIProgram, (byte)i.MIDIBank, i.MIDIChannelMask);
 						}
 					}
 
@@ -4082,17 +4092,17 @@ public class Song
 		return chan;
 	}
 
-	public static int KeyDown(int samp, int ins, int note, int vol, int chan)
+	public int KeyDown(int samp, int ins, int note, int vol, int chan)
 	{
 		return KeyDownEx(samp, ins, note, vol, chan, Effects.Panning, 0x80);
 	}
 
-	public static int KeyRecord(int samp, int ins, int note, int vol, int chan, Effects effect, int param)
+	public int KeyRecord(int samp, int ins, int note, int vol, int chan, Effects effect, int param)
 	{
 		return KeyDownEx(samp, ins, note, vol, chan, effect, param);
 	}
 
-	public static int KeyUp(int samp, int ins, int note)
+	public int KeyUp(int samp, int ins, int note)
 	{
 		int chan = KeyJazz.GetLastChannelForNote(note);
 
@@ -4105,7 +4115,7 @@ public class Song
 		return KeyUp(samp, ins, note, chan);
 	}
 
-	public static int KeyUp(int samp, int ins, int note, int chan)
+	public int KeyUp(int samp, int ins, int note, int chan)
 	{
 		if (KeyJazz.GetLastNoteInChannel(chan) != note)
 			return -1;

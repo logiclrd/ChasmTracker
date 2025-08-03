@@ -307,7 +307,7 @@ public class AudioPlayback
 			ResetPlayState();
 			MaxChannelsUsed = 0;
 
-			GeneralMIDI.SendSongStartCode(current_song);
+			GeneralMIDI.SendSongStartCode(Song.CurrentSong);
 		}
 
 		Page.NotifySongModeChangedGlobal();
@@ -533,7 +533,7 @@ public class AudioPlayback
 		if (MixFrequency != 4000)
 			FMDriver.Initialize(MixFrequency);
 
-		GeneralMIDI.Reset(Song.CurrentSong, 0);
+		GeneralMIDI.Reset(Song.CurrentSong, false);
 	}
 
 	public void SetWaveConfig(int rate, int bits, int channels)

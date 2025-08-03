@@ -41,13 +41,13 @@ public class FastVolumeDialog : Dialog
 
 	public event Action<int>? AcceptDialog;
 
-	void OK(object? data)
+	void OK()
 	{
 		AcceptDialog?.Invoke(thumbBarVolumePercent.Value);
 		Status.FlashText("Alt-I / Alt-J fast volume changes enabled");
 	}
 
-	void Cancel(object? data)
+	void Cancel()
 	{
 		Status.FlashText("Alt-I / Alt-J fast volume changes not enabled");
 	}

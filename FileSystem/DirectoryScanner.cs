@@ -376,7 +376,7 @@ public class DirectoryScanner
 		public string? CacheDirectoryName;
 	}
 
-	static Cache s_cacheTop = null;
+	static Cache? s_cacheTop = null;
 
 	public static void CacheUpdate(string path, FileList? fl, DirectoryList? dl)
 	{

@@ -6,6 +6,7 @@ using ChasmTracker.Audio;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Input;
+using ChasmTracker.MIDI;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -247,7 +248,7 @@ public class ConfigurationPage : Page
 
 		SongNote.ToggleAccidentalsMode((menuToggleAccidentalsMode.State != 0) ? AccidentalsMode.Flats : AccidentalsMode.Sharps);
 
-		GeneralMIDI.Reset(Song.CurrentSong, 0);
+		GeneralMIDI.Reset(Song.CurrentSong, false);
 
 		if (menuToggleMIDIMode.State != 0)
 			Status.Flags |= StatusFlags.MIDILikeTracker;
@@ -298,9 +299,9 @@ public class ConfigurationPage : Page
 
 		var dialog = Dialog.Show<VideoChangeDialog>();
 
-		dialog.ActionYes += _ => VideoModeKeep();
-		dialog.ActionNo += _ => VideoModeCancel();
-		dialog.ActionCancel += _ => VideoModeCancel();
+		dialog.ActionYes += () => VideoModeKeep();
+		dialog.ActionNo += () => VideoModeCancel();
+		dialog.ActionCancel += () => VideoModeCancel();
 	}
 
 	void ChangeVideoSettings()

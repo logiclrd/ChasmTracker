@@ -169,6 +169,6 @@ public class Clippy
 
 	static void StringPaste(string cbptr)
 	{
-		EventHub.PushEvent(new ClipboardPasteEvent(cbptr));
+		EventHub.PushEvent(new ClipboardPasteEvent(Encoding.UTF8.GetBytes(cbptr)));
 	}
 }

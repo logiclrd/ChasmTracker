@@ -86,7 +86,9 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 		if (env == null)
 			ins.Flags &= ~InstrumentFlags.VolumeEnvelope;
 
-		toggleEnvelopeEnabled.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope);
+		var toggleEnabled = (ToggleWidget)widgetEnvelopeEnabled;
+
+		toggleEnabled.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope);
 		toggleEnvelopeCarry.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry);
 		toggleEnvelopeLoop.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop);
 		toggleEnvelopeSustainLoop.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain);

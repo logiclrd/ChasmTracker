@@ -1,4 +1,5 @@
 using System;
+using System.Net.Mail;
 
 namespace ChasmTracker.MIDI;
 
@@ -6,9 +7,10 @@ public abstract class MIDIPort
 {
 	public MIDIIO IO;
 	public MIDIIO IOCap;
+	public MIDIIO ActiveIO;
 	public int Number;
 
-	public byte[]? UserData;
+	public object? UserData;
 
 	public abstract string Name { get; }
 	public abstract string Provider { get; }
@@ -18,12 +20,24 @@ public abstract class MIDIPort
 	public virtual bool CanSendLater => false;
 	public virtual bool CanDrain => false;
 
-	public virtual void Poll() { }
-	public virtual bool Enable() { return false; }
-	public virtual bool Disable() { return false; }
-	public virtual void SendNow(byte[] seq, int len, TimeSpan delay) { }
-	public virtual void SendLater(byte[] seq, int len, TimeSpan delay) { }
+	public virtual bool Enable()
+	{
+		ActiveIO = IO;
+		return false;
+	}
+
+	public virtual bool Disable()
+	{
+		ActiveIO = MIDIIO.None;
+		return false;
+	}
+
+	public virtual void SendNow(Span<byte> seq, TimeSpan delay) { }
+	public virtual void SendLater(Span<byte> seq, TimeSpan delay) { }
 	public virtual void Drain() { }
 
-	public event Action<MIDIPort, byte[]>? Received;
+	public event Action<MIDIPort, ArraySegment<byte>>? Received;
+
+	protected void OnReceived(ArraySegment<byte> data)
+		=> Received?.Invoke(this, data);
 }

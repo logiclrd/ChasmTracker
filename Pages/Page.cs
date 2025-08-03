@@ -10,6 +10,7 @@ namespace ChasmTracker.Pages;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.PatternEditor;
+using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.Menus;
@@ -755,8 +756,11 @@ public abstract class Page
 			page.NotifySongModeChanged();
 	}
 
+	public static bool DoClipboardPaste(ClipboardPasteEvent cptr)
+		=> Status.CurrentPage.ClipboardPaste(cptr);
+
 	/* called by the clipboard manager */
-	public virtual bool ClipboardPaste(byte[]? cptr) { return false; }
+	public virtual bool ClipboardPaste(ClipboardPasteEvent cptr) { return false; }
 
 	public readonly List<Widget> Widgets = new List<Widget>();
 
@@ -788,12 +792,12 @@ public abstract class Page
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
-	public static void SaveCheck(Action<object?> ok, Action<object?>? cancel = null, object? data = null)
+	public static void SaveCheck(Action ok, Action? cancel = null)
 	{
 		if (Status.Flags.HasFlag(StatusFlags.SongNeedsSave))
-			MessageBox.Show(MessageBoxTypes.OKCancel, "Current module not saved. Proceed?", ok, cancel, data);
+			MessageBox.Show(MessageBoxTypes.OKCancel, "Current module not saved. Proceed?", ok, cancel);
 		else
-			ok(data);
+			ok();
 	}
 
 	/* --------------------------------------------------------------------------------------------------------- */

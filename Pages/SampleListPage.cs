@@ -13,6 +13,7 @@ using ChasmTracker.Events;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
 using ChasmTracker.FileTypes.Converters;
+using ChasmTracker.FileTypes.SampleConverters;
 using ChasmTracker.Input;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
@@ -1138,10 +1139,10 @@ public class SampleListPage : Page
 					}
 
 					if (k.State == KeyState.Release)
-						Song.KeyUp(_currentSample, KeyJazz.NoInstrument, n);
+						Song.CurrentSong.KeyUp(_currentSample, KeyJazz.NoInstrument, n);
 					else
 					{
-						Song.KeyDown(_currentSample, KeyJazz.NoInstrument, n, v, KeyJazz.CurrentChannel);
+						Song.CurrentSong.KeyDown(_currentSample, KeyJazz.NoInstrument, n, v, KeyJazz.CurrentChannel);
 						_lastNote = n;
 					}
 				}
@@ -1471,7 +1472,7 @@ public class SampleListPage : Page
 
 		var dialog = Dialog.Show(new ExportSampleDialog(sample.FileName));
 
-		dialog.ActionYes += () => SaveSample(dialog.FileName, dialog.SampleExporter);
+		dialog.ActionYes += () => SaveSample(dialog.FileName, dialog.SampleConverter);
 	}
 
 

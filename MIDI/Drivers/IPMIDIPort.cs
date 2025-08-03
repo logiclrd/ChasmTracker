@@ -2,83 +2,129 @@ using System;
 
 namespace ChasmTracker.MIDI.Drivers;
 
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Net.Sockets;
 using ChasmTracker.MIDI;
+using ChasmTracker.Utility;
+using Mono.Unix;
 
-public class IPMIDIPort : MIDIPort
+public class IPMIDIPort : MIDIPort, IDisposable
 {
-	public IPMIDIPort(int number)
+	IPMIDI _owner;
+
+	public IPMIDIPort(IPMIDI owner, int number)
 	{
+		_owner = owner;
+
 		Number = number;
+
+		AllocateSocket();
 	}
 
 	public override string Name => "Multicast/IP MIDI " + (Number + 1);
 	public override string Provider => "IP";
 
-	public static bool Setup()
+	static readonly IPAddress s_ipMIDIGroupAddress = IPAddress.Parse("225.0.0.37");
+
+	public Socket Socket;
+
+	public static Socket CreateSocket(int n, bool isOut)
 	{
-		// TODO
-		return false;
+		var fd = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+
+		try
+		{
+			var mreq = new MulticastOption(s_ipMIDIGroupAddress);
+
+			fd.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+			/* don't loop back what we generate */
+			fd.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, !isOut);
+			fd.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 31);
+			fd.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, mreq);
+			fd.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Broadcast, true);
+
+			var asin = new IPEndPoint(IPAddress.Any, IPMIDI.MIDIIPBase + n);
+
+			fd.Bind(asin);
+
+			return fd;
+		}
+		catch
+		{
+			fd.Dispose();
+
+			throw;
+		}
+	}
+
+	[MemberNotNull(nameof(Socket))]
+	void AllocateSocket()
+	{
+		Socket = CreateSocket(Number, false);
+	}
+
+	public void Dispose()
+	{
+		Socket.Dispose();
 	}
 
 	public override bool Enable()
 	{
-		throw new System.NotImplementedException();
-		/* TODO
-	int n = INT_SHAPED_PTR(p->userdata);
-	mt_mutex_lock(blocker);
-	if (p->io & MIDI_INPUT)
-		state[n] |= 1;
-	if (p->io & MIDI_OUTPUT)
-		state[n] |= 2;
-	mt_mutex_unlock(blocker);
-	do_wake_midi();
-	return 1;
-		*/
+		base.Enable();
+		_owner.DoWakeMIDI();
+		return true;
 	}
 
 	public override bool Disable()
 	{
-		throw new System.NotImplementedException();
-		/* TODO
-	int n = INT_SHAPED_PTR(p->userdata);
-	mt_mutex_lock(blocker);
-	if (p->io & MIDI_INPUT)
-		state[n] &= (~1);
-	if (p->io & MIDI_OUTPUT)
-		state[n] &= (~2);
-	mt_mutex_unlock(blocker);
-	do_wake_midi();
-	return 1;
-		*/
+		base.Disable();
+		_owner.DoWakeMIDI();
+		return true;
+	}
+
+	[ThreadStatic]
+	static byte[]? s_receiveBuffer;
+
+	public void ReadIn()
+	{
+		s_receiveBuffer ??= new byte[65536];
+
+		EndPoint asin = new IPEndPoint(IPAddress.Any, 0);
+
+		int r = Socket.ReceiveFrom(s_receiveBuffer, ref asin);
+
+		if (r > 0)
+			OnReceived(s_receiveBuffer.Segment(0, r));
 	}
 
 	public override bool CanSendNow => true;
 
-	public override void SendNow(byte[] seq, int len, TimeSpan delay)
+	public override void SendNow(Span<byte> seq, TimeSpan delay)
 	{
-		throw new NotImplementedException();
-//	struct sockaddr_in asin = {0};
-//	unsigned char *ipcopy;
-//	int n = INT_SHAPED_PTR(p->userdata);
-//	int ss;
-//
-//	if (len == 0) return;
-//	if (!(state[n] & 2)) return; /* blah... */
-//
-//	asin.sin_family = AF_INET;
-//	ipcopy = (unsigned char *)&asin.sin_addr.s_addr;
-//	ipcopy[0] = 225; ipcopy[1] = ipcopy[2] = 0; ipcopy[3] = 37;
-//	asin.sin_port = htons(MIDI_IP_BASE+n);
-//
-//	while (len) {
-//		ss = (len > MAX_DGRAM_SIZE) ?  MAX_DGRAM_SIZE : len;
-//		if (sendto(out_fd, (const char*)data, ss, 0,
-//				(struct sockaddr *)&asin,sizeof(asin)) < 0) {
-//			state[n] &= (~2); /* turn off output */
-//			break;
-//		}
-//		len -= ss;
-//		data += ss;
-//	}
+		if (seq.Length == 0) return;
+		if (!ActiveIO.HasFlag(MIDIIO.Output)) return; /* blah... */
+
+		var asin = new IPEndPoint(s_ipMIDIGroupAddress, IPMIDI.MIDIIPBase + Number);
+
+		while (seq.Length > 0)
+		{
+			int ss = Math.Min(seq.Length, IPMIDI.MaxDGramSize);
+
+			try
+			{
+				if (Socket.SendTo(seq.Slice(0, ss), asin) < 0)
+					throw new SocketException();
+			}
+			catch
+			{
+				ActiveIO &= ~MIDIIO.Output; /* turn off output */
+				break;
+			}
+
+			seq = seq.Slice(ss);
+		}
 	}
 }
+

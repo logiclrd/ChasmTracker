@@ -13,9 +13,6 @@ public class Video
 {
 	static DateTime s_nextUpdate;
 	static VideoBackend s_backend = new SDLVideoBackend();
-	static IntPtr s_window; // SDL_Window *
-	static IntPtr s_renderer; // SDL_Renderer *
-	static IntPtr s_texture; // SDL_Texture *
 
 	static int[] s_tcBGR32 = new int[256];
 

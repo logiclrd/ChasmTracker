@@ -63,7 +63,7 @@ public class LengthDialog : Dialog
 		VGAMem.DrawText("End Pattern", new Point(22, 28), (0, 2));
 	}
 
-	void Close(object? data)
+	void Close()
 	{
 		int nl = thumbBarPatternLength.Value;
 

@@ -5,6 +5,7 @@ namespace ChasmTracker.Pages;
 
 using ChasmTracker.Clipboard;
 using ChasmTracker.Configurations;
+using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -212,8 +213,10 @@ public class PaletteEditorPage : Page
 		return null;
 	}
 
-	public override bool ClipboardPaste(byte[]? data)
+	public override bool ClipboardPaste(ClipboardPasteEvent cptr)
 	{
+		var data = cptr.Clipboard;
+
 		if (data == null)
 			return false;
 

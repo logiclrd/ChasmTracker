@@ -25,8 +25,8 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 		thumbBarPanningValue = new ThumbBarWidget(new Point(54, 43), 9, 0, 64);
 
 		otherPitchPanCenter = new OtherWidget(new Point(54, 45), new Size(9, 1));
-		otherPitchPanCenter.OtherHandleKey += pitch_pan_center_handle_key;
-		otherPitchPanCenter.OtherRedraw += pitch_pan_center_draw;
+		otherPitchPanCenter.OtherHandleKey += PitchPanCenterHandleKey;
+		otherPitchPanCenter.OtherRedraw += PitchPanCenterDraw;
 
 		thumbBarPitchPanSeparation = new ThumbBarWidget(new Point(54, 46), 9, -32, 32);
 		thumbBarPanningSwing = new ThumbBarWidget(new Point(54, 47), 9, 0, 64);
@@ -130,7 +130,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 
 	void PitchPanCenterDraw()
 	{
-		int isSelected = (SelectedActiveWidget == otherPitchPanCenter);
+		bool isSelected = (SelectedActiveWidget == otherPitchPanCenter);
 
 		var ins = Song.CurrentSong.GetInstrument(CurrentInstrument);
 
@@ -145,7 +145,9 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 		if (env == null)
 			ins.Flags &= ~InstrumentFlags.PanningEnvelope;
 
-		toggleEnvelopeEnabled.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelope);
+		var toggleEnabled = (ToggleWidget)widgetEnvelopeEnabled;
+
+		toggleEnabled.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelope);
 		toggleEnvelopeCarry.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry);
 		toggleEnvelopeLoop.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeLoop);
 		toggleEnvelopeSustainLoop.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeSustain);

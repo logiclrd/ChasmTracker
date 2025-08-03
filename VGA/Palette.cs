@@ -71,7 +71,7 @@ public class Palette
 
 	public void Apply()
 	{
-		Video.Colours(VGAMem.CurrentPalette);
+		Video.SetPalette(VGAMem.CurrentPalette);
 
 		/* is the "light" border color actually darker than the "dark" color? */
 		int lightBorderIntensity = VGAMem.CurrentPalette[3, 0] + VGAMem.CurrentPalette[3, 1] + VGAMem.CurrentPalette[3, 2];
