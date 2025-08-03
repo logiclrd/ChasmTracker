@@ -1,18 +1,230 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace ChasmTracker.Playback;
 
+using ChasmTracker.Audio;
+using ChasmTracker.Configurations;
+using ChasmTracker.Events;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public class AudioPlayback
+public static class AudioPlayback
 {
-	public static AudioPlaybackMode Mode;
-	public static MixFlags MixFlags;
+	public const int DefaultSampleRate = 48000;
+	public const int DefaultBufferSize = 2048;
+	public const int DefaultChannelLimit = 128;
+
+	public const uint SamplesPlayedInit = uint.MaxValue - 1; /* for a click noise on init */
+
+	static string? s_driverName;
+	static string? s_deviceName;
+	static int s_deviceID;
+
+	public static string AudioDriver => s_driverName ?? "unknown";
+	public static string AudioDevice => s_deviceName ?? "unknown";
 	public static int AudioDeviceID;
+
+	public static List<AudioDevice> AudioDeviceList = new List<AudioDevice>();
+
+	public static AudioDevice? CurrentAudioDevice = null;
+
+	public static AudioBackend[] AudioBackends = typeof(AudioBackend).Assembly
+		.GetTypes()
+		.Where(t => typeof(AudioBackend).IsAssignableFrom(t) && !t.IsAbstract)
+		.Select(t => (AudioBackend)Activator.CreateInstance(t)!)
+		.ToArray();
+
+	public static List<AudioBackend> InitializedBackends = new List<AudioBackend>();
+
+	public static AudioBackend? Backend;
+
+	// ------------------------------------------------------------------------------------------------------------
+	// drivers
+
+	public static List<AudioDriver> FullDrivers = new List<AudioDriver>();
+
+	static void CreateDriversList()
+	{
+		// should always be at the end
+		AudioDriver? disk = null;
+		AudioDriver? dummy = null;
+
+		// Reset the drivers list
+		FullDrivers.Clear();
+
+		foreach (var backend in InitializedBackends)
+		{
+			foreach (var driver in backend.EnumerateDrivers())
+			{
+				if (driver.Name == "dummy")
+					dummy = driver;
+				else if (driver.Name == "disk")
+					disk = driver;
+				else
+				{
+					// Skip SDL 2 waveout driver; we have our own implementation
+					// and the SDL 2's driver seems to randomly want to hang on
+					// exit
+					// We also skip SDL2's directsound driver since it only
+					// supports DirectX 8 and above, while our builtin driver
+					// supports DirectX 5 and above.
+					if ((driver.Name == "winmm") || (driver.Name == "directsound"))
+						continue;
+				}
+
+				if (FullDrivers.Any(entry => entry.Name == driver.Name))
+					continue;
+
+				FullDrivers.Add(driver);
+			}
+		}
+
+		if (disk != null)
+			FullDrivers.Add(disk);
+		if (dummy != null)
+			FullDrivers.Add(dummy);
+	}
+
+	// ------------------------------------------------------------------------
+	// playback
+
+	static void AudioCallback(Memory<byte> streamMemory)
+	{
+		var wasRow = Song.CurrentSong.Row;
+		var wasPat = Song.CurrentSong.CurrentOrder;
+
+		var stream = streamMemory.Span;
+
+		stream.Clear();
+
+		if (stream.Length == 0)
+		{
+			if ((Status.CurrentPage is WaterfallPage) || (Status.VisualizationStyle == TrackerVisualizationStyle.FFT))
+				AllPages.Waterfall.VisualizationWork8Mono(Span<sbyte>.Empty);
+
+			StopUnlocked(false);
+		}
+		else
+		{
+			if (SamplesPlayed >= SamplesPlayedInit)
+			{
+				for (int i = 0; i < stream.Length; i++)
+					stream[i] = 0x80;
+
+				unchecked
+				{
+					SamplesPlayed++; // will loop back to 0
+				}
+
+				return;
+			}
+
+			int n;
+
+			if (Song.CurrentSong.Flags.HasFlag(SongFlags.EndReached))
+				n = 0;
+			else
+			{
+				n = SongRenderer.Read(Song.CurrentSong, stream);
+
+				if (n == 0)
+				{
+					if ((Status.CurrentPage is WaterfallPage) || (Status.VisualizationStyle == TrackerVisualizationStyle.FFT))
+						AllPages.Waterfall.VisualizationWork8Mono(Span<sbyte>.Empty);
+
+					StopUnlocked(false);
+				}
+
+				unchecked
+				{
+					SamplesPlayed += (uint)n;
+				}
+			}
+
+			if (n > 0)
+			{
+				var pretendShorts = MemoryMarshal.Cast<byte, short>(stream.Slice(0, n * AudioSampleSize));
+
+				pretendShorts.CopyTo(AudioBuffer);
+
+				/* convert 8-bit unsigned to signed by XORing the high bit */
+				if (AudioOutputBits == 8)
+				{
+					var pretendBytes = MemoryMarshal.Cast<short, byte>(AudioBuffer);
+
+					for (int i = 0; i < n * 2; i++)
+						pretendBytes[i] ^= 0x80;
+				}
+
+				if ((Status.CurrentPage is WaterfallPage) || (Status.VisualizationStyle == TrackerVisualizationStyle.FFT))
+				{
+					// I don't really like this...
+					switch (AudioOutputBits)
+					{
+						case 8:
+							if (AudioOutputChannels == 2)
+								AllPages.Waterfall.VisualizationWork8Stereo(MemoryMarshal.Cast<short, sbyte>(AudioBuffer));
+							else
+								AllPages.Waterfall.VisualizationWork8Mono(MemoryMarshal.Cast<short, sbyte>(AudioBuffer));
+							break;
+						case 16:
+							if (AudioOutputChannels == 2)
+								AllPages.Waterfall.VisualizationWork16Stereo(AudioBuffer);
+							else
+								AllPages.Waterfall.VisualizationWork16Mono(AudioBuffer);
+							break;
+						case 32:
+							if (AudioOutputChannels == 2)
+								AllPages.Waterfall.VisualizationWork32Stereo(MemoryMarshal.Cast<short, int>(AudioBuffer));
+							else
+								AllPages.Waterfall.VisualizationWork32Mono(MemoryMarshal.Cast<short, int>(AudioBuffer));
+							break;
+					}
+				}
+
+				if (Song.CurrentSong.NumVoices > MaxChannelsUsed)
+					MaxChannelsUsed = Math.Min(Song.CurrentSong.NumVoices, MaxVoices);
+			}
+		}
+
+		AudioWriteOutCount++;
+
+		if (AudioWriteOutCount > AudioBuffersPerSecond)
+			AudioWriteOutCount = 0;
+		else if (wasPat == Song.CurrentSong.CurrentOrder && wasRow == Song.CurrentSong.Row
+				&& !MIDIEngine.NeedFlush())
+		{
+			/* skip it */
+			return;
+		}
+
+		/* send at end */
+		EventHub.PushEvent(new PlaybackEvent());
+	}
+
+	// ------------------------------------------------------------------------
+	// control
+
+	public static AudioPlaybackMode Mode
+	{
+		get
+		{
+			if (Song.CurrentSong.Flags.HasFlag(SongFlags.EndReached | SongFlags.Paused))
+				return AudioPlaybackMode.Stopped;
+			if (Song.CurrentSong.Flags.HasFlag(SongFlags.Paused))
+				return AudioPlaybackMode.SingleStep;
+			if (Song.CurrentSong.Flags.HasFlag(SongFlags.PatternPlayback))
+				return AudioPlaybackMode.PatternLoop;
+			return AudioPlaybackMode.Playing;
+		}
+	}
+
+	public static MixFlags MixFlags;
 
 	public static bool IsPlaying => Mode.HasAnyFlag(AudioPlaybackMode.Playing | AudioPlaybackMode.PatternLoop);
 
@@ -54,12 +266,11 @@ public class AudioPlayback
 		}
 	}
 
-	public static int SamplesPlayed;
+	public static uint SamplesPlayed;
 	public static int MaxChannelsUsed;
 
-	public static sbyte[]? AudioBuffer8 = null;
-	public static short[]? AudioBuffer16 = null;
-	public static int[]? AudioBuffer32 = null;
+	public static short[]? AudioBuffer = null;
+	public static int AudioBufferSamples = 0; /* multiply by audio_sample_size to get bytes */
 
 	public static int AudioOutputChannels = 2;
 	public static int AudioOutputBits = 16;
@@ -71,10 +282,6 @@ public class AudioPlayback
 	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
 	public static int MixStat; // number of channels being mixed (not really used)
 	public static int BufferCount; // number of samples to mix per tick
-
-	static string? s_driverName;
-
-	public static string AudioDriver => s_driverName ?? "unknown";
 
 	// mixer stuff -----------------------------------------------------------
 	// TODO: public MixFlags MixFlags;
@@ -89,6 +296,7 @@ public class AudioPlayback
 	public static int DryLOfsVol; /* to find out what these do  -paper */
 	// -----------------------------------------------------------------------
 
+	// Returns the max value in dBs, scaled as 0 = -40dB and 128 = 0dB.
 	public static void GetVUMeter(out int left, out int right)
 	{
 		left = Decibel.dB_s(40, VULeft / 256.0, 0.0);
@@ -119,7 +327,9 @@ public class AudioPlayback
 			Surround = AudioSettings.SurroundEffect;
 
 			// update midi queue configuration
-			int audioBufferLength = AudioBuffer16?.Length ?? AudioBuffer8?.Length ?? AudioBuffer32?.Length ?? 0;
+			int audioBufferLength = AudioBuffer?.Length ?? 0;
+
+			audioBufferLength = audioBufferLength * AudioOutputBits / 16;
 
 			MIDIEngine.QueueAlloc(audioBufferLength, AudioSampleSize, MixFrequency);
 
@@ -170,11 +380,6 @@ public class AudioPlayback
 			s_currentPlayChannel = s_currentPlayChannel.Clamp(1, 64);
 
 		Status.FlashText("Using channel " + s_currentPlayChannel + " for playback");
-	}
-
-	public static void Reinitialize(object? floobs)
-	{
-		// TODO
 	}
 
 	public static void ToggleMultichannelMode()
@@ -247,7 +452,7 @@ public class AudioPlayback
 				ins = -1;
 			}
 
-			Song.KeyRecord(smp, ins, curNote.Note,
+			Song.CurrentSong.KeyRecord(smp, ins, curNote.Note,
 				vol, i, curNote.Effect, curNote.Parameter);
 		}
 	}
@@ -338,12 +543,15 @@ public class AudioPlayback
 		Page.NotifySongModeChangedGlobal();
 	}
 
+	[ThreadStatic]
+	static byte[]? s_midiPacket;
+
 	public static void StopUnlocked(bool quitting)
 	{
+		s_midiPacket ??= new byte[4];
+
 		if (Song.CurrentSong.MIDIPlaying)
 		{
-			byte[] midiPacket = new byte[4];
-
 			// shut off everything; not IT like, but less annoying
 			for (int chan = 0; chan < Constants.MaxChannels; chan++)
 			{
@@ -351,42 +559,40 @@ public class AudioPlayback
 				{
 					for (int j = 0; j < Constants.MaxMIDIChannels; j++)
 					{
-						Song.CurrentSong.ProcessMIDIMacro(chan,
+						SongRenderer.ProcessMIDIMacro(chan,
 							Song.CurrentSong.MIDIConfig.NoteOff,
 							0, Song.CurrentSong.MIDINoteTracker[chan], 0, j);
 					}
 
-					midiPacket[0] = (byte)(0x80 + chan);
-					midiPacket[1] = (byte)Song.CurrentSong.MIDINoteTracker[chan];
+					s_midiPacket[0] = (byte)(0x80 + chan);
+					s_midiPacket[1] = (byte)Song.CurrentSong.MIDINoteTracker[chan];
 
-					Song.CurrentSong.MIDISend(midiPacket, 2, 0, fake: false);
+					Song.CurrentSong.MIDISend(s_midiPacket.Slice(0, 2), nchan: 0, fake: false);
 				}
 			}
 		}
 
 		if (Song.CurrentSong.MIDIPlaying)
 		{
-			byte[] midiPacket = new byte[4];
-
 			for (int j = 0; j < Constants.MaxMIDIChannels; j++)
 			{
-				midiPacket[0] = (byte)(0xe0 + j);
-				midiPacket[1] = 0;
-				Song.CurrentSong.MIDISend(midiPacket, 2, 0, fake: false);
+				s_midiPacket[0] = (byte)(0xe0 + j);
+				s_midiPacket[1] = 0;
+				Song.CurrentSong.MIDISend(s_midiPacket.Slice(0, 2), nchan: 0, fake: false);
 
-				midiPacket[0] = (byte)(0xb0 + j); // channel mode message
-				midiPacket[1] = 0x78;   // all sound off
-				midiPacket[2] = 0;
-				Song.CurrentSong.MIDISend(midiPacket, 3, 0, fake: false);
+				s_midiPacket[0] = (byte)(0xb0 + j); // channel mode message
+				s_midiPacket[1] = 0x78;   // all sound off
+				s_midiPacket[2] = 0;
+				Song.CurrentSong.MIDISend(s_midiPacket.Slice(0, 3), nchan: 0, fake: false);
 
-				midiPacket[1] = 0x79;   // reset all controllers
-				Song.CurrentSong.MIDISend(midiPacket, 3, 0, fake: false);
+				s_midiPacket[1] = 0x79;   // reset all controllers
+				Song.CurrentSong.MIDISend(s_midiPacket.Slice(0, 3), nchan: 0, fake: false);
 
-				midiPacket[1] = 0x7b;   // all notes off
-				Song.CurrentSong.MIDISend(midiPacket, 3, 0, fake: false);
+				s_midiPacket[1] = 0x7b;   // all notes off
+				Song.CurrentSong.MIDISend(s_midiPacket.Slice(0, 3), nchan: 0, fake: false);
 			}
 
-			Song.CurrentSong.ProcessMIDIMacro(0, Song.CurrentSong.MIDIConfig.Stop, 0, 0, 0, 0); // STOP!
+			SongRenderer.ProcessMIDIMacro(0, Song.CurrentSong.MIDIConfig.Stop, 0, 0, 0, 0); // STOP!
 			MIDIEngine.SendFlush();
 
 			Song.CurrentSong.MIDIPlaying = false;
@@ -417,12 +623,8 @@ public class AudioPlayback
 		VULeft = 0;
 		VURight = 0;
 
-		if (AudioBuffer8 != null)
-			Array.Clear(AudioBuffer8);
-		if (AudioBuffer16 != null)
-			Array.Clear(AudioBuffer16);
-		if (AudioBuffer32 != null)
-			Array.Clear(AudioBuffer32);
+		if (AudioBuffer != null)
+			Array.Clear(AudioBuffer);
 	}
 
 	public static void LoopPattern(int pattern, int row)
@@ -503,7 +705,7 @@ public class AudioPlayback
 		}
 	}
 
-	public void InitPlayer(bool reset)
+	public static void InitPlayer(bool reset)
 	{
 		if (MaxVoices > Constants.MaxVoices)
 			MaxVoices = Constants.MaxVoices;
@@ -536,7 +738,7 @@ public class AudioPlayback
 		GeneralMIDI.Reset(Song.CurrentSong, false);
 	}
 
-	public void SetWaveConfig(int rate, int bits, int channels)
+	public static void SetWaveConfig(int rate, int bits, int channels)
 	{
 		bool reset = (MixFrequency != rate)
 			|| (MixBitsPerSample != bits)
@@ -547,5 +749,401 @@ public class AudioPlayback
 		MixBitsPerSample = bits;
 
 		InitPlayer(reset);
+	}
+
+	/* --------------------------------------------------------------------------------------------------------- */
+
+	public static void StartAudio()
+	{
+		if (CurrentAudioDevice != null)
+			Backend?.PauseDevice(CurrentAudioDevice, false);
+	}
+
+	public static void StopAudio()
+	{
+		if (CurrentAudioDevice != null)
+			Backend?.PauseDevice(CurrentAudioDevice, true);
+	}
+
+	/* --------------------------------------------------------------------------------------------------------- */
+	/* This is completely horrible! :) */
+
+	static bool s_wasInit = false;
+
+	static bool LookUpDeviceName(string deviceName, out int pDevID)
+	{
+		if (Backend != null)
+		{
+			int i = 0;
+
+			foreach (var device in Backend.EnumerateDevices())
+			{
+				if (device.Name == deviceName)
+				{
+					pDevID = i;
+					return true;
+				}
+
+				i++;
+			}
+		}
+
+		pDevID = -1;
+		return false;
+	}
+
+	static void CleanUpAudioDevice()
+	{
+		if (CurrentAudioDevice != null)
+		{
+			if (Backend != null)
+				Backend.CloseDevice(CurrentAudioDevice);
+
+			CurrentAudioDevice = null;
+
+			s_deviceName = null;
+			s_deviceID = 0;
+		}
+	}
+
+	// le fuqing? open_device obtains the lock but doesn't release it?
+	class OpenState : IDisposable
+	{
+		bool _holdsLock;
+
+		public bool Successful;
+
+		public static OpenState False => new OpenState(obtainLock: false) { Successful = false };
+
+		public OpenState(bool obtainLock)
+		{
+			if (obtainLock)
+			{
+				LockAudio();
+				_holdsLock = true;
+			}
+		}
+
+		public void Dispose()
+		{
+			if (_holdsLock)
+			{
+				UnlockAudio();
+				_holdsLock = false;
+			}
+		}
+
+		public static implicit operator bool(OpenState state) => state.Successful;
+	}
+
+	static OpenState OpenDevice(int deviceID, bool verbose)
+	{
+		CleanUpAudioDevice();
+
+		if (Backend == null)
+			return OpenState.False;
+
+		/* if the buffer size isn't a power of two, the dsp driver will punt since it's not nice enough to fix
+		* it for us. (contrast alsa, which is TOO nice and fixes it even when we don't want it to) */
+		ushort sizePowerOf2 = 2;
+		while (sizePowerOf2 < AudioSettings.BufferSize)
+			sizePowerOf2 <<= 1;
+
+		/* round to the nearest (kept for compatibility) */
+		if (sizePowerOf2 != AudioSettings.BufferSize
+			&& (sizePowerOf2 - AudioSettings.BufferSize) > (AudioSettings.BufferSize - (sizePowerOf2 >> 1)))
+			sizePowerOf2 >>= 1;
+
+		/* This is needed in order to coax alsa into actually respecting the buffer size, since it's evidently
+		 * ignored entirely for "fake" devices such as "default" -- which SDL happens to use if no device name
+		 * is set. (see SDL_alsa_audio.c: http://tinyurl.com/ybf398f)
+		 * If hw doesn't exist, so be it -- let this fail, we'll fall back to the dummy device, and the
+		 * user can pick a more reasonable device later. */
+
+		/* I can't replicate this issue at all, so I'm just gonna comment this out. If it really *is* still an
+		 * issue, it can be uncommented.
+		 *  - paper */
+
+		//if (s_driverName == "alsa")
+		//{
+		//	if (Environment.GetEnvironmentVariable("AUDIODEV") == null)
+		//		Environment.SetEnvironmentVariable("AUDIODEV", "hw");
+		//}
+
+		var desired = new AudioSpecs();
+
+		desired.Frequency = AudioSettings.SampleRate;
+		desired.Bits = AudioSettings.Bits;
+		desired.Channels = AudioSettings.Channels;
+		desired.BufferSizeSamples = sizePowerOf2;
+		desired.Callback = AudioCallback;
+
+		AudioSpecs? obtained = null;
+
+		if (deviceID != AudioBackend.DefaultID)
+		{
+			CurrentAudioDevice = Backend.OpenDevice(deviceID, desired, out obtained);
+
+			if (CurrentAudioDevice != null)
+			{
+				s_deviceName = Backend.GetDeviceName(deviceID);
+				s_deviceID = deviceID;
+			}
+		}
+
+		if (CurrentAudioDevice == null)
+		{
+			CurrentAudioDevice = Backend.OpenDevice(AudioBackend.DefaultID, desired, out obtained);
+
+			if (CurrentAudioDevice != null)
+			{
+				s_deviceName = "default";  // ????
+				s_deviceID = AudioBackend.DefaultID;
+			}
+		}
+
+		if ((CurrentAudioDevice == null) || (obtained == null))
+		{
+			/* oops ! */
+			return OpenState.False;
+		}
+
+		var openState = new OpenState(obtainLock: true);
+
+		try
+		{
+			SetWaveConfig(obtained.Frequency, obtained.Bits, obtained.Channels);
+
+			AudioOutputChannels = obtained.Channels;
+			AudioOutputBits = obtained.Bits;
+			AudioSampleSize = AudioOutputChannels * AudioOutputBits / 8;
+			AudioBufferSamples = obtained.BufferSizeSamples;
+
+			if (verbose)
+			{
+				Log.AppendNewLine();
+				Log.AppendWithUnderline(2, "Audio initialised");
+				Log.Append(5, " Using driver '{0}'", s_driverName ?? "<unknown>");
+				Log.Append(5, " {0} Hz, {1} bit, {2}", obtained.Frequency, obtained.Bits,
+					obtained.Channels == 1 ? "mono" : "stereo");
+				Log.Append(5, " Buffer size: {0} samples", obtained.BufferSizeSamples);
+			}
+
+			openState.Successful = true;
+		}
+		catch { }
+
+		return openState;
+	}
+
+	static OpenState TryDriver(AudioBackend backendPassed, string driverName, string deviceName, bool verbose)
+	{
+		var backendRestore = Backend;
+		bool succeeded = false;
+
+		try
+		{
+			Backend = backendPassed;
+
+			if (!Backend.InitializeDriver(driverName))
+				return OpenState.False;
+
+			s_driverName = driverName;
+
+			if (LookUpDeviceName(deviceName, out var deviceID))
+			{
+				// nothing
+			}
+			else if (string.IsNullOrEmpty(deviceName) || (deviceName == "default"))
+				deviceID = AudioBackend.DefaultID;
+			else
+				return OpenState.False;
+
+			var openState = OpenDevice(deviceID, verbose);
+
+			if (openState.Successful)
+			{
+				s_wasInit = true;
+				AudioBackend.RefreshAudioDeviceList();
+				succeeded = true;
+			}
+
+			return openState;
+		}
+		finally
+		{
+			if (!succeeded)
+			{
+				Backend?.QuitDriver();
+
+				s_driverName = null;
+				Backend = backendRestore;
+			}
+		}
+	}
+
+	static void QuitImpl()
+	{
+		if (s_wasInit)
+		{
+			CleanUpAudioDevice();
+			s_driverName = null;
+			Backend?.QuitDriver();
+			s_wasInit = false;
+		}
+	}
+
+	/* driver == NULL || device == NULL is fine here */
+	static bool s_backendsInitialized = false;
+
+	public static bool Initialize(string? driverName, string? deviceName)
+	{
+		bool success = false;
+
+		Quit();
+
+		/* Use the driver from the config if it exists. */
+		if (string.IsNullOrEmpty(driverName))
+			driverName = Configuration.Audio.Driver ?? "default";
+
+		if (string.IsNullOrEmpty(deviceName))
+			deviceName = Configuration.Audio.Device ?? "default";
+
+		if (driverName == "oss")
+			driverName = "dsp";
+		else if ((driverName == "nosound") || (driverName == "none"))
+			driverName = "dummy";
+		else if (driverName == "winmm")
+			driverName = "waveout";
+		else if (driverName == "directsound")
+			driverName = "dsound";
+
+		if (string.IsNullOrEmpty(driverName))
+			driverName = Environment.GetEnvironmentVariable("SDL_AUDIODRIVER");
+
+		// Initialize all backends (for audio driver listing)
+		if (!s_backendsInitialized)
+		{
+			foreach (var backend in AudioBackends)
+				if (backend.Initialize())
+					InitializedBackends.Add(backend);
+
+			CreateDriversList();
+			s_backendsInitialized = true;
+		}
+
+		OpenState? openState = null;
+
+		if (FullDrivers.Any())
+		{
+			AudioBackend? backendDriver = null;
+
+			if (driverName != null)
+			{
+				backendDriver = FullDrivers.FirstOrDefault(entry => entry.Name == driverName)?.Backend;
+
+				if (backendDriver != null)
+				{
+					openState = TryDriver(backendDriver, driverName, deviceName, verbose: true);
+
+					if (!openState)
+					{
+						openState.Dispose();
+						openState = TryDriver(backendDriver, driverName, "", verbose: true);
+					}
+				}
+			}
+
+			if ((openState == null) || !openState)
+			{
+				openState?.Dispose();
+
+				foreach (var driver in FullDrivers)
+				{
+					openState = TryDriver(driver.Backend, driver.Name, deviceName, verbose: true);
+
+					if (!openState)
+					{
+						openState.Dispose();
+						openState = TryDriver(driver.Backend, driver.Name, "", verbose: true);
+					}
+
+					if (openState)
+						break;
+				}
+			}
+
+			Log.AppendNewLine();
+			Log.Append(4, "Failed to load requested audio driver `{0}`!", driverName ?? "<null>");
+		}
+
+		if (success)
+		{
+			int bufferShorts = (AudioBufferSamples * AudioSampleSize + 1) / 2;
+
+			AudioBuffer = new short[bufferShorts];
+
+			SamplesPlayed = Status.Flags.HasFlag(StatusFlags.ClassicMode) ? SamplesPlayedInit : 0;
+
+			openState?.Dispose();
+
+			AudioBackend.RefreshAudioDeviceList();
+
+			return success;
+		}
+
+		// hmmmmm ? :)
+		Environment.Exit(0);
+		throw new Exception("Initialization failed");
+	}
+
+	// deviceID is optional and can be null
+	public static bool Reinitialize(int? deviceID)
+	{
+		if (Status.Flags.HasAnyFlag(StatusFlags.DiskWriterActive | StatusFlags.DiskWriterActiveForPattern))
+		{
+			/* never allowed */
+			return false;
+		}
+
+		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+			Stop();
+
+		// if we got a device, cool, otherwise use our device ID,
+		// which (fingers crossed!) is the same one as last time.
+		var openState = OpenDevice(deviceID ?? s_deviceID, verbose: false);
+
+		openState.Dispose();
+
+		AudioBackend.FlashReinitializedText(openState.Successful);
+
+		return openState.Successful;
+	}
+
+	public static void Quit()
+	{
+		QuitImpl();
+
+		foreach (var backend in InitializedBackends)
+			backend.Quit();
+
+		InitializedBackends.Clear();
+	}
+
+	/* --------------------------------------------------------------------------------------------------------- */
+
+	public static void InitializeEQ(bool doReset, int mixFrequency)
+	{
+		int[] pg = new int[4];
+		int[] pf = new int[4];
+
+		for (int i = 0; i < 4; i++)
+		{
+			pg[i] = AudioSettings.EQBands[i].Gain;
+			pf[i] = 120 + ((i*128) * AudioSettings.EQBands[i].Frequency
+				* (mixFrequency / 128) / 1024);
+		}
+
+		Equalizer.SetEQGains(pg, 4, pf, doReset, mixFrequency);
 	}
 }

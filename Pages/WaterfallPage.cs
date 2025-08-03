@@ -108,7 +108,7 @@ public class WaterfallPage : Page
 	short[] _dl = new short[FFT.BufferSize];
 	short[] _dr = new short[FFT.BufferSize];
 
-	void VisualizationWork8Stereo(Span<sbyte> data)
+	public void VisualizationWork8Stereo(Span<sbyte> data)
 	{
 		if (data.Length == 0)
 			FFT.ClearData();
@@ -128,7 +128,7 @@ public class WaterfallPage : Page
 			ProcessVisualization();
 	}
 
-	void VisualizationWork8Mono(Span<sbyte> data)
+	public void VisualizationWork8Mono(Span<sbyte> data)
 	{
 		if (data.Length == 0)
 			FFT.ClearData();
@@ -145,7 +145,7 @@ public class WaterfallPage : Page
 			ProcessVisualization();
 	}
 
-	void VisualizationWork16Stereo(Span<sbyte> data)
+	public void VisualizationWork16Stereo(Span<short> data)
 	{
 		if (data.Length == 0)
 			FFT.ClearData();
@@ -165,7 +165,7 @@ public class WaterfallPage : Page
 			ProcessVisualization();
 	}
 
-	void VisualizationWork16Mono(Span<sbyte> data)
+	public void VisualizationWork16Mono(Span<short> data)
 	{
 		if (data.Length == 0)
 			FFT.ClearData();
@@ -182,7 +182,7 @@ public class WaterfallPage : Page
 			ProcessVisualization();
 	}
 
-	void VisualizationWork32Stereo(Span<sbyte> data)
+	public void VisualizationWork32Stereo(Span<int> data)
 	{
 		if (data.Length == 0)
 			FFT.ClearData();
@@ -202,7 +202,7 @@ public class WaterfallPage : Page
 			ProcessVisualization();
 	}
 
-	void VisualizationWork32Mono(Span<sbyte> data)
+	public void VisualizationWork32Mono(Span<int> data)
 	{
 		if (data.Length == 0)
 			FFT.ClearData();
@@ -258,11 +258,11 @@ public class WaterfallPage : Page
 
 				if (k.State == KeyState.Release)
 				{
-					Song.KeyUp(KeyJazz.NoInstrument, ii, n);
+					Song.CurrentSong.KeyUp(KeyJazz.NoInstrument, ii, n);
 					Status.LastKeySym = KeySym.None;
 				}
 				else if (!k.IsRepeat)
-					Song.KeyDown(KeyJazz.NoInstrument, ii, n, v, KeyJazz.CurrentChannel);
+					Song.CurrentSong.KeyDown(KeyJazz.NoInstrument, ii, n, v, KeyJazz.CurrentChannel);
 
 				return true;
 			}
@@ -310,7 +310,7 @@ public class WaterfallPage : Page
 					if (k.State == KeyState.Press)
 						return true;
 
-					order = AudioPlayback.CurrentOrder;
+					order = Song.CurrentSong.CurrentOrder;
 
 					if (AudioPlayback.Mode == AudioPlaybackMode.Playing)
 						n = Song.CurrentSong.OrderList[order];

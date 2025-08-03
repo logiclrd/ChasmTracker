@@ -851,13 +851,13 @@ public class SampleListPage : Page
 		{
 			case KeySym.a:
 				if (canMod)
-					MessageBox.Show(MessageBoxTypes.OKCancel, "Convert sample?", _ => DoSignConvert());
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Convert sample?", DoSignConvert);
 				return;
 			case KeySym.b:
 				if (canMod && (sample!.LoopStart > 0
 								|| (sample.Flags.HasFlag(SampleFlags.SustainLoop) && sample.SustainStart > 0)))
 				{
-					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", _ => DoPreLoopCut())
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", DoPreLoopCut)
 						.SelectedWidgetIndex.Value = 1;
 				}
 				return;
@@ -866,12 +866,12 @@ public class SampleListPage : Page
 				{
 					if (canMod && sample!.Flags.HasFlag(SampleFlags.Stereo))
 					{
-						MessageBox.Show(MessageBoxTypes.OKCancel, "Downmix sample to mono?", _ => DoDownmix());
+						MessageBox.Show(MessageBoxTypes.OKCancel, "Downmix sample to mono?", DoDownmix);
 					}
 				}
 				else
 				{
-					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete sample?", _ => DoDeleteSample())
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete sample?", DoDeleteSample)
 						.SelectedWidgetIndex.Value = 1;
 				}
 				return;
@@ -899,7 +899,7 @@ public class SampleListPage : Page
 				break;
 			case KeySym.h:
 				if (canMod)
-					MessageBox.Show(MessageBoxTypes.YesNo, "Centralise sample?", _ => DoCentralise());
+					MessageBox.Show(MessageBoxTypes.YesNo, "Centralise sample?", DoCentralise);
 				return;
 			case KeySym.i:
 				if (canMod)
@@ -909,7 +909,7 @@ public class SampleListPage : Page
 				if (canMod && (sample!.LoopEnd > 0
 								|| (sample.Flags.HasFlag(SampleFlags.SustainLoop) && sample.SustainEnd > 0)))
 				{
-					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", _ => DoPostLoopCut())
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", DoPostLoopCut)
 						.SelectedWidgetIndex.Value = 1;
 				}
 				return;
@@ -932,7 +932,7 @@ public class SampleListPage : Page
 			}
 			case KeySym.q:
 				if (canMod)
-					MessageBox.Show(MessageBoxTypes.YesNo, "Convert sample?", _ => DoQualityConvert(), _ => DoQualityToggle());
+					MessageBox.Show(MessageBoxTypes.YesNo, "Convert sample?", DoQualityConvert, DoQualityToggle);
 				return;
 			case KeySym.r:
 			{
@@ -1453,7 +1453,7 @@ public class SampleListPage : Page
 		{
 			if (Paths.IsRegularFile(ptr))
 			{
-				var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?", _ => DoSaveSample());
+				var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?", DoSaveSample);
 
 				dialog.SelectedWidgetIndex.Value = 1;
 			}

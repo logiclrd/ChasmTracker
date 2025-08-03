@@ -39,6 +39,18 @@ public abstract class AudioBackend
 	public abstract IEnumerable<AudioDevice> EnumerateDevices();
 	public abstract IEnumerable<AudioDriver> EnumerateDrivers();
 
+	public abstract bool Initialize();
+	public abstract void Quit();
+
+	public abstract string GetDeviceName(int deviceID);
+
+	public abstract bool InitializeDriver(string driverName);
+	public abstract void QuitDriver();
+
+	public abstract AudioDevice OpenDevice(int deviceID, AudioSpecs desired, out AudioSpecs obtained);
+	public abstract void PauseDevice(AudioDevice device, bool paused);
+	public abstract void CloseDevice(AudioDevice device);
+
 	public static void FlashReinitializedText(bool success)
 	{
 		if (success)

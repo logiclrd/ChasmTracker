@@ -1,4 +1,5 @@
 using System;
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 
 namespace ChasmTracker.DiskOutput;
@@ -11,6 +12,9 @@ public class DiskWriter // "disko"
 	public static Song? ExportSong;
 	public static DiskWriter[] ExportDs = new DiskWriter[Constants.MaxChannels + 1]; /* only [0] is used unless multichannel */
 
+	[ThreadStatic]
+	static byte[]? s_buffer;
+
 	public static SyncResult Sync()
 	{
 		if ((ExportFormat == null) || (ExportSong == null))
@@ -19,7 +23,9 @@ public class DiskWriter // "disko"
 			return SyncResult.Error; /* no writer running (why are we here?) */
 		}
 
-		var buffer = csf_read(ExportSong, BufferSize);
+		s_buffer ??= new byte[BufferSize];
+
+		SongRenderer.Read(ExportSong, s_buffer);
 
 		if (!ExportSong.MultiWrite)
 			ExportFormat.WriteBody(ExportDs[0], buffer);

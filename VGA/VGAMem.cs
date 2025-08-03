@@ -794,7 +794,7 @@ public static class VGAMem
 	/* somewhat heavily based on CViewSample::DrawSampleData2 in modplug */
 
 	static void DrawSampleData8(VGAMemOverlay r,
-		Span<sbyte> data, int length, int inputChans, int outputChans)
+		Span<sbyte> data, int inputChans, int outputChans)
 	{
 		if (data.Length == 0)
 			return;
@@ -802,7 +802,7 @@ public static class VGAMem
 		int nh = r.Size.Height / outputChans;
 		int np = r.Size.Height - nh / 2;
 
-		length /= inputChans;
+		int length = data.Length / inputChans;
 
 		int step = (int)(((long)length << 32) / r.Size.Width);
 
@@ -820,7 +820,7 @@ public static class VGAMem
 				int scanLength = unchecked((int)((posLo + 0xFFFFFFFF) >> 32));
 
 				if (posHi >= length) posHi = length - 1;
-				if (posHi + scanLength > length) scanLength = (int)(length - posHi);
+				if (posHi + scanLength > length) scanLength = length - posHi;
 
 				if (scanLength < 1)
 					scanLength = 1;
@@ -853,7 +853,7 @@ public static class VGAMem
 	}
 
 	static void DrawSampleData16(VGAMemOverlay r,
-		Span<short> data, int length, int inputChans, int outputChans)
+		Span<short> data, int inputChans, int outputChans)
 	{
 		if (data.Length == 0)
 			return;
@@ -861,7 +861,7 @@ public static class VGAMem
 		int nh = r.Size.Height / outputChans;
 		int np = r.Size.Height - nh / 2;
 
-		length /= inputChans;
+		int length = data.Length / inputChans;
 
 		int step = (int)(((long)length << 32) / r.Size.Width);
 
@@ -879,7 +879,7 @@ public static class VGAMem
 				int scanLength = unchecked((int)((posLo + 0xFFFFFFFF) >> 32));
 
 				if (posHi >= length) posHi = length - 1;
-				if (posHi + scanLength > length) scanLength = (int)(length - posHi);
+				if (posHi + scanLength > length) scanLength = length - posHi;
 
 				if (scanLength < 1)
 					scanLength = 1;
@@ -912,12 +912,15 @@ public static class VGAMem
 	}
 
 	static void DrawSampleData32(VGAMemOverlay r,
-		int[] data, int length, int inputChans, int outputChans)
+		Span<int> data, int inputChans, int outputChans)
 	{
+		if (data.Length == 0)
+			return;
+
 		int nh = r.Size.Height / outputChans;
 		int np = r.Size.Height - nh / 2;
 
-		length /= inputChans;
+		int length = data.Length / inputChans;
 
 		int step = (int)(((long)length << 32) / r.Size.Width);
 
@@ -945,7 +948,7 @@ public static class VGAMem
 
 					do
 					{
-						int s = data[(posHi + i) * inputChans + cc + co];
+						int s = data[(int)((posHi + i) * inputChans + cc + co)];
 						if (s < min) min = s;
 						if (s > max) max = s;
 					} while (co++ < inputChans - outputChans);
@@ -1111,12 +1114,10 @@ public static class VGAMem
 		int chans = sample.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1;
 
 		if (sample.Flags.HasFlag(SampleFlags._16Bit))
-			DrawSampleData16(r, sample.Data16,
-					sample.Length * chans,
+			DrawSampleData16(r, sample.Data16.Slice(0, sample.Length * chans),
 					chans, chans);
 		else
-			DrawSampleData8(r, sample.Data8,
-					sample.Length * chans,
+			DrawSampleData8(r, sample.Data8.Slice(0, sample.Length * chans),
 					chans, chans);
 
 		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
@@ -1128,27 +1129,27 @@ public static class VGAMem
 		ApplyOverlay(r);
 	}
 
-	public static void DrawSampleDataRect32(VGAMemOverlay r, int[] data,
-		int length, int inputChans, int outputChans)
+	public static void DrawSampleDataRect32(VGAMemOverlay r, Span<int> data,
+		int inputChans, int outputChans)
 	{
 		r.Clear(0);
-		DrawSampleData32(r, data, length, inputChans, outputChans);
+		DrawSampleData32(r, data, inputChans, outputChans);
 		ApplyOverlay(r);
 	}
 
-	public static void DrawSampleDataRect16(VGAMemOverlay r, short[] data,
-		int length, int inputChans, int outputChans)
+	public static void DrawSampleDataRect16(VGAMemOverlay r, Span<short> data,
+		int inputChans, int outputChans)
 	{
 		r.Clear(0);
-		DrawSampleData16(r, data, length, inputChans, outputChans);
+		DrawSampleData16(r, data, inputChans, outputChans);
 		ApplyOverlay(r);
 	}
 
-	public static void DrawSampleDataRect8(VGAMemOverlay r, sbyte[] data,
-		int length, int inputChans, int outputChans)
+	public static void DrawSampleDataRect8(VGAMemOverlay r, Span<sbyte> data,
+		int inputChans, int outputChans)
 	{
 		r.Clear(0);
-		DrawSampleData8(r, data, length, inputChans, outputChans);
+		DrawSampleData8(r, data, inputChans, outputChans);
 		ApplyOverlay(r);
 	}
 }

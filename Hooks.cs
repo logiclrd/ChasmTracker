@@ -34,7 +34,7 @@ public class Hooks
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
 			string batchFile = Path.Combine(
-				Configuration.ConfigurationDirectoryDotSchism,
+				Configuration.Directories.DotSchism,
 				name + ".bat");
 
 			if (File.Exists(batchFile))
@@ -43,7 +43,7 @@ public class Hooks
 		else
 		{
 			string scriptFile = Path.Combine(
-				Configuration.ConfigurationDirectoryDotSchism,
+				Configuration.Directories.DotSchism,
 				name);
 
 			if (File.Exists(scriptFile))

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ChasmTracker.Pages;
@@ -613,18 +614,15 @@ public abstract class Page
 			switch (AudioPlayback.AudioOutputBits)
 			{
 				case 8:
-					VGAMem.DrawSampleDataRect8(s_visualizationOverlay, AudioPlayback.AudioBuffer8!,
-						AudioPlayback.AudioBuffer8!.Length,
+					VGAMem.DrawSampleDataRect8(s_visualizationOverlay, MemoryMarshal.Cast<short, sbyte>(AudioPlayback.AudioBuffer),
 						AudioPlayback.AudioOutputChannels, outputChannels);
 					break;
 				case 16:
-					VGAMem.DrawSampleDataRect16(s_visualizationOverlay, AudioPlayback.AudioBuffer16!,
-						AudioPlayback.AudioBuffer16!.Length,
+					VGAMem.DrawSampleDataRect16(s_visualizationOverlay, AudioPlayback.AudioBuffer,
 						AudioPlayback.AudioOutputChannels, outputChannels);
 					break;
 				case 32:
-					VGAMem.DrawSampleDataRect32(s_visualizationOverlay, AudioPlayback.AudioBuffer32!,
-						AudioPlayback.AudioBuffer32!.Length,
+					VGAMem.DrawSampleDataRect32(s_visualizationOverlay, MemoryMarshal.Cast<short, int>(AudioPlayback.AudioBuffer),
 						AudioPlayback.AudioOutputChannels, outputChannels);
 					break;
 				default:
@@ -1106,21 +1104,21 @@ public abstract class Page
 				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					Song.CurrentSong.CurrentSpeed--;
+					Song.CurrentSong.SetCurrentSpeed(Song.CurrentSong.CurrentSpeed - 1);
 					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
 				{
-					Song.CurrentSong.CurrentTempo--;
+					Song.CurrentSong.SetCurrentTempo(Song.CurrentSong.CurrentTempo - 1);
 					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					Song.CurrentSong.CurrentGlobalVolume--;
+					Song.CurrentSong.SetCurrentGlobalVolume(Song.CurrentSong.CurrentGlobalVolume - 1);
 					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
@@ -1131,21 +1129,21 @@ public abstract class Page
 				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					Song.CurrentSong.CurrentSpeed++;
+					Song.CurrentSong.SetCurrentSpeed(Song.CurrentSong.CurrentSpeed + 1);
 					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
 				{
-					Song.CurrentSong.CurrentTempo++;
+					Song.CurrentSong.SetCurrentTempo(Song.CurrentSong.CurrentTempo + 1);
 					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					Song.CurrentSong.CurrentGlobalVolume++;
+					Song.CurrentSong.SetCurrentGlobalVolume(Song.CurrentSong.CurrentGlobalVolume + 1);
 					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
@@ -1220,7 +1218,7 @@ public abstract class Page
 				minipop.SetValue +=
 					newValue =>
 					{
-						Song.CurrentSong.CurrentSpeed = newValue;
+						Song.CurrentSong.SetCurrentSpeed(newValue);
 					};
 
 				minipop.SetValueNoPlay +=
@@ -1239,7 +1237,7 @@ public abstract class Page
 				minipop.SetValue +=
 					newValue =>
 					{
-						Song.CurrentSong.CurrentTempo = newValue;
+						Song.CurrentSong.SetCurrentTempo(newValue);
 					};
 
 				minipop.SetValueNoPlay +=

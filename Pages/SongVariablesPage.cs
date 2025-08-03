@@ -203,7 +203,7 @@ public class SongVariablesPage : Page
 		/* XXX actually, in IT the buttons on this dialog say OK/No for whatever reason */
 		Song.CurrentSong.SetInstrumentMode(true);
 
-		MessageBox.Show(MessageBoxTypes.YesNo, "Initialise instruments?", accept: _ => Song.CurrentSong.InitializeInstruments());
+		MessageBox.Show(MessageBoxTypes.YesNo, "Initialise instruments?", accept: () => Song.CurrentSong.InitializeInstruments());
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}

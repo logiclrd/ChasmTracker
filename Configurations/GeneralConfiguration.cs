@@ -14,4 +14,9 @@ public class GeneralConfiguration : ConfigurationSection
 
 	[ConfigurationKey("palette_cur")]
 	public int CurrentPalette;
+
+	public override void PrepareToSave()
+	{
+		StopOnLoad = !Status.Flags.HasFlag(StatusFlags.PlayAfterLoad);
+	}
 }

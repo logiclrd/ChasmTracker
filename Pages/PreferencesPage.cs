@@ -390,7 +390,7 @@ public class PreferencesPage : Page
 				? AudioBackend.DefaultID
 				: AudioBackend.Devices[_selectedAudioDevice - 1].ID;
 
-			AudioBackend.Reinitialize(id);
+			AudioPlayback.Reinitialize(id);
 		}
 
 		return true;
@@ -554,7 +554,7 @@ public class PreferencesPage : Page
 
 		if (loadSelectedDriver)
 		{
-			var result = AudioBackend.Initialize(AudioBackend.Drivers[_selectedAudioDriver].Name, null);
+			var result = AudioPlayback.Initialize(AudioBackend.Drivers[_selectedAudioDriver].Name, null);
 
 			AudioBackend.FlashReinitializedText(result);
 

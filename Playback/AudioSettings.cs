@@ -1,6 +1,6 @@
 namespace ChasmTracker.Playback;
 
-public class AudioSettings
+public static class AudioSettings
 {
 	public static int SampleRate;
 	public static int Bits;

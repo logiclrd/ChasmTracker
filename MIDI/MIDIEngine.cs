@@ -394,7 +394,7 @@ public class MIDIEngine : IMIDISink
 	}
 
 
-	static bool NeedFlush()
+	public static bool NeedFlush()
 	{
 		if (s_recordMutex == null)
 			return false;

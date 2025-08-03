@@ -726,7 +726,7 @@ public class Program
 		{
 			if (Status.Flags.HasFlag(StatusFlags.StartupFontEdit))
 			{
-				MessageBox.Show(MessageBoxTypes.OKCancel, "Exit Font Editor?", _ => Program.Exit(0));
+				MessageBox.Show(MessageBoxTypes.OKCancel, "Exit Font Editor?", () => Program.Exit(0));
 			}
 			else
 			{
@@ -743,7 +743,7 @@ public class Program
 				Status.Flags.HasFlag(StatusFlags.ClassicMode)
 				? "Exit Impulse Tracker?"
 				: "Exit Schism Tracker?",
-				_ => Page.SaveCheck(_ => Program.Exit(0)));
+				() => Page.SaveCheck(() => Program.Exit(0)));
 		}
 	}
 }

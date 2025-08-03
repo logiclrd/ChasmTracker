@@ -17,6 +17,21 @@ public class Configuration
 	//   and value names are converted to snake_case.
 	// - If this is inadequate, it can be overridden using [ConfigurationKey].
 	public static VideoConfiguration Video = new VideoConfiguration();
+	public static AudioConfiguration Audio = new AudioConfiguration();
+
+	// hmmm....
+	//     [Equalizer]
+	//     low_band=freq/gain
+	//     med_low_band=freq/gain
+	//     etc.
+	// would be a cleaner way of storing this
+	public static EQBandConfiguration EQLowBand = new EQBandConfiguration(0);
+	public static EQBandConfiguration EQMedLowBand = new EQBandConfiguration(1);
+	public static EQBandConfiguration EQMedHighBand = new EQBandConfiguration(2);
+	public static EQBandConfiguration EQHighBand = new EQBandConfiguration(3);
+
+	[ConfigurationKey("Mixer Settings")]
+	public static MixerConfiguration Mixer = new MixerConfiguration();
 	public static BackupsConfiguration Backups = new BackupsConfiguration();
 	public static GeneralConfiguration General = new GeneralConfiguration();
 	public static PatternEditorConfiguration PatternEditor = new PatternEditorConfiguration();

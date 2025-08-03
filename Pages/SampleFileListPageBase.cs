@@ -748,7 +748,7 @@ public class SampleFileListPageBase : Page
 				_haveSearch = false;
 				if (_flist.NumFiles > 0)
 				{
-					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete file?", accept: _ => DoDeleteFile())
+					MessageBox.Show(MessageBoxTypes.OKCancel, "Delete file?", accept: DoDeleteFile)
 						.ChangeFocusTo(1);
 				}
 				return true;

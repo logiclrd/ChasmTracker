@@ -43,6 +43,30 @@ public class Song
 	public int TempoFactor; // ditto
 	public int RepeatCount; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
 
+	public void SetCurrentSpeed(int newSpeed)
+	{
+		if (newSpeed < 1 || newSpeed > 255)
+			return;
+
+		lock (AudioPlayback.LockScope())
+			CurrentSpeed = newSpeed;
+	}
+
+	public void SetCurrentTempo(int newTempo)
+	{
+		lock (AudioPlayback.LockScope())
+			CurrentTempo = newTempo.Clamp(31, 255);
+	}
+
+	public void SetCurrentGlobalVolume(int newVolume)
+	{
+		if (newVolume < 0 || newVolume > 128)
+			return;
+
+		lock (AudioPlayback.LockScope())
+			CurrentGlobalVolume = newVolume;
+	}
+
 	// Nothing innately special about this -- just needs to be above the max pattern length.
 	// process row is set to this in order to get the player to jump to the end of the pattern.
 	// (See ITTECH.TXT)
@@ -222,6 +246,21 @@ public class Song
 	{
 		lock (AudioPlayback.LockScope())
 			CurrentOrder = newValue;
+	}
+
+	// Ctrl-F7
+	public void SetNextOrder(int order)
+	{
+		lock (AudioPlayback.LockScope())
+			ProcessOrder = order;
+	}
+
+	// Alt-F11
+	public bool ToggleOrderListLocked()
+	{
+		Flags ^= SongFlags.OrderListLocked;
+
+		return Flags.HasFlag(SongFlags.OrderListLocked);
 	}
 
 	// clear patterns => clear filename and save flag
