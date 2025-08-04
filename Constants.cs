@@ -28,6 +28,9 @@ public class Constants
 
 	public const int MaxVoices = 256;
 
+	public const int MixMaxChannels = 2;
+	public const int MixBufferSize = 512;
+
 	public const int DefaultPatternLength = 64;
 
 	public const int MixingAttenuation = 5;

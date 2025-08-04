@@ -18,11 +18,11 @@ public class WAV : SampleExporter
 	long _numBytes; // how many bytes have been written
 	int _bps; // bytes per sample
 
-	public override bool ExportHead(Stream fp, int bits, int channels, int rate, int length)
+	public override bool ExportHead(Stream fp, int bits, int channels, int rate)
 	{
 		_fileStartOffset = fp.Position;
 
-		_bps = WAVFile.WriteHeader(fp, bits, channels, rate, length, out _dataSizeOffset);
+		_bps = WAVFile.WriteHeader(fp, bits, channels, rate, 0, out _dataSizeOffset);
 
 		_numBytes = 0;
 

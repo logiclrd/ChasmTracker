@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace ChasmTracker.Playback;
 
+using System.Reflection;
 using ChasmTracker.Audio;
 using ChasmTracker.Configurations;
 using ChasmTracker.Events;
@@ -309,6 +310,22 @@ public static class AudioPlayback
 
 	public static TimeSpan CurrentTime => TimeSpan.FromSeconds(SamplesPlayed / (double)MixFrequency);
 
+	public static AudioPlaybackState SaveState()
+	{
+		var state = new AudioPlaybackState();
+
+		foreach (var field in typeof(AudioPlayback).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+			state.Values[field.Name] = field.GetValue(null);
+
+		return state;
+	}
+
+	public static void RestoreState(AudioPlaybackState state)
+	{
+		foreach (var field in typeof(AudioPlayback).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+			field.SetValue(null, state.Values[field.Name]);
+	}
+
 	public static void InitializeModPlug()
 	{
 		using (LockScope())
@@ -343,7 +360,7 @@ public static class AudioPlayback
 					AudioBuffersPerSecond--;
 			}
 
-			Song.InitializeMIDI(new MIDIEngine());
+			Song.CurrentSong.InitializeMIDI(new MIDIEngine());
 		}
 	}
 

@@ -9,7 +9,7 @@ public abstract class SampleExporter : FileConverter
 {
 	public virtual bool IsMulti => false;
 
-	public abstract bool ExportHead(Stream fp, int bits, int channels, int rate, int length);
+	public abstract bool ExportHead(Stream fp, int bits, int channels, int rate);
 	public abstract bool ExportSilence(Stream fp, int bytes);
 	public abstract bool ExportBody(Stream fp, Span<byte> data);
 	public abstract bool ExportTail(Stream fp);

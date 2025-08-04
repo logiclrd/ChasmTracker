@@ -15,7 +15,7 @@ public class FLAC : SampleExporter
 
 	FLACEncoder? _encoder;
 
-	public override bool ExportHead(Stream fp, int bits, int channels, int rate, int length)
+	public override bool ExportHead(Stream fp, int bits, int channels, int rate)
 	{
 		_encoder = new FLACEncoder();
 

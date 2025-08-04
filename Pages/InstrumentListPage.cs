@@ -753,10 +753,8 @@ public abstract class InstrumentListPage : Page
 		}
 	}
 
-	void DoSaveInstrument(object? ptr)
+	void DoSaveInstrument(InstrumentSaveData data)
 	{
-		var data = (InstrumentSaveData)ptr!;
-
 		Song.CurrentSong.SaveInstrument(data.Path, data.Converter, CurrentInstrument);
 	}
 
@@ -791,7 +789,7 @@ public abstract class InstrumentListPage : Page
 		if (File.Exists(ptr))
 		{
 			if (Paths.IsRegularFile(ptr))
-				MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?", accept: DoSaveInstrument, data: data);
+				MessageBox.Show(MessageBoxTypes.OKCancel, "Overwrite file?", accept: () => DoSaveInstrument(data));
 			else
 				Status.FlashText(filename + " is not a regular file");
 		}

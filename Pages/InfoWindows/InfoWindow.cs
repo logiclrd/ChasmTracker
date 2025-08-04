@@ -27,10 +27,13 @@ public abstract class InfoWindow
 	public abstract void Draw(int @base, int height, bool isActive);
 	public abstract void Click(Point mousePosition);
 
-	public static Func<int, int, InfoWindow>[] WindowTypes;
+	public static Func<int, int, InfoWindow>[]? WindowTypes;
 
 	public InfoWindow ConvertToNextWindowType()
 	{
+		if (WindowTypes == null)
+			return this;
+
 		int nextType = (WindowType + 1) % WindowTypes.Length;
 
 		return WindowTypes[nextType](nextType, Height);
@@ -38,6 +41,9 @@ public abstract class InfoWindow
 
 	public InfoWindow ConvertToPreviousWindowType()
 	{
+		if (WindowTypes == null)
+			return this;
+
 		int nextType = (WindowType + WindowTypes.Length - 1) % WindowTypes.Length;
 
 		return WindowTypes[nextType](nextType, Height);

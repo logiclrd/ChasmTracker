@@ -6,6 +6,7 @@ using System.Text;
 
 namespace ChasmTracker.Songs;
 
+using System.Reflection;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
@@ -23,7 +24,7 @@ public class Song
 {
 	public static Song CurrentSong = new Song();
 
-	static IMIDISink? s_midiSink;
+	IMIDISink? _midiSink;
 
 	public int NumVoices;// how many are currently playing. (POTENTIALLY larger than global MaxVoices)
 	public int BufferCount; // number of samples to mix per tick
@@ -188,9 +189,9 @@ public class Song
 				InitializeInstrumentFromSample(n, n);
 	}
 
-	public static void InitializeMIDI(IMIDISink midiSink)
+	public void InitializeMIDI(IMIDISink midiSink)
 	{
-		s_midiSink = midiSink;
+		_midiSink = midiSink;
 	}
 
 	// IT-compatible: last order of "main song", or 0
@@ -602,7 +603,8 @@ public class Song
 	public TimeSpan StopAtTime;
 
 	// multi-write stuff -- null if no multi-write is in progress, else array of one struct per channel
-	// public MultiWrite[]? MultiWrite;
+	public MultiWrite[]? MultiWrite;
+	public AudioPlaybackState? SavedAudioPlaybackState;
 
 	public SongFlags Flags;
 
@@ -730,6 +732,16 @@ public class Song
 
 			Flags &= ~(SongFlags.PatternLoop | SongFlags.EndReached);
 		}
+	}
+
+	public Song Clone()
+	{
+		var clone = new Song();
+
+		foreach (var field in typeof(Song).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy))
+			field.SetValue(clone, field.GetValue(this));
+
+		return clone;
 	}
 
 	public SongSample? GetSample(int n)
@@ -3897,7 +3909,7 @@ public class Song
 			fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
 
 			*/
-			s_midiSink?.OutRaw(this, data, BufferCount);
+			_midiSink?.OutRaw(this, data, BufferCount);
 		}
 	}
 
@@ -4521,7 +4533,7 @@ public class Song
 				ret = converter.SaveSong(this, stream);
 
 			if (Status.Flags.HasFlag(StatusFlags.MakeBackups))
-				DiskWriter.MakeBackup(mangle, Status.Flags.HasFlag(StatusFlags.NumberedBackups));
+				DiskWriter.MakeBackup(mangle, Status.Flags.HasFlag(StatusFlags.NumberedBackups) ? DiskWriterBackupMode.BackupNumbered : DiskWriterBackupMode.BackupTilde);
 
 			File.Move(tempName, mangle, overwrite: true);
 		}
@@ -4831,7 +4843,7 @@ public class Song
 	}
 
 	// 'start' indicates minimum sample/instrument to check
-	int FirstBlankSampleNumber(int start)
+	public int FirstBlankSampleNumber(int start)
 	{
 		if (start < 1)
 			start = 1;
@@ -5093,4 +5105,65 @@ public class Song
 	// FIXME this function sucks
 	public int GetHighestUsedChannel()
 		=> Patterns.OfType<Pattern>().Max(pattern => pattern.GetHighestUsedChannel());
+
+	/* Wrapper for MultiWriteSamples that writes to the current sample,
+	and with a confirmation dialog if the sample already has data */
+	public void PatternToSample(int pattern, bool split, bool bind)
+	{
+		if (split && bind)
+		{
+			Log.Append(4, "song_pattern_to_sample: internal error!");
+			return;
+		}
+
+		if (pattern < 0 || pattern >= Patterns.Count)
+			return;
+
+		// this is horrid
+		for (int n = 0; n < Samples.Count; n++)
+		{
+			if (Samples[n] is SongSample samp)
+			{
+				if (samp.Name[23] != 0xFF)
+					continue;
+
+				int existingPatternLink = (int)samp.Name[24];
+
+				if (pattern == existingPatternLink)
+				{
+					Status.FlashText($"Pattern {pattern} already linked to sample {n}");
+					return;
+				}
+			}
+		}
+
+		var ps = new PatternToSample();
+
+		ps.Pattern = pattern;
+		ps.Sample = AllPages.SampleList.CurrentSample;
+
+		if (ps.Sample == 0)
+			ps.Sample = 1;
+
+		ps.Bind = bind;
+
+		if (split)
+		{
+			// Nothing to confirm, as this never overwrites samples
+			DiskWriter.PatternToSampleMulti(ps);
+		}
+		else
+		{
+			var samp = CurrentSong.Samples[ps.Sample];
+
+			if ((samp == null) || samp.IsEmpty)
+				DiskWriter.PatternToSampleSingle(ps);
+			else
+			{
+				var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "This will replace the current sample.");
+
+				dialog.ActionYes = () => DiskWriter.PatternToSampleSingle(ps);
+			}
+		}
+	}
 }

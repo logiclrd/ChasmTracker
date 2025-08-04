@@ -4325,7 +4325,7 @@ public class PatternEditorPage : Page
 			case KeySym.o:
 				if (k.State == KeyState.Release)
 					return true;
-				DiskWriter.PatternToSample(_currentPattern, split: k.Modifiers.HasAnyFlag(KeyMod.Shift), bind: k.Sym == KeySym.b);
+				Song.CurrentSong.PatternToSample(_currentPattern, split: k.Modifiers.HasAnyFlag(KeyMod.Shift), bind: k.Sym == KeySym.b);
 				return true;
 
 			case KeySym.v:

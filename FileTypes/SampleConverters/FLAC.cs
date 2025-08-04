@@ -70,9 +70,11 @@ public class FLAC : SampleFileConverter
 				default: /* csf_read_sample will fail */ break;
 			}
 
-			decoder.OutputStream.Position = 0;
+			var outputStream = decoder.OutputStream ?? throw new Exception("Internal error: FLAC decoder has no OutputStream");
 
-			ReadSample(sample, flags, decoder.OutputStream);
+			outputStream.Position = 0;
+
+			ReadSample(sample, flags, outputStream);
 
 			return sample;
 		}

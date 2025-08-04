@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-
+using ChasmTracker.DiskOutput;
 using ChasmTracker.FileSystem;
 using ChasmTracker.MIDI;
 
@@ -37,6 +37,8 @@ public class Configuration
 	public static PatternEditorConfiguration PatternEditor = new PatternEditorConfiguration();
 	public static FilesConfiguration Files = new FilesConfiguration();
 	public static DirectoriesConfiguration Directories = new DirectoriesConfiguration();
+	[ConfigurationKey("Diskwriter")]
+	public static DiskWriterConfiguration DiskWriter = new DiskWriterConfiguration();
 	public static KeyboardConfiguration Keyboard = new KeyboardConfiguration();
 	public static InfoPageConfiguration InfoPage = new InfoPageConfiguration();
 	public static MIDIConfiguration MIDI = new MIDIConfiguration();

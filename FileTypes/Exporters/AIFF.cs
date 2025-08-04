@@ -15,7 +15,7 @@ public class AIFF : SampleExporter
 
 	AIFFWriteData? _awd;
 
-	public override bool ExportHead(Stream fp, int bits, int channels, int rate, int length)
+	public override bool ExportHead(Stream fp, int bits, int channels, int rate)
 	{
 		_awd = new AIFFWriteData();
 		_awd.StartOffset = fp.Position;
