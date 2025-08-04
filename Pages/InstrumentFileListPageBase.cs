@@ -352,7 +352,7 @@ public abstract class InstrumentFileListPageBase : Page
 		return true;
 	}
 
-	void otherFileList_HandleText(TextInputEvent text)
+	bool otherFileList_HandleText(TextInputEvent text)
 	{
 		var f = _flist[_flist.SelectedIndex];
 
@@ -364,11 +364,11 @@ public abstract class InstrumentFileListPageBase : Page
 				RepositionAtSlashSearch();
 				Status.Flags |= StatusFlags.NeedUpdate;
 
-				return;
+				return true;
 			}
 		}
 
-		return;
+		return false;
 	}
 
 	void otherFileList_Redraw()

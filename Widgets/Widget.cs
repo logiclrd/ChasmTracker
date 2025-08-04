@@ -83,7 +83,7 @@ public abstract class Widget
 
 	public virtual bool HandleKey(KeyEvent k) { return default; }
 
-	public virtual void HandleText(TextInputEvent textInput) { }
+	public virtual bool HandleText(TextInputEvent textInput) { return default; }
 
 	protected void OnActivated() => _activated?.Invoke();
 

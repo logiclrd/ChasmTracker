@@ -53,7 +53,7 @@ public class NumberEntryWidget : Widget
 		}
 	}
 
-	public override void HandleText(TextInputEvent textInput)
+	public override bool HandleText(TextInputEvent textInput)
 	{
 		int cursorPositionDigitValue = 1;
 
@@ -61,6 +61,8 @@ public class NumberEntryWidget : Widget
 			cursorPositionDigitValue *= 10;
 
 		int newValue = _value;
+
+		bool success = false;
 
 		foreach (char ch in textInput.Text)
 		{
@@ -84,6 +86,8 @@ public class NumberEntryWidget : Widget
 				cursorPositionDigitValue /= 10;
 				CursorPosition.Value++;
 			}
+
+			success = true;
 		}
 
 		CursorPosition.Value = CursorPosition.Value.Clamp(0, Size.Width - 1);
@@ -91,6 +95,8 @@ public class NumberEntryWidget : Widget
 		Value = newValue;
 
 		textInput.IsHandled = true;
+
+		return success;
 	}
 
 	protected override void DrawWidget(bool isSelected, int tfg, int tbg)

@@ -387,9 +387,9 @@ public class SampleListPage : Page
 		return true;
 	}
 
-	void otherSampleList_HandleText(TextInputEvent k)
+	bool otherSampleList_HandleText(TextInputEvent k)
 	{
-		SampleListHandleTextInput(k.Text);
+		return SampleListHandleTextInput(k.Text);
 	}
 
 	/* draw the actual list */

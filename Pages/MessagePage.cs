@@ -606,13 +606,15 @@ public class MessagePage : Page
 		Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.SongNeedsSave;
 	}
 
-	void HandleTextInputEditMode(TextInputEvent text)
+	bool HandleTextInputEditMode(TextInputEvent text)
 	{
 		if (Clippy.Owner(ClippySource.Select) == otherMessage)
 			DeleteSelection();
 
 		foreach (char ch in text.Text)
 			InsertChar(ch);
+
+		return true;
 	}
 
 	bool HandleKeyEditMode(KeyEvent k)

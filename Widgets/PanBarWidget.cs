@@ -16,7 +16,7 @@ public class PanBarWidget : Widget
 	public bool IsMuted;
 	public bool IsSurround;
 
-	public PanBarWidget(Point position, WidgetNext next, int channel)
+	public PanBarWidget(Point position, int channel)
 		: base(position, width: 24)
 	{
 		Minimum = 0;

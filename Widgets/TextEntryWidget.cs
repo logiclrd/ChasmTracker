@@ -2,6 +2,7 @@ using System;
 
 namespace ChasmTracker.Widgets;
 
+using System.ComponentModel;
 using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
@@ -92,10 +93,12 @@ public class TextEntryWidget : Widget
 		OnChanged();
 	}
 
-	public void AddText(string text)
+	public bool AddText(string text)
 	{
 		foreach (char ch in text)
 			AddCharacter(ch);
+
+		return (text.Length > 0);
 	}
 
 	public void DeleteCharacter()
@@ -114,10 +117,13 @@ public class TextEntryWidget : Widget
 		Array.Copy(TextCharacters, CursorPosition + 1, TextCharacters, CursorPosition, MaxLength - CursorPosition);
 	}
 
-	public override void HandleText(TextInputEvent textInput)
+	public override bool HandleText(TextInputEvent textInput)
 	{
-		AddText(textInput.Text);
+		bool success = AddText(textInput.Text);
+
 		textInput.IsHandled = true;
+
+		return success;
 	}
 
 	protected override void DrawWidget(bool isSelected, int tfg, int tbg)

@@ -489,14 +489,14 @@ public abstract class ModuleLoadSavePageBase : Page
 		}
 	}
 
-	protected void FileListHandleTextInput(TextInputEvent evt)
+	protected bool FileListHandleTextInput(TextInputEvent evt)
 	{
 		bool success = false;
 
 		foreach (char ch in evt.Text)
 			success |= SearchTextAddChar(ch);
 
-		//return success;
+		return success;
 	}
 
 	protected bool FileListHandleKey(KeyEvent k)
@@ -664,19 +664,19 @@ public abstract class ModuleLoadSavePageBase : Page
 		SearchRedraw();
 	}
 
-	protected void DirectoryListHandleTextInput(TextInputEvent evt)
+	protected bool DirectoryListHandleTextInput(TextInputEvent evt)
 	{
 		foreach (char ch in evt.Text)
 		{
 			if (ch < ' ')
-				return;// false;
+				return false;
 
 			s_searchText.Append(ch);
 		}
 
 		SearchUpdate();
 
-		//return true;
+		return true;
 	}
 
 	protected bool DirectoryListHandleKey(KeyEvent k)

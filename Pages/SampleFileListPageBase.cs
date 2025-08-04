@@ -662,8 +662,10 @@ public class SampleFileListPageBase : Page
 		FileListReposition();
 	}
 
-	void FileListHandleTextInput(TextInputEvent evt)
+	bool FileListHandleTextInput(TextInputEvent evt)
 	{
+		bool success = false;
+
 		foreach (var ch in evt.Text)
 		{
 			if ((ch >= 32) && (_searchStr.Any() || (_flist.SelectedIndex >= 0) && (_flist.SelectedIndex < _flist.NumFiles)))
@@ -674,7 +676,11 @@ public class SampleFileListPageBase : Page
 
 				Status.Flags |= StatusFlags.NeedUpdate;
 			}
+
+			success = true;
 		}
+
+		return success;
 	}
 
 	bool FileListHandleKey(KeyEvent k)

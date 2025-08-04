@@ -11,7 +11,7 @@ public class OtherWidget : Widget
 	public bool OtherAcceptsText;
 
 	public event Func<KeyEvent, bool>? OtherHandleKey;
-	public event Action<TextInputEvent>? OtherHandleText;
+	public event Func<TextInputEvent, bool>? OtherHandleText;
 	public event Action? OtherRedraw;
 
 	public OtherWidget()
@@ -38,6 +38,6 @@ public class OtherWidget : Widget
 	public override bool HandleKey(KeyEvent k)
 		=> OtherHandleKey?.Invoke(k) ?? false;
 
-	public override void HandleText(TextInputEvent textInput)
-		=> OtherHandleText?.Invoke(textInput);
+	public override bool HandleText(TextInputEvent textInput)
+		=> OtherHandleText?.Invoke(textInput) ?? false;
 }

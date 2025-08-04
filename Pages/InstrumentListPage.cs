@@ -454,15 +454,19 @@ public abstract class InstrumentListPage : Page
 		}
 	}
 
-	static void otherInstrumentList_HandleText(TextInputEvent evt)
+	static bool otherInstrumentList_HandleText(TextInputEvent evt)
 	{
+		bool success = false;
+
 		foreach (char ch in evt.Text)
 		{
 			if (s_instrumentCursorPos >= 25)
 				break;
 
-			InstrumentListAddChar(ch);
+			success |= InstrumentListAddChar(ch);
 		}
+
+		return success;
 	}
 
 	static bool otherInstrumentList_HandleKey(KeyEvent k)

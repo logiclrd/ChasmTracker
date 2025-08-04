@@ -31,6 +31,11 @@ public abstract class Page
 
 	Shared<int> _selectedWidgetIndex = new Shared<int>();
 
+	protected void LinkSelectedWidgetIndex(Shared<int> commonSelectedWidgetIndex)
+	{
+		_selectedWidgetIndex = commonSelectedWidgetIndex;
+	}
+
 	public static List<Widget>? ActiveWidgets;
 	public static Shared<int>? SelectedActiveWidgetIndex;
 

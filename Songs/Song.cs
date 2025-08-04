@@ -215,6 +215,22 @@ public class Song
 		return 0;
 	}
 
+	public int GetOrder(int n)
+	{
+		if (n < OrderList.Count)
+			return OrderList[n];
+		else
+			return SpecialOrders.Last;
+	}
+
+	public void SetOrder(int n, int o)
+	{
+		while (n >= OrderList.Count)
+			OrderList.Add(SpecialOrders.Last);
+
+		OrderList[n] = o;
+	}
+
 	// Total number of non-empty patterns in song, according to csf_pattern_is_empty
 	public int GetPatternCount()
 	{
