@@ -4791,7 +4791,7 @@ public class Song
 			}
 	}
 
-	public static Song? Load(string file)
+	public static Song? LoadUnchecked(string file)
 	{
 		string @base = Path.GetFileName(file);
 
