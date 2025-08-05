@@ -113,6 +113,14 @@ public abstract class InstrumentListPage : Page
 		base.SynchronizeWith(other);
 
 		AllPages.InstrumentList = this;
+
+		if (other is SampleListPage sampleList)
+		{
+			if (Song.CurrentSong.IsInstrumentMode)
+				SynchronizeToSample();
+			else
+				CurrentInstrument = sampleList.CurrentSample;
+		}
 	}
 
 	static int s_currentInstrument;

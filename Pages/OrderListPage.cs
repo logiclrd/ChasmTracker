@@ -44,6 +44,12 @@ public abstract class OrderListPage : Page
 		base.SynchronizeWith(other);
 
 		AllPages.OrderList = this;
+
+		if (other is InstrumentListPage)
+		{
+			if (Song.CurrentSong.IsInstrumentMode)
+				AllPages.SampleList.SynchronizeToInstrument();
+		}
 	}
 
 	// These values are shared between the subclasses of OrderListPage, which

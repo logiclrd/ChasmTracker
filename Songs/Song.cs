@@ -4378,9 +4378,21 @@ public class Song
 		return LoadSample(FakeSlot, file.FullPath) ? FakeSlot : KeyJazz.NoInstrument;
 	}
 
-	public static Song? CreateLoad(string file)
+	public static Song? Load(string fileName)
 	{
-		using (var s = File.OpenRead(file))
+		Page.SaveCheck(
+			() =>
+			{
+				if (LoadUnchecked(fileName))
+					Page.SetPage(AudioPlayback.Mode == AudioPlaybackMode.Playing ? PageNumbers.Info : PageNumbers.Log);
+				else
+					Page.SetPage(PageNumbers.Log);
+			});
+	}
+
+	public static Song? CreateLoad(string fileName)
+	{
+		using (var s = File.OpenRead(fileName))
 		{
 			Song? newSong = null;
 
@@ -4404,7 +4416,7 @@ public class Song
 			if (newSong == null)
 			{
 				if (exception == null)
-					exception = new Exception("Couldn't load file: " + file);
+					exception = new Exception("Couldn't load file: " + fileName);
 
 				throw exception;
 			}

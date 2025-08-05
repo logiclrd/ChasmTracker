@@ -328,7 +328,8 @@ public class SampleListPage : Page
 				case KeySym.Delete:
 					if (k.State == KeyState.Release)
 						return false;
-					if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAlt)) {
+					if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAlt))
+					{
 						if (_sampleListCursorPos < 25)
 							SampleListDeleteNextChar();
 						return true;
@@ -955,7 +956,7 @@ public class SampleListPage : Page
 				if (!canMod || (Status.Flags.HasFlag(StatusFlags.ClassicMode)))
 					return;
 
-				if (!sample!.Flags.HasAnyFlag( SampleFlags.Loop | SampleFlags.SustainLoop))
+				if (!sample!.Flags.HasAnyFlag(SampleFlags.Loop | SampleFlags.SustainLoop))
 				{
 					MessageBox.Show(MessageBoxTypes.OK, "Crossfade requires a sample loop to work.");
 					return;
@@ -1047,11 +1048,14 @@ public class SampleListPage : Page
 			case KeySym.Plus:
 				if (k.State == KeyState.Release)
 					return;
-				if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) {
+				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
+				{
 					sample = Song.CurrentSong.EnsureSample(_currentSample);
 					sample.C5Speed *= 2;
 					Status.Flags |= StatusFlags.SongNeedsSave;
-				} else if (k.Modifiers.HasAnyFlag(KeyMod.Control)) {
+				}
+				else if (k.Modifiers.HasAnyFlag(KeyMod.Control))
+				{
 					sample = Song.CurrentSong.EnsureSample(_currentSample);
 					sample.C5Speed = SongNote.CalculateHalfTone(sample.C5Speed, 1);
 					Status.Flags |= StatusFlags.SongNeedsSave;
@@ -1061,11 +1065,14 @@ public class SampleListPage : Page
 			case KeySym.Minus:
 				if (k.State == KeyState.Release)
 					return;
-				if (k.Modifiers.HasAnyFlag(KeyMod.Alt)) {
+				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
+				{
 					sample = Song.CurrentSong.EnsureSample(_currentSample);
 					sample.C5Speed /= 2;
 					Status.Flags |= StatusFlags.SongNeedsSave;
-				} else if (k.Modifiers.HasAnyFlag(KeyMod.Control)) {
+				}
+				else if (k.Modifiers.HasAnyFlag(KeyMod.Control))
+				{
 					sample = Song.CurrentSong.EnsureSample(_currentSample);
 					sample.C5Speed = SongNote.CalculateHalfTone(sample.C5Speed, -1);
 					Status.Flags |= StatusFlags.SongNeedsSave;
@@ -1096,7 +1103,8 @@ public class SampleListPage : Page
 				newSample++;
 				break;
 			case KeySym.Escape:
-				if (k.Modifiers.HasAnyFlag(KeyMod.Shift)) {
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+				{
 					if (k.State == KeyState.Release)
 						return;
 					_sampleListCursorPos = 25;
@@ -1854,5 +1862,14 @@ public class SampleListPage : Page
 			CurrentSample = first;
 		else
 			CurrentSample = instNum;
+	}
+
+	public override void SynchronizeWith(Page other)
+	{
+		if (other is InstrumentListPage)
+		{
+			if (Song.CurrentSong.IsInstrumentMode)
+				SynchronizeToInstrument();
+		}
 	}
 }
