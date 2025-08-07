@@ -6,6 +6,10 @@ public class EQBandConfiguration : ConfigurationSection
 {
 	EQBand eqBand;
 
+	EQBandConfiguration() { eqBand = new EQBand(); }
+
+	protected override ConfigurationSection CreatePristine() => new EQBandConfiguration();
+
 	public EQBandConfiguration(int bandIndex)
 	{
 		eqBand = AudioSettings.EQBands[bandIndex];

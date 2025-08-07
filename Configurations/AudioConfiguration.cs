@@ -16,7 +16,7 @@ public class AudioConfiguration : ConfigurationSection
 	[ConfigurationKey("master.right")]
 	public int MasterRight = 31;
 
-	public override void Parse()
+	public override void FinalizeLoad()
 	{
 		if (string.IsNullOrEmpty(Device) && !string.IsNullOrEmpty(Driver))
 		{

@@ -6,7 +6,7 @@ namespace ChasmTracker.Configurations;
 public class VideoConfiguration : ConfigurationSection
 {
 	public VideoInterpolationMode Interpolation = VideoInterpolationMode.NearestNeighbour;
-	public string? Format;
+	public new string? Format;
 	[ConfigurationKey("fullscreen")]
 	public bool FullScreen;
 	public int Width;

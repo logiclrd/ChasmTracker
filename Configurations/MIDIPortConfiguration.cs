@@ -1,6 +1,6 @@
 namespace ChasmTracker.Configurations;
 
-public class MIDIPortConfiguration
+public class MIDIPortConfiguration : ConfigurationSection
 {
 	public string Name = "";
 	public string Provider = "";

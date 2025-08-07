@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace ChasmTracker.Configurations;
 
-public class MIDIConfiguration
+public class MIDIConfiguration : ConfigurationSection
 {
 	public string? Name;
 	public string? Start;
@@ -15,7 +15,9 @@ public class MIDIConfiguration
 	public string? SetPanning;
 	public string? SetBank;
 	public string? SetProgram;
+	[ArrayMemberNaming(Prefix = "SF", IndexFormat = "X", Length = 16)]
 	public string?[] SFx = new string?[16];
+	[ArrayMemberNaming(Prefix = "Z", IndexFormat = "X2", Length = 128)]
 	public string?[] Zxx = new string?[128];
 
 	public static int SerializedSize => (10 + 16 + 128) * Constants.MaxMIDIMacro;

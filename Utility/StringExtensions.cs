@@ -58,7 +58,6 @@ public static class StringExtensions
 	/* opposite of str_escape. (this is glib's 'compress' function renamed more clearly) */
 	public static string Unescape(this string str)
 	{
-		// TODO: test me
 		var dest = new StringBuilder();
 		int n = 0;
 
@@ -140,6 +139,8 @@ public static class StringExtensions
 						break;
 				}
 			}
+
+			n++;
 		}
 
 		return dest.ToString();

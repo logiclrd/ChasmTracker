@@ -1,4 +1,3 @@
-using ChasmTracker.Audio;
 using ChasmTracker.Playback;
 
 namespace ChasmTracker.Configurations;

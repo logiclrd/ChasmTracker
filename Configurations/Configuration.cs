@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using ChasmTracker.DiskOutput;
-using ChasmTracker.FileSystem;
-using ChasmTracker.MIDI;
+using System.Text.RegularExpressions;
 
 namespace ChasmTracker.Configurations;
+
+using ChasmTracker.FileSystem;
 
 public class Configuration
 {
@@ -41,11 +42,33 @@ public class Configuration
 	public static DiskWriterConfiguration DiskWriter = new DiskWriterConfiguration();
 	public static KeyboardConfiguration Keyboard = new KeyboardConfiguration();
 	public static InfoPageConfiguration InfoPage = new InfoPageConfiguration();
+	[ConfigurationKey("MIDI")]
 	public static MIDIConfiguration MIDI = new MIDIConfiguration();
-	[ConfigurationKey("MIDI Port %d")] // TODO: lists
+	[ConfigurationKey("MIDI Port %d", FirstIndex = 1)] // TODO: lists
 	public static List<MIDIPortConfiguration> MIDIPorts = new List<MIDIPortConfiguration>();
 
 	public static StartupFlags StartupFlags;
+
+	public static readonly Dictionary<object, List<string>> CommentsByOwner = new Dictionary<object, List<string>>();
+
+	public static readonly Dictionary<string, ConfigurationSection> SectionByKey = typeof(Configuration)
+		.GetFields(BindingFlags.Static | BindingFlags.Public)
+		.Where(field => typeof(ConfigurationSection).IsAssignableFrom(field.FieldType))
+		.Select(field => (Key: GetSectionKey(field), Value: field.GetValue(null) as ConfigurationSection))
+		.Where(entry => entry.Value != null)
+		.ToDictionary(entry => entry.Key, entry => entry.Value!, comparer: StringComparer.InvariantCultureIgnoreCase);
+
+	static List<(string Prefix, int FirstIndex, FieldInfo Field, Type ElementType)> s_listSections = typeof(Configuration)
+		.GetFields(BindingFlags.Static | BindingFlags.Public)
+		.Where(field => field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
+		.Select(field => (Field: field, ElementType: field.FieldType.GetGenericArguments()[0]))
+		.Where(entry => typeof(ConfigurationSection).IsAssignableFrom(entry.ElementType))
+		.Select(entry => (Key: GetSectionKey(entry.Field), FirstIndex: GetListSectionFirstIndex(entry.Field), entry.Field, entry.ElementType))
+		.Where(entry => entry.Key.EndsWith("%d"))
+		.Select(entry => (PrefixOrigin: entry.Key.Substring(0, entry.Key.Length - 2), entry.FirstIndex, entry.Field, entry.ElementType))
+		.ToList();
+
+	static Dictionary<Type, Dictionary<string, Enum>> s_enumParseTables = new Dictionary<Type, Dictionary<string, Enum>>();
 
 	public static void InitializeDirectory()
 	{
@@ -80,9 +103,132 @@ public class Configuration
 		}
 	}
 
-	public static void Save()
+	static Regex s_commentLineRegex = new Regex(@"^\s*[#;]");
+
+	public static bool IsComment(string line) => s_commentLineRegex.IsMatch(line);
+
+	public static void Load(string fileName)
 	{
-		// TODO
+		using (var reader = new StreamReader(fileName))
+			Load(fileName, reader);
+	}
+
+	public static void Load(string fileName, TextReader reader)
+	{
+		CommentsByOwner.Clear();
+
+		foreach (var section in SectionByKey.Values)
+			section.Clear();
+
+		List<string> comments = new List<string>();
+		string currentSectionName = "<invalid>";
+		ConfigurationSection? currentSection = null;
+
+		while (true)
+		{
+			string? line = reader.ReadLine();
+
+			if (line == null)
+				break;
+
+			if (s_commentLineRegex.IsMatch(line))
+				comments.Add(line);
+			else if (line.StartsWith("[") && line.EndsWith("]"))
+			{
+				string sectionName = line.Substring(1, line.Length - 2);
+
+				if (GetSectionListItem(sectionName, out currentSection)
+				 || SectionByKey.TryGetValue(sectionName, out currentSection))
+				{
+					CommentsByOwner[currentSection] = comments;
+					comments.Clear();
+
+					currentSectionName = sectionName;
+				}
+				else
+				{
+					Console.WriteLine("IGNORING: " + line);
+					comments.Add("# " + line);
+				}
+			}
+			else if ((currentSection == null) || !currentSection.Parse(fileName, currentSectionName, line, comments))
+			{
+				Console.WriteLine("IGNORING 2: " + line);
+				comments.Add("# " + line);
+			}
+		}
+
+		CommentsByOwner[typeof(Configuration)] = comments;
+	}
+
+	static bool GetSectionListItem(string sectionName, out ConfigurationSection section)
+	{
+		foreach (var listSection in s_listSections)
+		{
+			if (sectionName.StartsWith(listSection.Prefix)
+			 && int.TryParse(sectionName.AsSpan().Slice(listSection.Prefix.Length), out var index))
+			{
+				var list = (System.Collections.IList)listSection.Field.GetValue(null)!;
+
+				if (list == null)
+				{
+					var listType = typeof(List<>).MakeGenericType(listSection.ElementType);
+
+					list = (System.Collections.IList)Activator.CreateInstance(listType)!;
+					listSection.Field.SetValue(null, list);
+				}
+
+				while (index >= list.Count)
+					list.Add((dynamic)Activator.CreateInstance(listSection.ElementType)!);
+
+				section = (ConfigurationSection)list[index]!;
+				return true;
+			}
+		}
+
+		section = default!;
+		return false;
+	}
+
+	public static void Save(string fileName)
+	{
+		using (var writer = new StreamWriter(fileName))
+			Save(writer);
+	}
+
+	public static void Save(TextWriter writer)
+	{
+		foreach (var section in SectionByKey)
+		{
+			if (CommentsByOwner.TryGetValue(section, out var sectionComments))
+				sectionComments.ForEach(writer.WriteLine);
+
+			section.Value.Format(section.Key, writer);
+		}
+
+		foreach (var listSection in s_listSections)
+		{
+			var list = (System.Collections.IList?)listSection.Field.GetValue(null);
+
+			if (list == null)
+				continue;
+
+			for (int i = listSection.FirstIndex; i < list.Count; i++)
+			{
+				var section = (ConfigurationSection?)list[i];
+
+				if (section == null)
+					continue;
+
+				if (CommentsByOwner.TryGetValue(section, out var sectionComments))
+					sectionComments.ForEach(writer.WriteLine);
+
+				section.Format(listSection.Prefix + i, writer);
+			}
+		}
+
+		if (CommentsByOwner.TryGetValue(typeof(Configuration), out var trailingComments))
+			trailingComments.ForEach(writer.WriteLine);
 	}
 
 	static string ConvertPascalCaseToWords(string pascalCase, bool forceLower, char wordSeparator)
@@ -115,16 +261,29 @@ public class Configuration
 		return builder.ToString();
 	}
 
-	static string GetSectionKey(MemberInfo member)
+	static bool IsConfigurationSectionListType(Type type)
+	{
+		if (!type.IsGenericType)
+			return false;
+
+		if (type.GetGenericTypeDefinition() != typeof(List<>))
+			return false;
+
+		var elementType = type.GetGenericArguments()[0];
+
+		return typeof(ConfigurationSection).IsAssignableFrom(elementType);
+	}
+
+	public static string GetSectionKey(MemberInfo member)
 	{
 		if (member is FieldInfo field)
 		{
-			if (!typeof(ConfigurationSection).IsAssignableFrom(field.FieldType))
+			if (!typeof(ConfigurationSection).IsAssignableFrom(field.FieldType) && !IsConfigurationSectionListType(field.FieldType))
 				throw new Exception("GetSectionKey called on a member that does not yield a ConfigurationSection");
 		}
 		else if (member is PropertyInfo property)
 		{
-			if (!typeof(ConfigurationSection).IsAssignableFrom(property.PropertyType))
+			if (!typeof(ConfigurationSection).IsAssignableFrom(property.PropertyType) && !IsConfigurationSectionListType(property.PropertyType))
 				throw new Exception("GetSectionKey called on a member that does not yield a ConfigurationSection");
 		}
 		else
@@ -136,7 +295,15 @@ public class Configuration
 		return ConvertPascalCaseToWords(member.Name, forceLower: false, wordSeparator: ' ');
 	}
 
-	static string GetValueKey(MemberInfo member)
+	public static int GetListSectionFirstIndex(MemberInfo member)
+	{
+		if (member.GetCustomAttribute<ConfigurationKeyAttribute>() is ConfigurationKeyAttribute config)
+			return config.FirstIndex;
+
+		return 0;
+	}
+
+	public static string GetValueKey(MemberInfo member)
 	{
 		if (!(member is FieldInfo field) && !(member is PropertyInfo property))
 			throw new Exception("GetSectionKey called on a member that is not a field or a property");
@@ -147,8 +314,133 @@ public class Configuration
 		return ConvertPascalCaseToWords(member.Name, forceLower: true, wordSeparator: '_');
 	}
 
-	public static void LoadMIDIPortConfiguration(MIDIPort port)
+	public static bool ParseValue([NotNullWhen(true)] FieldInfo? field, string value, out object? parsedValue)
 	{
+		parsedValue = default;
 
+		if (field == null)
+			return false;
+
+		bool serializeEnumAsInt = field.GetCustomAttribute<SerializeEnumAsIntAttribute>() != null;
+
+		return ParseValue(field.FieldType, value, serializeEnumAsInt, out parsedValue);
+	}
+
+	public static bool ParseValue(Type fieldType, string value, bool serializeEnumAsInt, out object? parsedValue)
+	{
+		parsedValue = default;
+
+		if (fieldType == typeof(string))
+		{
+			parsedValue = value;
+			return true;
+		}
+		else if (fieldType == typeof(int))
+		{
+			int p = 0;
+			bool good = true;
+
+			for (int i = 0; i < value.Length; i++)
+			{
+				if (char.IsDigit(value[i]))
+					p = p * 10 + (value[i] - '0');
+				else
+				{
+					good = false;
+					break;
+				}
+			}
+
+			parsedValue = p;
+			return good;
+		}
+		else if (fieldType == typeof(bool))
+		{
+			if ((value == "1") || value.Equals("true", StringComparison.InvariantCultureIgnoreCase))
+			{
+				parsedValue = true;
+				return true;
+			}
+			else if ((value == "0") || value.Equals("false", StringComparison.InvariantCultureIgnoreCase))
+			{
+				parsedValue = false;
+				return true;
+			}
+
+			return false;
+		}
+		else if (fieldType.IsEnum)
+		{
+			if (serializeEnumAsInt)
+			{
+				if (int.TryParse(value, out var intValue))
+				{
+					parsedValue = Enum.ToObject(fieldType, intValue);
+					return true;
+				}
+			}
+			else
+			{
+				if (!s_enumParseTables.TryGetValue(fieldType, out var enumParseTable))
+				{
+					enumParseTable = BuildEnumParseTable(fieldType);
+
+					s_enumParseTables[fieldType] = enumParseTable;
+				}
+
+				if (enumParseTable.TryGetValue(value.Trim(), out var parsedEnumValue))
+				{
+					parsedValue = parsedEnumValue;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		return false;
+	}
+
+	public static string FormatValue(Type type, bool serializeEnumAsInt, object? value)
+	{
+		if (value == null)
+			return "";
+
+		if (type == typeof(bool))
+			return ((bool)value) ? "1" : "0";
+		else if (type.IsEnum)
+		{
+			if (serializeEnumAsInt)
+				return ((int)(value ?? 0)).ToString();
+			else
+				return value.ToString()?.ToLowerInvariant() ?? "";
+		}
+		else
+			return value.ToString() ?? "";
+	}
+
+	static Dictionary<string, Enum> BuildEnumParseTable(Type enumType)
+	{
+		var values = new Dictionary<string, Enum>(StringComparer.InvariantCultureIgnoreCase);
+
+		foreach (var field in enumType.GetFields(BindingFlags.Static | BindingFlags.Public))
+		{
+			if (field.GetCustomAttribute<ConfigurationDefaultAttribute>() != null)
+				continue;
+
+			var value = field.GetValue(null);
+
+			if ((value == null) || (value.GetType() != enumType))
+				continue;
+
+			var serializedValueAttribute = field.GetCustomAttribute<ConfigurationValueAttribute>();
+
+			if (serializedValueAttribute != null)
+				values[serializedValueAttribute.Value] = (Enum)value;
+			else
+				values[field.Name] = (Enum)value;
+		}
+
+		return values;
 	}
 }
