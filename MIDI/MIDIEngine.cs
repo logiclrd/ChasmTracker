@@ -106,6 +106,88 @@ public class MIDIEngine : IMIDISink
 	}
 
 	/* ------------------------------------------------------------- */
+
+	static MIDIEngine()
+	{
+		Configuration.RegisterConfigurable(new MIDIConfigurationThunk());
+		Configuration.RegisterListGatherer(new GatherMIDIPortConfigurationThunk());
+	}
+
+	class MIDIConfigurationThunk : IConfigurable<MIDIConfiguration>
+	{
+		public void SaveConfiguration(MIDIConfiguration config) => MIDIEngine.SaveConfiguration(config);
+		public void LoadConfiguration(MIDIConfiguration config) => MIDIEngine.LoadConfiguration(config);
+	}
+
+	class GatherMIDIPortConfigurationThunk : IGatherConfigurationSections<MIDIPortConfiguration>
+	{
+		public void GatherConfiguration(IList<MIDIPortConfiguration> list) => MIDIEngine.GatherMIDIPortConfiguration(list);
+	}
+
+	static void LoadConfiguration(MIDIConfiguration config)
+		{
+			Flags = config.Flags;
+			PitchWheelDepth = config.PitchWheelDepth;
+			Amplification = config.Amplification;
+			C5Note = config.C5Note;
+		}
+
+	static void SaveConfiguration(MIDIConfiguration config)
+	{
+		config.Flags = Flags;
+		config.PitchWheelDepth = PitchWheelDepth;
+		config.Amplification = Amplification;
+		config.C5Note = C5Note;
+	}
+
+	static void GatherMIDIPortConfiguration(IList<MIDIPortConfiguration> list)
+	{
+		/* write out only enabled midi ports */
+		lock (s_mutex)
+		{
+			int i = 1;
+
+			foreach (var p in s_providers)
+			{
+				lock (p.Sync)
+				{
+					foreach (var q in p.EnumeratePorts())
+					{
+						if (string.IsNullOrEmpty(q.Name))
+							continue;
+
+						var ss = q.Name.TrimStart();
+
+						if (ss.Length == 0)
+							continue;
+
+						if (q.IO == MIDIIO.None)
+							continue;
+
+						while (i >= list.Count)
+							list.Add(new MIDIPortConfiguration());
+
+						var c = list[i];
+
+						i++;
+
+						c.Name = ss;
+						c.Provider = p.Name.TrimStart();
+						c.Input = q.IO.HasFlag(MIDIIO.Input);
+						c.Output = q.IO.HasFlag(MIDIIO.Output);
+					}
+				}
+			}
+
+			//TODO: Save number of MIDI-IP ports
+
+			/* delete other MIDI port sections */
+			while (list.Count > i)
+				list.RemoveAt(i);
+		}
+	}
+
+	/* ------------------------------------------------------------- */
 	/* PROVIDER registry */
 
 	static List<MIDIProvider> s_providers = new List<MIDIProvider>();
@@ -181,7 +263,7 @@ public class MIDIEngine : IMIDISink
 			}
 		}
 
-		Configuration.LoadMIDIPortConfiguration(p);
+		LoadMIDIPortConfiguration(p);
 
 		p.Received += port_Received;
 
@@ -197,6 +279,38 @@ public class MIDIEngine : IMIDISink
 			p.Disable();
 
 			s_ports[p.Number] = null;
+		}
+	}
+
+	static void LoadMIDIPortConfiguration(MIDIPort q)
+	{
+		string ss = q.Name.TrimStart();
+		string? sp = q.Provider?.TrimStart();
+
+		if (string.IsNullOrEmpty(ss))
+			return;
+
+		if (string.IsNullOrEmpty(sp))
+			sp = null;
+
+		/* look for MIDI port sections */
+		for (int j = 1; j < Configuration.MIDIPorts.Count; j++)
+		{
+			var c = Configuration.MIDIPorts[j];
+
+			if (!c.Name.Equals(q.Name, StringComparison.InvariantCultureIgnoreCase))
+				continue;
+			if (!c.Provider.Equals(q.Provider, StringComparison.InvariantCultureIgnoreCase))
+				continue;
+
+			/* okay found port */
+
+			if (q.IOCap.HasFlag(MIDIIO.Input) && c.Input)
+				q.IO |= MIDIIO.Input;
+			if (q.IOCap.HasFlag(MIDIIO.Output) && c.Output)
+				q.IO |= MIDIIO.Output;
+
+			q.Enable();
 		}
 	}
 

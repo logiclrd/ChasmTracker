@@ -58,13 +58,13 @@ public abstract class OrderListPage : Page
 	static int s_currentOrder;
 	static int s_cursorPos;
 
-	public static int TopOrder
+	public int TopOrder
 	{
 		get => s_topOrder;
 		set => s_topOrder = value;
 	}
 
-	public static int CurrentOrder
+	public int CurrentOrder
 	{
 		get => s_currentOrder;
 		set
@@ -147,7 +147,7 @@ public abstract class OrderListPage : Page
 	/* --------------------------------------------------------------------- */
 	/* called from the pattern editor on ctrl-plus/minus */
 
-	public static void PreviousOrderPattern()
+	public void PreviousOrderPattern()
 	{
 		int newOrder = CurrentOrder;
 		int lastPattern = Song.CurrentSong.OrderList[newOrder];
@@ -171,7 +171,7 @@ public abstract class OrderListPage : Page
 		}
 	}
 
-	public static void NextOrderPattern()
+	public void NextOrderPattern()
 	{
 		int newOrder = CurrentOrder;
 		int lastPattern = Song.CurrentSong.OrderList[newOrder];

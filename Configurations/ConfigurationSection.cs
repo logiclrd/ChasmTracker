@@ -16,6 +16,8 @@ public abstract class ConfigurationSection
 	Dictionary<string, FieldInfo> _fieldByKey;
 	List<(ArrayMemberNamingAttribute Naming, FieldInfo Field)> _arrays;
 
+	public int Index; // Only used for list-type sections (e.g. EQ)
+
 	protected ConfigurationSection()
 	{
 		_fieldByKey = GetType().GetFields()

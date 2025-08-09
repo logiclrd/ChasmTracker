@@ -33,17 +33,15 @@ public static class Configuration
 
 	[ConfigurationKey("Mixer Settings")]
 	public static MixerConfiguration Mixer = new MixerConfiguration();
-	public static BackupsConfiguration Backups = new BackupsConfiguration();
 	public static GeneralConfiguration General = new GeneralConfiguration();
 	public static PatternEditorConfiguration PatternEditor = new PatternEditorConfiguration();
-	public static FilesConfiguration Files = new FilesConfiguration();
 	public static DirectoriesConfiguration Directories = new DirectoriesConfiguration();
 	[ConfigurationKey("Diskwriter")]
 	public static DiskWriterConfiguration DiskWriter = new DiskWriterConfiguration();
 	public static InfoPageConfiguration InfoPage = new InfoPageConfiguration();
 	[ConfigurationKey("MIDI")]
 	public static MIDIConfiguration MIDI = new MIDIConfiguration();
-	[ConfigurationKey("MIDI Port %d", FirstIndex = 1)] // TODO: lists
+	[ConfigurationKey("MIDI Port %d", FirstIndex = 1)]
 	public static List<MIDIPortConfiguration> MIDIPorts = new List<MIDIPortConfiguration>();
 
 	public static StartupFlags StartupFlags;
@@ -68,6 +66,11 @@ public static class Configuration
 		.ToList();
 
 	static Dictionary<Type, EnumParseConfiguration> s_enumParseConfigurations = new Dictionary<Type, EnumParseConfiguration>();
+
+	static List<Type> _configurableTypes = typeof(Configuration).Assembly
+		.GetTypes()
+		.Where(t => typeof(IConfigurable).IsAssignableFrom(t))
+		.ToList();
 
 	public static void InitializeDirectory()
 	{
@@ -173,7 +176,55 @@ public static class Configuration
 		CommentsByOwner[typeof(Configuration)] = comments;
 
 		foreach (var section in SectionByKey.Values)
+		{
 			section.FinalizeLoad();
+
+			ConfigurableLoadConfiguration(section);
+		}
+	}
+
+	public static void RegisterConfigurable(IConfigurable configurable)
+	{
+		s_configurables.Add(configurable);
+	}
+
+	public static void RegisterListGatherer(IGatherConfigurationSections configurable)
+	{
+		s_listGatherers.Add(configurable);
+	}
+
+	static List<IConfigurable> s_configurables = new List<IConfigurable>();
+	static List<IGatherConfigurationSections> s_listGatherers = new List<IGatherConfigurationSections>();
+
+	static MethodInfo s_configurableLoadConfigurationMethodDefinition = typeof(Configuration)
+		.GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
+		.Where(method => method.Name == nameof(ConfigurableLoadConfiguration) && method.IsGenericMethodDefinition)
+		.Single();
+
+	static MethodInfo s_configurableSaveConfigurationMethodDefinition = typeof(Configuration)
+		.GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
+		.Where(method => method.Name == nameof(ConfigurableSaveConfiguration) && method.IsGenericMethodDefinition)
+		.Single();
+
+	static void ConfigurableLoadConfiguration(ConfigurationSection section)
+		=> s_configurableLoadConfigurationMethodDefinition.CreateDelegate(section.GetType()).DynamicInvoke(section);
+	static void ConfigurableSaveConfiguration(ConfigurationSection section)
+		=> s_configurableSaveConfigurationMethodDefinition.CreateDelegate(section.GetType()).DynamicInvoke(section);
+
+	static void ConfigurableLoadConfiguration<T>(T config)
+		where T : ConfigurationSection
+	{
+		foreach (var configurable in s_configurables)
+			if (configurable is IConfigurable<T> configurablePage)
+				configurablePage.LoadConfiguration(config);
+	}
+
+	static void ConfigurableSaveConfiguration<T>(T config)
+		where T : ConfigurationSection
+	{
+		foreach (var configurable in s_configurables)
+			if (configurable is IConfigurable<T> configurablePage)
+				configurablePage.SaveConfiguration(config);
 	}
 
 	static bool GetSectionListItem(string sectionName, out ConfigurationSection section)
@@ -214,7 +265,11 @@ public static class Configuration
 	public static void Save(TextWriter writer)
 	{
 		foreach (var section in SectionByKey.Values)
+		{
+			ConfigurableSaveConfiguration(section);
+
 			section.PrepareToSave();
+		}
 
 		foreach (var listSection in s_listSections)
 		{
@@ -223,18 +278,27 @@ public static class Configuration
 			if (list == null)
 				continue;
 
+			var gathererType = typeof(IGatherConfigurationSections<>).MakeGenericType(listSection.ElementType);
+			var listType = typeof(IList<>).MakeGenericType(listSection.ElementType);
+
+			if (listType.IsAssignableFrom(list.GetType()))
+			{
+				foreach (var gatherer in s_listGatherers)
+					if (gathererType.IsAssignableFrom(gatherer.GetType()))
+						((dynamic)gatherer).GatherConfiguration(list);
+			}
+
 			foreach (var section in list.OfType<ConfigurationSection>())
 				section.PrepareToSave();
 		}
 
-
 		foreach (var section in SectionByKey)
-			{
-				if (CommentsByOwner.TryGetValue(section, out var sectionComments))
-					sectionComments.ForEach(writer.WriteLine);
+		{
+			if (CommentsByOwner.TryGetValue(section, out var sectionComments))
+				sectionComments.ForEach(writer.WriteLine);
 
-				section.Value.Format(section.Key, writer);
-			}
+			section.Value.Format(section.Key, writer);
+		}
 
 		foreach (var listSection in s_listSections)
 		{

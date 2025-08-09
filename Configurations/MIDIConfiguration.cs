@@ -1,10 +1,17 @@
 using System;
 using System.Reflection;
+using ChasmTracker.MIDI;
 
 namespace ChasmTracker.Configurations;
 
 public class MIDIConfiguration : ConfigurationSection
 {
+	public MIDIFlags Flags = MIDIFlags.TickQuantize | MIDIFlags.RecordNoteOff | MIDIFlags.RecordVelocity | MIDIFlags.RecordAftertouch | MIDIFlags.PitchBend;
+	[ConfigurationKey("pitch_depth")]
+	public int PitchWheelDepth = 12;
+	public int Amplification = 100;
+	public int C5Note = 60;
+
 	public string? Name;
 	public string? Start;
 	public string? Stop;

@@ -36,6 +36,40 @@ public static class EnumExtensions
 		return (T)(object)(1 + Enum.GetValuesAsUnderlyingType<T>().OfType<int>().Max());
 	}
 
+	public static T Clamp<T>(this T value)
+		where T : struct, Enum
+	{
+		if (Enum.IsDefined(value))
+			return value;
+
+		var values = Enum.GetValues<T>();
+
+		T closest = values[0];
+		int closestDistance = Math.Abs(Convert.ToInt32(value) - Convert.ToInt32(closest));
+
+		for (int i = 1; i < values.Length; i++)
+		{
+			int distance = Math.Abs(Convert.ToInt32(value) - Convert.ToInt32(values[i]));
+
+			if (distance < closestDistance)
+			{
+				closest = values[i];
+				closestDistance = distance;
+			}
+		}
+
+		return closest;
+	}
+
+	public static T Clamp<T>(this T value, T useWhenInvalid)
+		where T : struct, Enum
+	{
+		if (Enum.IsDefined(value))
+			return value;
+		else
+			return useWhenInvalid;
+	}
+
 	public static T Cycle<T>(this T value)
 		where T : struct, Enum
 	{

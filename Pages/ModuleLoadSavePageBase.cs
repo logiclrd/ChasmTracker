@@ -82,7 +82,7 @@ public abstract class ModuleLoadSavePageBase : Page
 	protected void ResetGlob()
 	{
 		// Don't reparse the glob if it hasn't changed; that will mess with the cursor position
-		if ((_globListSrc != null) && _globListSrc.Equals(Configuration.Files.ModulePattern, StringComparison.InvariantCultureIgnoreCase))
+		if ((_globListSrc != null) && _globListSrc.Equals(Configuration.Directories.ModulePattern, StringComparison.InvariantCultureIgnoreCase))
 			_filenameEntry.Clear().Append(_globListSrc);
 		else
 			SetDefaultGlob(true);

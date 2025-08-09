@@ -27,8 +27,8 @@ public class Font
 	{
 		HalfData = DefaultFonts.HalfWidth.MakeCopy();
 
-		if ((Configuration.Files.Font == null)
-		 || !Load(Configuration.Files.Font))
+		if ((Configuration.General.Font == null)
+		 || !Load(Configuration.General.Font))
 			Reset();
 
 		Data = Normal;

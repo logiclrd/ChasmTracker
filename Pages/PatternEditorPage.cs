@@ -7,6 +7,7 @@ using System.Text;
 namespace ChasmTracker;
 
 using ChasmTracker.Clipboard;
+using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Dialogs.PatternEditor;
 using ChasmTracker.DiskOutput;
@@ -25,7 +26,7 @@ using ChasmTracker.Widgets;
 /* The all-important pattern editor. The code here is a general mess, so
  * don't look at it directly or, uh, you'll go blind or something. */
 
-public class PatternEditorPage : Page
+public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 {
 	/* only one widget, but MAN is it complicated :) */
 	OtherWidget otherEditorView;
@@ -1273,81 +1274,65 @@ public class PatternEditorPage : Page
 
 	/* --------------------------------------------------------------------------------------------------------- */
 	/* settings */
-	void ConfigSave(ConfigurationFile cfg)
+	public void SaveConfiguration(PatternEditorConfiguration config)
 	{
-		void SetNumber(string name, int value)
-			=> cfg.SetNumber("Pattern Editor", name, value);
-		void SetEnum<T>(string name, T value) where T : Enum
-			=> cfg.SetNumber("Pattern Editor", name, Convert.ToInt32(value));
-		void SetBool(string name, bool value)
-			=> cfg.SetBool("Pattern Editor", name, value);
-		void SetString(string name, string value)
-			=> cfg.SetString("Pattern Editor", name, value);
+		config.LinkEffectColumn = _linkEffectColumn;
+		config.DrawDivisions = _drawDivisions;
+		config.CentraliseCursor = _centraliseCursor;
+		config.HighlightCurrentRow = _highlightCurrentRow;
+		config.EditCopyMask = _editCopyMask;
+		config.VolumePercent = _volumePercent;
+		config.FastVolumePercent = _fastVolumePercent;
+		config.FastVolumeMode = _fastVolumeMode;
 
-		SetBool("link_effect_column", _linkEffectColumn);
-		SetBool("draw_divisions", _drawDivisions);
-		SetBool("centralise_cursor", _centraliseCursor);
-		SetBool("highlight_current_row", _highlightCurrentRow);
-		SetEnum("edit_copy_mask", _editCopyMask);
-		SetNumber("volume_percent", _volumePercent);
-		SetNumber("fast_volume_percent", _fastVolumePercent);
-		SetBool("fast_volume_mode", _fastVolumeMode);
-		SetBool("keyjazz_noteoff", _keyjazzNoteOff);
-		SetBool("keyjazz_write_noteoff", _keyjazzWriteNoteOff);
-		SetBool("keyjazz_repeat", _keyjazzRepeat);
-		SetBool("keyjazz_capslock", _keyjazzCapsLock);
-		SetEnum("mask_copy_search_mode", _maskCopySearchMode);
-		SetBool("invert_home_end", _invertHomeEnd);
+		config.KeyJazzNoteOff = _keyjazzNoteOff;
+		config.KeyJazzWriteNoteOff = _keyjazzWriteNoteOff;
+		config.KeyJazzRepeat = _keyjazzRepeat;
+		config.KeyJazzCapsLock = _keyjazzCapsLock;
 
-		SetBool("crayola_mode", Status.Flags.HasFlag(StatusFlags.CrayolaMode));
+		config.MaskCopySearchMode = _maskCopySearchMode;
+		config.InvertHomeEnd = _invertHomeEnd;
+
+		config.CrayolaMode = Status.Flags.HasFlag(StatusFlags.CrayolaMode);
 
 		char[] channelData = new char[Constants.MaxChannels];
 
 		for (int n = 0; n < Constants.MaxChannels; n++)
 			channelData[n] = (char)('a' + _trackViewScheme[n]);
 
-		SetString("track_view_scheme", new string(channelData));
+		config.TrackViewScheme = new string(channelData);
 
 		for (int n = 0; n < Constants.MaxChannels; n++)
 			channelData[n] = _channelMulti[n] ? 'M' : '-';
 
-		SetString("channel_multi", new string(channelData));
+		config.ChannelMulti = new string(channelData);
 	}
 
-	void ConfigLoad(ConfigurationFile cfg)
+	public void LoadConfiguration(PatternEditorConfiguration cfg)
 	{
-		int GetNumber(string name, int defaultValue)
-			=> cfg.GetNumber("Pattern Editor", name, defaultValue);
-		T GetEnum<T>(string name, T defaultValue) where T : Enum
-			=> (T)(object)cfg.GetNumber("Pattern Editor", name, Convert.ToInt32(defaultValue));
-		bool GetBool(string name, bool defaultValue)
-			=> cfg.GetBool("Pattern Editor", name, defaultValue);
-		string GetString(string name, string defaultValue)
-			=> cfg.GetString("Pattern Editor", name, defaultValue);
+		_linkEffectColumn = cfg.LinkEffectColumn;
+		_drawDivisions = cfg.DrawDivisions;
+		_centraliseCursor = cfg.CentraliseCursor;
+		_highlightCurrentRow = cfg.HighlightCurrentRow;
+		_editCopyMask = cfg.EditCopyMask;
+		_volumePercent = cfg.VolumePercent;
+		_fastVolumePercent = cfg.FastVolumePercent;
+		_fastVolumeMode = cfg.FastVolumeMode;
+		_keyjazzNoteOff = cfg.KeyJazzNoteOff;
+		_keyjazzWriteNoteOff = cfg.KeyJazzWriteNoteOff;
+		_keyjazzRepeat = cfg.KeyJazzRepeat;
+		_keyjazzCapsLock = cfg.KeyJazzCapsLock;
+		_maskCopySearchMode = cfg.MaskCopySearchMode;
+		_invertHomeEnd = cfg.InvertHomeEnd;
 
-		_linkEffectColumn = GetBool("link_effect_column", false);
-		_drawDivisions = GetBool("draw_divisions", true);
-		_centraliseCursor = GetBool("centralise_cursor", false);
-		_highlightCurrentRow = GetBool("highlight_current_row", false);
-		_editCopyMask = GetEnum("edit_copy_mask", PatternEditorMask.Note | PatternEditorMask.Instrument | PatternEditorMask.Volume);
-		_volumePercent = GetNumber("volume_percent", 100);
-		_fastVolumePercent = GetNumber("fast_volume_percent", 67);
-		_fastVolumeMode = GetBool("fast_volume_mode", false);
-		_keyjazzNoteOff = GetBool("keyjazz_noteoff", false);
-		_keyjazzWriteNoteOff = GetBool("keyjazz_write_noteoff", false);
-		_keyjazzRepeat = GetBool("keyjazz_repeat", true);
-		_keyjazzCapsLock = GetBool("keyjazz_capslock", false);
-		_maskCopySearchMode = GetEnum("mask_copy_search_mode", CopySearchMode.Off);
-		_invertHomeEnd = GetBool("invert_home_end", false);
-
-		bool crayolaMode = GetBool("crayola_mode", false);
+		bool crayolaMode = cfg.CrayolaMode;
 
 		if (crayolaMode)
 			Status.Flags |= StatusFlags.CrayolaMode;
 		else
 			Status.Flags &= ~StatusFlags.CrayolaMode;
 
-		string channelData = GetString("track_view_scheme", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+		string channelData = cfg.TrackViewScheme;
 
 		/* "decode" the track view scheme */
 		for (int n = 0; (n < Constants.MaxChannels) && (n < channelData.Length); n++)
@@ -1372,9 +1357,9 @@ public class PatternEditorPage : Page
 			}
 		}
 
-		channelData = GetString("channel_multi", "----------------------------------------------------------------");
+		channelData = cfg.ChannelMulti;
 
-		for (int n = 0; n < Constants.MaxChannels; n++)
+		for (int n = 0; (n < Constants.MaxChannels) && (n < channelData.Length); n++)
 			_channelMulti[n] = char.IsLetter(channelData[n]);
 
 		RecalculateVisibleArea();

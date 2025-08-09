@@ -36,11 +36,37 @@ public static class VGAMem
 		}
 	}
 
-	static void CheckInvert(ref byte tl, ref byte br)
+	static VGAMem()
 	{
-		if (Status.Flags.HasFlag(StatusFlags.InvertedPalette))
-			(tl, br) = (br, tl);
+		Configuration.RegisterConfigurable(new GeneralConfigurationThunk());
 	}
+
+	class GeneralConfigurationThunk : IConfigurable<GeneralConfiguration>
+	{
+		public void SaveConfiguration(GeneralConfiguration config) => VGAMem.SaveConfiguration(config);
+		public void LoadConfiguration(GeneralConfiguration config) => VGAMem.LoadConfiguration(config);
+	}
+
+	static void LoadConfiguration(GeneralConfiguration config)
+	{
+		if (config.CurrentPalette.Length >= 48)
+			CurrentPalette.SetFromString(config.CurrentPalette);
+
+		if ((config.Palette >= 0) && (config.Palette < Palettes.Presets.Length))
+			CurrentPalette = Palettes.Presets[config.Palette];
+	}
+
+	static void SaveConfiguration(GeneralConfiguration config)
+	{
+		config.Palette = CurrentPalette.Index;
+		config.CurrentPalette = CurrentPalette.ToString();
+	}
+
+	static void CheckInvert(ref byte tl, ref byte br)
+		{
+			if (Status.Flags.HasFlag(StatusFlags.InvertedPalette))
+				(tl, br) = (br, tl);
+		}
 
 	public static void Flip()
 	{

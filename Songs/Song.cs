@@ -14,9 +14,7 @@ using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
 using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
-using ChasmTracker.MIDI.Drivers;
 using ChasmTracker.Pages;
-using ChasmTracker.Pages.InfoWindows;
 using ChasmTracker.Playback;
 using ChasmTracker.Utility;
 
@@ -577,7 +575,37 @@ public class Song
 
 	public int[] OPLToChan = new int[9];
 	public int[] OPLFromChan = new int[Constants.MaxVoices];
+
 	// -----------------------------------------------------------------------
+
+	public static MIDIConfiguration DefaultMIDIConfig;
+
+	static Song()
+	{
+		Configuration.RegisterConfigurable(new MIDIConfigurationThunk());
+
+		DefaultMIDIConfig = MIDIConfiguration.GetDefault();
+	}
+
+	class MIDIConfigurationThunk : IConfigurable<MIDIConfiguration>
+	{
+		public void SaveConfiguration(MIDIConfiguration config) => Song.SaveConfiguration(config);
+		public void LoadConfiguration(MIDIConfiguration config) => Song.LoadConfiguration(config);
+	}
+
+	static void LoadConfiguration(MIDIConfiguration config)
+	{
+		DefaultMIDIConfig = config;
+
+		CurrentSong.MIDIConfig.CopyFrom(DefaultMIDIConfig);
+	}
+
+	static void SaveConfiguration(MIDIConfiguration config)
+	{
+		DefaultMIDIConfig.CopyFrom(CurrentSong.MIDIConfig);
+
+		config.CopyFrom(DefaultMIDIConfig);
+	}
 
 	// MIDI stuff ------------------------------------------------------------
 	/* This maps S3M concepts into MIDI concepts */
@@ -585,7 +613,7 @@ public class Song
 	/* This helps reduce the MIDI traffic, also does some encapsulation */
 	public SongMIDIState[] MIDIChannels = new SongMIDIState[Constants.MaxMIDIChannels];
 
-	public MIDIConfiguration MIDIConfig = MIDIConfiguration.GetDefault();
+	public MIDIConfiguration MIDIConfig = DefaultMIDIConfig.Clone();
 
 	public double MIDILastSongCounter;
 

@@ -14,13 +14,24 @@ public class PatternEditorConfiguration : ConfigurationSection
 	public int FastVolumePercent = 67;
 	public bool FastVolumeMode = false;
 	[ConfigurationKey("keyjazz_noteoff")]
-	public bool KeyjazzNoteOff = false;
+	public bool KeyJazzNoteOff = false;
 	[ConfigurationKey("keyjazz_write_noteoff")]
-	public bool KeyjazzWriteNoteOff = false;
-	public int KeyjazzRepeat;
+	public bool KeyJazzWriteNoteOff = false;
+	[ConfigurationKey("keyjazz_repeat")]
+	public bool KeyJazzRepeat = false;
 	[ConfigurationKey("keyjazz_capslock")]
-	public bool KeyjazzCapsLock = false;
+	public bool KeyJazzCapsLock = false;
 	[SerializeEnumAsInt]
 	public CopySearchMode MaskCopySearchMode = CopySearchMode.Off;
 	public bool InvertHomeEnd = false;
+	public bool CrayolaMode = false;
+	public string TrackViewScheme = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+	public string ChannelMulti = "----------------------------------------------------------------";
+
+	public override void FinalizeLoad()
+	{
+		AllPages.PatternEditor.LoadConfiguration();
+	}
+
+
 }

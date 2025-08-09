@@ -128,6 +128,9 @@ public abstract class Page
 		Title = title;
 		HelpText = helpText;
 
+		if (this is IConfigurable configurable)
+			Configuration.RegisterConfigurable(configurable);
+
 		CheckDrawFull();
 	}
 

@@ -13,7 +13,7 @@ using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.Widgets;
 
-public class InfoPage : Page
+public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 {
 	OtherWidget? otherInfo;
 
@@ -516,7 +516,7 @@ public class InfoPage : Page
 	/* --------------------------------------------------------------------------------------------------------- */
 	/* settings */
 
-	void SaveConfiguration()
+	public void SaveConfiguration(InfoPageConfiguration config)
 	{
 		var builder = new StringBuilder();
 
@@ -528,23 +528,23 @@ public class InfoPage : Page
 			builder.Append(window.ConfigurationID).Append(' ').Append(window.Height);
 		}
 
-		Configuration.InfoPage.Layout = builder.ToString();
+		config.Layout = builder.ToString();
 	}
 
-	void LoadConfigurationOld()
+	void LoadConfigurationOld(InfoPageConfiguration config)
 	{
 		_windows = new List<InfoWindow>();
 
-		for (int i = 0; i < Configuration.InfoPage.NumWindows; i++)
+		for (int i = 0; i < config.NumWindows; i++)
 		{
 			int packed =
 				i switch
 				{
-					0 => Configuration.InfoPage.Window1,
-					1 => Configuration.InfoPage.Window2,
-					2 => Configuration.InfoPage.Window3,
-					3 => Configuration.InfoPage.Window4,
-					4 => Configuration.InfoPage.Window5,
+					0 => config.Window1,
+					1 => config.Window2,
+					2 => config.Window3,
+					3 => config.Window4,
+					4 => config.Window5,
 					_ => -1
 				};
 
@@ -586,17 +586,17 @@ public class InfoPage : Page
 
 	static readonly char[] ConfigurationDelimeters = { ' ', '\t' };
 
-	void LoadConfiguration()
+	public void LoadConfiguration(InfoPageConfiguration config)
 	{
-		if (string.IsNullOrEmpty(Configuration.InfoPage.Layout))
+		if (string.IsNullOrEmpty(config.Layout))
 		{
-			LoadConfigurationOld();
+			LoadConfigurationOld(config);
 			return;
 		}
 
 		_windows = new List<InfoWindow>();
 
-		string[] tokens = Configuration.InfoPage.Layout.Split(ConfigurationDelimeters, StringSplitOptions.RemoveEmptyEntries);
+		string[] tokens = config.Layout.Split(ConfigurationDelimeters, StringSplitOptions.RemoveEmptyEntries);
 
 		for (int i = 0; i < tokens.Length; i += 2)
 		{

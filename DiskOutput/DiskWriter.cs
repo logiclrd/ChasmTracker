@@ -4,16 +4,16 @@ using System.IO;
 
 namespace ChasmTracker.DiskOutput;
 
+using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.FileTypes;
-using ChasmTracker.FileTypes.SongConverters;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
-public class DiskWriter : IDisposable // "disko"
+public class DiskWriter : IDisposable, IConfigurable<DiskWriterConfiguration> // "disko"
 {
 	public const int BufferSize = 65536;
 
@@ -56,7 +56,25 @@ public class DiskWriter : IDisposable // "disko"
 
 	public Stream AsStream(bool read) => _backend.AsStream(read);
 
-	// For triggering abort
+	// ---------------------------------------------------------------------------
+
+	public void LoadConfiguration(DiskWriterConfiguration config)
+	{
+		OutputRate = config.Rate;
+		OutputBits = config.Bits;
+		OutputChannels = config.Channels;
+	}
+
+	public void SaveConfiguration(DiskWriterConfiguration config)
+	{
+		config.Rate = OutputRate;
+		config.Bits = OutputBits;
+		config.Channels = OutputChannels;
+	}
+
+	// ---------------------------------------------------------------------------
+
+		// For triggering abort
 	public void SetException(Exception ex)
 	{
 		_exception = ex;

@@ -9,33 +9,31 @@ public class GeneralConfiguration : ConfigurationSection
 	public int KeyRepeatDelay;
 	public int KeyRepeatRate;
 
-	public string? Font;
+	public string Font = "font.cfg";
 	public bool StopOnLoad;
+	public bool ClassicMode;
+	public bool MakeBackups;
+	public bool NumberedBackups;
+	[SerializeEnumAsInt]
+	public TrackerTimeDisplay TimeDisplay = TrackerTimeDisplay.PlayElapsed;
+	[SerializeEnumAsInt, ConfigurationKey("vis_style")]
+	public TrackerVisualizationStyle VisualizationStyle = TrackerVisualizationStyle.Oscilloscope;
+
+	public bool AccidentalsAsFlats = false;
+
 	public TimeFormats TimeFormat = TimeFormats.Default;
 	public DateFormats DateFormat = DateFormats.Default;
 
-	public bool MetaIsCtrl;
-	public bool AltGrIsAlt;
+	[ConfigurationKey("meta_is_ctrl")]
+	public bool MetaIsControl = false;
+	public bool AltGrIsAlt = true;
 	public NumLockHandling NumlockSetting = NumLockHandling.Guess;
+
+	public bool LazyRedraw = false;
+
+	public bool MIDILikeTracker = false;
 
 	public int Palette = 2;
 	[ConfigurationKey("palette_cur")]
 	public string CurrentPalette = "";
-
-	public override void FinalizeLoad()
-	{
-		if (CurrentPalette.Length >= 48)
-			VGAMem.CurrentPalette.SetFromString(CurrentPalette);
-
-		if ((Palette >= 0) && (Palette < Palettes.Presets.Length))
-			VGAMem.CurrentPalette = Palettes.Presets[Palette];
-	}
-
-	public override void PrepareToSave()
-	{
-		StopOnLoad = !Status.Flags.HasFlag(StatusFlags.PlayAfterLoad);
-
-		Palette = VGAMem.CurrentPalette.Index;
-		CurrentPalette = VGAMem.CurrentPalette.ToString();
-	}
 }

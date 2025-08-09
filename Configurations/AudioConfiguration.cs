@@ -40,12 +40,5 @@ public class AudioConfiguration : ConfigurationSection
 	{
 		Driver = AudioPlayback.AudioDriver;
 		Device = AudioPlayback.AudioDevice;
-
-		SampleRate = AudioSettings.SampleRate;
-		Bits = AudioSettings.Bits;
-		Channels = AudioSettings.Channels;
-
-		MasterLeft = AudioSettings.Master.Left;
-		MasterRight = AudioSettings.Master.Right;
 	}
 }

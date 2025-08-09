@@ -2,6 +2,8 @@ using System;
 
 namespace ChasmTracker.Songs;
 
+using ChasmTracker.Configurations;
+using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 
 public struct SongNote
@@ -66,6 +68,27 @@ public struct SongNote
 				AccidentalsMode = AccidentalsMode.Flats;
 				break;
 		}
+	}
+
+	static SongNote()
+	{
+		Configuration.RegisterConfigurable(new GeneralConfigurationThunk());
+	}
+
+	class GeneralConfigurationThunk : IConfigurable<GeneralConfiguration>
+	{
+		public void SaveConfiguration(GeneralConfiguration config) => SongNote.SaveConfiguration(config);
+		public void LoadConfiguration(GeneralConfiguration config) => SongNote.LoadConfiguration(config);
+	}
+
+	static void LoadConfiguration(GeneralConfiguration config)
+	{
+		ToggleAccidentalsMode(config.AccidentalsAsFlats ? AccidentalsMode.Flats : AccidentalsMode.Sharps);
+	}
+
+	static void SaveConfiguration(GeneralConfiguration config)
+	{
+		config.AccidentalsAsFlats = (AccidentalsMode == AccidentalsMode.Flats);
 	}
 
 	public string NoteString => GetNoteString(Note);

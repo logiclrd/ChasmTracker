@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace ChasmTracker.Playback;
 
-using System.Reflection;
 using ChasmTracker.Audio;
 using ChasmTracker.Configurations;
 using ChasmTracker.Events;
@@ -43,6 +43,31 @@ public static class AudioPlayback
 	public static List<AudioBackend> InitializedBackends = new List<AudioBackend>();
 
 	public static AudioBackend? Backend;
+
+	// ------------------------------------------------------------------------------------------------------------
+
+	static AudioPlayback()
+	{
+		Configuration.RegisterConfigurable(new AudioConfigurationThunk());
+	}
+
+	class AudioConfigurationThunk : IConfigurable<AudioConfiguration>
+	{
+		public void SaveConfiguration(AudioConfiguration config) => AudioPlayback.SaveConfiguration(config);
+		public void LoadConfiguration(AudioConfiguration config) => AudioPlayback.LoadConfiguration(config);
+	}
+
+	static void LoadConfiguration(AudioConfiguration config)
+	{
+		s_driverName = config.Driver;
+		s_deviceName = config.Device;
+	}
+
+	static void SaveConfiguration(AudioConfiguration config)
+	{
+		config.Driver = s_driverName;
+		config.Device = s_deviceName;
+	}
 
 	// ------------------------------------------------------------------------------------------------------------
 	// drivers

@@ -12,6 +12,8 @@ public class EQBandConfiguration : ConfigurationSection
 
 	public EQBandConfiguration(int bandIndex)
 	{
+		Index = bandIndex;
+
 		eqBand = AudioSettings.EQBands[bandIndex];
 	}
 

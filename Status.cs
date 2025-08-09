@@ -2,6 +2,7 @@ using System;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.Input;
 using ChasmTracker.MIDI;
@@ -97,18 +98,75 @@ public static class Status
 
 	/* --------------------------------------------------------------------- */
 
-	static int LoopCount(int pos)
+	static Status()
 	{
-		if ((Song.CurrentSong.RepeatCount < 1) || Flags.HasFlag(StatusFlags.ClassicMode))
-			pos += VGAMem.DrawText("Playing", new Point(pos, 9), (0, 2));
-		else
-		{
-			pos += VGAMem.DrawText("Loop: ", new Point(pos, 9), (0, 2)); ;
-			pos += VGAMem.DrawText(Song.CurrentSong.RepeatCount.ToString(), new Point(pos, 9), (3, 2));
-		}
-
-		return pos;
+		Configuration.RegisterConfigurable(new GeneralConfigurationThunk());
 	}
+
+	class GeneralConfigurationThunk : IConfigurable<GeneralConfiguration>
+	{
+		public void SaveConfiguration(GeneralConfiguration config) => Status.SaveConfiguration(config);
+		public void LoadConfiguration(GeneralConfiguration config) => Status.LoadConfiguration(config);
+	}
+
+	static void LoadConfigFlag(bool enabled, StatusFlags flag)
+	{
+		if (enabled)
+			Flags |= flag;
+		else
+			Flags &= ~flag;
+	}
+
+	static void LoadConfiguration(GeneralConfiguration config)
+	{
+		LoadConfigFlag(!config.StopOnLoad, StatusFlags.PlayAfterLoad);
+		LoadConfigFlag(config.ClassicMode, StatusFlags.ClassicMode);
+		LoadConfigFlag(config.MakeBackups, StatusFlags.MakeBackups);
+		LoadConfigFlag(config.NumberedBackups, StatusFlags.NumberedBackups);
+
+		/* default to play/elapsed for invalid values */
+		TimeDisplay = config.TimeDisplay.Clamp(TrackerTimeDisplay.PlayElapsed);
+		/* default to oscilloscope for invalid values */
+		VisualizationStyle = config.VisualizationStyle;
+
+		LoadConfigFlag(config.MetaIsControl, StatusFlags.MetaIsControl);
+		LoadConfigFlag(config.AltGrIsAlt, StatusFlags.AltGrIsAlt);
+		LoadConfigFlag(config.LazyRedraw, StatusFlags.LazyRedraw);
+
+		LoadConfigFlag(config.MIDILikeTracker, StatusFlags.MIDILikeTracker);
+	}
+
+	static void SaveConfiguration(GeneralConfiguration config)
+	{
+		config.StopOnLoad = !Flags.HasFlag(StatusFlags.PlayAfterLoad);
+		config.ClassicMode = Flags.HasFlag(StatusFlags.ClassicMode);
+		config.MakeBackups = Flags.HasFlag(StatusFlags.MakeBackups);
+		config.NumberedBackups = Flags.HasFlag(StatusFlags.NumberedBackups);
+
+		config.TimeDisplay = TimeDisplay;
+		config.VisualizationStyle = VisualizationStyle;
+
+		config.MetaIsControl = Flags.HasFlag(StatusFlags.MetaIsControl);
+		config.AltGrIsAlt = Flags.HasFlag(StatusFlags.AltGrIsAlt);
+		config.LazyRedraw = Flags.HasFlag(StatusFlags.LazyRedraw);
+
+		config.MIDILikeTracker = Flags.HasFlag(StatusFlags.MIDILikeTracker);
+	}
+
+	/* --------------------------------------------------------------------- */
+
+		static int LoopCount(int pos)
+		{
+			if ((Song.CurrentSong.RepeatCount < 1) || Flags.HasFlag(StatusFlags.ClassicMode))
+				pos += VGAMem.DrawText("Playing", new Point(pos, 9), (0, 2));
+			else
+			{
+				pos += VGAMem.DrawText("Loop: ", new Point(pos, 9), (0, 2)); ;
+				pos += VGAMem.DrawText(Song.CurrentSong.RepeatCount.ToString(), new Point(pos, 9), (3, 2));
+			}
+
+			return pos;
+		}
 
 	static void DrawSongPlayingStatus()
 	{
