@@ -30,7 +30,8 @@ public static class VGAMem
 		set
 		{
 			_currentPalette = value;
-			Configuration.General.CurrentPalette = _currentPalette.Index;
+			Configuration.General.Palette = _currentPalette.Index;
+			Configuration.General.CurrentPalette = _currentPalette.ToString();
 			Configuration.Save();
 		}
 	}

@@ -11,7 +11,7 @@ namespace ChasmTracker.Configurations;
 
 using ChasmTracker.FileSystem;
 
-public class Configuration
+public static class Configuration
 {
 	// Naming convention:
 	// - By default, section names are converted to "Separate Words"
@@ -40,7 +40,6 @@ public class Configuration
 	public static DirectoriesConfiguration Directories = new DirectoriesConfiguration();
 	[ConfigurationKey("Diskwriter")]
 	public static DiskWriterConfiguration DiskWriter = new DiskWriterConfiguration();
-	public static KeyboardConfiguration Keyboard = new KeyboardConfiguration();
 	public static InfoPageConfiguration InfoPage = new InfoPageConfiguration();
 	[ConfigurationKey("MIDI")]
 	public static MIDIConfiguration MIDI = new MIDIConfiguration();
@@ -68,38 +67,51 @@ public class Configuration
 		.Select(entry => (PrefixOrigin: entry.Key.Substring(0, entry.Key.Length - 2), entry.FirstIndex, entry.Field, entry.ElementType))
 		.ToList();
 
-	static Dictionary<Type, Dictionary<string, Enum>> s_enumParseTables = new Dictionary<Type, Dictionary<string, Enum>>();
+	static Dictionary<Type, EnumParseConfiguration> s_enumParseConfigurations = new Dictionary<Type, EnumParseConfiguration>();
 
 	public static void InitializeDirectory()
 	{
 		string dotDirectory = Paths.GetDotDirectoryPath();
 
-		foreach (string candidate in Paths.EnumerateDotFolders())
-		{
-			string fullPath = Path.Combine(candidate);
+		string appDir = Path.GetDirectoryName(typeof(Configuration).Assembly.Location)!;
 
-			if (Directory.Exists(fullPath))
+		string portableFile = Path.Combine(appDir, "portable.txt");
+
+		if (File.Exists(portableFile))
+		{
+			Console.WriteLine("In portable mode.");
+
+			Directories.DotSchism = appDir;
+		}
+		else
+		{
+			foreach (string candidate in Paths.EnumerateDotFolders())
 			{
-				Directories.DotSchism = fullPath;
-				return;
+				string fullPath = Path.Combine(candidate);
+
+				if (Directory.Exists(fullPath))
+				{
+					Directories.DotSchism = fullPath;
+					return;
+				}
 			}
-		}
 
-		Directories.DotSchism = Path.Combine(
-			dotDirectory,
-			Paths.EnumerateDotFolders().First());
+			Directories.DotSchism = Path.Combine(
+				dotDirectory,
+				Paths.EnumerateDotFolders().First());
 
-		Console.WriteLine("Creating directory {0}", Directories.DotSchism);
-		Console.WriteLine("Chasm Tracker uses this directory to store your settings.");
+			Console.WriteLine("Creating directory {0}", Directories.DotSchism);
+			Console.WriteLine("Chasm Tracker uses this directory to store your settings.");
 
-		try
-		{
-			Directory.CreateDirectory(Directories.DotSchism);
-		}
-		catch (Exception e)
-		{
-			Console.Error.WriteLine("Error creating directory: {0}: {1}", e.GetType().Name, e.Message);
-			Console.Error.WriteLine("Everything will still work, but preferences will not be saved.");
+			try
+			{
+				Directory.CreateDirectory(Directories.DotSchism);
+			}
+			catch (Exception e)
+			{
+				Console.Error.WriteLine("Error creating directory: {0}: {1}", e.GetType().Name, e.Message);
+				Console.Error.WriteLine("Everything will still work, but preferences will not be saved.");
+			}
 		}
 	}
 
@@ -159,6 +171,9 @@ public class Configuration
 		}
 
 		CommentsByOwner[typeof(Configuration)] = comments;
+
+		foreach (var section in SectionByKey.Values)
+			section.FinalizeLoad();
 	}
 
 	static bool GetSectionListItem(string sectionName, out ConfigurationSection section)
@@ -198,13 +213,28 @@ public class Configuration
 
 	public static void Save(TextWriter writer)
 	{
-		foreach (var section in SectionByKey)
-		{
-			if (CommentsByOwner.TryGetValue(section, out var sectionComments))
-				sectionComments.ForEach(writer.WriteLine);
+		foreach (var section in SectionByKey.Values)
+			section.PrepareToSave();
 
-			section.Value.Format(section.Key, writer);
+		foreach (var listSection in s_listSections)
+		{
+			var list = (System.Collections.IList?)listSection.Field.GetValue(null);
+
+			if (list == null)
+				continue;
+
+			foreach (var section in list.OfType<ConfigurationSection>())
+				section.PrepareToSave();
 		}
+
+
+		foreach (var section in SectionByKey)
+			{
+				if (CommentsByOwner.TryGetValue(section, out var sectionComments))
+					sectionComments.ForEach(writer.WriteLine);
+
+				section.Value.Format(section.Key, writer);
+			}
 
 		foreach (var listSection in s_listSections)
 		{
@@ -381,14 +411,14 @@ public class Configuration
 			}
 			else
 			{
-				if (!s_enumParseTables.TryGetValue(fieldType, out var enumParseTable))
+				if (!s_enumParseConfigurations.TryGetValue(fieldType, out var enumParseConfiguration))
 				{
-					enumParseTable = BuildEnumParseTable(fieldType);
+					enumParseConfiguration = BuildEnumParseConfiguration(fieldType);
 
-					s_enumParseTables[fieldType] = enumParseTable;
+					s_enumParseConfigurations[fieldType] = enumParseConfiguration;
 				}
 
-				if (enumParseTable.TryGetValue(value.Trim(), out var parsedEnumValue))
+				if (enumParseConfiguration.ValueByName.TryGetValue(value.Trim(), out var parsedEnumValue))
 				{
 					parsedValue = parsedEnumValue;
 					return true;
@@ -419,9 +449,9 @@ public class Configuration
 			return value.ToString() ?? "";
 	}
 
-	static Dictionary<string, Enum> BuildEnumParseTable(Type enumType)
+	static EnumParseConfiguration BuildEnumParseConfiguration(Type enumType)
 	{
-		var values = new Dictionary<string, Enum>(StringComparer.InvariantCultureIgnoreCase);
+		var config = new EnumParseConfiguration();
 
 		foreach (var field in enumType.GetFields(BindingFlags.Static | BindingFlags.Public))
 		{
@@ -436,11 +466,28 @@ public class Configuration
 			var serializedValueAttribute = field.GetCustomAttribute<ConfigurationValueAttribute>();
 
 			if (serializedValueAttribute != null)
-				values[serializedValueAttribute.Value] = (Enum)value;
+			{
+				if (serializedValueAttribute.EverythingElse)
+					config.WildcardValue = (Enum)value;
+				else if (serializedValueAttribute.NotSet)
+					config.ValueWhenNull = (Enum)value;
+				else
+				{
+					var enumValue = (Enum)value;
+
+					config.ValueByName[serializedValueAttribute.Value] = enumValue;
+					config.NameByValue[enumValue] = serializedValueAttribute.Value;
+				}
+			}
 			else
-				values[field.Name] = (Enum)value;
+			{
+				var enumValue = (Enum)value;
+
+				config.ValueByName[field.Name] = enumValue;
+				config.NameByValue[enumValue] = field.Name;
+			}
 		}
 
-		return values;
+		return config;
 	}
 }

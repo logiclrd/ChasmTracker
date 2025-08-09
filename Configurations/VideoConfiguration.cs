@@ -16,7 +16,7 @@ public class VideoConfiguration : ConfigurationSection
 	public int WantFixedHeight;
 	public MouseCursorMode MouseCursor = MouseCursorMode.Emulated;
 	public bool Hardware;
-	public bool WantMenuBar;
+	public bool WantMenuBar = true;
 
 	public Size Size => new Size(Width, Height);
 	public Size WantFixedSize => new Size(WantFixedWidth, WantFixedHeight);

@@ -274,7 +274,7 @@ public class ConfigurationPage : Page
 	void VideoModeCancel()
 	{
 		if (Configuration.Video.Interpolation != _videoRevertInterpolation)
-			Configuration.Video.Interpolation = _videoRevertInterpolation;
+			Video.SetUp(_videoRevertInterpolation);
 
 		if (Video.IsFullScreen != _videoRevertFullScreen)
 			Video.Fullscreen(_videoRevertFullScreen);

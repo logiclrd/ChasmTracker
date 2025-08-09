@@ -39,7 +39,7 @@ public class Palette
 			return false;
 
 		// Remove bad characters from beginning (spaces etc.).
-			int startIndex = strIn.IndexOfAny(PaletteTranslation);
+		int startIndex = strIn.IndexOfAny(PaletteTranslation);
 
 		if (startIndex > 0)
 			strIn = strIn.Substring(startIndex);
@@ -54,6 +54,10 @@ public class Palette
 		for (int n = 0; n < 16; n++)
 			for (int c = 0; c < 3; c++)
 				Colours[n, c] = unchecked((byte)(Array.IndexOf(PaletteTranslation, strIn[n * 3 + c])));
+
+		Index = 0;
+
+		Palettes.Presets[0] = this;
 
 		return true;
 	}
