@@ -8,6 +8,7 @@ using System.Text;
 
 namespace ChasmTracker.FileSystem;
 
+using ChasmTracker.Configurations;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -201,7 +202,48 @@ public class DirectoryScanner
 
 	public static void Sort(FileList fileList, DirectoryList? dirList)
 	{
-		fileList.Sort();
+		StringComparer? stringComparer = StringComparer.InvariantCulture;
+		IComparer<FileReference>? fileComparer = null;
+		IComparer<DirectoryReference>? dirComparer = null;
+
+		switch (Configuration.Directories.SortWith)
+		{
+			case SortMode.StrCmp: stringComparer = StringComparer.InvariantCulture; break;
+			case SortMode.StrCaseCmp: stringComparer = StringComparer.InvariantCultureIgnoreCase; break;
+			case SortMode.StrVersCmp: stringComparer = new VersionComparer(StringComparer.InvariantCulture); break;
+			case SortMode.StrCaseVersCmp: stringComparer = new VersionComparer(StringComparer.InvariantCultureIgnoreCase); break;
+			case SortMode.TimeStamp:
+				fileComparer = new FileReferenceTimeStampComparer();
+				dirComparer = new ReferenceBaseNameComparer<DirectoryReference>(new VersionComparer(StringComparer.InvariantCulture));
+				break;
+		}
+
+		if (fileComparer == null)
+		{
+			if (stringComparer == null)
+				return;
+
+			fileComparer = new ReferenceBaseNameComparer<FileReference>(stringComparer);
+		}
+
+		fileComparer = new ReferenceSortOrderComparer<FileReference>(fileComparer);
+
+		fileList.Sort(fileComparer);
+
+		if (dirList != null)
+		{
+			if (dirComparer == null)
+			{
+				if (stringComparer == null)
+					return;
+
+				dirComparer = new ReferenceBaseNameComparer<DirectoryReference>(stringComparer);
+			}
+
+			dirComparer = new ReferenceSortOrderComparer<DirectoryReference>(dirComparer);
+
+			dirList.Sort(dirComparer);
+		}
 	}
 
 	// ------------------------------------------------------------------------

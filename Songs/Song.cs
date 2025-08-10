@@ -4408,14 +4408,20 @@ public class Song
 
 	public static Song? Load(string fileName)
 	{
+		Song? ret = null;
+
 		Page.SaveCheck(
 			() =>
 			{
-				if (LoadUnchecked(fileName))
+				ret = LoadUnchecked(fileName);
+
+				if (ret != null)
 					Page.SetPage(AudioPlayback.Mode == AudioPlaybackMode.Playing ? PageNumbers.Info : PageNumbers.Log);
 				else
 					Page.SetPage(PageNumbers.Log);
 			});
+
+		return ret;
 	}
 
 	public static Song? CreateLoad(string fileName)

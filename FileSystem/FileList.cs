@@ -69,9 +69,9 @@ public class FileList
 		return _files.Count - 1;
 	}
 
-	public void Sort()
+	public void Sort(IComparer<FileReference> comparer)
 	{
-		_files.Sort();
+		_files.Sort(comparer);
 	}
 
 	public FilterOperation BeginFilter(Func<FileReference, bool> filter, Shared<int> filePointer)

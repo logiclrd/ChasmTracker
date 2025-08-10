@@ -16,8 +16,8 @@ public class Video
 
 	static int[] s_tcBGR32 = new int[256];
 
-	public static int Width => 640; // TODO
-	public static int Height => 400;
+	public static int Width = 640;
+	public static int Height = 400;
 
 	public class MouseFields
 	{

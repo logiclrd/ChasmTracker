@@ -49,8 +49,8 @@ public class DirectoryList
 		return _directories.Count - 1;
 	}
 
-	public void Sort()
+	public void Sort(IComparer<DirectoryReference> comparer)
 	{
-		_directories.Sort();
+		_directories.Sort(comparer);
 	}
 }

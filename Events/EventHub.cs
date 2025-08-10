@@ -563,13 +563,13 @@ public static class EventHub
 	// Called back by the video backend;
 	public static bool Initialize()
 	{
-		if ((Configuration.Keyboard.KeyboardRepeatDelay > 0)
-		 && (Configuration.Keyboard.KeyboardRepeatRate > 0))
+		if ((Configuration.General.KeyRepeatDelay > 0)
+		 && (Configuration.General.KeyRepeatRate > 0))
 		{
 			// Override everything.
 			Keyboard.SetRepeat(
-				Configuration.Keyboard.KeyboardRepeatDelay,
-				Configuration.Keyboard.KeyboardRepeatRate);
+				Configuration.General.KeyRepeatDelay,
+				Configuration.General.KeyRepeatRate);
 		}
 
 		if (!SDLLifetime.Initialize())

@@ -27,11 +27,4 @@ public class PatternEditorConfiguration : ConfigurationSection
 	public bool CrayolaMode = false;
 	public string TrackViewScheme = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 	public string ChannelMulti = "----------------------------------------------------------------";
-
-	public override void FinalizeLoad()
-	{
-		AllPages.PatternEditor.LoadConfiguration();
-	}
-
-
 }

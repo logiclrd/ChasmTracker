@@ -22,6 +22,7 @@ public abstract class VideoBackend
 	public abstract void SetUp(VideoInterpolationMode interpolation);
 	public abstract bool IsFullScreen { get; }
 	public abstract void Fullscreen(bool? newFSFlag);
+	public abstract void Resize(Size newSize);
 	public abstract bool IsScreenSaverEnabled();
 	public abstract void ToggleScreenSaver(bool enabled);
 	public abstract Point Translate(Point v);

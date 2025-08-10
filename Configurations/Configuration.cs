@@ -122,6 +122,9 @@ public static class Configuration
 
 	public static bool IsComment(string line) => s_commentLineRegex.IsMatch(line);
 
+	public static void Load()
+		=> Load(Path.Combine(Directories.DotSchism, "config"));
+
 	public static void Load(string fileName)
 	{
 		using (var reader = new StreamReader(fileName))
@@ -255,6 +258,9 @@ public static class Configuration
 		section = default!;
 		return false;
 	}
+
+	public static void Save()
+		=> Save(Path.Combine(Directories.DotSchism, "config"));
 
 	public static void Save(string fileName)
 	{

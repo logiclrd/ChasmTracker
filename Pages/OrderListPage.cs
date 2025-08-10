@@ -1,10 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ChasmTracker.Pages;
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.NetworkInformation;
 using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Playback;
@@ -12,7 +11,6 @@ using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
-using Mono.Unix.Native;
 
 public abstract class OrderListPage : Page
 {
@@ -84,22 +82,22 @@ public abstract class OrderListPage : Page
 		}
 	}
 
-	static int[] s_savedOrderList;
+	static int[] s_savedOrderList = Array.Empty<int>();
 	static bool s_didSaveOrderList;
 
 	/* --------------------------------------------------------------------- */
 
 	static void Reposition()
 	{
-		if (CurrentOrder < TopOrder)
-			TopOrder = CurrentOrder;
-		else if (CurrentOrder > TopOrder + 31)
-			TopOrder = CurrentOrder - 31;
+		if (s_currentOrder < s_topOrder)
+			s_topOrder = s_currentOrder;
+		else if (s_currentOrder > s_topOrder + 31)
+			s_topOrder = s_currentOrder - 31;
 	}
 
 	/* --------------------------------------------------------------------- */
 
-	public static void UpdateCurrentOrder()
+	public void UpdateCurrentOrder()
 	{
 		VGAMem.DrawText(CurrentOrder.ToString("d3"), new Point(12, 5), (5, 0));
 		VGAMem.DrawText(Song.CurrentSong.GetLastOrder().ToString("d3"), new Point(16, 5), (5, 0));
@@ -342,8 +340,8 @@ public abstract class OrderListPage : Page
 			Status.FlashText("No unused patterns");
 		else
 		{
-			CurrentOrder = n - 1;
-			CurrentOrder = n0;
+			AllPages.OrderList.CurrentOrder = n - 1;
+			AllPages.OrderList.CurrentOrder = n0;
 
 			if (n - n0 == 1)
 				Status.FlashText("1 unused pattern found");
@@ -484,7 +482,7 @@ public abstract class OrderListPage : Page
 						return false;
 
 					newOrder = (k.MousePosition.Y - 15) + s_topOrder;
-					CurrentOrder = newOrder;
+					AllPages.OrderList.CurrentOrder = newOrder;
 					newOrder = s_currentOrder;
 
 					if (Song.CurrentSong.OrderList[s_currentOrder] != SpecialOrders.Last
@@ -744,7 +742,7 @@ public abstract class OrderListPage : Page
 			newCursorPos = 0;
 
 		if (newOrder != prevOrder)
-			CurrentOrder = newOrder;
+			AllPages.OrderList.CurrentOrder = newOrder;
 		else if (newCursorPos != s_cursorPos)
 			s_cursorPos = newCursorPos;
 		else

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 using SDL3;
 
@@ -17,9 +19,21 @@ public class SDLVideoBackend : VideoBackend
 {
 	IntPtr _window;
 
+	enum VideoType
+	{
+		Uninitialized = 0,
+		Renderer = 1,
+		Surface = 2,
+	}
+
+	VideoType _type;
+
 	/* renderer */
 	IntPtr _renderer;
 	IntPtr _texture;
+
+	SDL.Surface _surface;
+	Rect _surfaceClip;
 
 	IntPtr _pixelFormat;
 	SDL.PixelFormat _format;
@@ -164,9 +178,21 @@ public class SDLVideoBackend : VideoBackend
 		string name = SDL.GetRendererName(_renderer) ?? "<null>";
 
 		Log.Append(5, " Using driver '{0}'", SDL.GetCurrentVideoDriver() ?? "<null>");
-		Log.Append(5, " {0} renderer '{0}'",
-			(name == SoftwareRendererName) ? "Software" : "Hardware-accelerated",
-			name);
+
+		switch (_type)
+		{
+			case VideoType.Renderer:
+				Log.Append(5, " {0} renderer '{0}'",
+					(name == SoftwareRendererName) ? "Software" : "Hardware-accelerated",
+					name);
+				break;
+			case VideoType.Surface:
+				/* hm */
+				Log.Append(5, " Software video surface");
+				if (SDL.MustLock(_surface))
+					Log.Append(4, " Must lock surface");
+				break;
+		}
 
 		switch (_format)
 		{
@@ -222,50 +248,59 @@ public class SDLVideoBackend : VideoBackend
 
 	void RedrawTexture()
 	{
-		var format = SDL.PixelFormat.XRGB8888;
-
-		if (_texture != IntPtr.Zero)
-			SDL.DestroyTexture(_texture);
-
-		if (!string.IsNullOrWhiteSpace(Configuration.Video.Format))
+		switch (_type)
 		{
-			foreach (var mapping in NativeFormats)
-			{
-				if (mapping.Name == Configuration.Video.Format)
+			case VideoType.Renderer:
+				var format = SDL.PixelFormat.XRGB8888;
+
+				if (_texture != IntPtr.Zero)
+					SDL.DestroyTexture(_texture);
+
+				if (!string.IsNullOrWhiteSpace(Configuration.Video.Format))
 				{
-					format = mapping.Format;
-					goto GotFormat;
-				}
-			}
-		}
-
-		// We want to find the best format we can natively
-		// output to. If we can't, then we fall back to
-		// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
-		// conversion.
-		var rprop = SDL.GetRendererProperties(_renderer);
-
-		if (rprop != 0)
-		{
-			IntPtr formats = SDL.GetPointerProperty(rprop, SDL.Props.RendererTextureFormatsPointer, default);
-
-			int prefLast = NativeFormats.Count;
-
-			if (formats != IntPtr.Zero)
-			{
-				for (int i = 0; Marshal.ReadInt32(formats, i * 4) != (int)SDL.PixelFormat.Unknown; i++)
-					for (int j = 0; j < NativeFormats.Count; j++)
-						if (Marshal.ReadInt32(formats, i * 4) == (int)NativeFormats[j].Format && j < prefLast)
+					foreach (var mapping in NativeFormats)
+					{
+						if (mapping.Name == Configuration.Video.Format)
 						{
-							prefLast = j;
-							format = NativeFormats[prefLast].Format;
+							format = mapping.Format;
+							goto GotFormat;
 						}
-			}
-		}
+					}
+				}
 
-	GotFormat:
-		_texture = SDL.CreateTexture(_renderer, format, SDL.TextureAccess.Streaming, Constants.NativeScreenWidth, Constants.NativeScreenHeight);
-		_format = format;
+				// We want to find the best format we can natively
+				// output to. If we can't, then we fall back to
+				// SDL_PIXELFORMAT_RGB888 and let SDL deal with the
+				// conversion.
+				var rprop = SDL.GetRendererProperties(_renderer);
+
+				if (rprop != 0)
+				{
+					IntPtr formats = SDL.GetPointerProperty(rprop, SDL.Props.RendererTextureFormatsPointer, default);
+
+					int prefLast = NativeFormats.Count;
+
+					if (formats != IntPtr.Zero)
+					{
+						for (int i = 0; Marshal.ReadInt32(formats, i * 4) != (int)SDL.PixelFormat.Unknown; i++)
+							for (int j = 0; j < NativeFormats.Count; j++)
+								if (Marshal.ReadInt32(formats, i * 4) == (int)NativeFormats[j].Format && j < prefLast)
+								{
+									prefLast = j;
+									format = NativeFormats[prefLast].Format;
+								}
+					}
+				}
+
+			GotFormat:
+				_texture = SDL.CreateTexture(_renderer, format, SDL.TextureAccess.Streaming, Constants.NativeScreenWidth, Constants.NativeScreenHeight);
+				_format = format;
+
+				break;
+			case VideoType.Surface:
+				_format = _surface.Format;
+				break;
+		}
 
 		_pixelFormat = SDL.GetPixelFormatDetails(_format);
 
@@ -273,15 +308,53 @@ public class SDLVideoBackend : VideoBackend
 		_bpp = (int)SDL.BytesPerPixel(_format);
 
 		SetUp(Configuration.Video.Interpolation); // ew
+
+		RecalculateFixedWidth();
+	}
+
+	void ObtainSurface()
+	{
+		var surfacePtr = SDL.GetWindowSurface(_window);
+
+		ref var surfaceRef = ref Unsafe.AddByteOffset(ref Unsafe.NullRef<byte>(), surfacePtr);
+
+		var surfaceSpan = MemoryMarshal.CreateSpan(ref surfaceRef, Marshal.SizeOf<SDL.Surface>());
+
+		ref var windowSurface = ref MemoryMarshal.AsRef<SDL.Surface>(surfaceSpan);
+
+		_surface = windowSurface;
 	}
 
 	public override void SetHardware(bool hardware)
 	{
-		SDL.DestroyTexture(_texture);
+		/* do all the necessary cleanup HERE */
+		switch (_type)
+		{
+			case VideoType.Renderer:
+				SDL.DestroyTexture(_texture);
+				SDL.DestroyRenderer(_renderer);
+				break;
+			case VideoType.Surface:
+				Assert.IsTrue(() => SDL.WindowHasSurface(_window),
+					"Internal video type says surface, but the window doesn't have one");
+				SDL.DestroyWindowSurface(_window);
+				break;
+		}
 
-		SDL.DestroyRenderer(_renderer);
+		/* If we're going to be using a software renderer anyway, then
+		 * just request a surface. Our built-in blit is plenty fast. */
+		_type = hardware ? VideoType.Renderer : VideoType.Surface;
 
-		_renderer = SDL.CreateRenderer(_window, hardware ? null : SoftwareRendererName);
+		switch (_type)
+		{
+			case VideoType.Surface:
+				ObtainSurface();
+				break;
+			case VideoType.Renderer:
+				_renderer = SDL.CreateRenderer(_window, hardware ? null : SoftwareRendererName);
+				Assert.IsTrue(() => _renderer != IntPtr.Zero, "Failed to create a renderer");
+				break;
+		}
 
 		// hope that all worked!
 
@@ -292,8 +365,20 @@ public class SDLVideoBackend : VideoBackend
 
 	public override void Shutdown()
 	{
-		SDL.DestroyTexture(_texture);
-		SDL.DestroyRenderer(_renderer);
+		/* do all the necessary cleanup HERE */
+		switch (_type)
+		{
+			case VideoType.Renderer:
+				SDL.DestroyTexture(_texture);
+				SDL.DestroyRenderer(_renderer);
+				break;
+			case VideoType.Surface:
+				Assert.IsTrue(() => SDL.WindowHasSurface(_window),
+					"Internal video type says surface, but the window doesn't have one");
+				SDL.DestroyWindowSurface(_window);
+				break;
+		}
+
 		SDL.DestroyWindow(_window);
 	}
 
@@ -523,6 +608,211 @@ public class SDLVideoBackend : VideoBackend
 	/* --------------------------------------------------------------- */
 	/* blitters */
 
+	delegate uint MapRGBSpec(IntPtr format, IntPtr palette, byte r, byte g, byte b);
+
+	int[] _cv32BackingBuffer = new int[Constants.NativeScreenWidth * 2];
+	short[] _cv16BackingBuffer = new short[Constants.NativeScreenWidth * 2];
+	byte[] _cv8BackingBuffer = new byte[Constants.NativeScreenWidth];
+	int[] _mouseLine = new int[Constants.NativeScreenWidth / 8];
+	int[] _mouseLineMask = new int[Constants.NativeScreenWidth / 8];
+
+	unsafe void video_blitLN(int bpp, byte* pixels, int pitch, MapRGBSpec map_rgb, IntPtr map_rgb_data, int width, int height)
+	{
+		var mouse = GetMouseCoordinates();
+
+		int mouseLineX = mouse.X / 8;
+		int mouseLineV = mouse.X % 8;
+
+		fixed (int *csp = &_cv32BackingBuffer[0])
+		{
+			int *esp = csp + Constants.NativeScreenWidth;
+
+			int pad = pitch - width * bpp;
+
+			int scaleX = (Constants.NativeScreenWidth - 1) * 256 / width;
+			int scaleY = (Constants.NativeScreenHeight - 1) * 256 / height;
+
+			int lastY = -2;
+
+			for (int y = 0, fixedY = 0; y < height; y++, fixedy += scaley)
+			{
+				int inY = fixedY >> 8;
+
+				if (inY != lastY)
+				{
+					MakeMouseLine(mouseLineX, mouseLineV, inY, _mouseLine, _mouseLineMask, mouse.Y);
+
+					/* we'll downblit the colors later */
+					if (inY == lastY + 1)
+					{
+						/* move up one line */
+						VGAMem.Scan32(inY + 1, csp,
+						vgamem_scan32(iny + 1, csp, video.tc_bgr32, mouseline, mouseline_mask);
+						dp = esp; esp = csp; csp = dp;
+					} else {
+						vgamem_scan32(iny, (csp = (uint32_t*)cv32backing), video.tc_bgr32, mouseline, mouseline_mask);
+						vgamem_scan32(iny + 1, (esp = (csp + NATIVE_SCREEN_WIDTH)), video.tc_bgr32, mouseline, mouseline_mask);
+					}
+					lasty = iny;
+				}
+				for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
+					ex = FRAC(fixedx);
+					ey = FRAC(fixedy);
+
+					c00 = csp[FIXED2INT(fixedx)];
+					c01 = csp[FIXED2INT(fixedx) + 1];
+					c10 = esp[FIXED2INT(fixedx)];
+					c11 = esp[FIXED2INT(fixedx) + 1];
+
+#if FIXED_BITS <= 8
+				/* When there are enough bits between blue and
+				* red, do the RB channels together
+				* See http://www.virtualdub.org/blog/pivot/entry.php?id=117
+				* for a quick explanation */
+#define REDBLUE(Q) ((Q) & 0x00FF00FF)
+#define GREEN(Q) ((Q) & 0x0000FF00)
+				t1 = REDBLUE((((REDBLUE(c01)-REDBLUE(c00))*ex) >> FIXED_BITS)+REDBLUE(c00));
+				t2 = REDBLUE((((REDBLUE(c11)-REDBLUE(c10))*ex) >> FIXED_BITS)+REDBLUE(c10));
+				outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+
+				t1 = GREEN((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00));
+				t2 = GREEN((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10));
+				outg = (((((t2-t1)*ey) >> FIXED_BITS) + t1) >> 8) & 0xFF;
+
+				outr = (outb >> 16) & 0xFF;
+				outb &= 0xFF;
+#undef REDBLUE
+#undef GREEN
+#else
+#define BLUE(Q) (Q & 255)
+#define GREEN(Q) ((Q >> 8) & 255)
+#define RED(Q) ((Q >> 16) & 255)
+					t1 = ((((BLUE(c01) - BLUE(c00)) * ex) >> FIXED_BITS) + BLUE(c00)) & 0xFF;
+					t2 = ((((BLUE(c11) - BLUE(c10)) * ex) >> FIXED_BITS) + BLUE(c10)) & 0xFF;
+					outb = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
+
+					t1 = ((((GREEN(c01) - GREEN(c00)) * ex) >> FIXED_BITS) + GREEN(c00)) & 0xFF;
+					t2 = ((((GREEN(c11) - GREEN(c10)) * ex) >> FIXED_BITS) + GREEN(c10)) & 0xFF;
+					outg = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
+
+					t1 = ((((RED(c01) - RED(c00)) * ex) >> FIXED_BITS) + RED(c00)) & 0xFF;
+					t2 = ((((RED(c11) - RED(c10)) * ex) >> FIXED_BITS) + RED(c10)) & 0xFF;
+					outr = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
+#undef RED
+#undef GREEN
+#undef BLUE
+#endif
+
+					uint32_t c = map_rgb(map_rgb_data, outr, outg, outb);
+
+					switch (bpp) {
+						case 1: *(uint8_t*)pixels = c; break;
+						case 2: *(uint16_t*)pixels = c; break;
+						case 3:
+							// convert 32-bit to 24-bit
+# ifdef WORDS_BIGENDIAN
+							*pixels++ = ((char*)&c)[1];
+							*pixels++ = ((char*)&c)[2];
+							*pixels++ = ((char*)&c)[3];
+#else
+							*pixels++ = ((char*)&c)[0];
+							*pixels++ = ((char*)&c)[1];
+							*pixels++ = ((char*)&c)[2];
+#endif
+							break;
+						case 4: *(uint32_t*)pixels = c; break;
+						default: break;
+					}
+
+					pixels += bpp;
+				}
+				pixels += pad;
+			}
+	}
+
+	/* Fast nearest neighbor blitter */
+	void video_blitNN(unsigned int bpp, unsigned char* pixels, unsigned int pitch, uint32_t tpal[256], int width, int height)
+	{
+		// at most 32-bits...
+		union {
+			uint8_t uc[NATIVE_SCREEN_WIDTH];
+			uint16_t us[NATIVE_SCREEN_WIDTH];
+			uint32_t ui[NATIVE_SCREEN_WIDTH];
+		} pixels_u;
+		/* NOTE: we might be able to get away with 24.8 fixed point,
+		 * and reuse the stuff from the code above */
+		const uint64_t scaley = (((uint64_t)NATIVE_SCREEN_HEIGHT << 32) - 1) / height;
+		const uint64_t scalex = (((uint64_t)NATIVE_SCREEN_WIDTH << 32) - 1) / width;
+
+		unsigned int mouse_x, mouse_y;
+		video_get_mouse_coordinates(&mouse_x, &mouse_y);
+
+		const unsigned int mouseline_x = (mouse_x / 8);
+		const unsigned int mouseline_v = (mouse_x % 8);
+		const int pad = (pitch - (width * bpp));
+		uint32_t mouseline[80];
+		uint32_t mouseline_mask[80];
+		uint32_t y, last_scaled_y;
+		uint64_t fixedy;
+
+		for (y = 0, fixedy = 0; y < height; y++, fixedy += scaley) {
+			uint32_t x;
+			uint64_t fixedx;
+
+			/* add (1ul << 31) to round to nearest */
+			const uint32_t scaled_y = ((fixedy + (1ul << 31)) >> 32);
+
+			// only scan again if we have to or if this the first scan
+			if (scaled_y != last_scaled_y || y == 0) {
+				make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, mouse_y);
+				switch (bpp) {
+					case 1:
+						vgamem_scan8(scaled_y, pixels_u.uc, tpal, mouseline, mouseline_mask);
+						break;
+					case 2:
+						vgamem_scan16(scaled_y, pixels_u.us, tpal, mouseline, mouseline_mask);
+						break;
+					case 3:
+					case 4:
+						vgamem_scan32(scaled_y, pixels_u.ui, tpal, mouseline, mouseline_mask);
+						break;
+					default:
+						// should never happen
+						break;
+				}
+			}
+
+			for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
+				const uint32_t scaled_x = ((fixedx + (1ul << 31)) >> 32);
+
+				switch (bpp) {
+					case 1: *pixels = pixels_u.uc[scaled_x]; break;
+					case 2: *(uint16_t*)pixels = pixels_u.us[scaled_x]; break;
+					case 3:
+						// convert 32-bit to 24-bit
+# ifdef WORDS_BIGENDIAN
+						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
+						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
+						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 3];
+#else
+						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 0];
+						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
+						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
+#endif
+						break;
+					case 4: *(uint32_t*)pixels = pixels_u.ui[scaled_x]; break;
+					default: break; // should never happen
+				}
+
+				pixels += bpp;
+			}
+
+			last_scaled_y = scaled_y;
+
+			pixels += pad;
+		}
+	}
+
 	unsafe void video_blitUV(IntPtr pixelsPtr, int pitch, ref ChannelData tpal)
 	{
 		var mouse = GetMouseCoordinates();
@@ -543,6 +833,8 @@ public class SDLVideoBackend : VideoBackend
 			pixels += pitch;
 		}
 	}
+
+
 
 	unsafe void video_blitTV(IntPtr pixels, int pitch, ref ChannelData tpal)
 	{
@@ -610,6 +902,32 @@ public class SDLVideoBackend : VideoBackend
 			}
 
 			pixels += pitch;
+		}
+	}
+
+	/* scaled blit, according to user settings (lots of params here) */
+	unsafe void video_blitSC(int bpp, IntPtr pixels, int pitch, ref ChannelData pal, MapRGBSpec fun, IntPtr funData, Rect rect)
+	{
+		pixels += rect.TopLeft.Y * pitch;
+		pixels += rect.TopLeft.X * bpp;
+
+		if (rect.Size.Width == Constants.NativeScreenWidth && rect.Size.Height == Constants.NativeScreenHeight)
+		{
+			/* scaling isn't necessary */
+			video_blit11(bpp, (byte *)pixels, pitch, ref pal);
+		}
+		else
+		{
+			switch (Configuration.Video.Interpolation)
+			{
+				case VideoInterpolationMode.NearestNeighbour:
+					video_blitNN(bpp, pixels, pitch, pal, w, h);
+					break;
+				case VideoInterpolationMode.Linear:
+				case VideoInterpolationMode.Best:
+					video_blitLN(bpp, pixels, pitch, fun, fun_data, w, h);
+					break;
+			}
 		}
 	}
 
@@ -736,6 +1054,63 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
+	void RecalculateFixedWidth()
+	{
+		/* Aspect ratio correction if it's wanted */
+		if (Configuration.Video.WantFixed)
+		{
+			switch (_type)
+			{
+				case VideoType.Renderer:
+					SDL.SetRenderLogicalPresentation(
+						_renderer,
+						Configuration.Video.WantFixedWidth,
+						Configuration.Video.WantFixedHeight,
+						SDL.RendererLogicalPresentation.Letterbox);
+					break;
+				case VideoType.Surface:
+					double ratioW = _size.Width / (double)Configuration.Video.WantFixedWidth;
+					double ratioH = _size.Height / (double)Configuration.Video.WantFixedHeight;
+
+				if (ratioW < ratioH)
+					{
+
+					video.u.s.clip.w = video.width;
+					video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratioW;
+				} else {
+					video.u.s.clip.h = video.height;
+					video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratioH;
+				}
+
+				video.u.s.clip.x = (video.width  - video.u.s.clip.w) / 2;
+				video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
+				break;
+			}
+			case VIDEO_TYPE_UNINITIALIZED:
+				/* WUT */
+				SCHISM_UNREACHABLE;
+				break;
+			}
+		} else if (video.type == VIDEO_TYPE_SURFACE) {
+			video.u.s.clip.x = video.u.s.clip.y = 0;
+			video.u.s.clip.w = video.width;
+			video.u.s.clip.h = video.height;
+		}
+	}
+
+	public override void Resize(Size newSize)
+	{
+		Video.Width = newSize.Width;
+		Video.Height = newSize.Height;
+
+		RecalculateFixedWidth();
+
+		if (_type == VideoType.Surface)
+			ObtainSurface();
+
+		Status.Flags |= StatusFlags.NeedUpdate;
+	}
+
 	public override bool IsScreenSaverEnabled()
 	{
 		return SDL.ScreenSaverEnabled();
@@ -838,64 +1213,101 @@ public class SDLVideoBackend : VideoBackend
 
 	public unsafe override void Blit()
 	{
-		SDL.FRect dstRect = default;
-
-		if (Configuration.Video.WantFixed)
+		switch (_type)
 		{
-			dstRect.X = 0;
-			dstRect.Y = 0;
-			dstRect.W = Configuration.Video.WantFixedSize.Width;
-			dstRect.H = Configuration.Video.WantFixedSize.Height;
-		}
+			case VideoType.Renderer:
+				SDL.FRect dstRect = default;
 
-		SDL.RenderClear(_renderer);
+				if (Configuration.Video.WantFixed)
+				{
+					dstRect.X = 0;
+					dstRect.Y = 0;
+					dstRect.W = Configuration.Video.WantFixedSize.Width;
+					dstRect.H = Configuration.Video.WantFixedSize.Height;
+				}
 
-		// regular format blitter
-		SDL.LockTexture(_texture, IntPtr.Zero, out var pixels, out var pitch);
+				SDL.RenderClear(_renderer);
 
-		switch (_format)
-		{
-			case SDL.PixelFormat.IYUV:
-				video_blitUV(pixels, pitch, ref _palY);
-				pixels += (Constants.NativeScreenHeight * pitch);
-				video_blitTV(pixels, pitch, ref _palU);
-				pixels += (Constants.NativeScreenHeight * pitch) / 4;
-				video_blitTV(pixels, pitch, ref _palV);
+				// regular format blitter
+				SDL.LockTexture(_texture, IntPtr.Zero, out var pixels, out var pitch);
+
+				switch (_format)
+				{
+					case SDL.PixelFormat.IYUV:
+						video_blitUV(pixels, pitch, ref _palY);
+						pixels += (Constants.NativeScreenHeight * pitch);
+						video_blitTV(pixels, pitch, ref _palU);
+						pixels += (Constants.NativeScreenHeight * pitch) / 4;
+						video_blitTV(pixels, pitch, ref _palV);
+						break;
+					case SDL.PixelFormat.YV12:
+						video_blitUV(pixels, pitch, ref _palY);
+						pixels += (Constants.NativeScreenHeight * pitch);
+						video_blitTV(pixels, pitch, ref _palV);
+						pixels += (Constants.NativeScreenHeight * pitch) / 4;
+						video_blitTV(pixels, pitch, ref _palU);
+						break;
+					default:
+						video_blit11(_bpp, (byte*)pixels, pitch, ref _pal);
+						break;
+				}
+
+				IntPtr srcRectPtr = IntPtr.Zero;
+				IntPtr dstRectPtr = IntPtr.Zero;
+
+				byte[] dstRectBuffer = new byte[Marshal.SizeOf<SDL.FRect>()];
+
+				var dstRectPin = GCHandle.Alloc(dstRectBuffer, GCHandleType.Pinned);
+
+				try
+				{
+					if (Configuration.Video.WantFixed)
+					{
+						dstRectPtr = dstRectPin.AddrOfPinnedObject();
+						Marshal.StructureToPtr(dstRect, dstRectPtr, fDeleteOld: false);
+					}
+
+					SDL.UnlockTexture(_texture);
+					SDL.RenderTexture(_renderer, _texture, srcRectPtr, dstRectPtr);
+					SDL.RenderPresent(_renderer);
+				}
+				finally
+				{
+					dstRectPin.Free();
+				}
+
 				break;
-			case SDL.PixelFormat.YV12:
-				video_blitUV(pixels, pitch, ref _palY);
-				pixels += (Constants.NativeScreenHeight * pitch);
-				video_blitTV(pixels, pitch, ref _palV);
-				pixels += (Constants.NativeScreenHeight * pitch) / 4;
-				video_blitTV(pixels, pitch, ref _palU);
+			case VideoType.Surface:
+				if (SDL.MustLock(_surface))
+				{
+					unsafe
+					{
+						fixed (void *surfacePtr = &_surface)
+						while (!SDL.LockSurface(new IntPtr(surfacePtr)))
+							Thread.Sleep(10);
+					}
+				}
+
+				video_blitSC(SDL.BytesPerPixel(_format),
+					_surface.Pixels,
+					_surface.Pitch,
+					_pal,
+					SDL.MapRGB,
+					_pixelFormat,
+					_surfaceClip);
+
+				if (SDL.MustLock(_surface))
+				{
+					unsafe
+					{
+						fixed (void *surfacePtr = &_surface)
+							SDL.UnlockSurface(new IntPtr(surfacePtr));
+					}
+				}
+
+				SDL.UpdateWindowSurface(_window);
+
 				break;
-			default:
-				video_blit11(_bpp, (byte *)pixels, pitch, ref _pal);
-				break;
-		}
-
-		IntPtr srcRectPtr = IntPtr.Zero;
-		IntPtr dstRectPtr = IntPtr.Zero;
-
-		byte[] dstRectBuffer = new byte[Marshal.SizeOf<SDL.FRect>()];
-
-		var dstRectPin = GCHandle.Alloc(dstRectBuffer, GCHandleType.Pinned);
-
-		try
-		{
-			if (Configuration.Video.WantFixed)
-			{
-				dstRectPtr = dstRectPin.AddrOfPinnedObject();
-				Marshal.StructureToPtr(dstRect, dstRectPtr, fDeleteOld: false);
-			}
-
-			SDL.UnlockTexture(_texture);
-			SDL.RenderTexture(_renderer, _texture, srcRectPtr, dstRectPtr);
-			SDL.RenderPresent(_renderer);
-		}
-		finally
-		{
-			dstRectPin.Free();
 		}
 	}
 

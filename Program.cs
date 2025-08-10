@@ -300,7 +300,7 @@ public class Program
 								break;
 
 							case WindowEventType.SizeChanged: /* tiling window managers */
-								video_resize(se.window.data.resized.width, se.window.data.resized.height);
+								s_video.Resize(windowEvent.NewSize);
 								goto case WindowEventType.Exposed;
 
 							case WindowEventType.Exposed:
@@ -498,7 +498,7 @@ public class Program
 			Hooks.Exit();
 
 		if (s_shutdownProcess.HasFlag(ShutdownFlags.SaveConfiguration))
-			Configuration.AtExitSave();
+			Configuration.Save();
 
 		if (s_shutdownProcess.HasFlag(ShutdownFlags.SDLQuit))
 		{
@@ -598,8 +598,10 @@ public class Program
 			AudioPlayback.InitializeModPlug();
 
 			// Load and export song
-			if (Song.LoadUnchecked(s_args.InitialSong))
+			if (Song.LoadUnchecked(s_args.InitialSong) is Song initialSong)
 			{
+				Song.CurrentSong = initialSong;
+
 				int multiOffset = s_args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
 
 				string driver = s_args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
@@ -643,7 +645,7 @@ public class Program
 		VGAMem.CurrentPalette.Apply();
 		Font.Initialize();
 		MIDIEngine.Start();
-		Audio.Initialize(audio_driver, audio_device);
+		Audio.Initialize(AudioPlayback.AudioDriver, AudioPlayback.AudioDevice);
 		AudioPlayback.InitializeModPlug();
 
 		Video.SetMouseCursor(Configuration.Video.MouseCursor);

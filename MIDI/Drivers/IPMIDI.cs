@@ -13,6 +13,8 @@ namespace ChasmTracker.MIDI.Drivers;
 
 public class IPMIDI : MIDIProvider<IPMIDIPort>
 {
+	public override string Name => "IP";
+
 	public const int DefaultIPPortCount = 5;
 	public const int MIDIIPBase = 21928;
 	public const int MaxDGramSize = 1280;
