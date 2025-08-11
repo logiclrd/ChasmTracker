@@ -14,6 +14,7 @@ using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
 using ChasmTracker.FileTypes.Converters;
 using ChasmTracker.FileTypes.SampleConverters;
+using ChasmTracker.FM;
 using ChasmTracker.Input;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;

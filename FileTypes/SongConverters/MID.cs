@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 namespace ChasmTracker.FileTypes.SongConverters;
 
 using ChasmTracker.FileSystem;
+using ChasmTracker.FM;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 

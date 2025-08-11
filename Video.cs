@@ -6,6 +6,7 @@ namespace ChasmTracker;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.Input;
+using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
@@ -14,10 +15,12 @@ public class Video
 	static DateTime s_nextUpdate;
 	static VideoBackend s_backend = new SDLVideoBackend();
 
-	static int[] s_tcBGR32 = new int[256];
+	static ChannelData s_tcBGR32 = new ChannelData();
 
-	public static int Width = 640;
-	public static int Height = 400;
+	public static ref ChannelData TC_BGR32 => ref s_tcBGR32;
+
+	public static int Width => s_backend.Width;
+	public static int Height => s_backend.Height;
 
 	public class MouseFields
 	{
@@ -32,9 +35,25 @@ public class Video
 			Shape = MouseCursorShapes.Arrow,
 		};
 
+	static bool s_started = false;
+
 	public static bool Startup()
 	{
-		return s_backend.Initialize() && s_backend.Startup();
+		if (!s_started)
+			return s_started = (s_backend.Initialize() && s_backend.Startup());
+		else
+			return true;
+	}
+
+	public static void ShutDown()
+	{
+		if (s_started)
+		{
+			s_backend.Shutdown();
+			s_backend.Quit();
+
+			s_started = false;
+		}
 	}
 
 	public static string DriverName => s_backend.DriverName ?? "(null)";
@@ -47,11 +66,6 @@ public class Video
 		Log.AppendUnderline(17);
 
 		s_backend.Report();
-	}
-
-	public static void ToggleScreenSaver(bool enabled)
-	{
-		s_backend.ToggleScreenSaver(enabled);
 	}
 
 	public static void ToggleDisplayFullscreen()
@@ -73,32 +87,45 @@ public class Video
 		s_backend.SetHardware(newHWFlag);
 	}
 
-	public static bool IsHardware
-		=> s_backend.IsHardware;
-
 	public static void SetUp(VideoInterpolationMode interpolation)
 	{
 		Configuration.Video.Interpolation = interpolation;
 		s_backend.SetUp(interpolation);
 	}
 
-	public static bool HaveMenu
-		=> s_backend.HaveMenu;
+	public static bool IsFocused => s_backend.IsFocused;
+	public static bool IsVisible => s_backend.IsVisible;
+	public static bool IsWindowManagerAvailable => s_backend.IsWindowManagerAvailable;
+	public static bool IsHardware => s_backend.IsHardware;
 
-	public static void ToggleMenu(bool on)
-	{
-		s_backend.ToggleMenu(on);
-	}
+	/* -------------------------------------------------------- */
 
-	public static bool IsInputGrabbed()
-	{
-		return s_backend.IsInputGrabbed();
-	}
+	public static bool IsScreenSaverEnabled => s_backend.IsScreenSaverEnabled;
+	public static void ToggleScreenSaver(bool enabled) => s_backend.ToggleScreenSaver(enabled);
 
-	public static void SetInputGrabbed(bool newValue)
-	{
-		s_backend.SetInputGrabbed(newValue);
-	}
+	/* -------------------------------------------------------- */
+	/* coordinate translation */
+
+	public Point Translate(Point v) => s_backend.Translate(v);
+	public Point GetLogicalCoordinates(Point p) => s_backend.GetLogicalCoordinates(p);
+
+	/* -------------------------------------------------------- */
+	/* input grab */
+
+	public static bool IsInputGrabbed() => s_backend.IsInputGrabbed;
+	public static void SetInputGrabbed(bool newValue) => s_backend.SetInputGrabbed(newValue);
+
+	/* -------------------------------------------------------- */
+	/* menu toggling */
+
+	public static bool HaveMenu => s_backend.HaveMenu;
+	public static void ToggleMenu(bool on) => s_backend.ToggleMenu(on);
+
+	/* -------------------------------------------------------- */
+
+	public static void Blit() => s_backend.Blit();
+
+	/* -------------------------------------------------------- */
 
 	public static void SetMouseCursor(MouseCursorMode cursor)
 	{
@@ -146,11 +173,11 @@ public class Video
 	{
 		var now = DateTime.UtcNow;
 
-		if (s_backend.IsVisible() && Status.Flags.HasFlag(StatusFlags.NeedUpdate))
+		if (s_backend.IsVisible && Status.Flags.HasFlag(StatusFlags.NeedUpdate))
 		{
 			Status.Flags &= ~StatusFlags.NeedUpdate;
 
-			if (!s_backend.IsFocused() && Status.Flags.HasFlag(StatusFlags.LazyRedraw))
+			if (!s_backend.IsFocused && Status.Flags.HasFlag(StatusFlags.LazyRedraw))
 			{
 				if (now < s_nextUpdate)
 					return;
@@ -165,7 +192,7 @@ public class Video
 				s_nextUpdate = now.AddMilliseconds(100);
 			}
 
-			RedrawScreen();
+			Page.RedrawScreen();
 			Refresh();
 			s_backend.Blit();
 		}
@@ -176,51 +203,9 @@ public class Video
 		}
 	}
 
-	public static void RedrawScreen()
-	{
-		// TODO
-	}
+	public static WMData? GetWMData() => s_backend.GetWMData();
 
-	public static WMData? GetWMData()
-	{
-		var wprops = SDL.GetWindowProperties(s_window);
-
-		if (wprops == 0)
-			return null;
-
-		var wmData = new WMData();
-
-		switch (SDL.GetCurrentVideoDriver())
-		{
-			case "windows":
-			{
-				wmData.Subsystem = WMSubsystem.Windows;
-				wmData.WindowHandle = SDL.GetPointerProperty(wprops, SDL.Props.WindowWin32HWNDPointer, IntPtr.Zero);
-
-				if (wmData.WindowHandle != IntPtr.Zero)
-					return wmData;
-
-				break;
-			}
-			case "x11":
-			{
-				wmData.Subsystem = WMSubsystem.X11;
-				wmData.XDisplay = SDL.GetPointerProperty(wprops, SDL.Props.WindowX11DisplayPointer, IntPtr.Zero);
-				wmData.XWindow = SDL.GetNumberProperty(wprops, SDL.Props.WindowX11WindowNumber, 0);
-				wmData.XLock = null;
-				wmData.XUnlock = null;
-
-				if ((wmData.XDisplay != IntPtr.Zero) && (wmData.XWindow != 0))
-					return wmData;
-
-				break;
-			}
-
-		}
-
-		// maybe the real WM data was the friends we made along the way
-		return null;
-	}
+	public static void ShowCursor(bool enabled) => s_backend.ShowCursor(enabled);
 
 	public static void WarpMouse(double x, double y)
 	{
@@ -232,24 +217,24 @@ public class Video
 	{
 		GenerateColours(
 			palette,
-			(idx, rgb) => s_tcBGR32[idx] = rgb | unchecked((int)0xFF000000));
+			(idx, rgb) => s_tcBGR32[idx] = rgb | 0xFF000000);
 
-		s_backend.SetPalette(s_tcBGR32);
+		s_backend.SetPalette(ref s_tcBGR32);
 	}
 
 	/* calls back to a function receiving all the colors :) */
 	// was: video_colors_iterate
-	public static void GenerateColours(Palette palette, Action<int, int> fun)
+	public static void GenerateColours(Palette palette, Action<int, uint> fun)
 	{
 		/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
 
 		/* make our "base" space */
 		for (int i = 0; i < 16; i++)
 		{
-			int rgb =
+			uint rgb = unchecked((uint)(
 				(palette[i, 0] << 0) |
 				(palette[i, 1] << 8) |
-				(palette[i, 2] << 16);
+				(palette[i, 2] << 16)));
 
 			fun(i, rgb);
 		}
@@ -265,10 +250,10 @@ public class Video
 			byte g = unchecked((byte)((palette[p].Green + (palette[p + 1].Green - palette[p].Green) * (i & 0x1F)) / 0x20));
 			byte b = unchecked((byte)((palette[p].Blue + (palette[p + 1].Blue - palette[p].Blue) * (i & 0x1F)) / 0x20));
 
-			int rgb =
+			uint rgb = unchecked((uint)(
 				(r << 0) |
 				(g << 8) |
-				(b << 16);
+				(b << 16)));
 
 			fun(i + 128, rgb);
 		}

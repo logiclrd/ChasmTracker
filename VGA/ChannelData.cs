@@ -5,6 +5,6 @@ namespace ChasmTracker.VGA;
 [InlineArray(256)]
 public struct ChannelData
 {
-	int _element0;
+	uint _element0;
 }
 

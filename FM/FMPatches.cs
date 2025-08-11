@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace ChasmTracker;
+namespace ChasmTracker.FM;
 
 using ChasmTracker.Songs;
 

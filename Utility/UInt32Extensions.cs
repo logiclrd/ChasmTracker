@@ -24,4 +24,9 @@ public static class UInt32Extensions
 	{
 		return (value & bits) != 0;
 	}
+
+	public static bool HasAnyBitSet(this uint value, int bits)
+	{
+		return (value & unchecked((uint)bits)) != 0;
+	}
 }

@@ -238,9 +238,12 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
+	public override int Width => _size.Width;
+	public override int Height => _size.Height;
+
 	public override string? DriverName => SDL.GetCurrentVideoDriver();
 
-	public override void SetPalette(int[] colours)
+	public override void SetPalette(ref ChannelData colours)
 	{
 		for (int i = 0; i < 256; i++)
 			_pal[i] = colours[i];
@@ -498,7 +501,7 @@ public class SDLVideoBackend : VideoBackend
 		Array.Clear(mouseLineMask);
 
 		if (Video.Mouse.Visible != MouseCursorState.Emulated
-		 || !IsFocused()
+		 || !IsFocused
 		 || (mouseY >= cursor.Centre.Y && y < mouseY - cursor.Centre.Y)
 		 || y < cursor.Centre.Y
 		 || y >= mouseY + cursor.Size.Height + cursor.Centre.Y)
@@ -546,20 +549,19 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
-	public override bool IsFocused()
-	{
-		return SDL.GetWindowFlags(_window).HasFlag(SDL.WindowFlags.InputFocus);
-	}
+	public override bool IsFocused
+		=> SDL.GetWindowFlags(_window).HasFlag(SDL.WindowFlags.InputFocus);
 
-	public override bool IsVisible()
-	{
-		return !SDL.GetWindowFlags(_window).HasFlag(SDL.WindowFlags.Hidden);
-	}
+	public override bool IsVisible
+		=> !SDL.GetWindowFlags(_window).HasFlag(SDL.WindowFlags.Hidden);
 
-	public override bool IsWindowManagerAvailable()
+	public override bool IsWindowManagerAvailable
 	{
-		// Ok
-		return true;
+		get
+		{
+			// Ok
+			return true;
+		}
 	}
 
 	const string SoftwareRendererName = "software";
@@ -608,35 +610,44 @@ public class SDLVideoBackend : VideoBackend
 	/* --------------------------------------------------------------- */
 	/* blitters */
 
-	delegate uint MapRGBSpec(IntPtr format, IntPtr palette, byte r, byte g, byte b);
+	public delegate uint MapRGBSpec(IntPtr format, IntPtr palette, byte r, byte g, byte b);
 
-	int[] _cv32BackingBuffer = new int[Constants.NativeScreenWidth * 2];
+	uint[] _cv32BackingBuffer = new uint[Constants.NativeScreenWidth * 2];
 	short[] _cv16BackingBuffer = new short[Constants.NativeScreenWidth * 2];
 	byte[] _cv8BackingBuffer = new byte[Constants.NativeScreenWidth];
 	int[] _mouseLine = new int[Constants.NativeScreenWidth / 8];
 	int[] _mouseLineMask = new int[Constants.NativeScreenWidth / 8];
 
-	unsafe void video_blitLN(int bpp, byte* pixels, int pitch, MapRGBSpec map_rgb, IntPtr map_rgb_data, int width, int height)
+	const int FixedBits = 8;
+	const int FixedMask = (1 << FixedBits) - 1;
+	const int FixedScale = 1 << FixedBits;
+
+	public unsafe void BlitLN(int bpp, byte* pixels, int pitch, MapRGBSpec mapRGB, IntPtr mapRGBData, int width, int height)
 	{
 		var mouse = GetMouseCoordinates();
 
 		int mouseLineX = mouse.X / 8;
 		int mouseLineV = mouse.X % 8;
 
-		fixed (int *csp = &_cv32BackingBuffer[0])
+		int cspi, espi, dpi;
+
+		cspi = 0;
+		espi = Constants.NativeScreenWidth;
+
+		fixed (uint* csp = &_cv32BackingBuffer[0])
 		{
-			int *esp = csp + Constants.NativeScreenWidth;
+			uint* esp = csp + Constants.NativeScreenWidth;
 
 			int pad = pitch - width * bpp;
 
-			int scaleX = (Constants.NativeScreenWidth - 1) * 256 / width;
-			int scaleY = (Constants.NativeScreenHeight - 1) * 256 / height;
+			int scaleX = (Constants.NativeScreenWidth - 1) * FixedScale / width;
+			int scaleY = (Constants.NativeScreenHeight - 1) * FixedScale / height;
 
 			int lastY = -2;
 
-			for (int y = 0, fixedY = 0; y < height; y++, fixedy += scaley)
+			for (int y = 0, fixedY = 0; y < height; y++, fixedY += scaleY)
 			{
-				int inY = fixedY >> 8;
+				int inY = fixedY >> FixedBits;
 
 				if (inY != lastY)
 				{
@@ -646,135 +657,139 @@ public class SDLVideoBackend : VideoBackend
 					if (inY == lastY + 1)
 					{
 						/* move up one line */
-						VGAMem.Scan32(inY + 1, csp,
-						vgamem_scan32(iny + 1, csp, video.tc_bgr32, mouseline, mouseline_mask);
-						dp = esp; esp = csp; csp = dp;
-					} else {
-						vgamem_scan32(iny, (csp = (uint32_t*)cv32backing), video.tc_bgr32, mouseline, mouseline_mask);
-						vgamem_scan32(iny + 1, (esp = (csp + NATIVE_SCREEN_WIDTH)), video.tc_bgr32, mouseline, mouseline_mask);
+						fixed (uint* csptr = &_cv32BackingBuffer[cspi])
+							VGAMem.Scan32(inY + 1, csptr, ref Video.TC_BGR32, _mouseLine, _mouseLineMask);
+
+						dpi = espi;
+						espi = cspi;
+						cspi = dpi;
 					}
-					lasty = iny;
+					else
+					{
+						cspi = 0;
+						espi = Constants.NativeScreenWidth;
+
+						fixed (uint* ptr = &_cv32BackingBuffer[0])
+						{
+							VGAMem.Scan32(inY, &ptr[cspi], ref Video.TC_BGR32, _mouseLine, _mouseLineMask);
+							VGAMem.Scan32(inY + 1, &ptr[espi], ref Video.TC_BGR32, _mouseLine, _mouseLineMask);
+						}
+
+						lastY = inY;
+					}
 				}
-				for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
-					ex = FRAC(fixedx);
-					ey = FRAC(fixedy);
 
-					c00 = csp[FIXED2INT(fixedx)];
-					c01 = csp[FIXED2INT(fixedx) + 1];
-					c10 = esp[FIXED2INT(fixedx)];
-					c11 = esp[FIXED2INT(fixedx) + 1];
+				for (int x = 0, fixedX = 0; x < width; x++, fixedX += scaleX)
+				{
+					uint ex = unchecked((uint)(fixedX & FixedMask));
+					uint ey = unchecked((uint)(fixedY & FixedMask));
 
-#if FIXED_BITS <= 8
-				/* When there are enough bits between blue and
-				* red, do the RB channels together
-				* See http://www.virtualdub.org/blog/pivot/entry.php?id=117
-				* for a quick explanation */
-#define REDBLUE(Q) ((Q) & 0x00FF00FF)
-#define GREEN(Q) ((Q) & 0x0000FF00)
-				t1 = REDBLUE((((REDBLUE(c01)-REDBLUE(c00))*ex) >> FIXED_BITS)+REDBLUE(c00));
-				t2 = REDBLUE((((REDBLUE(c11)-REDBLUE(c10))*ex) >> FIXED_BITS)+REDBLUE(c10));
-				outb = ((((t2-t1)*ey) >> FIXED_BITS) + t1);
+					uint c00 = _cv32BackingBuffer[cspi + (fixedX >> FixedBits)];
+					uint c01 = _cv32BackingBuffer[cspi + (fixedX >> FixedBits) + 1];
+					uint c10 = _cv32BackingBuffer[espi + (fixedX >> FixedBits)];
+					uint c11 = _cv32BackingBuffer[espi + (fixedX >> FixedBits) + 1];
 
-				t1 = GREEN((((GREEN(c01)-GREEN(c00))*ex) >> FIXED_BITS)+GREEN(c00));
-				t2 = GREEN((((GREEN(c11)-GREEN(c10))*ex) >> FIXED_BITS)+GREEN(c10));
-				outg = (((((t2-t1)*ey) >> FIXED_BITS) + t1) >> 8) & 0xFF;
+					/* When there are enough bits between blue and
+					 * red, do the RB channels together
+					 * See http://www.virtualdub.org/blog/pivot/entry.php?id=117
+					 * for a quick explanation */
+					const uint RedBlueMask = 0x00FF00FF;
+					const uint GreenMask = 0x0000FF00;
 
-				outr = (outb >> 16) & 0xFF;
-				outb &= 0xFF;
-#undef REDBLUE
-#undef GREEN
-#else
-#define BLUE(Q) (Q & 255)
-#define GREEN(Q) ((Q >> 8) & 255)
-#define RED(Q) ((Q >> 16) & 255)
-					t1 = ((((BLUE(c01) - BLUE(c00)) * ex) >> FIXED_BITS) + BLUE(c00)) & 0xFF;
-					t2 = ((((BLUE(c11) - BLUE(c10)) * ex) >> FIXED_BITS) + BLUE(c10)) & 0xFF;
-					outb = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
+					uint t1, t2;
 
-					t1 = ((((GREEN(c01) - GREEN(c00)) * ex) >> FIXED_BITS) + GREEN(c00)) & 0xFF;
-					t2 = ((((GREEN(c11) - GREEN(c10)) * ex) >> FIXED_BITS) + GREEN(c10)) & 0xFF;
-					outg = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
+					t1 = (RedBlueMask & ((((RedBlueMask & c01) - (RedBlueMask & c00)) * ex) >> FixedBits)) + (RedBlueMask & c00);
+					t2 = (RedBlueMask & ((((RedBlueMask & c11) - (RedBlueMask & c10)) * ex) >> FixedBits)) + (RedBlueMask & c10);
 
-					t1 = ((((RED(c01) - RED(c00)) * ex) >> FIXED_BITS) + RED(c00)) & 0xFF;
-					t2 = ((((RED(c11) - RED(c10)) * ex) >> FIXED_BITS) + RED(c10)) & 0xFF;
-					outr = ((((t2 - t1) * ey) >> FIXED_BITS) + t1);
-#undef RED
-#undef GREEN
-#undef BLUE
-#endif
+					uint outB = (((t2 - t1) * ey) >> FixedBits) + t1;
 
-					uint32_t c = map_rgb(map_rgb_data, outr, outg, outb);
+					t1 = (GreenMask & ((((GreenMask & c01) - (GreenMask & c00)) * ex) >> FixedBits)) + (GreenMask & c00);
+					t2 = (GreenMask & ((((GreenMask & c11) - (GreenMask & c10)) * ex) >> FixedBits)) + (GreenMask & c10);
 
-					switch (bpp) {
-						case 1: *(uint8_t*)pixels = c; break;
-						case 2: *(uint16_t*)pixels = c; break;
+					uint outG = (((((t2 - t1) * ey) >> FixedBits) + t1) >> 8) & 0xFF;
+
+					uint outR = (outB >> 16) & 0xFF;
+
+					outB &= 0xFF;
+
+					var c = unchecked(mapRGB(mapRGBData, IntPtr.Zero, (byte)outR, (byte)outG, (byte)outB));
+
+					switch (bpp)
+					{
+						case 1: *pixels = unchecked((byte)c); break;
+						case 2: *(ushort*)pixels = unchecked((ushort)c); break;
 						case 3:
 							// convert 32-bit to 24-bit
-# ifdef WORDS_BIGENDIAN
-							*pixels++ = ((char*)&c)[1];
-							*pixels++ = ((char*)&c)[2];
-							*pixels++ = ((char*)&c)[3];
-#else
-							*pixels++ = ((char*)&c)[0];
-							*pixels++ = ((char*)&c)[1];
-							*pixels++ = ((char*)&c)[2];
-#endif
+							byte* cp = (byte*)&c;
+
+							*pixels++ = cp[0];
+							*pixels++ = cp[1];
+							*pixels++ = cp[2];
+
 							break;
-						case 4: *(uint32_t*)pixels = c; break;
+						case 4: *(uint*)pixels = c; break;
 						default: break;
 					}
 
 					pixels += bpp;
 				}
+
 				pixels += pad;
 			}
+		}
 	}
 
 	/* Fast nearest neighbor blitter */
-	void video_blitNN(unsigned int bpp, unsigned char* pixels, unsigned int pitch, uint32_t tpal[256], int width, int height)
+	int[] _u = new int[Constants.NativeScreenWidth];
+
+	public unsafe void BlitNN(int bpp, byte* pixels, int pitch, ref ChannelData tpal, int width, int height)
 	{
 		// at most 32-bits...
-		union {
-			uint8_t uc[NATIVE_SCREEN_WIDTH];
-			uint16_t us[NATIVE_SCREEN_WIDTH];
-			uint32_t ui[NATIVE_SCREEN_WIDTH];
-		} pixels_u;
+		var pixelsU = stackalloc int[Constants.NativeScreenWidth];
+
+		byte* uc = (byte*)pixelsU;
+		ushort* us = (ushort*)pixelsU;
+		uint* ui = (uint*)pixelsU;
+
 		/* NOTE: we might be able to get away with 24.8 fixed point,
-		 * and reuse the stuff from the code above */
-		const uint64_t scaley = (((uint64_t)NATIVE_SCREEN_HEIGHT << 32) - 1) / height;
-		const uint64_t scalex = (((uint64_t)NATIVE_SCREEN_WIDTH << 32) - 1) / width;
+				* and reuse the stuff from the code above */
+		ulong scaleY = (((ulong)Constants.NativeScreenHeight << 32) - 1) / (uint)height;
+		ulong scaleX = (((ulong)Constants.NativeScreenWidth << 32) - 1) / (uint)width;
 
-		unsigned int mouse_x, mouse_y;
-		video_get_mouse_coordinates(&mouse_x, &mouse_y);
+		var mouse = GetMouseCoordinates();
 
-		const unsigned int mouseline_x = (mouse_x / 8);
-		const unsigned int mouseline_v = (mouse_x % 8);
-		const int pad = (pitch - (width * bpp));
-		uint32_t mouseline[80];
-		uint32_t mouseline_mask[80];
-		uint32_t y, last_scaled_y;
-		uint64_t fixedy;
+		int mouseLineX = mouse.X / 8;
+		int mouseLineV = mouse.X % 8;
 
-		for (y = 0, fixedy = 0; y < height; y++, fixedy += scaley) {
-			uint32_t x;
-			uint64_t fixedx;
+		int pad = (pitch - (width * bpp));
 
+		int y;
+		ulong lastScaledYLong = ulong.MaxValue;
+		ulong fixedY;
+
+		for (y = 0, fixedY = 0; y < height; y++, fixedY += scaleY)
+		{
 			/* add (1ul << 31) to round to nearest */
-			const uint32_t scaled_y = ((fixedy + (1ul << 31)) >> 32);
+			var scaledYLong = (fixedY + (1ul << 31)) >> 32;
 
 			// only scan again if we have to or if this the first scan
-			if (scaled_y != last_scaled_y || y == 0) {
-				make_mouseline(mouseline_x, mouseline_v, scaled_y, mouseline, mouseline_mask, mouse_y);
-				switch (bpp) {
+			if (scaledYLong != lastScaledYLong || y == 0)
+			{
+				int scaledY = unchecked((int)scaledYLong);
+
+				MakeMouseLine(mouseLineX, mouseLineV, scaledY, _mouseLine, _mouseLineMask, mouse.Y);
+
+				switch (bpp)
+				{
 					case 1:
-						vgamem_scan8(scaled_y, pixels_u.uc, tpal, mouseline, mouseline_mask);
+						VGAMem.Scan8(scaledY, uc, ref tpal, _mouseLine, _mouseLineMask);
 						break;
 					case 2:
-						vgamem_scan16(scaled_y, pixels_u.us, tpal, mouseline, mouseline_mask);
+						VGAMem.Scan16(scaledY, us, ref tpal, _mouseLine, _mouseLineMask);
 						break;
 					case 3:
 					case 4:
-						vgamem_scan32(scaled_y, pixels_u.ui, tpal, mouseline, mouseline_mask);
+						VGAMem.Scan32(scaledY, ui, ref tpal, _mouseLine, _mouseLineMask);
 						break;
 					default:
 						// should never happen
@@ -782,38 +797,37 @@ public class SDLVideoBackend : VideoBackend
 				}
 			}
 
-			for (x = 0, fixedx = 0; x < width; x++, fixedx += scalex) {
-				const uint32_t scaled_x = ((fixedx + (1ul << 31)) >> 32);
+			int x;
+			ulong fixedX;
 
-				switch (bpp) {
-					case 1: *pixels = pixels_u.uc[scaled_x]; break;
-					case 2: *(uint16_t*)pixels = pixels_u.us[scaled_x]; break;
+			for (x = 0, fixedX = 0; x < width; x++, fixedX += scaleX)
+			{
+				uint scaledX = unchecked((uint)((fixedX + (1ul << 31)) >> 32));
+
+				switch (bpp)
+				{
+					case 1: *pixels = uc[scaledX]; break;
+					case 2: *(ushort *)pixels = us[scaledX]; break;
 					case 3:
 						// convert 32-bit to 24-bit
-# ifdef WORDS_BIGENDIAN
-						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
-						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
-						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 3];
-#else
-						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 0];
-						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 1];
-						*pixels++ = pixels_u.uc[(scaled_x) * 4 + 2];
-#endif
+						*pixels++ = uc[scaledX * 4 + 0];
+						*pixels++ = uc[scaledX * 4 + 1];
+						*pixels++ = uc[scaledX * 4 + 2];
 						break;
-					case 4: *(uint32_t*)pixels = pixels_u.ui[scaled_x]; break;
+					case 4: *(uint*)pixels = ui[scaledX]; break;
 					default: break; // should never happen
 				}
 
 				pixels += bpp;
 			}
 
-			last_scaled_y = scaled_y;
+			lastScaledYLong = scaledYLong;
 
 			pixels += pad;
 		}
 	}
 
-	unsafe void video_blitUV(IntPtr pixelsPtr, int pitch, ref ChannelData tpal)
+	public unsafe void BlitUV(IntPtr pixelsPtr, int pitch, ref ChannelData tpal)
 	{
 		var mouse = GetMouseCoordinates();
 
@@ -823,7 +837,7 @@ public class SDLVideoBackend : VideoBackend
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
 
-		byte *pixels = (byte *)pixelsPtr;
+		byte* pixels = (byte*)pixelsPtr;
 
 		for (int y = 0; y < Constants.NativeScreenHeight; y++)
 		{
@@ -834,9 +848,7 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
-
-
-	unsafe void video_blitTV(IntPtr pixels, int pitch, ref ChannelData tpal)
+	public unsafe void BlitTV(IntPtr pixels, int pitch, ref ChannelData tpal)
 	{
 		var mouse = GetMouseCoordinates();
 
@@ -847,23 +859,23 @@ public class SDLVideoBackend : VideoBackend
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
 
-		fixed (byte *cv8Backing = &cv8BackingBuffer[0])
-		for (int y = 0; y < Constants.NativeScreenHeight; y += 2)
-		{
-			MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
-			VGAMem.Scan8(y, cv8Backing, ref tpal, mouseLine, mouseLineMask);
-
-			for (int x = 0; x < pitch; x += 2)
+		fixed (byte* cv8Backing = &cv8BackingBuffer[0])
+			for (int y = 0; y < Constants.NativeScreenHeight; y += 2)
 			{
-				Marshal.WriteByte(pixels, unchecked((byte)(cv8BackingBuffer[x + 1] | (cv8BackingBuffer[x] << 4))));
-				pixels++;
+				MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
+				VGAMem.Scan8(y, cv8Backing, ref tpal, mouseLine, mouseLineMask);
+
+				for (int x = 0; x < pitch; x += 2)
+				{
+					Marshal.WriteByte(pixels, unchecked((byte)(cv8BackingBuffer[x + 1] | (cv8BackingBuffer[x] << 4))));
+					pixels++;
+				}
 			}
-		}
 	}
 
-	unsafe void video_blit11(int bpp, byte *pixels, int pitch, ref ChannelData tpal)
+	public unsafe void Blit11(int bpp, byte* pixels, int pitch, ref ChannelData tpal)
 	{
-		int[] cv32BackingBuffer = new int[Constants.NativeScreenWidth];
+		var cv32Backing = stackalloc uint[Constants.NativeScreenWidth];
 
 		var mouse = GetMouseCoordinates();
 
@@ -873,7 +885,6 @@ public class SDLVideoBackend : VideoBackend
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
 
-		fixed (int *cv32Backing = &cv32BackingBuffer[0])
 		for (int y = 0; y < Constants.NativeScreenHeight; y++)
 		{
 			MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
@@ -884,7 +895,7 @@ public class SDLVideoBackend : VideoBackend
 					VGAMem.Scan8(y, pixels, ref tpal, mouseLine, mouseLineMask);
 					break;
 				case 2:
-					VGAMem.Scan16(y, (short *)pixels, ref tpal, mouseLine, mouseLineMask);
+					VGAMem.Scan16(y, (ushort*)pixels, ref tpal, mouseLine, mouseLineMask);
 					break;
 				case 3:
 					VGAMem.Scan32(y, cv32Backing, ref tpal, mouseLine, mouseLineMask);
@@ -897,7 +908,7 @@ public class SDLVideoBackend : VideoBackend
 					}
 					break;
 				case 4:
-					VGAMem.Scan32(y, (int *)pixels, ref tpal, mouseLine, mouseLineMask);
+					VGAMem.Scan32(y, (uint*)pixels, ref tpal, mouseLine, mouseLineMask);
 					break;
 			}
 
@@ -906,7 +917,7 @@ public class SDLVideoBackend : VideoBackend
 	}
 
 	/* scaled blit, according to user settings (lots of params here) */
-	unsafe void video_blitSC(int bpp, IntPtr pixels, int pitch, ref ChannelData pal, MapRGBSpec fun, IntPtr funData, Rect rect)
+	public unsafe void BlitSC(int bpp, byte *pixels, int pitch, ref ChannelData pal, MapRGBSpec fun, IntPtr funData, Rect rect)
 	{
 		pixels += rect.TopLeft.Y * pitch;
 		pixels += rect.TopLeft.X * bpp;
@@ -914,70 +925,70 @@ public class SDLVideoBackend : VideoBackend
 		if (rect.Size.Width == Constants.NativeScreenWidth && rect.Size.Height == Constants.NativeScreenHeight)
 		{
 			/* scaling isn't necessary */
-			video_blit11(bpp, (byte *)pixels, pitch, ref pal);
+			Blit11(bpp, pixels, pitch, ref pal);
 		}
 		else
 		{
 			switch (Configuration.Video.Interpolation)
 			{
 				case VideoInterpolationMode.NearestNeighbour:
-					video_blitNN(bpp, pixels, pitch, pal, w, h);
+					BlitNN(bpp, pixels, pitch, ref pal, rect.Size.Width, rect.Size.Height);
 					break;
 				case VideoInterpolationMode.Linear:
 				case VideoInterpolationMode.Best:
-					video_blitLN(bpp, pixels, pitch, fun, fun_data, w, h);
+					BlitLN(bpp, pixels, pitch, fun, funData, rect.Size.Width, rect.Size.Height);
 					break;
 			}
 		}
 	}
 
-	/* --------------------------------------------------------------- */
+		/* --------------------------------------------------------------- */
 
-	readonly int[] LastMap = { 0, 1, 2, 3, 5 };
+		readonly int[] LastMap = { 0, 1, 2, 3, 5 };
 
-	void YUVPal(int i, Colour rgb)
-	{
-		rgb.ToYUV(out int y, out int u, out int v);
-
-		switch (_format)
+		void YUVPal(int i, Colour rgb)
 		{
-			case SDL.PixelFormat.IYUV:
-			case SDL.PixelFormat.YV12:
-				_palY[i] = (byte)y;
-				_palU[i] = (byte)((u >> 4) & 0xF);
-				_palV[i] = (byte)((v >> 4) & 0xF);
-				break;
+			rgb.ToYUV(out int y, out int u, out int v);
+
+			switch (_format)
+			{
+				case SDL.PixelFormat.IYUV:
+				case SDL.PixelFormat.YV12:
+					_palY[i] = (byte)y;
+					_palU[i] = (byte)((u >> 4) & 0xF);
+					_palV[i] = (byte)((v >> 4) & 0xF);
+					break;
+			}
 		}
-	}
 
-	void SDLPal(int i, Colour rgb)
-	{
-		_pal[i] = unchecked((int)SDL.MapRGB(_pixelFormat, IntPtr.Zero, rgb.R, rgb.G, rgb.B));
-	}
-
-	/* calls back to a function receiving all the colors :) */
-	void IterateColours(Colour[] palette /* [16] */, Action<int, Colour> fun)
-	{
-		/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
-
-		/* make our "base" space */
-		for (int i = 0; i < 16; i++)
-			fun(i, palette[i]);
-
-		/* make our "gradient" space; this is used exclusively for the waterfall page (Alt-F12) */
-		for (int i = 0; i < 128; i++)
+		void SDLPal(int i, Colour rgb)
 		{
-			Colour rgb;
-
-			int p = LastMap[i>>5];
-
-			rgb.R = (byte)(palette[p].R + (palette[p + 1].R - palette[p].R) * (i & 0x1F) / 0x20);
-			rgb.B = (byte)(palette[p].G + (palette[p + 1].G - palette[p].G) * (i & 0x1F) / 0x20);
-			rgb.G = (byte)(palette[p].B + (palette[p + 1].B - palette[p].B) * (i & 0x1F) / 0x20);
-
-			fun(i + 128, rgb);
+			_pal[i] = SDL.MapRGB(_pixelFormat, IntPtr.Zero, rgb.R, rgb.G, rgb.B);
 		}
-	}
+
+		/* calls back to a function receiving all the colors :) */
+		void IterateColours(Colour[] palette /* [16] */, Action<int, Colour> fun)
+		{
+			/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
+
+			/* make our "base" space */
+			for (int i = 0; i < 16; i++)
+				fun(i, palette[i]);
+
+			/* make our "gradient" space; this is used exclusively for the waterfall page (Alt-F12) */
+			for (int i = 0; i < 128; i++)
+			{
+				Colour rgb;
+
+				int p = LastMap[i >> 5];
+
+				rgb.R = (byte)(palette[p].R + (palette[p + 1].R - palette[p].R) * (i & 0x1F) / 0x20);
+				rgb.B = (byte)(palette[p].G + (palette[p + 1].G - palette[p].G) * (i & 0x1F) / 0x20);
+				rgb.G = (byte)(palette[p].B + (palette[p + 1].B - palette[p].B) * (i & 0x1F) / 0x20);
+
+				fun(i + 128, rgb);
+			}
+		}
 
 	public void Colours(Colour[] palette)
 	{
@@ -1072,36 +1083,36 @@ public class SDLVideoBackend : VideoBackend
 					double ratioW = _size.Width / (double)Configuration.Video.WantFixedWidth;
 					double ratioH = _size.Height / (double)Configuration.Video.WantFixedHeight;
 
-				if (ratioW < ratioH)
+					if (ratioW < ratioH)
 					{
+						_surfaceClip.Size = new Size(
+							Video.Width,
+							(int)(Configuration.Video.WantFixedHeight * ratioW));
+					}
+					else
+					{
+						_surfaceClip.Size = new Size(
+							(int)(Configuration.Video.WantFixedWidth * ratioH),
+							Video.Height);
+					}
 
-					video.u.s.clip.w = video.width;
-					video.u.s.clip.h = (double)cfg_video_want_fixed_height * ratioW;
-				} else {
-					video.u.s.clip.h = video.height;
-					video.u.s.clip.w = (double)cfg_video_want_fixed_width  * ratioH;
-				}
-
-				video.u.s.clip.x = (video.width  - video.u.s.clip.w) / 2;
-				video.u.s.clip.y = (video.height - video.u.s.clip.h) / 2;
-				break;
+					_surfaceClip.TopLeft = new Point(
+						(Video.Width - _surfaceClip.Size.Width) / 2,
+						(Video.Height - _surfaceClip.Size.Height) / 2);
+					break;
 			}
-			case VIDEO_TYPE_UNINITIALIZED:
-				/* WUT */
-				SCHISM_UNREACHABLE;
-				break;
-			}
-		} else if (video.type == VIDEO_TYPE_SURFACE) {
-			video.u.s.clip.x = video.u.s.clip.y = 0;
-			video.u.s.clip.w = video.width;
-			video.u.s.clip.h = video.height;
+		}
+		else if (_type == VideoType.Surface)
+		{
+			_surfaceClip = new Rect(
+				default,
+				new Size(Video.Width, Video.Height));
 		}
 	}
 
 	public override void Resize(Size newSize)
 	{
-		Video.Width = newSize.Width;
-		Video.Height = newSize.Height;
+		_size = newSize;
 
 		RecalculateFixedWidth();
 
@@ -1111,10 +1122,8 @@ public class SDLVideoBackend : VideoBackend
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
-	public override bool IsScreenSaverEnabled()
-	{
-		return SDL.ScreenSaverEnabled();
-	}
+	public override bool IsScreenSaverEnabled
+		=> SDL.ScreenSaverEnabled();
 
 	public override void ToggleScreenSaver(bool enabled)
 	{
@@ -1158,10 +1167,8 @@ public class SDLVideoBackend : VideoBackend
 		}
 	}
 
-	public override bool IsInputGrabbed()
-	{
-		return SDL.GetWindowMouseGrab(_window) && SDL.GetWindowKeyboardGrab(_window);
-	}
+	public override bool IsInputGrabbed
+		=> SDL.GetWindowMouseGrab(_window) && SDL.GetWindowKeyboardGrab(_window);
 
 	public override void SetInputGrabbed(bool enabled)
 	{
@@ -1234,21 +1241,21 @@ public class SDLVideoBackend : VideoBackend
 				switch (_format)
 				{
 					case SDL.PixelFormat.IYUV:
-						video_blitUV(pixels, pitch, ref _palY);
+						BlitUV(pixels, pitch, ref _palY);
 						pixels += (Constants.NativeScreenHeight * pitch);
-						video_blitTV(pixels, pitch, ref _palU);
+						BlitTV(pixels, pitch, ref _palU);
 						pixels += (Constants.NativeScreenHeight * pitch) / 4;
-						video_blitTV(pixels, pitch, ref _palV);
+						BlitTV(pixels, pitch, ref _palV);
 						break;
 					case SDL.PixelFormat.YV12:
-						video_blitUV(pixels, pitch, ref _palY);
+						BlitUV(pixels, pitch, ref _palY);
 						pixels += (Constants.NativeScreenHeight * pitch);
-						video_blitTV(pixels, pitch, ref _palV);
+						BlitTV(pixels, pitch, ref _palV);
 						pixels += (Constants.NativeScreenHeight * pitch) / 4;
-						video_blitTV(pixels, pitch, ref _palU);
+						BlitTV(pixels, pitch, ref _palU);
 						break;
 					default:
-						video_blit11(_bpp, (byte*)pixels, pitch, ref _pal);
+						Blit11(_bpp, (byte*)pixels, pitch, ref _pal);
 						break;
 				}
 
@@ -1288,10 +1295,10 @@ public class SDLVideoBackend : VideoBackend
 					}
 				}
 
-				video_blitSC(SDL.BytesPerPixel(_format),
-					_surface.Pixels,
+				BlitSC((int)SDL.BytesPerPixel(_format),
+					(byte *)_surface.Pixels,
 					_surface.Pitch,
-					_pal,
+					ref _pal,
 					SDL.MapRGB,
 					_pixelFormat,
 					_surfaceClip);
