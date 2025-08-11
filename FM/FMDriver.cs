@@ -12,7 +12,7 @@ public abstract class FMDriver
 	public abstract byte Read(int a);
 
 	public abstract bool TimerOver(int c);
-	public abstract void UpdateOne(Span<short> buffer);
+	public abstract void UpdateMulti(Memory<short>?[] buffers, uint[] vuMax);
 
 	public event OPLTimerHandler? TimerHandler;
 	public event OPLIRQHandler? IRQHandler;
@@ -23,7 +23,7 @@ public abstract class FMDriver
 		TimerHandler?.Invoke(timer, period);
 	}
 
-	protected void OnIRQ(int irq)
+	protected void OnIRQ(bool irq)
 	{
 		IRQHandler?.Invoke(irq);
 	}

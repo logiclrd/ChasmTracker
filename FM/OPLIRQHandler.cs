@@ -1,3 +1,3 @@
 namespace ChasmTracker.FM;
 
-public delegate void OPLIRQHandler(int irq);
+public delegate void OPLIRQHandler(bool irq);

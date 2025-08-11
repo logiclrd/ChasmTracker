@@ -347,7 +347,7 @@ public abstract class Page
 			}
 		}
 
-		string buf = string.Format("{0:###}:{1:00}:{2:00}", s_currentTime.H % 1000, s_currentTime.M, s_currentTime.S);
+		string buf = string.Format("{0:##0}:{1:00}:{2:00}", s_currentTime.H % 1000, s_currentTime.M, s_currentTime.S);
 
 		VGAMem.DrawText(buf, new Point(69, 9), (0, 2));
 	}

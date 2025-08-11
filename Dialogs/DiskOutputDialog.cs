@@ -31,7 +31,7 @@ public class DiskOutputDialog : Dialog
 		int sec = ExportDS.Length / AudioPlayback.MixFrequency;
 		int pos = ExportDS.Length * 64 / EstimatedLength;
 
-		VGAMem.DrawText($"Exporting song...{sec / 60:######}:{sec % 60:00}", new Point(27, 27), (0, 2));
+		VGAMem.DrawText($"Exporting song...{sec / 60:#####0}:{sec % 60:00}", new Point(27, 27), (0, 2));
 		VGAMem.DrawFillCharacters(new Point(24, 30), new Point(55, 30), (VGAMem.DefaultForeground, 0));
 		VGAMem.DrawVUMeter(new Point(24, 30), 32, pos, ProgressColour, ProgressColour); // ugh
 		VGAMem.DrawBox(new Point(23, 29), new Point(56, 31), BoxTypes.Thin | BoxTypes.Inner | BoxTypes.Inset);

@@ -12,6 +12,7 @@ using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
+using ChasmTracker.FM;
 using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
@@ -564,7 +565,7 @@ public class Song
 	}
 
 	// OPL stuff -------------------------------------------------------------
-	// TODO: public OPL OPL;
+	public FMDriver? OPL;
 	public int OPLRetVal;
 	public int OPLRegNumber;
 	public bool OPLFMActive;

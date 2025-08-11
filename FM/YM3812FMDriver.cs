@@ -1,9 +1,9 @@
 using System;
 using System.Runtime.CompilerServices;
-using ChasmTracker.Utility;
-using Microsoft.Maui.Graphics;
 
 namespace ChasmTracker.FM;
+
+using ChasmTracker.Utility;
 
 // license:GPL-2.0+
 // copyright-holders:Jarek Burczynski,Tatsuyuki Satoh
@@ -91,7 +91,6 @@ public class YM3812FMDriver : FMDriver
 	const int FrequencyShift         = 16;  /* 16.16 fixed point (frequency calculations) */
 	const int EnvelopeGeneratorShift = 16;  /* 16.16 fixed point (EG timing)              */
 	const int LFOShift               = 24;  /*  8.24 fixed point (LFO calculations)       */
-	const int TimerShift             = 16;  /* 16.16 fixed point (timers calculations)    */
 
 	const int FrequencyMask = ((1 << FrequencyShift) - 1);
 
@@ -121,24 +120,10 @@ public class YM3812FMDriver : FMDriver
 		Off = 0,
 	}
 
-	enum OPLType : byte
-	{
-		WaveformSelect = 0x01,  /* waveform select     */
-		ADPCM          = 0x02,  /* DELTA-T ADPCM unit  */
-		Keyboard       = 0x04,  /* keyboard interface  */
-		IO             = 0x08,  /* I/O port            */
-	}
-
 	/* ---------- Generic interface section ---------- */
 	const OPLType YM3526 = 0;
 	const OPLType YM3812 = OPLType.WaveformSelect;
 	//const OPLType Y8950 = OPLType.ADPCM | OPLType.Keyboard | OPLType.IO;
-
-	[InlineArray(2)]
-	struct OPLSlotOutArray
-	{
-		int _element0;
-	}
 
 	unsafe struct OPLSlot
 	{
@@ -239,7 +224,7 @@ public class YM3812FMDriver : FMDriver
 
 	bool      wavesel;                /* waveform select enable flag  */
 
-	uint[]    T = new uint[2];        /* timer counters               */
+	int[]     T = new int[2];         /* timer counters               */
 	bool[]    st = new bool[2];       /* timer enable                 */
 
 	enum StatusFlags : byte
@@ -269,10 +254,10 @@ public class YM3812FMDriver : FMDriver
 
 	internal const int RateSteps = 8;
 
-	ref OPLSlot Slot7_1 => ref P_CH[7].Slot[0];
-	ref OPLSlot Slot7_2 => ref P_CH[7].Slot[1];
-	ref OPLSlot Slot8_1 => ref P_CH[8].Slot[0];
-	ref OPLSlot Slot8_2 => ref P_CH[8].Slot[1];
+	ref OPLSlot Slot7_1 => ref P_CH[7].Slot[Slot1];
+	ref OPLSlot Slot7_2 => ref P_CH[7].Slot[Slot2];
+	ref OPLSlot Slot8_1 => ref P_CH[8].Slot[Slot1];
+	ref OPLSlot Slot8_2 => ref P_CH[8].Slot[Slot2];
 
 	/* status set and IRQ handling */
 	void SetStatus(StatusFlags flag)
@@ -286,7 +271,7 @@ public class YM3812FMDriver : FMDriver
 				/* IRQ on */
 				status |= StatusFlags.IRQEnabled;
 				/* callback user interrupt handler (IRQ is OFF to ON) */
-				OnIRQ(1);
+				OnIRQ(true);
 			}
 		}
 	}
@@ -302,7 +287,7 @@ public class YM3812FMDriver : FMDriver
 			{
 				status &= ~StatusFlags.IRQEnabled;
 				/* callback user interrupt handler (IRQ is ON to OFF) */
-				OnIRQ(0);
+				OnIRQ(false);
 			}
 		}
 	}
@@ -667,7 +652,7 @@ public class YM3812FMDriver : FMDriver
 
 				/* when res1 = 0 phase = 0x000 | 0xd0; */
 				/* when res1 = 1 phase = 0x200 | (0xd0>>2); */
-				uint phase = (res1 != 0) ? (0x200u | (0xd0>>2)) : 0xd0;
+				uint phase = (res1 != 0) ? (0x200u | (0xd0 >> 2)) : 0xd0;
 
 				/* enable gate based on frequency of operator 2 in channel 8 */
 				uint bit5e = ((Slot8_2.Cnt >> FrequencyShift) >> 5) & 1;
@@ -766,8 +751,6 @@ public class YM3812FMDriver : FMDriver
 
 	void InitializeGlobalTables()
 	{
-		int i;
-
 		/* frequency base */
 		freqbase  = (rate != 0) ? ((double)clock / 72.0) / rate  : 0;
 #if false
@@ -781,24 +764,25 @@ public class YM3812FMDriver : FMDriver
 		TimerBase = 72.0 / (double)clock;
 
 		/* make fnumber -> increment counter table */
-		for( i=0 ; i < 1024 ; i++ )
+		for (int i = 0; i < 1024; i++)
 		{
 			/* opn phase increment counter = 20bit */
 			/* -10 because chip works with 10.10 fixed point, while we use 16.16 */
 			fn_tab[i] = (uint)( (double)i * 64 * freqbase * (1<<(FrequencyShift-10)) );
 #if false
-			Console.Error.WriteLine("FMOPL.C: fn_tab[{0:####}] = {1:x8} (dec={2:########})",
+			Console.Error.WriteLine("FMOPL.C: fn_tab[{0:###0}] = {1:x8} (dec={2:#######0})",
 							i, fn_tab[i]>>6, fn_tab[i]>>6 );
 #endif
 		}
 
 #if false
-		for( i=0 ; i < 16 ; i++ )
+		for (int i=0 ; i < 16 ; i++)
 		{
 			Console.Error.WriteLine("FMOPL.C: sl_tab[{0}] = {1:x8}",
 				i, YM3812Tables.sl_tab[i] );
 		}
-		for( i=0 ; i < 8 ; i++ )
+
+		for (int i=0 ; i < 8 ; i++)
 		{
 			int j;
 			Console.Error.Write("FMOPL.C: ksl_tab[oct={0:##}] =",i);
@@ -908,7 +892,7 @@ public class YM3812FMDriver : FMDriver
 		ref var CH   = ref P_CH[slot / 2];
 		ref var SLOT = ref CH.Slot[slot & 1];
 
-		SLOT.ksl = unchecked((byte)YM3812Tables.ksl_shift[v >> 6]);
+		SLOT.ksl = YM3812Tables.ksl_shift[v >> 6];
 		SLOT.TL  = ((uint)v & 0x3f) << (EnvelopeBits-1-7); /* 7 bits TL (bit 6 = always 0) */
 
 		SLOT.TLL = unchecked((int)(SLOT.TL + (CH.ksl_base>>SLOT.ksl)));
@@ -971,10 +955,10 @@ public class YM3812FMDriver : FMDriver
 						}
 						break;
 					case 0x02:  /* Timer 1 */
-						T[0] = unchecked((uint)((256 - v) * 4));
+						T[0] = (256 - v) * 4;
 						break;
 					case 0x03:  /* Timer 2 */
-						T[1] = unchecked((uint)((256 - v) * 16));
+						T[1] = (256 - v) * 16;
 						break;
 					case 0x04:  /* IRQ clear / mask and Timer enable */
 						if (v.HasBitSet(0x80))
@@ -1192,7 +1176,7 @@ public class YM3812FMDriver : FMDriver
 		return 0;
 	}
 
-	static void OPL_UnLockTable()
+	static void UnlockTable()
 	{
 		if(YM3812Tables.num_lock > 0) YM3812Tables.num_lock--;
 		if(YM3812Tables.num_lock > 0) return;
@@ -1285,13 +1269,10 @@ public class YM3812FMDriver : FMDriver
 	/* Create one of virtual YM3812/YM3526/Y8950 */
 	/* 'clock' is chip clock in Hz  */
 	/* 'rate'  is sampling rate  */
-	YM3812FMDriver(uint clock, uint rate)
+	public YM3812FMDriver(uint clock, uint rate)
 	{
 		if (LockTable() == -1) throw new Exception("LockTable failed");
 
-		/* calculate OPL state size */
-
-		/* allocate memory block */
 		this.type  = YM3812;
 		this.clock = clock;
 		this.rate  = rate;
@@ -1306,7 +1287,7 @@ public class YM3812FMDriver : FMDriver
 	public override void ShutDown()
 	{
 		/* Destroy one of virtual YM3812 */
-		OPL_UnLockTable();
+		UnlockTable();
 	}
 
 	public override bool Write(int a, int v)
@@ -1366,53 +1347,86 @@ public class YM3812FMDriver : FMDriver
 		return status.HasFlag(StatusFlags.IRQEnabled);
 	}
 
-	/*
-	** Generate samples for one of the YM3812's
-	**
-	** 'which' is the virtual YM3812 number
-	** '*buffer' is the output buffer pointer
-	** 'length' is the number of samples that should be generated
-	*/
-	public override void UpdateOne(Span<short> buffer)
+	const int OPLVolume = 2274; // TODO: move to mixer class
+
+	/* like update_one, but does it for each channel independently
+	 * XXX: vuMax should be [static 9] but I don't know how many compilers support it */
+	public override void UpdateMulti(Memory<short>?[] buffers, uint[] vuMax)
 	{
 		bool rhythm_part = rhythm.HasBitSet(0x20);
 
-		for (int i=0; i < buffer.Length; i++)
+		for (int i = 0; i < buffers.Length; i++)
 		{
-			int lt;
-
-			output.Value = 0;
-
 			advance_lfo();
 
-			/* FM part */
-			OPL_CALC_CH(ref P_CH[0]);
-			OPL_CALC_CH(ref P_CH[1]);
-			OPL_CALC_CH(ref P_CH[2]);
-			OPL_CALC_CH(ref P_CH[3]);
-			OPL_CALC_CH(ref P_CH[4]);
-			OPL_CALC_CH(ref P_CH[5]);
-
-			if(!rhythm_part)
+			for (int j = 0; j < 6; j++)
 			{
-				OPL_CALC_CH(ref P_CH[6]);
-				OPL_CALC_CH(ref P_CH[7]);
-				OPL_CALC_CH(ref P_CH[8]);
+				output.Value = 0;
+
+				OPL_CALC_CH(ref P_CH[j]);
+
+				uint ab = unchecked((uint)Math.Abs(output.Value));
+
+				vuMax[j] = Math.Max(vuMax[j], ab);
+
+				var maybeBuffer = buffers[j];
+
+				if (maybeBuffer.HasValue)
+				{
+					var buffer = maybeBuffer.Value.Span;
+
+					var sample = unchecked((short)(output.Value * OPLVolume));
+
+					buffer[i*2+0] += sample;
+					buffer[i*2+1] += sample;
+				}
 			}
-			else /* Rhythm part */
+
+			if (!rhythm_part)
 			{
-				OPL_CALC_RH(P_CH, (noise_rng >> 0).HasBitSet(1));
+				for (int j = 6; j < 9; j++)
+				{
+					output.Value = 0;
+					OPL_CALC_CH(ref P_CH[j]);
+
+					uint ab = unchecked((uint)Math.Abs(output.Value));
+
+					vuMax[j] = Math.Max(vuMax[j], ab);
+
+					var maybeBuffer = buffers[j];
+
+					if (maybeBuffer.HasValue)
+					{
+						var buffer = maybeBuffer.Value.Span;
+
+						var sample = unchecked((short)(output.Value * OPLVolume));
+
+						buffer[i*2+0] += sample;
+						buffer[i*2+1] += sample;
+					}
+				}
 			}
+			else
+			{
+				output.Value = 0;
+				OPL_CALC_RH(P_CH, noise_rng.HasBitSet(1));
 
-			lt = output.Value;
+				uint ab = unchecked((uint)Math.Abs(output.Value));
 
-			lt >>= FinalShift;
+				vuMax[0] = Math.Max(vuMax[0], ab);
 
-			/* limit check */
-			lt = lt.Clamp(MinOut, MaxOut);
+				var maybeBuffer = buffers[0];
 
-			/* store to sound buffer */
-			buffer[i] = unchecked((short)lt);
+				if (maybeBuffer.HasValue)
+				{
+					var buffer = maybeBuffer.Value.Span;
+
+					var sample = unchecked((short)(output.Value * OPLVolume));
+
+					buffer[i*2+0] += sample;
+					buffer[i*2+1] += sample;
+				}
+			}
 
 			advance();
 		}
