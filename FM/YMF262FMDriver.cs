@@ -69,6 +69,8 @@ differences between OPL2 and OPL3 shown in datasheets:
 
 public class YMF262FMDriver : FMDriver
 {
+	public override uint RateDivisor => 288u;
+
 	/* output final shift */
 	const int MaxOut = short.MaxValue;
 	const int MinOut = short.MinValue;
@@ -1797,7 +1799,7 @@ public class YMF262FMDriver : FMDriver
 	/* Create one of virtual YMF262 */
 	/* 'clock' is chip clock in Hz  */
 	/* 'rate'  is sampling rate  */
-	public YMF262FMDriver(uint clock, uint rate)
+	public override void Initialize(uint clock, uint rate)
 	{
 		if (LockTable() == -1) throw new Exception("LockTable failed");
 
@@ -1906,7 +1908,7 @@ public class YMF262FMDriver : FMDriver
 
 	// `buffers` is an array of 18 pointers, all pointing to separate 32-bit interlaced stereo
 	// buffers of `length` size in samples.
-	public override void UpdateMulti(Memory<short>?[] buffers, uint[] vuMax)
+	public override void UpdateMulti(Memory<int>?[] buffers, uint[] vuMax)
 	{
 		bool rhythm_part = rhythm.HasBitSet(0x20);
 
@@ -1988,8 +1990,8 @@ public class YMF262FMDriver : FMDriver
 				{
 					var buffer = maybeBuffer.Value.Span;
 
-					buffer[i * 2 + 0] += unchecked((short)(chanout[j] & (int)pan[k++]));
-					buffer[i * 2 + 1] += unchecked((short)(chanout[j] & (int)pan[k++]));
+					buffer[i * 2 + 0] += chanout[j] & (int)pan[k++];
+					buffer[i * 2 + 1] += chanout[j] & (int)pan[k++];
 					k += 2; // skip next two pans
 				}
 				else

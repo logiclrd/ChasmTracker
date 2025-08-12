@@ -4,6 +4,9 @@ namespace ChasmTracker.Utility;
 
 public static class Int32Extensions
 {
+	public static bool IsInRange(this int value, int min, int max)
+		=> (value >= min) && (value <= max);
+
 	public static int Clamp(this int value, int min, int max)
 		=> Math.Max(min, Math.Min(max, value));
 

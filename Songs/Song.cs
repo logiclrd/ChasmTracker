@@ -566,16 +566,358 @@ public class Song
 
 	// OPL stuff -------------------------------------------------------------
 	public FMDriver? OPL;
-	public int OPLRetVal;
+	public byte OPLRetVal;
 	public int OPLRegNumber;
 	public bool OPLFMActive;
 
-	public byte[] OPLDTab = new byte[9];
-	public byte[] OPlKeyOnTab = new byte[9];
+	public byte[]?[] OPLDTab = new byte[9][];
+	public byte[] OPLKeyOnTab = new byte[9];
 	public int[] OPLPans = new int[Constants.MaxVoices];
 
 	public int[] OPLToChan = new int[9];
 	public int[] OPLFromChan = new int[Constants.MaxVoices];
+
+	public void InitializeOPL(int mixFrequency)
+	{
+		OPL?.ShutDown();
+
+		OPL = FMDriver.Create(mixFrequency);
+		// Clock = speed at which the chip works. mixfreq = audio resampler
+
+		OPL.ResetChip();
+	}
+
+	int GetOPLVoice(int c)
+	{
+		return OPLFromChan[c];
+	}
+
+	int SetOPLVoice(int c)
+	{
+		if (OPLFromChan[c] == -1)
+		{
+			// Search for unused chans
+
+			for (int a = 0; a < 9; a++)
+			{
+				if (OPLToChan[a] == -1)
+				{
+					OPLToChan[a] = c;
+					OPLFromChan[c] = a;
+					break;
+				}
+			}
+
+			if (OPLFromChan[c] == -1)
+			{
+				// Search for note-released chans
+				for (int a = 0; a < 9; a++)
+				{
+					if (!OPLKeyOnTab[a].HasBitSet(FMDriver.KeyOnBit))
+					{
+						OPLFromChan[OPLToChan[a]] = -1;
+						OPLToChan[a] = c;
+						OPLFromChan[c] = a;
+						break;
+					}
+				}
+			}
+		}
+
+		//Log.Append(2, "entering with {0}. tested? {1}. selected {2}. Current: {3}", c, t, s, ChantoOPL[c]);
+		return GetOPLVoice(c);
+	}
+
+	void OPLOutPortB(int port, int value)
+	{
+		if ((OPL == null)
+	   || (port < FMDriver.BasePort)
+		 || (port >= FMDriver.BasePort + 4))
+			return;
+
+		int ind = port - FMDriver.BasePort;
+
+		OPL.Write(ind, value);
+
+		if (ind.HasBitSet(1))
+		{
+			if (OPLRegNumber == 4)
+			{
+				if (value == 0x80)
+					OPLRetVal = 0x02;
+				else if (value == 0x21)
+					OPLRetVal = 0xC0;
+			}
+		}
+		else
+			OPLRegNumber = unchecked((byte)value);
+	}
+
+	byte OPLInPortB(int port)
+	{
+		return port.IsInRange(FMDriver.BasePort, FMDriver.BasePort + 3) ? OPLRetVal : (byte)0;
+	}
+
+	void OPLByte(int idx, byte data)
+	{
+		OPLOutPortB(FMDriver.BasePort, idx);    // for(int a = 0; a < 6;  a++) InPortB(FMDriver.BasePort);
+		OPLOutPortB(FMDriver.BasePort + 1, data); // for(int a = 0; a < 35; a++) InPortB(FMDriver.BasePort);
+	}
+
+	void OPLByteRightSide(int idx, byte data)
+	{
+		OPLOutPortB(FMDriver.BasePort + 2, idx);    // for(int a = 0; a < 6;  a++) InPortB(FMDriver.BasePort);
+		OPLOutPortB(FMDriver.BasePort + 3, data); // for(int a = 0; a < 35; a++) InPortB(FMDriver.BasePort);
+	}
+
+	public void OPLNoteOff(int c)
+	{
+		int oplc = GetOPLVoice(c);
+		if (oplc == -1)
+			return;
+
+		OPLKeyOnTab[oplc] &= unchecked((byte)~FMDriver.KeyOnBit);
+
+		OPLByte(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
+	}
+
+	/* OPLNoteOn changes the frequency on specified
+		channel and guarantees the key is on. (Doesn't
+		retrig, just turns the note on and sets freq.)
+		If keyoff is nonzero, doesn't even set the note on.
+		Could be used for pitch bending also. */
+	public void OPLHertzTouch(int c, int milliHertz, bool keyoff)
+	{
+		int oplc = GetOPLVoice(c);
+		if (oplc == -1)
+			return;
+
+		OPLFMActive = true;
+
+		/*
+			Bytes A0-B8 - Octave / F-Number / Key-On
+
+			7     6     5     4     3     2     1     0
+			+-----+-----+-----+-----+-----+-----+-----+-----+
+			|        F-Number (least significant byte)      |  (A0-A8)
+			+-----+-----+-----+-----+-----+-----+-----+-----+
+			|  Unused   | Key |    Octave       | F-Number  |  (B0-B8)
+			|           | On  |                 | most sig. |
+			+-----+-----+-----+-----+-----+-----+-----+-----+
+		*/
+
+		const int conversion_factor = (int)FMDriver.RateBase; // Frequency of OPL.
+
+		FMDriver.MilliHertzToFnum(milliHertz, out var outfnum, out var outblock, conversion_factor);
+
+		OPLKeyOnTab[oplc] = unchecked((byte)(
+					(keyoff ? (byte)0 : FMDriver.KeyOnBit)      // Key on
+					| (outblock << 2)                  // Octave
+					| ((outfnum >> 8) & FMDriver.FNumHighMask))); // F-number high 2 bits
+
+		OPLByte(FMDriver.FNumLow +    oplc, unchecked((byte)(outfnum & 0xFF)));  // F-Number low 8 bits
+		OPLByte(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
+	}
+
+	public void OPLTouch(int c, int vol)
+	{
+	//fprintf(stderr, "OPLTouch(%d, %p:%02X.%02X.%02X.%02X-%02X.%02X.%02X.%02X-%02X.%02X.%02X, %d)\n",
+	//    c, D,D[0],D[1],D[2],D[3],D[4],D[5],D[6],D[7],D[8],D[9],D[10], Vol);
+
+		int oplc = GetOPLVoice(c);
+		if (oplc == -1)
+			return;
+
+		byte[] D = OPLDTab[oplc] ?? throw new Exception("Internal error: OPL function parameters not set");
+		int Ope = FMDriver.PortBases[oplc];
+
+		/*
+			Bytes 40-55 - Level Key Scaling / Total Level
+
+			7     6     5     4     3     2     1     0
+			+-----+-----+-----+-----+-----+-----+-----+-----+
+			|  Scaling  |             Total Level           |
+			|   Level   | 24    12     6     3    1.5   .75 | <-- dB
+			+-----+-----+-----+-----+-----+-----+-----+-----+
+				bits 7-6 - causes output levels to decrease as the frequency
+					rises:
+						00   -  no change
+						10   -  1.5 dB/8ve
+						01   -  3 dB/8ve
+						11   -  6 dB/8ve
+				bits 5-0 - controls the total output level of the operator.
+					all bits CLEAR is loudest; all bits SET is the
+					softest.  Don't ask me why.
+		*/
+
+		/* 2008-09-27 Bisqwit:
+		 * Did tests in ST3: The value poked
+		 * to 0x43, minus from 63, is:
+		 *
+		 *  OplVol 63  47  31
+		 * SmpVol
+		 *  64     63  47  31
+		 *  32     32  24  15
+		 *  16     16  12   8
+		 *
+		 * This seems to clearly indicate that the value
+		 * poked is calculated with 63 - round(oplvol*smpvol/64.0).
+		 *
+		 * Also, from the documentation we can deduce that
+		 * the maximum volume to be set is 47.25 dB and that
+		 * each increase by 1 corresponds to 0.75 dB.
+		 *
+		 * Since we know that 6 dB is equivalent to a doubling
+		 * of the volume, we can deduce that an increase or
+		 * decrease by 8 will double / halve the volume.
+		 *
+			D = 63-OPLVol
+			NewD = 63-target
+
+			OPLVol = 63 - D
+			newvol = clip(vol,63)  -> max value of newvol=63, same as max of OPLVol.
+			target = OPLVOL * (newvol/63)
+
+
+			NewD = 63-(OLPVOL * (newvol/63))
+			NewD = 63-((63 - D) * (newvol/63))
+			NewD = 63-((63*newvol/63) - (D*newvol/63) )
+			NewD = 63-(newvol - (D*newvol/63) )
+			NewD = 63-(newvol) + (D*newvol/63)
+			NewD = 63 + (D*newvol/63) - newvol
+			NewD = 63 + (D*newvol/63) - newvol
+		*/
+		// On Testing, ST3 does not alter the modulator volume.
+
+		// vol is previously converted to the 0..63 range.
+
+		// Set volume of both operators in additive mode
+		if (D[10].HasBitSet(FMDriver.ConnectionBit))
+		{
+			OPLByte(
+				FMDriver.KSLLevel + Ope,
+				unchecked((byte)(
+					(D[2] & FMDriver.KSLMask) | (63 + ((D[2] & FMDriver.TotalLevelMask) * vol / 63) - vol)
+				)));
+		}
+
+		OPLByte(
+			FMDriver.KSLLevel + 3+Ope,
+			unchecked((byte)(
+				(D[3] & FMDriver.KSLMask) | (63 + ((D[3] & FMDriver.TotalLevelMask) * vol / 63) - vol)
+			)));
+	}
+
+
+	public void OPLPan(int c, int val)
+	{
+		OPLPans[c] = val.Clamp(0, 256);
+
+		int oplc = GetOPLVoice(c);
+		if (oplc == -1)
+			return;
+
+		byte[] D = OPLDTab[oplc] ?? throw new Exception("Internal error: OPL function parameters not set");
+
+		/* feedback, additive synthesis and Panning... */
+		OPLByte(
+			FMDriver.FeedbackConnection + oplc,
+			unchecked((byte)(
+				(D[10] & ~FMDriver.StereoBits)
+			| (OPLPans[c] < 85 ? FMDriver.VoiceToLeft
+				: OPLPans[c] > 170 ? FMDriver.VoiceToRight
+				: (FMDriver.VoiceToLeft | FMDriver.VoiceToRight))
+			)));
+	}
+
+
+	public void OPLPatch(int c, byte[] D)
+	{
+		int oplc = SetOPLVoice(c);
+		if (oplc == -1)
+			return;
+
+		OPLDTab[oplc] = D;
+		int Ope = FMDriver.PortBases[oplc];
+
+		OPLByte(FMDriver.AMVib+           Ope, D[0]);
+		OPLByte(FMDriver.KSLLevel+        Ope, D[2]);
+		OPLByte(FMDriver.AttackDecay+     Ope, D[4]);
+		OPLByte(FMDriver.SustainRelease+  Ope, D[6]);
+		OPLByte(FMDriver.WaveSelect+      Ope, unchecked((byte)(D[8]&7)));// 5 high bits used elsewhere
+
+		OPLByte(FMDriver.AMVib+         3+Ope, D[1]);
+		OPLByte(FMDriver.KSLLevel+      3+Ope, D[3]);
+		OPLByte(FMDriver.AttackDecay+   3+Ope, D[5]);
+		OPLByte(FMDriver.SustainRelease+3+Ope, D[7]);
+		OPLByte(FMDriver.WaveSelect+    3+Ope, unchecked((byte)(D[9]&7)));// 5 high bits used elsewhere
+
+		/* feedback, additive synthesis and Panning... */
+		OPLByte(
+			FMDriver.FeedbackConnection + oplc,
+			unchecked((byte)(
+				(D[10] & ~FMDriver.StereoBits)
+			| (OPLPans[c]<85 ? FMDriver.VoiceToLeft
+				: OPLPans[c]>170 ? FMDriver.VoiceToRight
+				: (FMDriver.VoiceToLeft | FMDriver.VoiceToRight))
+			)));
+	}
+
+	public void OPLReset()
+	{
+		if (OPL == null)
+			return;
+
+		OPL.ResetChip();
+
+		OPLDetect();
+
+		for (int a = 0; a < Constants.MaxVoices; ++a)
+			OPLFromChan[a]=-1;
+
+		for (int a = 0; a < OPLToChan.Length; ++a)
+		{
+			OPLToChan[a]= -1;
+			OPLDTab[a] = null;
+		}
+
+		OPLByte(FMDriver.TestRegister, FMDriver.EnableWaveSelect);
+
+		//Enable OPL3.
+		OPLByteRightSide(FMDriver.OPL3ModeRegister, FMDriver.OPL3Enable);
+
+		OPLFMActive = false;
+	}
+
+	public bool OPLDetect()
+	{
+		/* Reset timers 1 and 2 */
+		OPLByte(FMDriver.TimerControlRegister, FMDriver.Timer1Mask | FMDriver.Timer2Mask);
+
+		/* Reset the IRQ of the FM chip */
+		OPLByte(FMDriver.TimerControlRegister, FMDriver.IRQReset);
+
+		byte ST1 = OPLInPortB(FMDriver.BasePort); /* Status register */
+
+		OPLByte(FMDriver.Timer1Register, 255);
+		OPLByte(FMDriver.TimerControlRegister, FMDriver.Timer2Mask | FMDriver.Timer1Start);
+
+		/*_asm xor cx,cx;P1:_asm loop P1*/
+		byte ST2 = OPLInPortB(FMDriver.BasePort);
+
+		OPLByte(FMDriver.TimerControlRegister, FMDriver.Timer1Mask | FMDriver.Timer2Mask);
+		OPLByte(FMDriver.TimerControlRegister, FMDriver.IRQReset);
+
+		bool OPLMode = (ST2 & 0xE0) == 0xC0 && !ST1.HasAnyBitSet(0xE0);
+
+		return OPLMode;
+	}
+
+	public void ShutDownOPL()
+	{
+		OPL?.ShutDown();
+		OPL = null;
+	}
 
 	// -----------------------------------------------------------------------
 
@@ -1850,9 +2192,8 @@ public class Song
 			if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 			{
 				//Do this only if really an adlib chan. Important!
-				// TODO
-				//OPL_NoteOff(csf, nchan);
-				//OPL_Touch(csf, nchan, 0);
+				OPLNoteOff(nchan);
+				OPLTouch(nchan, 0);
 			}
 
 			GeneralMIDI.KeyOff(CurrentSong, nchan);
@@ -1936,9 +2277,8 @@ public class Song
 							//
 							// This isn't very useful really since we can't save
 							// AdLib songs with instruments anyway, but whatever.
-							// TODO
-							//OPL_NoteOff(csf, nchan);
-							//OPL_Touch(csf, nchan, 0);
+							OPLNoteOff(nchan);
+							OPLTouch(nchan, 0);
 						}
 						break;
 					case DuplicateCheckActions.NoteOff:
@@ -2032,9 +2372,8 @@ public class Song
 		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 		{
 			//Do this only if really an adlib chan. Important!
-			// TODO
-			//OPL_NoteOff(csf, nchan);
-			//OPL_Touch(csf, nchan, 0);
+			OPLNoteOff(nchan);
+			OPLTouch(nchan, 0);
 		}
 
 		GeneralMIDI.KeyOff(CurrentSong, nchan);
@@ -2056,8 +2395,7 @@ public class Song
 		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 		{
 			//Do this only if really an adlib chan. Important!\
-			// TODO
-			//OPL_NoteOff(csf, nchan);
+			OPLNoteOff(nchan);
 		}
 
 		GeneralMIDI.KeyOff(CurrentSong, nchan);
@@ -3744,9 +4082,8 @@ public class Song
 					if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 					{
 						//Do this only if really an adlib chan. Important!
-						// TODO
-						//OPL_NoteOff(csf, nchan);
-						//OPL_Touch(csf, nchan, 0);
+						OPLNoteOff(nchan);
+						OPLTouch(nchan, 0);
 					}
 
 					GeneralMIDI.KeyOff(CurrentSong, nchan);
@@ -3780,11 +4117,10 @@ public class Song
 
 					var sample = Samples[instrumentNumber];
 
-					if ((sample != null) && sample.Flags.HasFlag(SampleFlags.AdLib))
-					{
-						// TODO
-						//OPL_Patch(csf, nchan, csf->samples[instr].adlib_bytes);
-					}
+					if ((sample != null)
+					 && sample.Flags.HasFlag(SampleFlags.AdLib)
+					 && (sample.AdLibBytes != null))
+						OPLPatch(nchan, sample.AdLibBytes);
 
 					if (IsInstrumentMode && Instruments[instrumentNumber] != null)
 					{
@@ -3823,13 +4159,11 @@ public class Song
 						{
 							var sample = Samples[chan.NewInstrumentNumber];
 
-							if ((sample != null) && sample.Flags.HasFlag(SampleFlags.AdLib))
-							{
-								// TODO
-								//OPL_Patch(csf, nchan, csf->samples[chan->new_instrument].adlib_bytes);
-							}
+							if ((sample != null)
+							 && sample.Flags.HasFlag(SampleFlags.AdLib)
+							 && (sample.AdLibBytes != null))
+								OPLPatch(nchan, sample.AdLibBytes);
 
-							// TODO
 							var instr = Instruments[chan.NewInstrumentNumber];
 
 							if (instr != null)
@@ -4055,11 +4389,10 @@ public class Song
 
 			if (s != null)
 			{
-				if (c.Flags.HasFlag(ChannelFlags.AdLib))
+				if (c.Flags.HasFlag(ChannelFlags.AdLib) && (s.AdLibBytes != null))
 				{
-					// TODO:
-					//OPL_NoteOff(current_song, chanInternal);
-					//OPL_Patch(current_song, chanInternal, s->adlib_bytes);
+					OPLNoteOff(chanInternal);
+					OPLPatch(chanInternal, s.AdLibBytes);
 				}
 
 				c.Flags = ((ChannelFlags)s.Flags & ChannelFlags.SampleFlags) | (c.Flags & ChannelFlags.Mute);

@@ -83,6 +83,8 @@ Revision History:
 
 public class YM3812FMDriver : FMDriver
 {
+	public override uint RateDivisor => 288u;
+
 	/* output final shift */
 	const int FinalShift = 0;
 	const int MaxOut = short.MaxValue;
@@ -1269,7 +1271,7 @@ public class YM3812FMDriver : FMDriver
 	/* Create one of virtual YM3812/YM3526/Y8950 */
 	/* 'clock' is chip clock in Hz  */
 	/* 'rate'  is sampling rate  */
-	public YM3812FMDriver(uint clock, uint rate)
+	public override void Initialize(uint clock, uint rate)
 	{
 		if (LockTable() == -1) throw new Exception("LockTable failed");
 
@@ -1347,11 +1349,9 @@ public class YM3812FMDriver : FMDriver
 		return status.HasFlag(StatusFlags.IRQEnabled);
 	}
 
-	const int OPLVolume = 2274; // TODO: move to mixer class
-
 	/* like update_one, but does it for each channel independently
 	 * XXX: vuMax should be [static 9] but I don't know how many compilers support it */
-	public override void UpdateMulti(Memory<short>?[] buffers, uint[] vuMax)
+	public override void UpdateMulti(Memory<int>?[] buffers, uint[] vuMax)
 	{
 		bool rhythm_part = rhythm.HasBitSet(0x20);
 
@@ -1375,7 +1375,7 @@ public class YM3812FMDriver : FMDriver
 				{
 					var buffer = maybeBuffer.Value.Span;
 
-					var sample = unchecked((short)(output.Value * OPLVolume));
+					var sample = output.Value * Volume;
 
 					buffer[i*2+0] += sample;
 					buffer[i*2+1] += sample;
@@ -1399,7 +1399,7 @@ public class YM3812FMDriver : FMDriver
 					{
 						var buffer = maybeBuffer.Value.Span;
 
-						var sample = unchecked((short)(output.Value * OPLVolume));
+						var sample = output.Value * Volume;
 
 						buffer[i*2+0] += sample;
 						buffer[i*2+1] += sample;
@@ -1421,7 +1421,7 @@ public class YM3812FMDriver : FMDriver
 				{
 					var buffer = maybeBuffer.Value.Span;
 
-					var sample = unchecked((short)(output.Value * OPLVolume));
+					var sample = output.Value * Volume;
 
 					buffer[i*2+0] += sample;
 					buffer[i*2+1] += sample;

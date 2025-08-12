@@ -512,7 +512,7 @@ public static class AudioPlayback
 		MixFlags &= ~(MixFlags.NoBackwardJumps | MixFlags.DirectToDisk);
 
 		// TODO:
-		//OPL_Reset(current_song); // gruh?
+		Song.CurrentSong.OPLReset(); // gruh?
 
 		Song.CurrentSong.SetCurrentOrder(0);
 
@@ -640,8 +640,7 @@ public static class AudioPlayback
 			Song.CurrentSong.MIDIPlaying = false;
 		}
 
-		// TODO
-		//OPL_Reset(current_song); // Also stop all OPL sounds
+		Song.CurrentSong.OPLReset(); // Also stop all OPL sounds
 		GeneralMIDI.Reset(Song.CurrentSong, quitting);
 		GeneralMIDI.SendSongStopCode(Song.CurrentSong);
 
@@ -775,7 +774,7 @@ public static class AudioPlayback
 		// the "4000Hz" value comes from csf_reset, but I don't yet understand why the opl keeps that value, if
 		// each call to Fmdrv_Init generates a new opl.
 		if (MixFrequency != 4000)
-			FMDriver.Initialize(MixFrequency);
+			Song.CurrentSong.InitializeOPL(MixFrequency);
 
 		GeneralMIDI.Reset(Song.CurrentSong, false);
 	}
@@ -1182,10 +1181,9 @@ public static class AudioPlayback
 		for (int i = 0; i < 4; i++)
 		{
 			pg[i] = AudioSettings.EQBands[i].Gain;
-			pf[i] = 120 + ((i*128) * AudioSettings.EQBands[i].Frequency
-				* (mixFrequency / 128) / 1024);
+			pf[i] = 120 + (i*128 * AudioSettings.EQBands[i].Frequency * (mixFrequency / 128) / 1024);
 		}
 
-		Equalizer.SetEQGains(pg, 4, pf, doReset, mixFrequency);
+		Equalizer.SetGains(pg, pf, doReset, mixFrequency);
 	}
 }
