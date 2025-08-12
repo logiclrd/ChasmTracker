@@ -2,6 +2,7 @@ using System.IO;
 
 namespace ChasmTracker.Pages;
 
+using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -45,7 +46,10 @@ public class ModuleLoadPage : ModuleLoadSavePageBase
 			return;
 
 		if (Song.Load(ptr) is Song loaded)
+		{
 			Song.CurrentSong = loaded;
+			AudioPlayback.Reset();
+		}
 		else
 		{
 			Log.Append(4, "Failed to load: " + Path.GetFileName(ptr));

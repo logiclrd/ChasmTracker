@@ -600,8 +600,6 @@ public class Program
 			// Load and export song
 			if (Song.LoadUnchecked(s_args.InitialSong) is Song initialSong)
 			{
-				Song.CurrentSong = initialSong;
-
 				int multiOffset = s_args.DiskwriteTo.IndexOf("%c", StringComparison.InvariantCultureIgnoreCase);
 
 				string driver = s_args.DiskwriteTo.EndsWith(".aif", StringComparison.InvariantCultureIgnoreCase)
@@ -677,6 +675,8 @@ public class Program
 			if (song != null)
 			{
 				Song.CurrentSong = song;
+
+				AudioPlayback.Reset();
 
 				if (s_args.DiskwriteTo != null)
 				{

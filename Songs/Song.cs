@@ -289,8 +289,6 @@ public class Song
 		{
 			AudioPlayback.StopUnlocked(false);
 
-			AudioPlayback.Reset();
-
 			Song newSong = new Song();
 
 			newSong.Flags = CurrentSong.Flags;
@@ -369,6 +367,8 @@ public class Song
 			}
 
 			CurrentSong = newSong;
+
+			AudioPlayback.Reset();
 
 			CurrentSong.ForgetHistory();
 		}
@@ -5273,6 +5273,8 @@ public class Song
 		lock (AudioPlayback.LockScope())
 		{
 			CurrentSong = newSong;
+
+			AudioPlayback.Reset();
 
 			CurrentSong.RepeatCount = 0;
 
