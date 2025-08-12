@@ -7,6 +7,7 @@ using System.Text;
 
 namespace ChasmTracker.Songs;
 
+using System.Diagnostics.CodeAnalysis;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
@@ -23,7 +24,35 @@ public class Song
 {
 	public static Song CurrentSong = new Song();
 
-	IMIDISink? _midiSink;
+	public string Title = "";
+	public string Message = "";
+	public string FileName = "";
+	public string BaseName = "";
+	public string TrackerID = "";
+
+	public int InitialGlobalVolume;
+	public int InitialSpeed;
+	public int InitialTempo;
+
+	public int PanSeparation;
+
+	public int RowHighlightMajor;
+	public int RowHighlightMinor;
+
+	public int[] MixBuffer = new int[Constants.MixBufferSize * 2];
+
+	public readonly List<Pattern> Patterns = new List<Pattern>();
+	public readonly List<SongSample?> Samples = new List<SongSample?>();
+	public readonly List<SongInstrument?> Instruments = new List<SongInstrument?>();
+	public readonly List<int> OrderList = new List<int>();
+	public readonly SongChannel[] Channels = new SongChannel[Constants.MaxChannels];
+	public readonly SongVoice[] Voices = new SongVoice[Constants.MaxVoices];
+	public readonly int[] VoiceMix = new int[Constants.MaxVoices];
+
+	public readonly List<SongHistory> History = new List<SongHistory>();
+	public SongHistory EditStart = new SongHistory();
+
+	public IMIDISink? MIDISink;
 
 	public int NumVoices;// how many are currently playing. (POTENTIALLY larger than global MaxVoices)
 	public int BufferCount; // number of samples to mix per tick
@@ -39,7 +68,7 @@ public class Song
 	public int ProcessOrder;
 	public int CurrentGlobalVolume;
 	public int MixingVolume;
-	public int FreqFactor; // not used -- for tweaking the song speed LP-style (interesting!)
+	public int FrequencyFactor; // not used -- for tweaking the song speed LP-style (interesting!)
 	public int TempoFactor; // ditto
 	public int RepeatCount; // 0 = first playback, etc. (note: set to -1 to stop instead of looping)
 
@@ -70,7 +99,7 @@ public class Song
 	// Nothing innately special about this -- just needs to be above the max pattern length.
 	// process row is set to this in order to get the player to jump to the end of the pattern.
 	// (See ITTECH.TXT)
-	const int ProcessNextOrder = 0xFFFE; // special value for ProcessRow
+	public const int ProcessNextOrder = 0xFFFE; // special value for ProcessRow
 
 	static Random s_rnd = new Random();
 
@@ -192,7 +221,7 @@ public class Song
 
 	public void InitializeMIDI(IMIDISink midiSink)
 	{
-		_midiSink = midiSink;
+		MIDISink = midiSink;
 	}
 
 	// IT-compatible: last order of "main song", or 0
@@ -407,7 +436,7 @@ public class Song
 	//
 	// XXX freq WAS unused but is now mix_frequency!
 	//
-	void SetUpChannelFilter(ref SongVoice chan, bool reset, int filterModifier, int freq)
+	public void SetUpChannelFilter(ref SongVoice chan, bool reset, int filterModifier, int freq)
 	{
 		const double FrequencyParamMult = 128.0 / (24.0 * 256.0);
 
@@ -461,32 +490,6 @@ public class Song
 			chan.FilterY10 = chan.FilterY11 = 0;
 		}
 	}
-
-	public string Title = "";
-	public string Message = "";
-	public string FileName = "";
-	public string BaseName = "";
-	public string TrackerID = "";
-
-	public int InitialGlobalVolume;
-	public int InitialSpeed;
-	public int InitialTempo;
-
-	public int PanSeparation;
-
-	public int RowHighlightMajor;
-	public int RowHighlightMinor;
-
-	public readonly List<Pattern> Patterns = new List<Pattern>();
-	public readonly List<SongSample?> Samples = new List<SongSample?>();
-	public readonly List<SongInstrument?> Instruments = new List<SongInstrument?>();
-	public readonly List<int> OrderList = new List<int>();
-	public readonly SongChannel[] Channels = new SongChannel[Constants.MaxChannels];
-	public readonly SongVoice[] Voices = new SongVoice[Constants.MaxVoices];
-	public readonly int[] VoiceMix = new int[Constants.MaxVoices];
-
-	public readonly List<SongHistory> History = new List<SongHistory>();
-	public SongHistory EditStart = new SongHistory();
 
 	public void InsertRestartPos(int restartOrder) // hax
 	{
@@ -1065,7 +1068,7 @@ public class Song
 		Flags = 0;
 		PanSeparation = 128;
 		NumVoices = 0;
-		FreqFactor = 128;
+		FrequencyFactor = 128;
 		TempoFactor = 128;
 		InitialGlobalVolume = 128;
 		CurrentGlobalVolume = 128;
@@ -1128,7 +1131,7 @@ public class Song
 
 		MIDILastRowNumber = -1;
 
-		_midiSink = null;
+		MIDISink = null;
 	}
 
 	int _currentOrder;
@@ -1556,10 +1559,18 @@ public class Song
 			throw new ArgumentOutOfRangeException();
 
 		// Make a new instrument if it doesn't exist.
-		if (Instruments[n] == null)
+		if ((Instruments[n] == null))
 			Instruments[n] = new SongInstrument(this);
 
 		return Instruments[n]!;
+	}
+
+	public SongInstrument? GetInstrumentSlotSafe(int n)
+	{
+		if ((n < 0) || (n >= Instruments.Count))
+			return null;
+
+		return Instruments[n];
 	}
 
 	public int GetInstrumentNumber(SongInstrument? inst)
@@ -4360,7 +4371,7 @@ public class Song
 			fortunately, schism does and can complete this (tags: _schism_midi_out_raw )
 
 			*/
-			_midiSink?.OutRaw(this, data, BufferCount);
+			MIDISink?.OutRaw(this, data, BufferCount);
 		}
 	}
 

@@ -795,6 +795,32 @@ public class MIDIEngine : IMIDISink
 		}
 	}
 
+	// Get the length of a MIDI event in bytes
+	// FIXME: this needs to handle sysex and friends as well
+	public static int GetEventLength(byte first_byte)
+	{
+		switch (first_byte & 0xF0)
+		{
+			case 0xC0:
+			case 0xD0:
+				return 2;
+			case 0xF0:
+				switch (first_byte)
+				{
+					case 0xF1:
+					case 0xF3:
+						return 2;
+					case 0xF2:
+						return 3;
+					default:
+						return 1;
+				}
+
+			default:
+				return 3;
+		}
+	}
+
 	public static IMIDISink GetMIDISink() => new MIDIEngine();
 
 	public void OutRaw(Song csf, Span<byte> data, TimeSpan pos)

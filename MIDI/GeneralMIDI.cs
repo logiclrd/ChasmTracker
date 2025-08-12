@@ -570,10 +570,10 @@ public static class GeneralMIDI
 
 
 
-	public static void SetFreqAndVol(Song csf, int c, int Hertz, byte vol, MIDIBendMode bendMode, bool keyOff)
+	public static void SetFrequencyAndVolume(Song csf, int c, int Hertz, byte vol, MIDIBendMode bendMode, bool keyOff)
 	{
 #if GM_DEBUG
-		Console.Error.WriteLine("GM_SetFreqAndVol({0},{1},{2})", c,Hertz,vol);
+		Console.Error.WriteLine("GM_SetFrequencyAndVolume({0},{1},{2})", c,Hertz,vol);
 #endif
 		if (c < 0 || ((uint)c) >= Constants.MaxVoices)
 			return;

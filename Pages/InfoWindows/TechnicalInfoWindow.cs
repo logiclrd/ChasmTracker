@@ -124,7 +124,7 @@ public class TechnicalInfoWindow : InfoWindow
 				continue;
 
 			// Frequency
-			VGAMem.DrawText($"{voice.SampleFreq,10}", new Point(5, pos), (2, 0));
+			VGAMem.DrawText($"{voice.SampleFrequency,10}", new Point(5, pos), (2, 0));
 			// Position
 			VGAMem.DrawText($"{voice.Position,10}", new Point(16, pos), (2, 0));
 

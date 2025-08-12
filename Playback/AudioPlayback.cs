@@ -618,7 +618,7 @@ public static class AudioPlayback
 				{
 					for (int j = 0; j < Constants.MaxMIDIChannels; j++)
 					{
-						SongRenderer.ProcessMIDIMacro(chan,
+						MIDITranslator.ProcessMIDIMacro(Song.CurrentSong, chan,
 							Song.CurrentSong.MIDIConfig.NoteOff,
 							0, Song.CurrentSong.MIDINoteTracker[chan], 0, j);
 					}
@@ -651,7 +651,7 @@ public static class AudioPlayback
 				Song.CurrentSong.MIDISend(s_midiPacket.Slice(0, 3), nchan: 0, fake: false);
 			}
 
-			SongRenderer.ProcessMIDIMacro(0, Song.CurrentSong.MIDIConfig.Stop, 0, 0, 0, 0); // STOP!
+			MIDITranslator.ProcessMIDIMacro(Song.CurrentSong, 0, Song.CurrentSong.MIDIConfig.Stop, 0, 0, 0, 0); // STOP!
 			MIDIEngine.SendFlush();
 
 			Song.CurrentSong.MIDIPlaying = false;

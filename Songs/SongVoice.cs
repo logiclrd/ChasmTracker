@@ -45,7 +45,7 @@ public struct SongVoice
 	public int FadeOutVolume;
 	public int Frequency;
 	public int C5Speed;
-	public int SampleFreq; // only used on the info page (F5)
+	public int SampleFrequency; // only used on the info page (F5)
 	public int PortamentoTarget;
 
 	public SongInstrument? Instrument;
