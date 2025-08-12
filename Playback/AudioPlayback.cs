@@ -69,6 +69,23 @@ public static class AudioPlayback
 		config.Device = s_deviceName;
 	}
 
+	public static void Reset()
+	{
+		// SNDMIX: These are flags for playback control
+		RampingSamples = 64;
+		VULeft = 0;
+		VURight = 0;
+		DryLOfsVol = 0;
+		DryROfsVol = 0;
+		MaxVoices = 32; // ITT it is 1994
+
+		/* This is intentionally crappy quality, so that it's very obvious if it didn't get initialized */
+		MixFlags = 0;
+		MixFrequency = 4000;
+		MixBitsPerSample = 8;
+		MixChannels = 1;
+	}
+
 	// ------------------------------------------------------------------------------------------------------------
 	// drivers
 

@@ -83,6 +83,8 @@ public class Song
 		CurrentSong = new Song();
 		CurrentSong.LinearPitchSlides = true;
 
+		AudioPlayback.Reset();
+
 		New(NewSongFlags.ClearAll);
 
 		AudioPlayback.MixFlags |= MixFlags.MuteChannelMode;
@@ -286,6 +288,8 @@ public class Song
 		lock (AudioPlayback.LockScope())
 		{
 			AudioPlayback.StopUnlocked(false);
+
+			AudioPlayback.Reset();
 
 			Song newSong = new Song();
 
@@ -1057,6 +1061,74 @@ public class Song
 	{
 		for (int i = 0; i < Constants.MaxSamples; i++)
 			Samples.Add(null);
+
+		Flags = 0;
+		PanSeparation = 128;
+		NumVoices = 0;
+		FreqFactor = 128;
+		TempoFactor = 128;
+		InitialGlobalVolume = 128;
+		CurrentGlobalVolume = 128;
+		InitialSpeed = 6;
+		InitialTempo = 125;
+		ProcessRow = 0;
+		Row = 0;
+		CurrentPattern = 0;
+		CurrentOrder = 0;
+		ProcessOrder = 0;
+		MixingVolume = 0x30;
+
+		Message = "";
+
+		// SNDMIX: These are flags for playback control
+		AudioPlayback.Reset();
+		AudioPlayback.RampingSamples = 64;
+		AudioPlayback.VULeft = 0;
+		AudioPlayback.VURight = 0;
+		AudioPlayback.DryLOfsVol = 0;
+		AudioPlayback.DryROfsVol = 0;
+		AudioPlayback.MaxVoices = 32; // ITT it is 1994
+
+		/* This is intentionally crappy quality, so that it's very obvious if it didn't get initialized */
+		AudioPlayback.MixFlags = 0;
+		AudioPlayback.MixFrequency = 4000;
+		AudioPlayback.MixBitsPerSample = 8;
+		AudioPlayback.MixChannels = 1;
+
+		RowHighlightMajor = 16;
+		RowHighlightMinor = 4;
+
+		Array.Clear(Voices);
+		Array.Clear(VoiceMix);
+		Samples.Clear();
+		Instruments.Clear();
+		OrderList.Clear();
+		Patterns.Clear();
+
+		ResetMIDIConfig();
+		ForgetHistory();
+
+		Array.Clear(Channels);
+		for (int i=0; i < Channels.Length; i++)
+		{
+			Channels[i].Panning = 128;
+			Channels[i].Volume = 64;
+			Channels[i].Flags = 0;
+		}
+
+		ShutDownOPL();
+		GeneralMIDI.Reset(this, true);
+
+		Array.Clear(MIDINoteTracker);
+		Array.Clear(MIDIVolTracker);
+		Array.Clear(MIDIInsTracker);
+		Array.Clear(MIDIWasProgram);
+		Array.Clear(MIDIWasBankLo);
+		Array.Clear(MIDIWasBankHi);
+
+		MIDILastRowNumber = -1;
+
+		_midiSink = null;
 	}
 
 	int _currentOrder;
