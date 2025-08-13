@@ -1,5 +1,6 @@
 using System;
-
+using System.Buffers;
+using System.Runtime.InteropServices;
 using ChasmTracker.Utility;
 
 namespace ChasmTracker.Songs;
@@ -11,8 +12,8 @@ public class SongSample
 	public int LoopEnd;
 	public int SustainStart;
 	public int SustainEnd;
-	public ArraySegment<sbyte> Data8 = ArraySegment<sbyte>.Empty;
-	public ArraySegment<short> Data16 = ArraySegment<short>.Empty;
+	public Span<sbyte> Data8 => (Data.Count > 0) ? MemoryMarshal.Cast<byte, sbyte>(Data.AsSpan()) : Span<sbyte>.Empty;
+	public Span<short> Data16 => (Data.Count > 0) ? MemoryMarshal.Cast<byte, short>(Data.AsSpan()) : Span<short>.Empty;
 	public int C5Speed = 8363;
 	public int Panning;
 	public int Volume = 64 * 4;
@@ -31,35 +32,27 @@ public class SongSample
 
 	public byte[]? AdLibBytes;
 
-	public sbyte[]? RawData8;
-	public short[]? RawData16;
+	public byte[]? RawData;
 
-	public bool HasData => Flags.HasFlag(SampleFlags._16Bit) ? (RawData16 != null) : (RawData8 != null);
-	public Array? Data => Flags.HasFlag(SampleFlags._16Bit) ? RawData16 : RawData8;
+	public bool HasData => RawData != null;
+
+	public ArraySegment<byte> Data;
 
 	public const int AllocatePrepend = Constants.MaxSamplingPointSize * Constants.MaxInterpolationLookaheadBufferSize;
 	public const int AllocateAppend = (1 + 4 + 4) * Constants.MaxInterpolationLookaheadBufferSize * 4;
 
 	public void AllocateData()
 	{
-		RawData8 = null;
-		RawData16 = null;
+		RawData = null;
 
-		Data8 = ArraySegment<sbyte>.Empty;
-		Data16 = ArraySegment<short>.Empty;
+		Data = ArraySegment<byte>.Empty;
 
 		bool _16bit = Flags.HasFlag(SampleFlags._16Bit);
 
-		if (_16bit)
-		{
-			RawData16 = new short[Length + AllocatePrepend + AllocateAppend];
-			Data16 = new ArraySegment<short>(RawData16, AllocatePrepend, Length);
-		}
-		else
-		{
-			RawData8 = new sbyte[Length + AllocatePrepend + AllocateAppend];
-			Data8 = new ArraySegment<sbyte>(RawData8, AllocatePrepend, Length);
-		}
+		int bps = _16bit ? 2 : 1;
+
+		RawData = new byte[(Length + AllocatePrepend + AllocateAppend) * bps];
+		Data = new ArraySegment<byte>(RawData, AllocatePrepend * bps, Length * bps);
 	}
 
 	public void TakeSubset(int firstSample, int sampleCount)
@@ -78,10 +71,9 @@ public class SongSample
 
 			bool _16bit = Flags.HasFlag(SampleFlags._16Bit);
 
-			if (_16bit)
-				Buffer.BlockCopy(RawData16!, 2 * (AllocatePrepend + firstSample), RawData16!, 2 * AllocatePrepend, 2 * Length);
-			else
-				Buffer.BlockCopy(RawData8!, AllocatePrepend + firstSample, RawData8!, AllocatePrepend, Length);
+			int bps = _16bit ? 2 : 1;
+
+			Buffer.BlockCopy(RawData!, bps * (AllocatePrepend + firstSample), RawData!, bps * AllocatePrepend, bps * Length);
 		}
 	}
 
@@ -114,7 +106,7 @@ public class SongSample
 
 	void PrecomputeLoopCopyLoopImpl8(int targetOffset, int loopStartOffset, int loopEnd, int channels, bool bidi, bool forwardDirection)
 	{
-		if (RawData8 == null)
+		if (RawData == null)
 			return;
 
 		int samples = 2 * Constants.MaxInterpolationLookaheadBufferSize + (forwardDirection ? 1 : 0);
@@ -126,7 +118,7 @@ public class SongSample
 		for (int i = 0; i < samples; i++)
 		{
 			for (int c = 0; c < channels; c++)
-				RawData8[targetOffset + destOffset + c] = RawData8[Data8.Offset + position * channels + c];
+				RawData[targetOffset + destOffset + c] = RawData[Data.Offset + position * channels + c];
 
 			destOffset += writeIncrement * channels;
 
@@ -164,14 +156,14 @@ public class SongSample
 
 	void PrecomputeLoops8()
 	{
-		if (RawData8 == null)
+		if (RawData == null)
 			return;
 
 		int channels = Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1;
 		int copySamples = channels * Constants.MaxInterpolationLookaheadBufferSize;
 
-		int smpStartOffset = Data8.Offset;
-		int afterSmpStartOffset = Data8.Offset + Data8.Count;
+		int smpStartOffset = Data.Offset;
+		int afterSmpStartOffset = Data.Offset + Data.Count;
 		int loopLookaheadStartOffset = afterSmpStartOffset + copySamples;
 		int sustainLookaheadStartOffset = loopLookaheadStartOffset + 4 * copySamples;
 
@@ -181,8 +173,8 @@ public class SongSample
 		{
 			for (int c = 0; c < channels; c++)
 			{
-				RawData8[afterSmpStartOffset + i * channels + c] = RawData8[afterSmpStartOffset - channels + c];
-				RawData8[smpStartOffset - (i + 1) * channels + c] = RawData8[c];
+				RawData[afterSmpStartOffset + i * channels + c] = RawData[afterSmpStartOffset - channels + c];
+				RawData[smpStartOffset - (i + 1) * channels + c] = RawData[c];
 			}
 		}
 
@@ -210,8 +202,11 @@ public class SongSample
 
 	void PrecomputeLoopCopyLoopImpl16(int targetOffset, int loopStartOffset, int loopEnd, int channels, bool bidi, bool forwardDirection)
 	{
-		if (RawData16 == null)
+		if (RawData == null)
 			return;
+
+		var RawData16 = MemoryMarshal.Cast<byte, short>(RawData);
+		var Data16 = RawData16.Slice(Data.Offset / 2, Data.Count / 2);
 
 		int samples = 2 * Constants.MaxInterpolationLookaheadBufferSize + (forwardDirection ? 1 : 0);
 		int destOffset = channels * (2 * Constants.MaxInterpolationLookaheadBufferSize - 1);
@@ -222,7 +217,7 @@ public class SongSample
 		for (int i = 0; i < samples; i++)
 		{
 			for (int c = 0; c < channels; c++)
-				RawData16[targetOffset + destOffset + c] = RawData16[Data16.Offset + position * channels + c];
+				RawData16[targetOffset + destOffset + c] = Data16[position * channels + c];
 
 			destOffset += writeIncrement * channels;
 
@@ -260,14 +255,17 @@ public class SongSample
 
 	void PrecomputeLoops16()
 	{
-		if (RawData16 == null)
+		if (RawData == null)
 			return;
+
+		var RawData16 = MemoryMarshal.Cast<byte, short>(RawData);
+		var Data16 = RawData16.Slice(Data.Offset / 2, Data.Count / 2);
 
 		int channels = Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1;
 		int copySamples = channels * Constants.MaxInterpolationLookaheadBufferSize;
 
-		int smpStartOffset = Data16.Offset;
-		int afterSmpStartOffset = Data16.Offset + Data16.Count;
+		int smpStartOffset = Data.Offset / 2;
+		int afterSmpStartOffset = smpStartOffset + Data16.Length;
 		int loopLookaheadStartOffset = afterSmpStartOffset + copySamples;
 		int sustainLookaheadStartOffset = loopLookaheadStartOffset + 4 * copySamples;
 
@@ -365,10 +363,11 @@ public class SongSample
 		if (AdLibBytes != null)
 			ret.AdLibBytes = (byte[])AdLibBytes.Clone();
 
-		if (RawData8 != null)
-			Array.Copy(RawData8, ret.RawData8!, RawData8.Length);
-		if (RawData16 != null)
-			Array.Copy(RawData16, ret.RawData16!, RawData16.Length);
+		if (RawData != null)
+		{
+			ret.RawData = (byte[])RawData.Clone();
+			ret.Data = new ArraySegment<byte>(ret.RawData, Data.Offset, Data.Count);
+		}
 
 		return ret;
 	}

@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 using System.Xml.Serialization;
 using ChasmTracker.Playback;
@@ -84,7 +85,7 @@ public class SamplesInfoWindow : InfoWindow
 				VGAMem.DrawText(c.ToString("d2"), new Point(2, pos), (fg, 2));
 			}
 
-			if (!((voice.CurrentSampleData != null) && (voice.Length > 0)) && !voice.Flags.HasFlag(ChannelFlags.AdLib))
+			if (!((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length > 0)) && !voice.Flags.HasFlag(ChannelFlags.AdLib))
 				continue;
 
 			/* first box: vu meter */

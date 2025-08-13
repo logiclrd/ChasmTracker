@@ -1310,7 +1310,7 @@ public class SampleListPage : Page
 
 			byte[] textSynthEntryBytes = Encoding.ASCII.GetBytes(textSynthEntry);
 
-			Buffer.BlockCopy(textSynthEntryBytes, 0, sample.Data!, SongSample.AllocatePrepend, textSynthEntryBytes.Length);
+			textSynthEntryBytes.CopyTo(sample.Data.AsSpan());
 
 			sample.LoopStart = 0;
 			sample.LoopEnd = sample.Length;

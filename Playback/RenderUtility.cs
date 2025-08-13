@@ -3,14 +3,10 @@ using System.Runtime.InteropServices;
 
 namespace ChasmTracker.Playback;
 
-using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 
 public static class RenderUtility
 {
-	const int OfsDecayShift = 8;
-	const int OfsDecayMask = 0xFF;
-
 	public static void StereoFill(Span<int> buffer, int samples, ref int pROfs, ref int pLOfs)
 	{
 		int rOfs = pROfs;
@@ -21,8 +17,8 @@ public static class RenderUtility
 
 		for (int i = 0; i < samples; i++)
 		{
-			int x_r = (rOfs + (((-rOfs) >> 31) & OfsDecayMask)) >> OfsDecayShift;
-			int x_l = (lOfs + (((-lOfs) >> 31) & OfsDecayMask)) >> OfsDecayShift;
+			int x_r = (rOfs + (((-rOfs) >> 31) & MixUtility.OfsDecayMask)) >> MixUtility.OfsDecayShift;
+			int x_l = (lOfs + (((-lOfs) >> 31) & MixUtility.OfsDecayMask)) >> MixUtility.OfsDecayShift;
 
 			rOfs -= x_r;
 			lOfs -= x_l;
@@ -32,29 +28,6 @@ public static class RenderUtility
 
 		pROfs = rOfs;
 		pLOfs = lOfs;
-	}
-
-	public static void EndChannelOfs(ref SongVoice channel, Span<int> buffer, int samples)
-	{
-		int rOfs = channel.ROfs;
-		int lOfs = channel.LOfs;
-
-		if ((rOfs == 0) && (lOfs == 0))
-			return;
-
-		for (int i = 0; i < samples; i++)
-		{
-			int x_r = (rOfs + (((-rOfs) >> 31) & OfsDecayMask)) >> OfsDecayShift;
-			int x_l = (lOfs + (((-lOfs) >> 31) & OfsDecayMask)) >> OfsDecayShift;
-
-			rOfs -= x_r;
-			lOfs -= x_l;
-			buffer[i * 2]     += x_r;
-			buffer[i * 2 + 1] += x_l;
-		}
-
-		channel.ROfs = rOfs;
-		channel.LOfs = lOfs;
 	}
 
 	public static void MonoFromStereo(Span<int> mixBuf, int samples)

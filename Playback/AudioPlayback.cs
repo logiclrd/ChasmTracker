@@ -742,7 +742,7 @@ public static class AudioPlayback
 		{
 			ref var v = ref csf.Voices[i];
 
-			if ((v.Sample == smp) || (v.CurrentSampleData == smp.Data))
+			if ((v.Sample == smp) || (v.CurrentSampleData.Span == smp.Data.AsSpan()))
 			{
 				v.Note = v.NewNote = 1;
 				v.NewInstrumentNumber = 0;

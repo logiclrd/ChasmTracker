@@ -1,17 +1,15 @@
 using System;
-using System.Data;
-using System.Diagnostics;
-using ChasmTracker.MIDI.Drivers;
-using ChasmTracker.Playback;
-using ChasmTracker.Songs;
-using ChasmTracker.Utility;
-using Mono.Unix.Native;
+using System.Runtime.InteropServices;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Playback;
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
+
 public static class SampleEditOperations
 {
-	static (int Minimum, int Maximum) MinMax8(sbyte[] data)
+	static (int Minimum, int Maximum) MinMax8(Span<sbyte> data)
 	{
 		sbyte min = sbyte.MaxValue;
 		sbyte max = sbyte.MinValue;
@@ -29,7 +27,7 @@ public static class SampleEditOperations
 		return (min, max);
 	}
 
-	static (int Minimum, int Maximum) MinMax16(short[] data)
+	static (int Minimum, int Maximum) MinMax16(Span<short> data)
 	{
 		short min = short.MaxValue;
 		short max = short.MinValue;
@@ -49,22 +47,26 @@ public static class SampleEditOperations
 
 	/* --------------------------------------------------------------------- */
 	/* sign convert (a.k.a. amiga flip) */
-	static void SignConvert8(sbyte[]? data)
+	static void SignConvert8(byte[]? data)
 	{
 		if (data == null)
 			return;
 
+		var signBit = unchecked((byte)sbyte.MinValue);
+
 		for (int i = 0; i < data.Length; i++)
-			data[i] ^= sbyte.MinValue;
+			data[i] ^= signBit;
 	}
 
-	static void SignConvert16(short[]? data)
+	static void SignConvert16(byte[]? data)
 	{
 		if (data == null)
 			return;
 
-		for (int i = 0; i < data.Length; i++)
-			data[i] ^= short.MinValue;
+		var data16 = MemoryMarshal.Cast<byte, short>(data);
+
+		for (int i = 0; i < data16.Length; i++)
+			data16[i] ^= short.MinValue;
 	}
 
 	public static void SignConvert(SongSample sample)
@@ -74,9 +76,9 @@ public static class SampleEditOperations
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
 			if (sample.Flags.HasFlag(SampleFlags._16Bit))
-				SignConvert16(sample.RawData16);
+				SignConvert16(sample.RawData);
 			else
-				SignConvert8(sample.RawData8);
+				SignConvert8(sample.RawData);
 
 			sample.AdjustLoop();
 		}
@@ -84,35 +86,41 @@ public static class SampleEditOperations
 
 	/* --------------------------------------------------------------------- */
 	/* from the back to the front */
-	static void ReverseMono<TSample>(TSample[]? data)
+	static void ReverseMono<TSample>(byte[]? data)
+		where TSample : struct
 	{
 		if (data == null)
 			return;
 
-		int lpos = 0, rpos = data.Length - 1;
+		var sData = MemoryMarshal.Cast<byte, TSample>(data);
+
+		int lpos = 0, rpos = sData.Length - 1;
 
 		while (lpos < rpos)
 		{
-			(data[lpos], data[rpos]) = (data[rpos], data[lpos]);
+			(sData[lpos], sData[rpos]) = (sData[rpos], sData[lpos]);
 
 			lpos++;
 			rpos--;
 		}
 	}
 
-	static void ReverseStereo<TSample>(TSample[]? data)
+	static void ReverseStereo<TSample>(byte[]? data)
+		where TSample : struct
 	{
 		if (data == null)
 			return;
 
-		int lpos = 0, rpos = data.Length - 2;
+		var sData = MemoryMarshal.Cast<byte, TSample>(data);
+
+		int lpos = 0, rpos = sData.Length - 2;
 
 		rpos -= (rpos & 1); // should be unnecessary, but you never know :-)
 
 		while (lpos < rpos)
 		{
-			(data[lpos], data[lpos + 1], data[rpos], data[rpos + 1]) =
-				(data[rpos], data[rpos + 1], data[lpos], data[lpos + 1]);
+			(sData[lpos], sData[lpos + 1], sData[rpos], sData[rpos + 1]) =
+				(sData[rpos], sData[rpos + 1], sData[lpos], sData[lpos + 1]);
 
 			lpos += 2;
 			rpos -= 2;
@@ -128,16 +136,16 @@ public static class SampleEditOperations
 			if (sample.Flags.HasFlag(SampleFlags.Stereo))
 			{
 				if (sample.Flags.HasFlag(SampleFlags._16Bit)) // FIXME This is UB!
-					ReverseStereo<short>(sample.RawData16);
+					ReverseStereo<short>(sample.RawData);
 				else
-					ReverseMono<sbyte>(sample.RawData8);
+					ReverseStereo<sbyte>(sample.RawData);
 			}
 			else
 			{
 				if (sample.Flags.HasFlag(SampleFlags._16Bit))
-					ReverseStereo<short>(sample.RawData16);
+					ReverseMono<short>(sample.RawData);
 				else
-					ReverseMono<sbyte>(sample.RawData8);
+					ReverseMono<sbyte>(sample.RawData);
 			}
 
 			(sample.LoopStart, sample.LoopEnd) = (sample.LoopEnd, sample.LoopStart);
@@ -153,16 +161,34 @@ public static class SampleEditOperations
 	* the same); otherwise, the sample length is changed and the data is
 	* left untouched. */
 
-	static void QualityConvert8to16(sbyte[] idata, short[] odata)
+	static byte[] QualityConvert8to16(byte[]? idata)
 	{
+		if (idata == null)
+			return Array.Empty<byte>();
+
+		byte[] odata = new byte[idata.Length * 2];
+
+		var odata16 = MemoryMarshal.Cast<byte, short>(odata);
+
 		for (int i = 0; i < idata.Length; i++)
-			odata[i] = unchecked((short)(((ushort)idata[i]) << 8));
+			odata16[i] = unchecked((short)(idata[i] << 8));
+
+		return odata;
 	}
 
-	static void QualityConvert16to8(short[] idata, sbyte[] odata)
+	static byte[] QualityConvert16to8(byte[]? idata)
 	{
-		for (int i = 0; i < idata.Length; i++)
-			odata[i] = unchecked((sbyte)(((ushort)idata[i]) >> 8));
+		if (idata == null)
+			return Array.Empty<byte>();
+
+		var idata16 = MemoryMarshal.Cast<byte, short>(idata);
+
+		var odata = new byte[idata16.Length];
+
+		for (int i = 0; i < odata.Length; i++)
+			odata[i] = unchecked((byte)(idata16[i] >> 8));
+
+		return odata;
 	}
 
 	public static void ToggleQuality(SongSample sample, bool convertData)
@@ -180,15 +206,11 @@ public static class SampleEditOperations
 			{
 				if (sample.Flags.HasFlag(SampleFlags._16Bit))
 				{
-					sample.RawData16 = new short[sample.RawData8!.Length];
-					QualityConvert8to16(sample.RawData8, sample.RawData16);
-					sample.RawData8 = null;
+					sample.RawData = QualityConvert8to16(sample.RawData);
 				}
 				else
 				{
-					sample.RawData8 = new sbyte[sample.RawData16!.Length];
-					QualityConvert16to8(sample.RawData16, sample.RawData8);
-					sample.RawData16 = null;
+					sample.RawData = QualityConvert16to8(sample.RawData);
 				}
 			}
 			else
@@ -217,9 +239,14 @@ public static class SampleEditOperations
 
 	/* --------------------------------------------------------------------- */
 	/* centralise (correct dc offset) */
-	static void Centralise8(sbyte[] data)
+	static void Centralise8(byte[]? data)
 	{
-		var (min, max) = MinMax8(data);
+		if (data == null)
+			return;
+
+		var sdata = MemoryMarshal.Cast<byte, sbyte>(data);
+
+		var (min, max) = MinMax8(sdata);
 
 		int offset = (max + min + 1) >> 1;
 
@@ -227,20 +254,25 @@ public static class SampleEditOperations
 			return;
 
 		for (int i = 0; i < data.Length; i++)
-			data[i] = unchecked((sbyte)(data[i] - offset));
+			sdata[i] = unchecked((sbyte)(sdata[i] - offset));
 	}
 
-	static void Centralise16(short[] data)
+	static void Centralise16(byte[]? data)
 	{
-		var (min, max) = MinMax16(data);
+		if (data == null)
+			return;
+
+		var sdata = MemoryMarshal.Cast<byte, short>(data);
+
+		var (min, max) = MinMax16(sdata);
 
 		int offset = (max + min + 1) >> 1;
 
 		if (offset == 0)
 			return;
 
-		for (int i = 0; i < data.Length; i++)
-			data[i] = unchecked((short)(data[i] - offset));
+		for (int i = 0; i < sdata.Length; i++)
+			sdata[i] = unchecked((short)(sdata[i] - offset));
 	}
 
 	public static void Centralise(SongSample sample)
@@ -250,9 +282,9 @@ public static class SampleEditOperations
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
 			if (sample.Flags.HasFlag(SampleFlags._16Bit))
-				Centralise16(sample.RawData16!);
+				Centralise16(sample.RawData);
 			else
-				Centralise8(sample.RawData8!);
+				Centralise8(sample.RawData);
 
 			sample.AdjustLoop();
 		}
@@ -260,22 +292,36 @@ public static class SampleEditOperations
 
 	/* --------------------------------------------------------------------- */
 	/* downmix stereo to mono */
-	static sbyte[] Downmix8(sbyte[] data)
+	static byte[] Downmix8(byte[]? idata)
 	{
-		var odata = new sbyte[data.Length / 2];
+		if (idata == null)
+			return Array.Empty<byte>();
 
-		for (int i = 0, j = 0; i + 1 < data.Length; j++, i += 2)
-			data[j] = unchecked((sbyte)((data[i] + data[i + 1]) / 2));
+		var isdata = MemoryMarshal.Cast<byte, sbyte>(idata);
+
+		var odata = new byte[isdata.Length / 2];
+
+		var osdata = MemoryMarshal.Cast<byte, sbyte>(odata);
+
+		for (int i = 0, j = 0; i + 1 < isdata.Length; j++, i += 2)
+			osdata[j] = unchecked((sbyte)((isdata[i] + isdata[i + 1]) / 2));
 
 		return odata;
 	}
 
-	static short[] Downmix16(short[] data)
+	static byte[] Downmix16(byte[]? idata)
 	{
-		var odata = new short[data.Length / 2];
+		if (idata == null)
+			return Array.Empty<byte>();
 
-		for (int i = 0, j = 0; i + 1 < data.Length; j++, i += 2)
-			data[j] = unchecked((short)((data[i] + data[i + 1]) / 2));
+		var isdata = MemoryMarshal.Cast<byte, short>(idata);
+
+		var odata = new byte[isdata.Length];
+
+		var osdata = MemoryMarshal.Cast<byte, short>(odata);
+
+		for (int i = 0, j = 0; i + 1 < isdata.Length; j++, i += 2)
+			osdata[j] = unchecked((short)((isdata[i] + isdata[i + 1]) / 2));
 
 		return odata;
 	}
@@ -293,9 +339,9 @@ public static class SampleEditOperations
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
 			if (sample.Flags.HasFlag(SampleFlags._16Bit))
-				sample.RawData16 = Downmix16(sample.RawData16!);
+				sample.RawData = Downmix16(sample.RawData);
 			else
-				sample.RawData8 = Downmix8(sample.RawData8!);
+				sample.RawData = Downmix8(sample.RawData);
 
 			sample.Flags |= ~SampleFlags.Stereo;
 
@@ -305,16 +351,20 @@ public static class SampleEditOperations
 
 	/* --------------------------------------------------------------------- */
 	/* amplify (or attenuate) */
-	static void Amplify8(sbyte[] data, int percent)
+	static void Amplify8(Span<byte> data, int percent)
 	{
-		for (int i = 0; i < data.Length; i++)
-			data[i] = unchecked((sbyte)(data[i] * percent / 100).Clamp(sbyte.MinValue, sbyte.MaxValue));
+		var sdata = MemoryMarshal.Cast<byte, sbyte>(data);
+
+		for (int i = 0; i < sdata.Length; i++)
+			sdata[i] = unchecked((sbyte)(sdata[i] * percent / 100).Clamp(sbyte.MinValue, sbyte.MaxValue));
 	}
 
-	static void Amplify16(short[] data, int percent)
+	static void Amplify16(Span<byte> data, int percent)
 	{
-		for (int i = 0; i < data.Length; i++)
-			data[i] = unchecked((short)(data[i] * percent / 100).Clamp(short.MinValue, short.MaxValue));
+		var sdata = MemoryMarshal.Cast<byte, short>(data);
+
+		for (int i = 0; i < sdata.Length; i++)
+			sdata[i] = unchecked((short)(sdata[i] * percent / 100).Clamp(short.MinValue, short.MaxValue));
 	}
 
 	public static void Amplify(SongSample sample, int percent)
@@ -324,26 +374,36 @@ public static class SampleEditOperations
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
 			if (sample.Flags.HasFlag(SampleFlags._16Bit))
-				Amplify16(sample.RawData16!, percent);
+				Amplify16(sample.RawData, percent);
 			else
-				Amplify8(sample.RawData8!, percent);
+				Amplify8(sample.RawData, percent);
 
 			sample.AdjustLoop();
 		}
 	}
 
-	static int GetAmplify8(sbyte[] data)
+	static int GetAmplify8(byte[]? data)
 	{
-		var (min, max) = MinMax8(data);
+		if (data == null)
+			return 100;
+
+		var sdata = MemoryMarshal.Cast<byte, sbyte>(data);
+
+		var (min, max) = MinMax8(sdata);
 
 		max = Math.Max(max, -min);
 
 		return (max != 0) ? (sbyte.MaxValue * 100 / max) : 100;
 	}
 
-	static int GetAmplify16(short[] data)
+	static int GetAmplify16(byte[]? data)
 	{
-		var (min, max) = MinMax16(data);
+		if (data == null)
+			return 100;
+
+		var sdata = MemoryMarshal.Cast<byte, short>(data);
+
+		var (min, max) = MinMax16(sdata);
 
 		max = Math.Max(max, -min);
 
@@ -355,9 +415,9 @@ public static class SampleEditOperations
 		int percent;
 
 		if (sample.Flags.HasAnyFlag(SampleFlags._16Bit))
-			percent = GetAmplify16(sample.RawData16!);
+			percent = GetAmplify16(sample.RawData);
 		else
-			percent = GetAmplify8(sample.RawData8!);
+			percent = GetAmplify8(sample.RawData);
 
 		if (percent < 100)
 			percent = 100;
@@ -368,13 +428,13 @@ public static class SampleEditOperations
 	/* --------------------------------------------------------------------- */
 	/* useful for importing delta-encoded raw data */
 
-	static void DeltaDecode8(sbyte[] data)
+	static void DeltaDecode8(Span<sbyte> data)
 	{
 		for (int pos = 1; pos < data.Length; pos++)
 			data[pos] = unchecked((sbyte)(data[pos] + data[pos - 1]));
 	}
 
-	static void DeltaDecode16(short[] data)
+	static void DeltaDecode16(Span<short> data)
 	{
 		for (int pos = 1; pos < data.Length; pos++)
 			data[pos] = unchecked((short)(data[pos] + data[pos - 1]));
@@ -385,9 +445,9 @@ public static class SampleEditOperations
 		lock (AudioPlayback.LockScope())
 		{
 			if (sample.Flags.HasFlag(SampleFlags._16Bit))
-				DeltaDecode16(sample.RawData16!);
+				DeltaDecode16(MemoryMarshal.Cast<byte, short>(sample.RawData));
 			else
-				DeltaDecode8(sample.RawData8!);
+				DeltaDecode8(MemoryMarshal.Cast<byte, sbyte>(sample.RawData));
 
 			sample.AdjustLoop();
 		}
@@ -396,13 +456,13 @@ public static class SampleEditOperations
 	/* --------------------------------------------------------------------- */
 	/* surround flipping (probably useless with the S91 effect, but why not) */
 
-	static void Invert8(sbyte[] data)
+	static void Invert8(Span<sbyte> data)
 	{
 		for (int i = 0; i < data.Length; i++)
 			data[i] = unchecked((sbyte)(~data[i]));
 	}
 
-	static void Invert16(short[] data)
+	static void Invert16(Span<short> data)
 	{
 		for (int i = 0; i < data.Length; i++)
 			data[i] = unchecked((short)(~data[i]));
@@ -413,9 +473,9 @@ public static class SampleEditOperations
 		lock (AudioPlayback.LockScope())
 		{
 			if (sample.Flags.HasFlag(SampleFlags._16Bit))
-				Invert16(sample.RawData16!);
+				Invert16(MemoryMarshal.Cast<byte, short>(sample.RawData));
 			else
-				Invert8(sample.RawData8!);
+				Invert8(MemoryMarshal.Cast<byte, sbyte>(sample.RawData));
 
 			sample.AdjustLoop();
 		}
@@ -424,10 +484,17 @@ public static class SampleEditOperations
 	/* --------------------------------------------------------------------- */
 	/* resize */
 
-	static sbyte[] Resize8(sbyte[] src, int newLen, bool isStereo)
+	static byte[] Resize8(byte[]? srcB, int newLen, bool isStereo)
 	{
+		var src = MemoryMarshal.Cast<byte, sbyte>(srcB);
+
 		// newLen is number of samples, but if isStereo is true then each sample is 2 channels
-		sbyte[] dst = new sbyte[isStereo ? 2 * newLen : newLen];
+		byte[] dstB = new byte[isStereo ? 2 * newLen : newLen];
+
+		if (srcB == null)
+			return dstB;
+
+		var dst = MemoryMarshal.Cast<byte, sbyte>(dstB);
 
 		double factor = (double)src.Length / (double)newLen;
 
@@ -446,13 +513,21 @@ public static class SampleEditOperations
 				dst[i] = src[(int)(i * factor)];
 		}
 
-		return dst;
+		return dstB;
 	}
 
-	static short[] Resize16(short[] src, int newLen, bool isStereo)
+	static byte[] Resize16(byte[]? srcB, int newLen, bool isStereo)
 	{
+		var src = MemoryMarshal.Cast<byte, short>(srcB);
+
 		// newLen is number of samples, but if isStereo is true then each sample is 2 channels
-		short[] dst = new short[isStereo ? 2 * newLen : newLen];
+		// and of course each short is 2 bytes
+		byte[] dstB = new byte[2 * (isStereo ? 2 * newLen : newLen)];
+
+		if (srcB == null)
+			return dstB;
+
+		var dst = MemoryMarshal.Cast<byte, short>(dstB);
 
 		double factor = (double)src.Length / (double)newLen;
 
@@ -471,23 +546,43 @@ public static class SampleEditOperations
 				dst[i] = src[(int)(i * factor)];
 		}
 
-		return dst;
+		return dstB;
 	}
 
-	static sbyte[] Resize8AntiAlias(sbyte[] src, int newLen, bool isStereo)
+	static byte[] Resize8AntiAlias(byte[]? srcB, int newLen, bool isStereo)
 	{
-		// newLen is number of samples, but if isStereo is true then each sample is 2 channels
+		var src = MemoryMarshal.Cast<byte, sbyte>(srcB);
 
-		// TODO: Resample{Mono|Stereo}8BitFirFilter
-		throw new NotImplementedException();
+		byte[] dstB = new byte[newLen * (isStereo ? 2 : 1)];
+
+		if (srcB == null)
+			return dstB;
+
+		var dst = MemoryMarshal.Cast<byte, sbyte>(dstB);
+
+		var resampler = Mixer.GetResampler<sbyte>(isStereo, ResamplingType.FIRFilter);
+
+		resampler.Resample(src, dst);
+
+		return dstB;
 	}
 
-	static short[] Resize16AntiAlias(short[] src, int newLen, bool isStereo)
+	static byte[] Resize16AntiAlias(byte[]? srcB, int newLen, bool isStereo)
 	{
-		// newLen is number of samples, but if isStereo is true then each sample is 2 channels
+		var src = MemoryMarshal.Cast<byte, short>(srcB);
 
-		// TODO: Resample{Mono|Stereo}16BitFirFilter
-		throw new NotImplementedException();
+		byte[] dstB = new byte[newLen * (isStereo ? 2 : 1) * 2];
+
+		if (srcB == null)
+			return dstB;
+
+		var dst = MemoryMarshal.Cast<byte, short>(dstB);
+
+		var resampler = Mixer.GetResampler<short>(isStereo, ResamplingType.FIRFilter);
+
+		resampler.Resample(src, dst);
+
+		return dstB;
 	}
 
 	public static void Resize(SongSample sample, int newLen, bool antialias)
@@ -525,40 +620,49 @@ public static class SampleEditOperations
 			if (sample.Flags.HasFlag(SampleFlags._16Bit))
 			{
 				if (antialias)
-					sample.RawData16 = Resize16AntiAlias(sample.RawData16!, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize16AntiAlias(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
 				else
-					sample.RawData16 = Resize16(sample.RawData16!, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize16(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
 			}
 			else
 			{
 				if (antialias)
-					sample.RawData8 = Resize8AntiAlias(sample.RawData8!, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize8AntiAlias(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
 				else
-					sample.RawData8 = Resize8(sample.RawData8!, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize8(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
 			}
 
 			sample.AdjustLoop();
 		}
 	}
 
-	static sbyte[] MonoLR8(sbyte[] data, bool takeLeftChannel)
+	static byte[] MonoLR8(byte[]? oldData, bool takeLeftChannel)
 	{
-		var odata = new sbyte[data.Length / 2];
+		if (oldData == null)
+			return Array.Empty<byte>();
 
-		for (int i = takeLeftChannel ? 0 : 1, j = 0; i + 1 < data.Length; j++, i += 2)
-			odata[j] = data[i];
+		var newData = new byte[oldData.Length / 2];
 
-		return odata;
+		for (int i = takeLeftChannel ? 0 : 1, j = 0; i + 1 < oldData.Length; j++, i += 2)
+			newData[j] = oldData[i];
+
+		return newData;
 	}
 
-	static short[] MonoLR16(short[] data, bool takeLeftChannel)
+	static byte[] MonoLR16(byte[]? oldData, bool takeLeftChannel)
 	{
-		var odata = new short[data.Length / 2];
+		if (oldData == null)
+			return Array.Empty<byte>();
 
-		for (int i = takeLeftChannel ? 0 : 1, j = 0; i + 1 < data.Length; j++, i += 2)
-			odata[j] = data[i];
+		var newData = new byte[oldData.Length / 2];
 
-		return odata;
+		var oldData16 = MemoryMarshal.Cast<byte, short>(oldData);
+		var newData16 = MemoryMarshal.Cast<byte, short>(newData);
+
+		for (int i = takeLeftChannel ? 0 : 1, j = 0; i + 1 < oldData16.Length; j++, i += 2)
+			newData16[j] = oldData16[i];
+
+		return newData;
 	}
 
 	public static void MonoLeft(SongSample sample)
@@ -570,9 +674,9 @@ public static class SampleEditOperations
 			if (sample.Flags.HasFlag(SampleFlags.Stereo))
 			{
 				if (sample.Flags.HasFlag(SampleFlags._16Bit))
-					sample.RawData16 = MonoLR16(sample.RawData16!, takeLeftChannel: true);
+					sample.RawData = MonoLR16(sample.RawData, takeLeftChannel: true);
 				else
-					sample.RawData8 = MonoLR8(sample.RawData8!, takeLeftChannel: true);
+					sample.RawData = MonoLR8(sample.RawData, takeLeftChannel: true);
 
 				sample.Flags &= SampleFlags.Stereo;
 
@@ -589,10 +693,12 @@ public static class SampleEditOperations
 
 			if (sample.Flags.HasFlag(SampleFlags.Stereo))
 			{
+				var buffer = new byte[sample.RawData!.Length];
+
 				if (sample.Flags.HasFlag(SampleFlags._16Bit))
-					sample.RawData16 = MonoLR16(sample.RawData16!, takeLeftChannel: false);
+					sample.RawData = MonoLR16(sample.RawData, takeLeftChannel: false);
 				else
-					sample.RawData8 = MonoLR8(sample.RawData8!, takeLeftChannel: false);
+					sample.RawData = MonoLR8(sample.RawData, takeLeftChannel: false);
 
 				sample.Flags &= SampleFlags.Stereo;
 
@@ -666,37 +772,40 @@ public static class SampleEditOperations
 			// e=0.5: constant power crossfade (for uncorrelated samples), e=1.0: constant volume crossfade (for perfectly correlated samples)
 			double e = 1.0 - law / 200.0;
 
+			var rawData8 = MemoryMarshal.Cast<byte, sbyte>(smp.RawData);
+			var rawData16 = MemoryMarshal.Cast<byte, short>(smp.RawData);
+
 			if (smp.Flags.HasFlag(SampleFlags._16Bit))
 			{
 				CrossFade16(
-					smp.RawData16!.Slice(start, fadeLength),
-					smp.RawData16!.Slice(end, fadeLength),
-					smp.RawData16!.Slice(end, fadeLength),
+					rawData16.Slice(start, fadeLength),
+					rawData16.Slice(end, fadeLength),
+					rawData16.Slice(end, fadeLength),
 					e);
 
 				if (fadeAfterLoop)
 				{
 					CrossFade16(
-						smp.RawData16!.Slice(afterLoopStart, afterLoopLength),
-						smp.RawData16!.Slice(afterLoopEnd, afterLoopLength),
-						smp.RawData16!.Slice(afterLoopEnd, afterLoopLength),
+						rawData16.Slice(afterLoopStart, afterLoopLength),
+						rawData16.Slice(afterLoopEnd, afterLoopLength),
+						rawData16.Slice(afterLoopEnd, afterLoopLength),
 						e);
 				}
 			}
 			else
 			{
 				CrossFade8(
-					smp.RawData8!.Slice(start, fadeLength),
-					smp.RawData8!.Slice(end, fadeLength),
-					smp.RawData8!.Slice(end, fadeLength),
+					rawData8.Slice(start, fadeLength),
+					rawData8.Slice(end, fadeLength),
+					rawData8.Slice(end, fadeLength),
 					e);
 
 				if (fadeAfterLoop)
 				{
 					CrossFade8(
-						smp.RawData8!.Slice(afterLoopStart, afterLoopLength),
-						smp.RawData8!.Slice(afterLoopEnd, afterLoopLength),
-						smp.RawData8!.Slice(afterLoopEnd, afterLoopLength),
+						rawData8.Slice(afterLoopStart, afterLoopLength),
+						rawData8.Slice(afterLoopEnd, afterLoopLength),
+						rawData8.Slice(afterLoopEnd, afterLoopLength),
 						e);
 				}
 			}

@@ -1353,7 +1353,7 @@ public static class SongRenderer
 				}
 			}
 
-			if (chan.CurrentSampleData != null)
+			if (chan.CurrentSampleData.Span != Memory<byte>.Empty.Span)
 			{
 				if (!UpdateSample(csf, ref chan, cn, master_vol))
 					break;

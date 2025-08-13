@@ -453,7 +453,7 @@ public class Program
 			// Check for new audio devices every 5 seconds.
 			if (Status.Now - lastAudioPoll > TimeSpan.FromMilliseconds(5000))
 			{
-				Audio.RefreshDeviceList();
+				AudioBackend.RefreshAudioDeviceList();
 				Status.Flags |= StatusFlags.NeedUpdate;
 				lastAudioPoll = DateTime.UtcNow;
 			}
@@ -521,23 +521,23 @@ public class Program
 
 		MIDIEngine.Stop();
 
-		Audio.Quit();
+		AudioBackend.Current.Quit();
 		Clippy.Quit();
-		Events.Quit();
-		Timer.Quit();
+		EventHub.Quit();
+		// TODO: Timer.Quit();
 
-		OS.SysExit();
+		// TODO: OS.SysExit();
 
 		Environment.Exit(x);
 	}
 
 	static int Main(string[] args)
 	{
-		OS.SysInit();
+		// TODO: OS.SysInit();
 
-		Vis.Init();
+		FFT.Initialize();
 
-		Ver.Init();
+		Version.Initialize();
 
 		s_args = new CommandLineArguments(); /* shouldn't this be like, first? */
 
@@ -643,7 +643,7 @@ public class Program
 		VGAMem.CurrentPalette.Apply();
 		Font.Initialize();
 		MIDIEngine.Start();
-		Audio.Initialize(AudioPlayback.AudioDriver, AudioPlayback.AudioDevice);
+		AudioPlayback.Initialize(AudioPlayback.AudioDriver, AudioPlayback.AudioDevice);
 		AudioPlayback.InitializeModPlug();
 
 		Video.SetMouseCursor(Configuration.Video.MouseCursor);

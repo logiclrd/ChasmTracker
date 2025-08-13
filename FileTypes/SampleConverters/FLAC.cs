@@ -248,8 +248,8 @@ public class FLAC : SampleFileConverter
 
 					bool succeeded =
 						sample.Flags.HasFlag(SampleFlags._16Bit)
-						? encoder.EmitSampleData(sample.Data16.Slice(outputOffset, needed).AsSpan())
-						: encoder.EmitSampleData(sample.Data8.Slice(outputOffset, needed).AsSpan());
+						? encoder.EmitSampleData(sample.Data16.Slice(outputOffset, needed))
+						: encoder.EmitSampleData(sample.Data8.Slice(outputOffset, needed));
 
 					if (!succeeded)
 					{

@@ -2303,7 +2303,7 @@ public class Song
 				if (sample == null)
 					data = null;
 				else
-					data = sample.Flags.HasFlag(SampleFlags._16Bit) ? sample.Data16.Array : sample.Data8.Array;
+					data = sample.Data;
 			}
 			else /* OpenMPT test case emptyslot.it */
 				return;
@@ -2336,10 +2336,10 @@ public class Song
 			switch (p.Instrument?.DuplicateCheckType)
 			{
 				case DuplicateCheckTypes.Note:
-					applyDNA = (SongNote.IsNote(note) && (p.Note == note) && (instrument == p.Instrument));
+					applyDNA = SongNote.IsNote(note) && (p.Note == note) && (instrument == p.Instrument);
 					break;
 				case DuplicateCheckTypes.Sample:
-					applyDNA = ((data != null) && (data == p.CurrentSampleData) && (instrument == p.Instrument));
+					applyDNA = (data.Span == p.CurrentSampleData.Span) && (instrument == p.Instrument);
 					break;
 				case DuplicateCheckTypes.Instrument:
 					applyDNA = (instrument == p.Instrument);
@@ -3285,7 +3285,7 @@ public class Song
 			chan.Volume = pSmp.Volume;
 
 		// inst_changed is used for IT carry-on env option
-		if (pEnv != chan.Instrument || (chan.CurrentSampleData == null))
+		if (pEnv != chan.Instrument || (chan.CurrentSampleData.Span == Memory<byte>.Empty.Span))
 		{
 			instrumentChanged = true;
 			chan.Instrument = pEnv;
@@ -3385,7 +3385,7 @@ public class Song
 
 		bool wasKeyOff = chan.Flags.HasFlag(ChannelFlags.KeyOff);
 
-		if (pSmp == chan.Sample && (chan.CurrentSampleData != null) && (chan.Length != 0))
+		if (pSmp == chan.Sample && (chan.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (chan.Length != 0))
 		{
 			if (portamento && instrumentChanged && (pEnv != null))
 				chan.Flags &= ~(ChannelFlags.KeyOff | ChannelFlags.NoteFade);
@@ -4119,12 +4119,12 @@ public class Song
 
 					if (IsInstrumentMode)
 					{
-						if (instrumentNumber < Instruments.Count && (chan.Instrument != Instruments[instrumentNumber] || (chan.CurrentSampleData == null)))
+						if (instrumentNumber < Instruments.Count && (chan.Instrument != Instruments[instrumentNumber] || (chan.CurrentSampleData.Span == Memory<byte>.Empty.Span)))
 							note = chan.NewNote;
 					}
 					else
 					{
-						if (instrumentNumber < Samples.Count && (chan.Sample != Samples[instrumentNumber] || (chan.CurrentSampleData == null)))
+						if (instrumentNumber < Samples.Count && (chan.Sample != Samples[instrumentNumber] || (chan.CurrentSampleData.Span == Memory<byte>.Empty.Span)))
 							note = chan.NewNote;
 					}
 				}
@@ -5181,8 +5181,7 @@ public class Song
 
 		StopSample(smp);
 
-		smp.RawData8 = null;
-		smp.RawData16 = null;
+		smp.RawData = null;
 		smp.Length = 0;
 		smp.Flags &= ~SampleFlags._16Bit;
 	}
@@ -5388,7 +5387,7 @@ public class Song
 		{
 			ref var v = ref Voices[i];
 
-			if (v.Sample == smp || v.CurrentSampleData == smp.Data)
+			if (v.Sample == smp || v.CurrentSampleData.Span == smp.Data.AsSpan())
 			{
 				v.Note = v.NewNote = 1;
 				v.NewInstrumentNumber = 0;
@@ -5421,7 +5420,7 @@ public class Song
 			{
 				ref var channel = ref Voices[VoiceMix[n]];
 
-				if ((channel.Sample != null) && (channel.CurrentSampleData != null))
+				if ((channel.Sample != null) && (channel.CurrentSampleData.Span != Memory<byte>.Empty.Span))
 				{
 					int s = GetSampleNumber(channel.Sample);
 
@@ -5470,7 +5469,7 @@ public class Song
 			{
 				ref var channel = ref Voices[VoiceMix[n]];
 
-				if ((channel.Sample != null) && (channel.CurrentSampleData != null))
+				if ((channel.Sample != null) && (channel.CurrentSampleData.Span != Memory<byte>.Empty.Span))
 				{
 					int s = Samples.IndexOf(channel.Sample);
 					if (s != sampleNumberChanged) continue;

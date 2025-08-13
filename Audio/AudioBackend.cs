@@ -8,8 +8,6 @@ public abstract class AudioBackend
 {
 	public const int DefaultID = ~0;
 
-	// TODO: audio.h
-
 	public static AudioBackend[] Backends = Array.Empty<AudioBackend>();
 
 	public static AudioDriver[] Drivers = Array.Empty<AudioDriver>();

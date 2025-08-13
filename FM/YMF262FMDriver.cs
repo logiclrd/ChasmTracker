@@ -250,7 +250,7 @@ public class YMF262FMDriver : FMDriver
 
 	byte   nts;                    /* NTS (note select)            */
 
-	OPLType type;                     /* chip type                    */
+	//OPLType type;                     /* chip type                    */
 	uint clock;                   /* master clock  (Hz)           */
 	uint rate;                    /* sampling rate (Hz)           */
 	double freqbase;                /* frequency base               */
@@ -1803,7 +1803,7 @@ public class YMF262FMDriver : FMDriver
 	{
 		if (LockTable() == -1) throw new Exception("LockTable failed");
 
-		this.type  = YMF262;
+		//this.type  = YMF262;
 		this.clock = clock;
 		this.rate  = rate;
 

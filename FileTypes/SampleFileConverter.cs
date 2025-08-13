@@ -1,7 +1,9 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ChasmTracker.FileTypes;
@@ -133,7 +135,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 
 				fp.ReadExactly(buffer);
 
-				Buffer.BlockCopy(buffer, 0, sample.RawData8!, sample.Data8.Offset, sample.Length);
+				MemoryMarshal.Cast<byte, sbyte>(buffer).CopyTo(sample.Data8);
 
 				for (int j = 0; j < sample.Length; j++)
 					sample.Data8[j] = unchecked((sbyte)(sample.Data8[j] * 2).Clamp(-128, 127));
@@ -177,7 +179,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 						iAdd = buffer[j];
 				}
 
-				Buffer.BlockCopy(buffer, 0, sample.RawData8!, sample.Data8.Offset, sample.Length);
+				MemoryMarshal.Cast<byte, sbyte>(buffer).CopyTo(sample.Data8);
 
 				sampleBytes = sample.Length;
 
@@ -275,30 +277,31 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				if (len * 2 > memSize)
 					break;
 
+				var data8 = sample.Data8;
+				var data16 = sample.Data16;
+
 				// read
 				var rawData = new byte[len * 2];
 
 				fp.ReadExactly(rawData);
 
 				// process
-				Buffer.BlockCopy(rawData, 0, sample.RawData16!, sample.Data16.Offset, rawData.Length);
-
-				var data = sample.Data16;
+				MemoryMarshal.Cast<byte, sbyte>(rawData).CopyTo(data8);
 
 				if ((flags & SampleFormat.EndiannessMask) == SampleFormat.BigEndian)
 				{
-					for (int i = 0; i < data.Count; i++)
-						data[i] = ByteSwap.Swap(data[i]);
+					for (int i = 0; i < data16.Length; i++)
+						data16[i] = ByteSwap.Swap(data16[i]);
 				}
 
 				bool delta = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMDeltaEncoded;
 
 				for (int j = 0; j < len; j++)
 				{
-					data[j] = unchecked((short)(data[j] + iAdd));
+					data16[j] = unchecked((short)(data16[j] + iAdd));
 
 					if (delta)
-						iAdd = data[j];
+						iAdd = data16[j];
 				}
 
 				sampleBytes = len * 2;
@@ -326,19 +329,22 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				if (len * 2 > memSize)
 					break;
 
+				var data8 = sample.Data8;
+				var data16 = sample.Data16;
+
 				// read
 				var rawData = new byte[len * 2];
 
 				fp.ReadExactly(rawData);
 
 				// process
-				var data = sample.Data16;
-
 				bool bswap = (flags & SampleFormat.EndiannessMask) == SampleFormat.BigEndian;
 				bool alreadyInterleaved = (flags & SampleFormat.ChannelMask) == SampleFormat.StereoInterleaved;
 
+				var rawDataBytes = MemoryMarshal.Cast<byte, sbyte>(rawData);
+
 				if (alreadyInterleaved)
-					Buffer.BlockCopy(rawData, 0, data.Array!, 2 * data.Offset, rawData.Length);
+					rawDataBytes.CopyTo(data8);
 				else
 				{
 					for (int i = 0; i < sample.Length; i++)
@@ -347,10 +353,10 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 							int o = c * sample.Length + i;
 							int p = i * 2 + c;
 
-							Buffer.BlockCopy(rawData, o + o, data.Array!, 2 * data.Offset + p, 2);
+							rawDataBytes.Slice(o + o, 2).CopyTo(data8.Slice(p));
 
 							if (bswap)
-								data[p] = ByteSwap.Swap(data[p]);
+								sample.Data16[p] = ByteSwap.Swap(data16[p]);
 						}
 				}
 
@@ -364,10 +370,10 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 
 					for (int j = c; j < len; j += 2)
 					{
-						data[j] = unchecked((short)(data[j] + iAdd));
+						data16[j] = unchecked((short)(data16[j] + iAdd));
 
 						if (delta)
-							iAdd = data[j];
+							iAdd = data16[j];
 					}
 				}
 
@@ -696,9 +702,9 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 						(data[j], data[j + 1]) = (data[j + 1], data[j]);
 				}
 
-				Buffer.BlockCopy(data, 0, sample.RawData16!, sample.Data16.Offset, data.Length);
+				MemoryMarshal.Cast<sbyte, byte>(data).CopyTo(sample.RawData);
 
-				sampleBytes = sample.Data16.Count * 2;
+				sampleBytes = sample.Data16.Length * 2;
 
 				break;
 			}
@@ -750,7 +756,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 					data[o++] = smpVal;
 				}
 
-				sampleBytes = data.Count;
+				sampleBytes = data.Length;
 
 				break;
 			}

@@ -12,7 +12,7 @@ public struct SongVoice
 	public SongVoice() { }
 
 	// First 32-bytes: Most used mixing information: don't change it
-	public Array? CurrentSampleData;
+	public Memory<byte> CurrentSampleData;
 	public int Position; // sample position, fixed-point -- integer part
 	public int PositionFrac; // fractional part
 	public int Increment; // 16.16 fixed point, how much to add to position per sample-frame of output
