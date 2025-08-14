@@ -2431,18 +2431,23 @@ public class Song
 
 	void EffectNoteCut(int nchan, bool clearNote)
 	{
+		/* FIXME: some weirdness in IT makes it so that SCx is not processed when there
+		 * a note delay, EXCEPT on the second loop. our counter is backwards, so we'll
+		 * have to save the delay parameter and subtract it to find out if we're on the
+		 * second loop. */
 		ref var chan = ref Voices[nchan];
 
+		/* TODO: Does this also apply to note-column note cuts? */
 		if (SongNote.IsNote(chan.RowNote) && (chan.RowVolumeEffect == VolumeEffects.TonePortamento))
 			return;
 
 		// stop the current note:
 		chan.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
 		//if (chan->ptr_instrument) chan->volume = 0;
-		chan.Frequency = 0;
+		//chan.Frequency = 0;
 		chan.Increment = 0;
 		chan.FadeOutVolume = 0;
-		//chan->length = 0;
+		//chan.Length = 0;
 
 		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 		{
