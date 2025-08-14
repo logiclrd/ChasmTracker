@@ -1520,6 +1520,8 @@ public class SampleListPage : Page
 		int newLen = (int)((long)sample.Length * newC5Speed / sample.C5Speed);
 
 		SampleEditOperations.Resize(sample, newLen, true);
+
+		sample.C5Speed = newC5Speed;
 	}
 
 	void DoResampleSample(int sampleNumber, int newC5Speed)
@@ -1529,6 +1531,8 @@ public class SampleListPage : Page
 		int newLen = (int)((long)sample.Length * newC5Speed / sample.C5Speed);
 
 		SampleEditOperations.Resize(sample, newLen, false);
+
+		sample.C5Speed = newC5Speed;
 	}
 
 	void ShowResampleSampleDialog(bool antiAlias)
