@@ -23,13 +23,13 @@ public class HelpPage : Page
 
 		foreach (var resourceName in typeof(HelpPage).Assembly.GetManifestResourceNames())
 		{
-			const string Prefix = "ChasmTracker.HelpText.";
+			const string Prefix = "ChasmTracker.Help.Text.";
 
 			if (resourceName.StartsWith(Prefix))
 			{
 				string pageName = resourceName.Substring(Prefix.Length);
 
-				if (Enum.TryParse<HelpTexts>(pageName, out var index))
+				if (Enum.TryParse<HelpTexts>(pageName.Replace("-", ""), ignoreCase: true, out var index))
 				{
 					using (var stream = typeof(HelpPage).Assembly.GetManifestResourceStream(resourceName))
 					using (var reader = new StreamReader(stream!))

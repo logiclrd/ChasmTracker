@@ -342,9 +342,21 @@ public class Palettes
 		});
 
 	public static readonly Palette[] Presets =
-		typeof(Palettes).GetProperties(BindingFlags.Public | BindingFlags.Static)
-		.Where(property => typeof(Palette).IsAssignableFrom(property.PropertyType))
-		.Select(property => (Palette)property.GetValue(null)!)
-		.Select((palette, index) => palette.SetIndex(index))
-		.ToArray();
+		[
+			UserDefined,
+			LightBlue,
+			Camouflage,
+			Gold,
+			MidnightTracking,
+			PineColours,
+			Soundtracker,
+			Volcanic,
+			Industrial,
+			PurpleMotion,
+			WhyColours,
+			Kawaii,
+			GoldVintage,
+			FX2_0,
+			Atlantic,
+		];
 }

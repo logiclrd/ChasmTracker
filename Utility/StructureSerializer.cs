@@ -23,7 +23,7 @@ public static class StructureSerializer
 		if (dataLength < Marshal.SizeOf<T>())
 			return default;
 
-		fixed (byte* dataPointer = &data[0])
+		fixed (byte *dataPointer = &data[0])
 			return Marshal.PtrToStructure<T>((IntPtr)dataPointer)!;
 	}
 

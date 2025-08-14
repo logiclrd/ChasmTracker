@@ -39,7 +39,7 @@ public abstract class ConfigurationSection
 	{
 		var pristine = CreatePristine();
 
-		foreach (var field in GetType().GetFields(BindingFlags.Instance | BindingFlags.Public))
+		foreach (var field in GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
 			field.SetValue(this, field.GetValue(pristine));
 	}
 

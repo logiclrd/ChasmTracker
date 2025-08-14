@@ -320,7 +320,7 @@ public class FLACDecoder : IDisposable
 				if (parsedMetadata.Length < 4)
 					break;
 
-				var appFp = new UnmanagedMemoryStream((byte*)application.Data, parsedMetadata.Length - 4);
+				var appFp = new UnmanagedMemoryStream((byte *)application.Data, parsedMetadata.Length - 4);
 
 				int chunkID, chunkLen;
 

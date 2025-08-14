@@ -29,8 +29,6 @@ public class GeneralConfiguration : ConfigurationSection
 	public bool AltGrIsAlt = true;
 	public NumLockHandling NumlockSetting = NumLockHandling.Guess;
 
-	public bool LazyRedraw = false;
-
 	public bool MIDILikeTracker = false;
 
 	public int Palette = 2;

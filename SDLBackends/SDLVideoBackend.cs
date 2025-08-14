@@ -500,11 +500,11 @@ public class SDLVideoBackend : VideoBackend
 		Array.Clear(mouseLine);
 		Array.Clear(mouseLineMask);
 
-		if (Video.Mouse.Visible != MouseCursorState.Emulated
+		if (Video.Mouse.Visible != MouseCursorMode.Emulated
 		 || !IsFocused
 		 || (mouseY >= cursor.Centre.Y && y < mouseY - cursor.Centre.Y)
 		 || y < cursor.Centre.Y
-		 || y >= mouseY + cursor.Size.Height + cursor.Centre.Y)
+		 || y >= mouseY + cursor.Size.Height - cursor.Centre.Y)
 			return;
 
 		int scenter = (cursor.Centre.X / 8) + (cursor.Centre.X % 8 != 0 ? 1 : 0);
@@ -622,7 +622,7 @@ public class SDLVideoBackend : VideoBackend
 	const int FixedMask = (1 << FixedBits) - 1;
 	const int FixedScale = 1 << FixedBits;
 
-	public unsafe void BlitLN(int bpp, byte* pixels, int pitch, MapRGBSpec mapRGB, IntPtr mapRGBData, int width, int height)
+	public unsafe void BlitLN(int bpp, byte *pixels, int pitch, MapRGBSpec mapRGB, IntPtr mapRGBData, int width, int height)
 	{
 		var mouse = GetMouseCoordinates();
 
@@ -634,9 +634,9 @@ public class SDLVideoBackend : VideoBackend
 		cspi = 0;
 		espi = Constants.NativeScreenWidth;
 
-		fixed (uint* csp = &_cv32BackingBuffer[0])
+		fixed (uint *csp = &_cv32BackingBuffer[0])
 		{
-			uint* esp = csp + Constants.NativeScreenWidth;
+			uint *esp = csp + Constants.NativeScreenWidth;
 
 			int pad = pitch - width * bpp;
 
@@ -657,7 +657,7 @@ public class SDLVideoBackend : VideoBackend
 					if (inY == lastY + 1)
 					{
 						/* move up one line */
-						fixed (uint* csptr = &_cv32BackingBuffer[cspi])
+						fixed (uint *csptr = &_cv32BackingBuffer[cspi])
 							VGAMem.Scan32(inY + 1, csptr, ref Video.TC_BGR32, _mouseLine, _mouseLineMask);
 
 						dpi = espi;
@@ -669,7 +669,7 @@ public class SDLVideoBackend : VideoBackend
 						cspi = 0;
 						espi = Constants.NativeScreenWidth;
 
-						fixed (uint* ptr = &_cv32BackingBuffer[0])
+						fixed (uint *ptr = &_cv32BackingBuffer[0])
 						{
 							VGAMem.Scan32(inY, &ptr[cspi], ref Video.TC_BGR32, _mouseLine, _mouseLineMask);
 							VGAMem.Scan32(inY + 1, &ptr[espi], ref Video.TC_BGR32, _mouseLine, _mouseLineMask);
@@ -720,7 +720,7 @@ public class SDLVideoBackend : VideoBackend
 						case 2: *(ushort*)pixels = unchecked((ushort)c); break;
 						case 3:
 							// convert 32-bit to 24-bit
-							byte* cp = (byte*)&c;
+							byte *cp = (byte *)&c;
 
 							*pixels++ = cp[0];
 							*pixels++ = cp[1];
@@ -742,17 +742,17 @@ public class SDLVideoBackend : VideoBackend
 	/* Fast nearest neighbor blitter */
 	int[] _u = new int[Constants.NativeScreenWidth];
 
-	public unsafe void BlitNN(int bpp, byte* pixels, int pitch, ref ChannelData tpal, int width, int height)
+	public unsafe void BlitNN(int bpp, byte *pixels, int pitch, ref ChannelData tpal, int width, int height)
 	{
 		// at most 32-bits...
 		var pixelsU = stackalloc int[Constants.NativeScreenWidth];
 
-		byte* uc = (byte*)pixelsU;
-		ushort* us = (ushort*)pixelsU;
-		uint* ui = (uint*)pixelsU;
+		byte *uc = (byte *)pixelsU;
+		ushort *us = (ushort *)pixelsU;
+		uint *ui = (uint *)pixelsU;
 
 		/* NOTE: we might be able to get away with 24.8 fixed point,
-				* and reuse the stuff from the code above */
+		 * and reuse the stuff from the code above */
 		ulong scaleY = (((ulong)Constants.NativeScreenHeight << 32) - 1) / (uint)height;
 		ulong scaleX = (((ulong)Constants.NativeScreenWidth << 32) - 1) / (uint)width;
 
@@ -761,7 +761,7 @@ public class SDLVideoBackend : VideoBackend
 		int mouseLineX = mouse.X / 8;
 		int mouseLineV = mouse.X % 8;
 
-		int pad = (pitch - (width * bpp));
+		int pad = pitch - (width * bpp);
 
 		int y;
 		ulong lastScaledYLong = ulong.MaxValue;
@@ -837,7 +837,7 @@ public class SDLVideoBackend : VideoBackend
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
 
-		byte* pixels = (byte*)pixelsPtr;
+		byte *pixels = (byte *)pixelsPtr;
 
 		for (int y = 0; y < Constants.NativeScreenHeight; y++)
 		{
@@ -859,7 +859,7 @@ public class SDLVideoBackend : VideoBackend
 		int[] mouseLine = new int[80];
 		int[] mouseLineMask = new int[80];
 
-		fixed (byte* cv8Backing = &cv8BackingBuffer[0])
+		fixed (byte *cv8Backing = &cv8BackingBuffer[0])
 			for (int y = 0; y < Constants.NativeScreenHeight; y += 2)
 			{
 				MakeMouseLine(mouseLineX, mouseLineV, y, mouseLine, mouseLineMask, mouse.Y);
@@ -873,7 +873,7 @@ public class SDLVideoBackend : VideoBackend
 			}
 	}
 
-	public unsafe void Blit11(int bpp, byte* pixels, int pitch, ref ChannelData tpal)
+	public unsafe void Blit11(int bpp, byte *pixels, int pitch, ref ChannelData tpal)
 	{
 		var cv32Backing = stackalloc uint[Constants.NativeScreenWidth];
 
@@ -908,7 +908,7 @@ public class SDLVideoBackend : VideoBackend
 					}
 					break;
 				case 4:
-					VGAMem.Scan32(y, (uint*)pixels, ref tpal, mouseLine, mouseLineMask);
+					VGAMem.Scan32(y, (uint *)pixels, ref tpal, mouseLine, mouseLineMask);
 					break;
 			}
 
@@ -1255,7 +1255,7 @@ public class SDLVideoBackend : VideoBackend
 						BlitTV(pixels, pitch, ref _palU);
 						break;
 					default:
-						Blit11(_bpp, (byte*)pixels, pitch, ref _pal);
+						Blit11(_bpp, (byte *)pixels, pitch, ref _pal);
 						break;
 				}
 
@@ -1369,10 +1369,10 @@ public class SDLVideoBackend : VideoBackend
 	{
 		var vis = Video.Mouse.Visible;
 
-		ShowCursor(vis == MouseCursorState.System);
+		ShowCursor(vis == MouseCursorMode.System);
 
 		// Totally turn off mouse event sending when the mouse is disabled
-		bool evstate = !(vis == MouseCursorState.Disabled);
+		bool evstate = !(vis == MouseCursorMode.Disabled);
 
 		if (evstate != SDL.EventEnabled((uint)SDL.EventType.MouseMotion))
 		{

@@ -1028,6 +1028,7 @@ public static class AudioPlayback
 			if (openState.Successful)
 			{
 				s_wasInit = true;
+				AudioBackend.Current = CurrentAudioDevice?.Backend ?? default!;
 				AudioBackend.RefreshAudioDeviceList();
 				succeeded = true;
 			}
@@ -1042,6 +1043,8 @@ public static class AudioPlayback
 
 				s_driverName = null;
 				Backend = backendRestore;
+
+				AudioBackend.Current = backendRestore;
 			}
 		}
 	}
@@ -1133,7 +1136,10 @@ public static class AudioPlayback
 					}
 
 					if (openState)
+					{
+						success = true;
 						break;
+					}
 				}
 			}
 

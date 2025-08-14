@@ -99,7 +99,7 @@ public static class AudioSettings
 		if ((config.Index < 0) || (config.Index >= EQBands.Length))
 			return;
 
-		var band = EQBands[config.Index];
+		var band = (EQBands[config.Index] ??= new EQBand());
 
 		band.Frequency = config.Frequency;
 		band.Gain = config.Gain;

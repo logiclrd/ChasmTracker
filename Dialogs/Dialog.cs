@@ -5,7 +5,6 @@ using System.Linq;
 
 namespace ChasmTracker.Dialogs;
 
-using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Menus;
 using ChasmTracker.Pages;
@@ -48,6 +47,8 @@ public class Dialog
 		where T : Dialog
 	{
 		s_activeDialogs.Push(dialog);
+
+		Page.ActiveWidgets = dialog.Widgets;
 
 		return dialog;
 	}
@@ -411,6 +412,9 @@ public class Dialog
 		WidgetNext.Initialize(Widgets);
 
 		SetInitialFocus();
+
+		Status.DialogType = DialogTypes.Custom;
+		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	protected virtual void Initialize() { }
