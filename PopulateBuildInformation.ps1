@@ -1,7 +1,7 @@
 $timestamp = "built $([System.DateTime]::Now.ToString("yyyy-MM-dd HH:mm:ss zzz"))"
-$commit = $(. git log --pretty=format:'%H' -n 1 2> /dev/null)
+$commit = $(. git log --pretty=format:'%H' -n 1 2> $null)
 
-. git status --porcelain=v1 2> /dev/null | grep -q .
+. git status --porcelain=v1 2> $null | grep -q .
 
 $pristine = ($LASTEXITCODE -ne 0)
 
