@@ -39,9 +39,9 @@ public class AmplifyDialog : Dialog
 
 		thumbBarPercent.Value = percent;
 
-		Widgets.Add(thumbBarPercent);
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(thumbBarPercent);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 	}
 
 	public override void DrawConst()

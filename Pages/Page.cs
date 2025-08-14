@@ -21,105 +21,17 @@ using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public abstract class Page
+public abstract class Page : WidgetContext
 {
 	public readonly PageNumbers PageNumber;
 	public readonly string Title;
 	public readonly HelpTexts HelpText;
-	public Shared<int> SelectedWidgetIndex => _selectedWidgetIndex;
 
-	Shared<int> _selectedWidgetIndex = new Shared<int>();
+	public static WidgetContext? ActiveWidgetContext;
 
-	protected void LinkSelectedWidgetIndex(Shared<int> commonSelectedWidgetIndex)
-	{
-		_selectedWidgetIndex = commonSelectedWidgetIndex;
-	}
-
-	public static List<Widget>? ActiveWidgets;
-	public static Shared<int>? SelectedActiveWidgetIndex;
-
-	public Widget? SelectedWidget
-	{
-		get
-		{
-			if ((SelectedWidgetIndex < 0) || (SelectedWidgetIndex >= Widgets.Count))
-				return null;
-
-			return Widgets[SelectedWidgetIndex];
-		}
-	}
-
-	public static Widget? SelectedActiveWidget
-	{
-		get
-		{
-			if ((ActiveWidgets == null) || (SelectedActiveWidgetIndex == null))
-				return null;
-
-			if ((SelectedActiveWidgetIndex < 0) || (SelectedActiveWidgetIndex >= ActiveWidgets.Count))
-				return null;
-
-			return ActiveWidgets[SelectedActiveWidgetIndex];
-		}
-	}
+	public static Widget? SelectedActiveWidget => ActiveWidgetContext?.SelectedWidget;
 
 	public static MiniPopState MiniPopActive;
-
-	public static void ChangeFocusTo(int newWidgetIndex)
-	{
-		if ((ActiveWidgets == null) || (SelectedActiveWidgetIndex == null))
-			return;
-
-		if ((newWidgetIndex == SelectedActiveWidgetIndex)
-		 || (newWidgetIndex < 0)
-		 || (newWidgetIndex >= ActiveWidgets.Count))
-			return;
-
-		if (SelectedActiveWidget != null)
-			SelectedActiveWidget.IsDepressed = false;
-
-		SelectedActiveWidgetIndex.Value = newWidgetIndex;
-
-		if (SelectedActiveWidget != null)
-		{
-			SelectedActiveWidget.IsDepressed = false;
-
-			if (SelectedActiveWidget is TextEntryWidget textEntry)
-				textEntry.CursorPosition = textEntry.Text.Length;
-		}
-
-		Status.Flags |= StatusFlags.NeedUpdate;
-	}
-
-	public static void ChangeFocusTo(Widget? newWidget)
-	{
-		if (newWidget != null)
-		{
-			if (ActiveWidgets == null)
-				return;
-
-			ChangeFocusTo(ActiveWidgets.IndexOf(newWidget));
-		}
-		else
-			ChangeFocusTo(-1);
-	}
-
-	public static bool ChangeFocusTo(Point pt)
-	{
-		if (ActiveWidgets == null)
-			return false;
-
-		for (int i = 0; i < ActiveWidgets.Count; i++)
-		{
-			if (ActiveWidgets[i].ContainsPoint(pt))
-			{
-				ChangeFocusTo(i);
-				return true;
-			}
-		}
-
-		return false;
-	}
 
 	protected Page(PageNumbers pageNumber, string title, HelpTexts helpText)
 	{
@@ -145,8 +57,9 @@ public abstract class Page
 
 		newPage.SynchronizeWith(Status.CurrentPage);
 
-		ActiveWidgets = newPage.Widgets;
-		SelectedActiveWidgetIndex = newPage.SelectedWidgetIndex;
+		ActiveWidgetContext = newPage;
+
+		ActiveWidgetContext.TakeOwnershipOfSharedWidgets();
 
 		Status.CurrentPageNumber = newPageNumber;
 		Status.CurrentPage.SetPage();
@@ -764,8 +677,6 @@ public abstract class Page
 
 	/* called by the clipboard manager */
 	public virtual bool ClipboardPaste(ClipboardPasteEvent cptr) { return false; }
-
-	public readonly List<Widget> Widgets = new List<Widget>();
 
 	/* HelpTexts.Global if no page-specific help */
 	public HelpTexts HelpIndex;

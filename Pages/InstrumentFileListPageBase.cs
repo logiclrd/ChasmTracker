@@ -52,7 +52,7 @@ public abstract class InstrumentFileListPageBase : Page
 		otherFileList.OtherRedraw += otherFileList_Redraw;
 		otherFileList.OtherAcceptsText = true;
 
-		Widgets.Add(otherFileList);
+		AddWidget(otherFileList);
 	}
 
 	public override bool? HandleKey(KeyEvent k)
@@ -386,7 +386,7 @@ public abstract class InstrumentFileListPageBase : Page
 
 			int fg, bg;
 
-			if (n == _flist.SelectedIndex && (SelectedActiveWidgetIndex ?? SelectedWidgetIndex) == 0)
+			if (n == _flist.SelectedIndex && (ActiveWidgetContext?.SelectedWidgetIndex ?? SelectedWidgetIndex) == 0)
 			{
 				fg = 0;
 				bg = 3;

@@ -25,7 +25,7 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 		otherInfo.OtherHandleKey += otherInfo_HandleKey;
 		otherInfo.OtherRedraw += otherInfo_Redraw;
 
-		Widgets.Add(otherInfo);
+		AddWidget(otherInfo);
 
 		InitializeWindows(out WindowTypes, out WindowTypesByID);
 

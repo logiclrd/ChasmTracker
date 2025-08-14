@@ -30,9 +30,9 @@ public class StereoConversionDialog : Dialog
 		buttonBoth.Clicked += () => SelectionMade?.Invoke(StereoConversionSelection.Both);
 		buttonRight.Clicked += () => SelectionMade?.Invoke(StereoConversionSelection.Right);
 
-		Widgets.Add(buttonLeft);
-		Widgets.Add(buttonBoth);
-		Widgets.Add(buttonRight);
+		AddWidget(buttonLeft);
+		AddWidget(buttonBoth);
+		AddWidget(buttonRight);
 
 		SelectedWidgetIndex.Value = 1;
 	}

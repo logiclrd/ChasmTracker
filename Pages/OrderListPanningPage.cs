@@ -21,7 +21,7 @@ public class OrderListPanningPage : OrderListPage
 			panBarChannelPanning[n].Changed += UpdateValuesInSong;
 		}
 
-		Widgets.AddRange(panBarChannelPanning);
+		AddWidgets(panBarChannelPanning);
 
 		LinkSelectedWidgetIndex(s_commonSelectedWidgetIndex);
 	}

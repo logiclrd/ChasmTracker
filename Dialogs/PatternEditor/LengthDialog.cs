@@ -44,10 +44,10 @@ public class LengthDialog : Dialog
 
 		_currentPattern = currentPattern;
 
-		Widgets.Add(thumbBarPatternLength);
-		Widgets.Add(thumbBarStartPattern);
-		Widgets.Add(thumbBarEndPattern);
-		Widgets.Add(buttonOK);
+		AddWidget(thumbBarPatternLength);
+		AddWidget(thumbBarStartPattern);
+		AddWidget(thumbBarEndPattern);
+		AddWidget(buttonOK);
 
 		ActionYes = Close;
 	}

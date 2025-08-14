@@ -115,14 +115,14 @@ public class PaletteEditorPage : Page
 
 		for (int i = 0; i < 16; i++)
 		{
-			Widgets.Add(thumbBarRed[i]);
-			Widgets.Add(thumbBarGreen[i]);
-			Widgets.Add(thumbBarBlue[i]);
+			AddWidget(thumbBarRed[i]);
+			AddWidget(thumbBarGreen[i]);
+			AddWidget(thumbBarBlue[i]);
 		}
 
-		Widgets.Add(otherPaletteList);
-		Widgets.Add(buttonCopy);
-		Widgets.Add(buttonPaste);
+		AddWidget(otherPaletteList);
+		AddWidget(buttonCopy);
+		AddWidget(buttonPaste);
 	}
 
 	/* --------------------------------------------------------------------- */

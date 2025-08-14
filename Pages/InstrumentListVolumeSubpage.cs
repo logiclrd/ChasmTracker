@@ -27,9 +27,9 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 		thumbBarFadeOut.Changed += UpdateValues;
 		thumbBarVolumeSwing.Changed += UpdateValues;
 
-		Widgets.Add(thumbBarGlobalVolume);
-		Widgets.Add(thumbBarFadeOut);
-		Widgets.Add(thumbBarVolumeSwing);
+		AddWidget(thumbBarGlobalVolume);
+		AddWidget(thumbBarFadeOut);
+		AddWidget(thumbBarVolumeSwing);
 	}
 
 	public void ResetCurrentNode(SongInstrument ins)

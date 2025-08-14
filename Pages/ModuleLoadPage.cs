@@ -37,6 +37,11 @@ public class ModuleLoadPage : ModuleLoadSavePageBase
 
 		textEntryDirectoryName = new TextEntryWidget(new Point(13, 47), 64, "", Constants.MaxPathLength);
 		textEntryDirectoryName.Activated += DirectoryNameEntered;
+
+		AddWidget(otherFileList);
+		AddWidget(otherDirectoryList);
+		AddWidget(textEntryFileName);
+		AddWidget(textEntryDirectoryName);
 	}
 
 	protected override void HandleFileEntered(string ptr)

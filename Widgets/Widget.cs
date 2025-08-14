@@ -9,6 +9,8 @@ using ChasmTracker.Utility;
 
 public abstract class Widget
 {
+	public WidgetContext? WidgetContext;
+	public bool IsShared;
 	public WidgetType Type;
 
 	/* for redrawing */
@@ -284,7 +286,7 @@ public abstract class Widget
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return false;
 
-				Page.ChangeFocusTo(Next.Up);
+				WidgetContext?.ChangeFocusTo(Next.Up);
 				return true;
 			}
 			case KeySym.Down:
@@ -292,7 +294,7 @@ public abstract class Widget
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return false;
 
-				Page.ChangeFocusTo(Next.Down);
+				WidgetContext?.ChangeFocusTo(Next.Down);
 				return true;
 			}
 			case KeySym.Tab:
@@ -301,9 +303,9 @@ public abstract class Widget
 					return false;
 
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-					Page.ChangeFocusTo(Next.BackTab);
+					WidgetContext?.ChangeFocusTo(Next.BackTab);
 				else
-					Page.ChangeFocusTo(Next.Tab);
+					WidgetContext?.ChangeFocusTo(Next.Tab);
 
 				return true;
 			}
@@ -312,7 +314,7 @@ public abstract class Widget
 				if (HandleArrow(k) is var arrowOverrideResult)
 					return arrowOverrideResult;
 
-				Page.ChangeFocusTo(Next.Left);
+				WidgetContext?.ChangeFocusTo(Next.Left);
 
 				break;
 			}
@@ -321,7 +323,7 @@ public abstract class Widget
 				if (HandleArrow(k) is var arrowOverrideResult)
 					return arrowOverrideResult;
 
-				Page.ChangeFocusTo(Next.Right);
+				WidgetContext?.ChangeFocusTo(Next.Right);
 
 				break;
 			}

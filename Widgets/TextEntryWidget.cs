@@ -2,7 +2,6 @@ using System;
 
 namespace ChasmTracker.Widgets;
 
-using System.ComponentModel;
 using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;

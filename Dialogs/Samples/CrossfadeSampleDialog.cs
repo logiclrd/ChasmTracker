@@ -62,12 +62,12 @@ public class CrossfadeSampleDialog : Dialog
 		buttonCancel.Clicked += DialogButtonCancel;
 		buttonOK.Clicked += DialogButtonYes;
 
-		Widgets.Add(toggleButtonLoop);
-		Widgets.Add(toggleButtonSustain);
-		Widgets.Add(numberEntrySamplesToFade);
-		Widgets.Add(thumbBarPriority);
-		Widgets.Add(buttonCancel);
-		Widgets.Add(buttonOK);
+		AddWidget(toggleButtonLoop);
+		AddWidget(toggleButtonSustain);
+		AddWidget(numberEntrySamplesToFade);
+		AddWidget(thumbBarPriority);
+		AddWidget(buttonCancel);
+		AddWidget(buttonOK);
 	}
 
 	public override void DrawConst()

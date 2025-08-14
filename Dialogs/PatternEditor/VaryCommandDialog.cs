@@ -25,9 +25,9 @@ public class VaryCommandDialog : Dialog
 		buttonCancel = new ButtonWidget(new Point(41, 33), 6, "Cancel", 1);
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(thumbBarVaryDepth);
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(thumbBarVaryDepth);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 
 		ActionYes = OK;
 	}

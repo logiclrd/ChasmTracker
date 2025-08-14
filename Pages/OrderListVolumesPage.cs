@@ -21,7 +21,7 @@ public class OrderListVolumesPage : OrderListPage
 			thumbBarChannelVolume[n].Changed += UpdateValuesInSong;
 		}
 
-		Widgets.AddRange(thumbBarChannelVolume);
+		AddWidgets(thumbBarChannelVolume);
 
 		LinkSelectedWidgetIndex(s_commonSelectedWidgetIndex);
 	}
@@ -39,7 +39,7 @@ public class OrderListVolumesPage : OrderListPage
 
 			if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
 			{
-				if (SelectedActiveWidgetIndex?.Value == n)
+				if (ActiveWidgetContext?.SelectedWidgetIndex?.Value == n)
 					fg = 3;
 			}
 
@@ -51,7 +51,7 @@ public class OrderListVolumesPage : OrderListPage
 
 			if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
 			{
-				if (SelectedActiveWidgetIndex?.Value == n + 32)
+				if (ActiveWidgetContext?.SelectedWidgetIndex?.Value == n + 32)
 					fg = 3;
 			}
 

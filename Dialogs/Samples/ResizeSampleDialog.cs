@@ -27,8 +27,8 @@ public class ResizeSampleDialog : Dialog
 		buttonCancel = new ButtonWidget(new Point(36, 30), 6, "Cancel", 1);
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(numberEntryNewLength);
-		Widgets.Add(buttonCancel);
+		AddWidget(numberEntryNewLength);
+		AddWidget(buttonCancel);
 	}
 
 	public override void DrawConst()

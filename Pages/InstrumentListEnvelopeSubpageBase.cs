@@ -53,15 +53,15 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 		numberEntryEnvelopeSustainLoopBegin.Changed += UpdateValues;
 		numberEntryEnvelopeSustainLoopEnd.Changed += UpdateValues;
 
-		Widgets.Add(otherEnvelope);
-		Widgets.Add(widgetEnvelopeEnabled);
-		Widgets.Add(toggleEnvelopeCarry);
-		Widgets.Add(toggleEnvelopeLoop);
-		Widgets.Add(numberEntryEnvelopeLoopBegin);
-		Widgets.Add(numberEntryEnvelopeLoopEnd);
-		Widgets.Add(toggleEnvelopeSustainLoop);
-		Widgets.Add(numberEntryEnvelopeSustainLoopBegin);
-		Widgets.Add(numberEntryEnvelopeSustainLoopEnd);
+		AddWidget(otherEnvelope);
+		AddWidget(widgetEnvelopeEnabled);
+		AddWidget(toggleEnvelopeCarry);
+		AddWidget(toggleEnvelopeLoop);
+		AddWidget(numberEntryEnvelopeLoopBegin);
+		AddWidget(numberEntryEnvelopeLoopEnd);
+		AddWidget(toggleEnvelopeSustainLoop);
+		AddWidget(numberEntryEnvelopeSustainLoopBegin);
+		AddWidget(numberEntryEnvelopeSustainLoopEnd);
 	}
 
 	// Pitch has a fancy tristate

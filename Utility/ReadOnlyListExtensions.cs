@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace ChasmTracker.Utility;
 
-public static class ListExtensions
+public static class ReadOnlyListExtensions
 {
-	public static T? FindPreviousWithLoop<T>(this IList<T> list, int startIndex, Predicate<T> predicate)
+	public static T? FindPreviousWithLoop<T>(this IReadOnlyList<T> list, int startIndex, Predicate<T> predicate)
 	{
 		for (int i = startIndex - 1; i >= 0; i--)
 			if (predicate(list[i]))
@@ -18,7 +18,7 @@ public static class ListExtensions
 		return default;
 	}
 
-	public static T? FindNextWithLoop<T>(this IList<T> list, int startIndex, Predicate<T> predicate)
+	public static T? FindNextWithLoop<T>(this IReadOnlyList<T> list, int startIndex, Predicate<T> predicate)
 	{
 		for (int i = startIndex + 1; i < list.Count; i++)
 			if (predicate(list[i]))
@@ -29,5 +29,11 @@ public static class ListExtensions
 				return list[i];
 
 		return default;
+	}
+
+	public static void ForEach<T>(this IReadOnlyList<T> list, Action<T> action)
+	{
+		for (int i=0; i < list.Count; i++)
+			action(list[i]);
 	}
 }

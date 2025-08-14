@@ -51,7 +51,7 @@ public class NumberPromptDialog : Dialog
 		textEntryInput.Activated += textEntryInput_Activated;
 		textEntryInput.CursorPosition = _initialText.Length;
 
-		Widgets.Add(textEntryInput);
+		AddWidget(textEntryInput);
 	}
 
 	public override void DrawConst()

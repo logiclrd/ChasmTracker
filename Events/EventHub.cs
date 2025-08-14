@@ -394,11 +394,7 @@ public static class EventHub
 					/* why is this checking for ibook_helper? */
 					if (MacOSX.FnKeyModeAtStartup != MacOSX.FnKeyMode.Check)
 					{
-						if ((Page.ActiveWidgets != null)
-						 && (Page.SelectedActiveWidgetIndex != null)
-						 && (Page.SelectedActiveWidgetIndex >= 0)
-						 && (Page.SelectedActiveWidgetIndex < Page.ActiveWidgets.Count)
-						 && Page.ActiveWidgets[Page.SelectedActiveWidgetIndex].AcceptsText)
+						if (Page.ActiveWidgetContext?.SelectedWidget?.AcceptsText ?? false)
 						{
 							/* text is more likely? */
 							keyEvent.Modifiers |= KeyMod.Num;

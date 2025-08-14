@@ -80,11 +80,11 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 			toggleButtonSaveFormat[c].Next.BackTab = otherDirectoryList;
 		}
 
-		Widgets.Add(otherFileList);
-		Widgets.Add(otherDirectoryList);
-		Widgets.Add(textEntryFileName);
-		Widgets.Add(textEntryDirectoryName);
-		Widgets.AddRange(toggleButtonSaveFormat);
+		AddWidget(otherFileList);
+		AddWidget(otherDirectoryList);
+		AddWidget(textEntryFileName);
+		AddWidget(textEntryDirectoryName);
+		AddWidgets(toggleButtonSaveFormat);
 	}
 
 	public override void NotifySongChanged()

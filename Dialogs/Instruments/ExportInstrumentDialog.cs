@@ -43,10 +43,10 @@ public class ExportInstrumentDialog : Dialog
 		otherEventSink.OtherHandleKey += otherEventSink_HandleKey;
 		otherEventSink.OtherRedraw += otherEventSink_Draw;
 
-		Widgets.Add(textEntryFileName);
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
-		Widgets.Add(otherEventSink);
+		AddWidget(textEntryFileName);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
+		AddWidget(otherEventSink);
 	}
 
 	void otherEventSink_Draw()

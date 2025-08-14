@@ -29,9 +29,9 @@ public class TextSynthDialog : Dialog
 		buttonOK.Clicked += DialogButtonYes;
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(textEntryEntry);
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(textEntryEntry);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 	}
 
 	public override void DrawConst()

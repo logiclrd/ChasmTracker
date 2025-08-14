@@ -27,8 +27,8 @@ public class ResampleSampleDialog : Dialog
 		buttonCancel = new ButtonWidget(new Point(37, 30), 6, "Cancel", 1);
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(numberEntryNewC5Speed);
-		Widgets.Add(buttonCancel);
+		AddWidget(numberEntryNewC5Speed);
+		AddWidget(buttonCancel);
 	}
 
 	public override void DrawConst()

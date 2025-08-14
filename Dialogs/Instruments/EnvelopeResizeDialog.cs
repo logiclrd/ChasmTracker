@@ -30,8 +30,8 @@ public class EnvelopeResizeDialog : Dialog
 		buttonCancel = new ButtonWidget(new Point(36, 30), 6, "Cancel", 1);
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(numberEntryNewTickLength);
-		Widgets.Add(buttonCancel);
+		AddWidget(numberEntryNewTickLength);
+		AddWidget(buttonCancel);
 	}
 
 	public override void DrawConst()

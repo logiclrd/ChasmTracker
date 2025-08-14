@@ -53,17 +53,17 @@ public class MIDIOutputPage : Page
 		for (int i = 0; i < ZxxVisibleLines; i++)
 			textEntryMacroZxx[i] = new TextEntryWidget(new Point(17, 42 + i), 43, _editConfig.Zxx[i] ?? "", Constants.MaxMIDIMacro - 1);
 
-		Widgets.Add(textEntryMIDIStart);
-		Widgets.Add(textEntryMIDIStop);
-		Widgets.Add(textEntryMIDITick);
-		Widgets.Add(textEntryNoteOn);
-		Widgets.Add(textEntryNoteOff);
-		Widgets.Add(textEntrySetVolume);
-		Widgets.Add(textEntrySetPanning);
-		Widgets.Add(textEntrySetBank);
-		Widgets.Add(textEntrySetProgram);
-		Widgets.AddRange(textEntryMacroSFx);
-		Widgets.AddRange(textEntryMacroZxx);
+		AddWidget(textEntryMIDIStart);
+		AddWidget(textEntryMIDIStop);
+		AddWidget(textEntryMIDITick);
+		AddWidget(textEntryNoteOn);
+		AddWidget(textEntryNoteOff);
+		AddWidget(textEntrySetVolume);
+		AddWidget(textEntrySetPanning);
+		AddWidget(textEntrySetBank);
+		AddWidget(textEntrySetProgram);
+		AddWidgets(textEntryMacroSFx);
+		AddWidgets(textEntryMacroZxx);
 
 		Widgets.ForEach(w => w.Changed += CopyOut);
 	}

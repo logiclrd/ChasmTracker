@@ -26,9 +26,9 @@ public class VolumeAmplifyDialog : Dialog
 		buttonCancel = new ButtonWidget(new Point(41, 33), 6, "Cancel", 1);
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(thumbBarVolumePercent);
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(thumbBarVolumePercent);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 
 		ActionYes = OK;
 	}

@@ -84,7 +84,7 @@ public class AboutPageDialog : Dialog
 			"Continue",
 			padding: 3);
 
-		Widgets.Add(buttonContinue);
+		AddWidget(buttonContinue);
 	}
 
 	public override void DrawConst()

@@ -238,10 +238,13 @@ public abstract class ModuleLoadSavePageBase : Page
 		VGAMem.DrawTextBIOSLen(s_searchText, s_searchFirstChar, 25, new Point(51, 37), (5, 0));
 
 		/* draw the cursor if it's on the dir/file list */
-		var selectedWidget = SelectedActiveWidgetIndex;
+		if (ActiveWidgetContext == this)
+		{
+			var selectedWidget = SelectedWidgetIndex;
 
-		if ((selectedWidget != null) && ((selectedWidget == 0) || (selectedWidget == 1)))
-			VGAMem.DrawCharacter(0, new Point(51 + s_searchText.Length + s_searchFirstChar, 37), (0, 6));
+			if ((selectedWidget != null) && ((selectedWidget == 0) || (selectedWidget == 1)))
+				VGAMem.DrawCharacter(0, new Point(51 + s_searchText.Length + s_searchFirstChar, 37), (0, 6));
+		}
 	}
 
 	void SearchUpdate()
@@ -379,7 +382,7 @@ public abstract class ModuleLoadSavePageBase : Page
 
 				int fg1, fg2, bg;
 
-				if (n == s_flist.SelectedIndex && (SelectedActiveWidgetIndex?.Value ?? -1) == 0)
+				if (n == s_flist.SelectedIndex && (ActiveWidgetContext?.SelectedWidget == otherFileList))
 				{
 					fg1 = fg2 = 0;
 					bg = 3;
@@ -408,7 +411,7 @@ public abstract class ModuleLoadSavePageBase : Page
 		}
 		else
 		{
-			if ((SelectedActiveWidgetIndex != null) && (SelectedActiveWidgetIndex == 0))
+			if (ActiveWidgetContext?.SelectedWidget == otherFileList)
 			{
 				VGAMem.DrawText("No files.", new Point(3, 13), (0, 3));
 				VGAMem.DrawFillCharacters(new Point(12, 13), new Point(48, 13), (VGAMem.DefaultForeground, 3));
@@ -646,7 +649,7 @@ public abstract class ModuleLoadSavePageBase : Page
 
 			int fg, bg;
 
-			if ((n == s_dlist.SelectedIndex) && (SelectedActiveWidgetIndex?.Value == 1))
+			if ((n == s_dlist.SelectedIndex) && (ActiveWidgetContext?.SelectedWidget == otherDirectoryList))
 			{
 				fg = 0;
 				bg = 3;
@@ -699,7 +702,7 @@ public abstract class ModuleLoadSavePageBase : Page
 						ChangeDirectory(s_dlist[s_dlist.SelectedIndex].FullPath);
 
 						if (s_flist.NumFiles > 0)
-							ChangeFocusTo((ActiveWidgets ?? Widgets)[0]);
+							ChangeFocusTo(0);
 
 						Status.Flags |= StatusFlags.NeedUpdate;
 						return true;
@@ -749,7 +752,7 @@ public abstract class ModuleLoadSavePageBase : Page
 					ChangeDirectory(s_dlist[s_dlist.SelectedIndex].FullPath);
 
 				if (s_flist.NumFiles > 0)
-					ChangeFocusTo((ActiveWidgets ?? Widgets)[0]);
+					ChangeFocusTo(0);
 				Status.Flags |= StatusFlags.NeedUpdate;
 				return true;
 			case KeySym.Backspace:
