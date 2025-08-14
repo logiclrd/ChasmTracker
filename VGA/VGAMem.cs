@@ -4,6 +4,7 @@ using System.Text;
 
 namespace ChasmTracker.VGA;
 
+using System.Runtime.CompilerServices;
 using ChasmTracker.Configurations;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
@@ -18,8 +19,8 @@ public static class VGAMem
 
 	public const byte DefaultForeground = 3;
 
-	public static VGAMemCharacter[] Memory = new VGAMemCharacter[4000];
-	public static VGAMemCharacter[] MemoryRead = new VGAMemCharacter[4000];
+	public static uint[] Memory = new uint[4000];
+	public static uint[] MemoryRead = new uint[4000];
 
 	public static byte[] Overlay = new byte[Constants.NativeScreenWidth * Constants.NativeScreenHeight];
 
@@ -79,14 +80,131 @@ public static class VGAMem
 		Array.Clear(Memory);
 	}
 
+	/* ------------------------------------------------------------------------ */
+	// for UNICODE; this is packed ultra-tight :)
+
+	const int UnicodeFGBit = 25;
+	const uint UnicodeFGMask = 0xF << UnicodeFGBit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int UnicodeFG(int x) => unchecked((int)((x & UnicodeFGMask) >> UnicodeFGBit));
+
+	const int UnicodeBGBit = 21;
+	const uint UnicodeBGMask = 0xF << UnicodeBGBit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int UnicodeBG(int x) => unchecked((int)((x & UnicodeBGMask) >> UnicodeBGBit));
+
+	/* character mask; just enough to fit one codepoint */
+	const uint UnicodeCodePointMask = 0x001FFFFF;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int UnicodeCodePoint(int x) => unchecked((int)(x & UnicodeCodePointMask));
+
+	/* ------------------------------------------------------------------------ */
+	/* halfwidth defines; stores 2 characters and both fg/bg */
+
+	const int HalfWidthFG1Bit = 26;
+	const uint HalfWidthFG1Mask = 0xF << HalfWidthFG1Bit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int HalfWidthFG1(int x) => unchecked((int)((x & HalfWidthFG1Mask) >> HalfWidthFG1Bit));
+
+	const int HalfWidthBG1Bit = 22;
+	const uint HalfWidthBG1Mask = 0xF << HalfWidthBG1Bit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int HalfWidthBG1(int x) => unchecked((int)((x & HalfWidthBG1Mask) >> HalfWidthBG1Bit));
+
+	const int HalfWidthChar1Bit = 15;
+	const uint HalfWidthChar1Mask = 0x7F << HalfWidthChar1Bit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int HalfWidthChar1(int x) => unchecked((int)((x & HalfWidthChar1Mask) >> HalfWidthChar1Bit));
+
+	const int HalfWidthFG2Bit = 11;
+	const uint HalfWidthFG2Mask = 0xF << HalfWidthFG2Bit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int HalfWidthFG2(int x) => unchecked((int)((x & HalfWidthFG2Mask) >> HalfWidthFG2Bit));
+
+	const int HalfWidthBG2Bit = 7;
+	const uint HalfWidthBG2Mask = 0xF << HalfWidthBG2Bit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int HalfWidthBG2(int x) => unchecked((int)((x & HalfWidthBG2Mask) >> HalfWidthBG2Bit));
+
+	const int HalfWidthChar2Bit = 0;
+	const uint HalfWidthChar2Mask = 0x7F << HalfWidthChar2Bit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int HalfWidthChar2(int x) => unchecked((int)((x & HalfWidthChar2Mask) >> HalfWidthChar2Bit));
+
 	public static VGAMemOverlay AllocateOverlay(Point topLeft, Point bottomRight)
 		=> new VGAMemOverlay(topLeft, bottomRight);
+
+	/* ok i think i get this now, after inspecting it further.
+	 * good thing no one bothered putting any comments in the code. <grumble>
+	 * the fake vga buffer is pigeonholing the half-width characters into 14 bits.
+	 * why 14, i don't know, but that means 7 bits per character, and these functions
+	 * handle shifting stuff around to get them into that space. realistically, we
+	 * only need to bother with chars 32 through 127, as well as 173 (middot) and
+	 * 205 (the double-line used for noteoff). since 32->127 is 96 characters, there's
+	 * plenty of room for the printable stuff... and guess what, 173->205 is another
+	 * 32, which fits nice and clean into 7 bits! so if the character is within that
+	 * range, we're fine. otherwise it'll just result in a broken glyph. (but it
+	 * probably wasn't drawn in the font anyway) */
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int PackHalfWidthCharacter(int c)
+	{
+		if (c >= 32 && c <= 127)
+			return c - 32; /* 0 ... 95 */
+		else if (c >= 173 && c <= 205)
+			return 96 + c - 173; /* 96 ... 127 */
+
+		return '?';
+	}
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int UnpackHalfWidthCharacter(int c)
+	{
+		if (c >= 0 && c <= 95)
+			return c + 32;
+		else if (c >= 96 && c <= 127)
+			return 96 - c + 173;
+
+		return '?';
+	}
+
+	/* ------------------------------------------------------------------------ */
+	/* BIOS and ITF defines; stores 1 character, and fg/bg */
+
+	const int FGBit = 12;
+	const uint FGMask = 0xF << FGBit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int FG(int x) => unchecked((int)((x & FGMask) >> FGBit));
+
+	const int BGBit = 8;
+	const uint BGMask = 0xF << BGBit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int BG(int x) => unchecked((int)((x & BGMask) >> BGBit));
+
+	const int CharBit = 0;
+	const uint CharMask = 0xFF << CharBit;
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	static int Char(int x) => unchecked((int)((x & CharMask) >> CharBit));
+
+	/* ------------------------------------------------------------------------ */
 
 	public static void ApplyOverlay(VGAMemOverlay n)
 	{
 		for (int y = n.TopLeft.Y; y <= n.BottomRight.Y; y++)
 			for (int x = n.TopLeft.X; x <= n.BottomRight.X; x++)
-				Memory[x + y * 80].Font = FontTypes.Overlay;
+				Memory[x + y * 80] = FontTypes.Overlay;
 	}
 
 	/* scanner variants
