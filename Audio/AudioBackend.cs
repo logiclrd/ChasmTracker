@@ -12,12 +12,16 @@ public abstract class AudioBackend
 
 	public static AudioDriver[] Drivers = Array.Empty<AudioDriver>();
 
-	public static AudioBackend Current => default!;
+	public static AudioBackend? Current = default!;
+
 	public static AudioDevice[] Devices = Array.Empty<AudioDevice>();
 
 	/* called when SCHISM_AUDIODEVICEADDED/SCHISM_AUDIODEVICEREMOVED event received */
 	public static void RefreshAudioDeviceList()
 	{
+		if (Current == null)
+			return;
+
 		var deviceList = new List<AudioDevice>();
 
 		foreach (var device in Current.EnumerateDevices())

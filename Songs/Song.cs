@@ -1675,9 +1675,9 @@ public class Song
 	{
 		int ord = CurrentOrder;
 
-		ord = ord.Clamp(0, 255);
+		ord = ord.Clamp(0, OrderList.Count);
 
-		for (int i = ord; i < 255; i++)
+		for (int i = ord; i < OrderList.Count; i++)
 			if (OrderList[i] == pat)
 				return i;
 

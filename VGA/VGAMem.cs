@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text;
 
 namespace ChasmTracker.VGA;
@@ -63,10 +64,10 @@ public static class VGAMem
 	}
 
 	static void CheckInvert(ref byte tl, ref byte br)
-		{
-			if (Status.Flags.HasFlag(StatusFlags.InvertedPalette))
-				(tl, br) = (br, tl);
-		}
+	{
+		if (Status.Flags.HasFlag(StatusFlags.InvertedPalette))
+			(tl, br) = (br, tl);
+	}
 
 	public static void Flip()
 	{
@@ -110,7 +111,7 @@ public static class VGAMem
 
 		for (int x = 0; x < 80; x++, bp++, q += 8)
 		{
-			ref var ch = ref Memory[bp];
+			ref var ch = ref MemoryRead[bp];
 
 			byte fg, bg, fg2, bg2, dg;
 
@@ -214,7 +215,7 @@ public static class VGAMem
 
 		for (int x = 0; x < 80; x++, bp++, q += 8)
 		{
-			ref var ch = ref Memory[bp];
+			ref var ch = ref MemoryRead[bp];
 
 			byte fg, bg, fg2, bg2, dg;
 
@@ -318,7 +319,7 @@ public static class VGAMem
 
 		for (int x = 0; x < 80; x++, bp++, q += 8)
 		{
-			ref var ch = ref Memory[bp];
+			ref var ch = ref MemoryRead[bp];
 
 			byte fg, bg, fg2, bg2, dg;
 
@@ -330,7 +331,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Data[yl + ch.C << 3];
+					dg = Font.Data[yl + (ch.C << 3)];
 					break;
 				case FontTypes.BIOS:
 					/* VGA BIOS character */
@@ -338,13 +339,13 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Alt[yl + ch.C << 3];
+					dg = Font.Alt[yl + (ch.C << 3)];
 					break;
 				case FontTypes.HalfWidth:
 				{
 					/* halfwidth (used for patterns) */
-					byte dg1 = Font.HalfData[yl + ch.C << 2];
-					byte dg2 = Font.HalfData[yl + ch.C2 << 2];
+					byte dg1 = Font.HalfData[yl + (ch.C << 2)];
+					byte dg2 = Font.HalfData[yl + (ch.C2 << 2)];
 
 					dg = unchecked((byte)(((ry & 1) == 0)
 						? ((dg1 & 0xF0) | dg2 >> 4)
@@ -376,15 +377,15 @@ public static class VGAMem
 					/* These are ordered by how often they will probably appear
 					 * for an average user of Chasm (i.e., English speakers). */
 					if (c >= 0x20 && c <= 0x7F) /* ASCII */
-						dg = Font.Data[yl + c << 3];
+						dg = Font.Data[yl + (c << 3)];
 					else if (c >= 0xA0 && c <= 0xFF) /* extended latin */
-						dg = DefaultFonts.ExtendedLatin[yl + (c - 0xA0) << 3];
+						dg = DefaultFonts.ExtendedLatin[yl + ((c - 0xA0) << 3)];
 					else if (c >= 0x390 && c <= 0x3C9) /* greek */
-						dg = DefaultFonts.Greek[yl + (c - 0x390) << 3];
+						dg = DefaultFonts.Greek[yl + ((c - 0x390) << 3)];
 					else if (c >= 0x3040 && c <= 0x309F) /* japanese hiragana */
-						dg = DefaultFonts.Hiragana[yl + (c - 0x3040) << 3];
+						dg = DefaultFonts.Hiragana[yl + ((c - 0x3040) << 3)];
 					else /* will display a ? if no cp437 equivalent found */
-						dg = Font.Data[yl + ((char)c).ToCP437() << 3];
+						dg = Font.Data[yl + (((char)c).ToCP437() << 3)];
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -429,7 +430,7 @@ public static class VGAMem
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
-		ch.Font = FontTypes.BIOS;
+		ch.Font = FontTypes.ImpulseTracker;
 		ch.C = (byte)c;
 		ch.Colours = colours;
 	}
@@ -440,7 +441,7 @@ public static class VGAMem
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
-		ch.Font = FontTypes.BIOS;
+		ch.Font = FontTypes.ImpulseTracker;
 		ch.C = c;
 		ch.Colours = colours;
 	}
@@ -469,7 +470,12 @@ public static class VGAMem
 
 	public static int DrawText(string text, Point position, VGAMemColours colours)
 	{
-		for (int n = 0; n < text.Length; n++)
+		int rightEdge = position.X + text.Length - 1;
+
+		if (rightEdge > 80)
+			rightEdge = 80;
+
+		for (int n = 0, x = position.X; x <= rightEdge; n++, x++)
 			DrawCharacter(text[n], position.Advance(n), colours);
 
 		return text.Length;

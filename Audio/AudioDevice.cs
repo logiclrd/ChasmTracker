@@ -2,11 +2,15 @@ namespace ChasmTracker.Audio;
 
 public class AudioDevice
 {
+	public readonly AudioBackend Backend;
+
 	public int ID;
 	public string Name;
 
-	public AudioDevice(int id, string name)
+	public AudioDevice(AudioBackend backend, int id, string name)
 	{
+		Backend = backend;
+
 		ID = id;
 		Name = name;
 	}

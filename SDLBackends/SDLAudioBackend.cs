@@ -12,8 +12,8 @@ public class SDLAudioBackend : AudioBackend
 {
 	class SDLAudioDevice : AudioDevice
 	{
-		public SDLAudioDevice(int devNumber)
-			: base(devNumber, "SDL Audio Device")
+		public SDLAudioDevice(SDLAudioBackend backend, int devNumber, string name = "SDL Audio Device")
+			: base(backend, devNumber, name)
 		{
 		}
 
@@ -125,7 +125,7 @@ public class SDLAudioBackend : AudioBackend
 			yield break;
 
 		for (int i=0; i < _devices.Length; i++)
-			yield return new AudioDevice(i, GetDeviceName(i));
+			yield return new SDLAudioDevice(this, i, GetDeviceName(i));
 	}
 
 	/* -------------------------------------------------------- */
@@ -155,7 +155,7 @@ public class SDLAudioBackend : AudioBackend
 
 		int devNumber = _nextAudioDevice++;
 
-		var dev = new SDLAudioDevice(devNumber);
+		var dev = new SDLAudioDevice(this, devNumber);
 
 		_audioDevices[devNumber] = dev;
 

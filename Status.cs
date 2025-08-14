@@ -101,12 +101,19 @@ public static class Status
 	static Status()
 	{
 		Configuration.RegisterConfigurable(new GeneralConfigurationThunk());
+		Configuration.RegisterConfigurable(new VideoConfigurationThunk());
 	}
 
 	class GeneralConfigurationThunk : IConfigurable<GeneralConfiguration>
 	{
 		public void SaveConfiguration(GeneralConfiguration config) => Status.SaveConfiguration(config);
 		public void LoadConfiguration(GeneralConfiguration config) => Status.LoadConfiguration(config);
+	}
+
+	class VideoConfigurationThunk : IConfigurable<VideoConfiguration>
+	{
+		public void SaveConfiguration(VideoConfiguration config) => Status.SaveConfiguration(config);
+		public void LoadConfiguration(VideoConfiguration config) => Status.LoadConfiguration(config);
 	}
 
 	static void LoadConfigFlag(bool enabled, StatusFlags flag)
@@ -131,9 +138,13 @@ public static class Status
 
 		LoadConfigFlag(config.MetaIsControl, StatusFlags.MetaIsControl);
 		LoadConfigFlag(config.AltGrIsAlt, StatusFlags.AltGrIsAlt);
-		LoadConfigFlag(config.LazyRedraw, StatusFlags.LazyRedraw);
 
 		LoadConfigFlag(config.MIDILikeTracker, StatusFlags.MIDILikeTracker);
+	}
+
+	static void LoadConfiguration(VideoConfiguration config)
+	{
+		LoadConfigFlag(config.LazyRedraw, StatusFlags.LazyRedraw);
 	}
 
 	static void SaveConfiguration(GeneralConfiguration config)
@@ -148,25 +159,29 @@ public static class Status
 
 		config.MetaIsControl = Flags.HasFlag(StatusFlags.MetaIsControl);
 		config.AltGrIsAlt = Flags.HasFlag(StatusFlags.AltGrIsAlt);
-		config.LazyRedraw = Flags.HasFlag(StatusFlags.LazyRedraw);
 
 		config.MIDILikeTracker = Flags.HasFlag(StatusFlags.MIDILikeTracker);
 	}
 
+	static void SaveConfiguration(VideoConfiguration config)
+	{
+		config.LazyRedraw = Flags.HasFlag(StatusFlags.LazyRedraw);
+	}
+
 	/* --------------------------------------------------------------------- */
 
-		static int LoopCount(int pos)
+	static int LoopCount(int pos)
+	{
+		if ((Song.CurrentSong.RepeatCount < 1) || Flags.HasFlag(StatusFlags.ClassicMode))
+			pos += VGAMem.DrawText("Playing", new Point(pos, 9), (0, 2));
+		else
 		{
-			if ((Song.CurrentSong.RepeatCount < 1) || Flags.HasFlag(StatusFlags.ClassicMode))
-				pos += VGAMem.DrawText("Playing", new Point(pos, 9), (0, 2));
-			else
-			{
-				pos += VGAMem.DrawText("Loop: ", new Point(pos, 9), (0, 2)); ;
-				pos += VGAMem.DrawText(Song.CurrentSong.RepeatCount.ToString(), new Point(pos, 9), (3, 2));
-			}
-
-			return pos;
+			pos += VGAMem.DrawText("Loop: ", new Point(pos, 9), (0, 2)); ;
+			pos += VGAMem.DrawText(Song.CurrentSong.RepeatCount.ToString(), new Point(pos, 9), (3, 2));
 		}
+
+		return pos;
+	}
 
 	static void DrawSongPlayingStatus()
 	{

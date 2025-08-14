@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -186,9 +185,7 @@ public abstract class Page
 	{
 		var thisType = GetType();
 
-		var drawFull = thisType.GetMethod(nameof(DrawFull), BindingFlags.DeclaredOnly);
-
-		if (drawFull == null)
+		if (thisType.GetMethod(nameof(DrawFull))?.DeclaringType != thisType)
 			_drawFullDoesNothing = true;
 	}
 
@@ -385,8 +382,6 @@ public abstract class Page
 	{
 		var activePage = Status.CurrentPage;
 
-		int n = activePage.Widgets.Count;
-
 		if (!activePage._drawFullDoesNothing)
 			activePage.DrawFull();
 		else
@@ -396,9 +391,11 @@ public abstract class Page
 			activePage.PredrawHook();
 		}
 
+		int n = activePage.Widgets.Count;
+
 		/* this doesn't use widgets[] because it needs to draw the page's
 		* widgets whether or not a dialog is active */
-		while (n-- >= 0)
+		while (n-- > 0)
 			activePage.Widgets[n].DrawWidget(n == activePage.SelectedWidgetIndex);
 
 		/* redraw the area over the menu if there is one */
@@ -1366,7 +1363,7 @@ public abstract class Page
 				{
 					if (k.State == KeyState.Release)
 						return true;
-					Video.SetMouseCursorState(MouseCursorState.CycleState);
+					Video.SetMouseCursor(MouseCursorMode.CycleState);
 					return true;
 				}
 				break;

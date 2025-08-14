@@ -30,7 +30,7 @@ namespace ChasmTracker.Utility.MemoryMemoryStream
             // analysis executed by the JIT, which can in some cases block constant propagation.
             bool copy = flag;
 
-            return *(byte*)&copy;
+            return *(byte *)&copy;
         }
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace ChasmTracker.Utility.MemoryMemoryStream
         public static unsafe int ToBitwiseMask32(this bool flag)
         {
             bool copy = flag;
-            byte rangeFlag = *(byte*)&copy;
+            byte rangeFlag = *(byte *)&copy;
             int
                 negativeFlag = rangeFlag - 1,
                 mask = ~negativeFlag;
@@ -72,7 +72,7 @@ namespace ChasmTracker.Utility.MemoryMemoryStream
         public static unsafe long ToBitwiseMask64(this bool flag)
         {
             bool copy = flag;
-            byte rangeFlag = *(byte*)&copy;
+            byte rangeFlag = *(byte *)&copy;
             long
                 negativeFlag = (long)rangeFlag - 1,
                 mask = ~negativeFlag;

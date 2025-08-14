@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 
 namespace ChasmTracker;
@@ -18,7 +17,6 @@ using ChasmTracker.Menus;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Playback;
-using ChasmTracker.SDLBackends;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -30,8 +28,6 @@ public class Program
 	//VideoDriver s_videoDriver;
 	//AudioDriver s_audioDriver;
 	//AudioDevice s_audioDevice;
-
-	static VideoBackend s_video = new SDLVideoBackend();
 
 	static CommandLineArguments? s_args;
 	static ShutdownFlags s_shutdownProcess;
@@ -172,7 +168,7 @@ public class Program
 						kk.Sym = KeySym.None;
 						kk.Modifiers = KeyMod.None;
 
-						kk.MousePositionFine = s_video.Translate(mouseEvent.Position);
+						kk.MousePositionFine = Video.Translate(mouseEvent.Position);
 
 						if (mouseEvent is MouseWheelEvent mouseWheelEvent)
 						{
@@ -297,11 +293,11 @@ public class Program
 								goto case WindowEventType.Leave;
 
 							case WindowEventType.Leave:
-								s_video.ShowCursor(true);
+								Video.ShowCursor(true);
 								break;
 
 							case WindowEventType.SizeChanged: /* tiling window managers */
-								s_video.Resize(windowEvent.NewSize);
+								Video.Resize(windowEvent.NewSize);
 								goto case WindowEventType.Exposed;
 
 							case WindowEventType.Exposed:
@@ -505,8 +501,8 @@ public class Program
 		{
 			Video.Refresh();
 
-			s_video.Blit();
-			s_video.Shutdown();
+			Video.Blit();
+			Video.ShutDown();
 			/*
 			Don't use this function as atexit handler, because that will cause
 			segfault when MESA runs on Wayland or KMS/DRM: Never call SDL_Quit()
@@ -522,7 +518,7 @@ public class Program
 
 		MIDIEngine.Stop();
 
-		AudioBackend.Current.Quit();
+		AudioBackend.Current?.Quit();
 		Clippy.Quit();
 		EventHub.Quit();
 		// TODO: Timer.Quit();

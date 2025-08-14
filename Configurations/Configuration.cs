@@ -163,58 +163,63 @@ public static class Configuration
 		Load(fileName, new TextReaderLineSource(reader));
 	}
 
+	static bool s_loading = false;
+
 	static void Load(string fileName, ILineSource lineSource)
 	{
-		CommentsByOwner.Clear();
+		s_loading = true;
 
-		foreach (var section in SectionByKey.Values)
-			section.Clear();
-
-		List<string> comments = new List<string>();
-		string currentSectionName = "<invalid>";
-		ConfigurationSection? currentSection = null;
-
-		while (true)
+		try
 		{
-			string? line = lineSource.ReadLine();
+			CommentsByOwner.Clear();
 
-			if (line == null)
-				break;
+			foreach (var section in SectionByKey.Values)
+				section.Clear();
 
-			if (s_commentLineRegex.IsMatch(line))
-				comments.Add(line);
-			else if (line.StartsWith("[") && line.EndsWith("]"))
+			List<string> comments = new List<string>();
+			string currentSectionName = "<invalid>";
+			ConfigurationSection? currentSection = null;
+
+			while (true)
 			{
-				string sectionName = line.Substring(1, line.Length - 2);
+				string? line = lineSource.ReadLine();
 
-				if (GetSectionListItem(sectionName, out currentSection)
-				 || SectionByKey.TryGetValue(sectionName, out currentSection))
+				if (line == null)
+					break;
+
+				if (s_commentLineRegex.IsMatch(line))
+					comments.Add(line);
+				else if (line.StartsWith("[") && line.EndsWith("]"))
 				{
-					CommentsByOwner[currentSection] = comments;
-					comments.Clear();
+					string sectionName = line.Substring(1, line.Length - 2);
 
-					currentSectionName = sectionName;
+					if (GetSectionListItem(sectionName, out currentSection)
+					|| SectionByKey.TryGetValue(sectionName, out currentSection))
+					{
+						CommentsByOwner[currentSection] = comments;
+						comments.Clear();
+
+						currentSectionName = sectionName;
+					}
+					else
+						comments.Add("# " + line);
 				}
-				else
-				{
-					Console.WriteLine("IGNORING: " + line);
+				else if ((currentSection == null) || !currentSection.Parse(fileName, currentSectionName, line, comments))
 					comments.Add("# " + line);
-				}
 			}
-			else if ((currentSection == null) || !currentSection.Parse(fileName, currentSectionName, line, comments))
+
+			CommentsByOwner[typeof(Configuration)] = comments;
+
+			foreach (var section in SectionByKey.Values)
 			{
-				Console.WriteLine("IGNORING 2: " + line);
-				comments.Add("# " + line);
+				section.FinalizeLoad();
+
+				ConfigurableLoadConfiguration(section);
 			}
 		}
-
-		CommentsByOwner[typeof(Configuration)] = comments;
-
-		foreach (var section in SectionByKey.Values)
+		finally
 		{
-			section.FinalizeLoad();
-
-			ConfigurableLoadConfiguration(section);
+			s_loading = false;
 		}
 	}
 
@@ -310,6 +315,9 @@ public static class Configuration
 
 	public static void Save(TextWriter writer)
 	{
+		if (s_loading)
+			return;
+
 		foreach (var section in SectionByKey.Values)
 		{
 			ConfigurableSaveConfiguration(section);

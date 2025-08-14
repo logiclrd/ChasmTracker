@@ -21,7 +21,20 @@ public class AboutPageDialog : Dialog
 
 	static AboutPageDialog()
 	{
-		s_logoImage = VGAMem.AllocateOverlay(new Point(23, 17), new Point(58, 24));
+		Point topLeft, bottomRight;
+
+		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		{
+			topLeft = new Point(23, 17);
+			bottomRight = new Point(58, 24);
+		}
+		else
+		{
+			topLeft = new Point(12, 13);
+			bottomRight = new Point(67, 24);
+		}
+
+		s_logoImage = VGAMem.AllocateOverlay(topLeft, bottomRight);
 
 		string logoFileName =
 			Status.Flags.HasFlag(StatusFlags.ClassicMode)
@@ -37,7 +50,9 @@ public class AboutPageDialog : Dialog
 	}
 
 	public AboutPageDialog()
-		: base(new Point(11, 16), new Size(58, 19))
+		: base(
+			new Point(11, Status.Flags.HasFlag(StatusFlags.ClassicMode) ? 16 : 12),
+			new Size(58, Status.Flags.HasFlag(StatusFlags.ClassicMode) ? 20 : 24))
 	{
 		_fakeDriver = ((new Random().Next() & 3) != 0) ? 0 : 1;
 
@@ -63,7 +78,7 @@ public class AboutPageDialog : Dialog
 	protected override void Initialize()
 	{
 		buttonContinue = new ButtonWidget(
-			position: new Point(33, 32),
+			position: new Point(33, 33),
 			width: 12,
 			DialogButtonYes,
 			"Continue",
@@ -77,10 +92,10 @@ public class AboutPageDialog : Dialog
 		if (Status.CurrentPageNumber == PageNumbers.About)
 		{
 			/* redraw outer part */
-			VGAMem.DrawBox(
-				new Point(11, 16),
-				new Point(68, 34),
-				BoxTypes.Thin | BoxTypes.Outer | BoxTypes.FlatDark);
+			//VGAMem.DrawBox(
+			//	new Point(11, 16),
+			//	new Point(68, 35),
+			//	BoxTypes.Thin | BoxTypes.Outer | BoxTypes.FlatDark);
 		}
 
 		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
@@ -124,7 +139,7 @@ public class AboutPageDialog : Dialog
 
 			/* build date */
 			string buildLine =
-				$"Build {BuildInformation.Commit}{(BuildInformation.IsPristine ? "" : "*")} at {BuildInformation.Timestamp}";
+				$"{BuildInformation.Commit.Substring(0, 8)}{(BuildInformation.IsPristine ? "" : "*")} {BuildInformation.Timestamp}";
 
 			VGAMem.DrawText(buildLine, new Point(15, 27), (1, 2));
 			VGAMem.DrawText(Copyright.ShortCopyright, new Point(15, 29), (1, 2));

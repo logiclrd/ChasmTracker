@@ -1,7 +1,5 @@
 using System;
 
-using SDL3;
-
 namespace ChasmTracker;
 
 using ChasmTracker.Configurations;
@@ -11,7 +9,7 @@ using ChasmTracker.Utility;
 using ChasmTracker.SDLBackends;
 using ChasmTracker.VGA;
 
-public class Video
+public static class Video
 {
 	static DateTime s_nextUpdate;
 	static VideoBackend s_backend = new SDLVideoBackend();
@@ -25,14 +23,14 @@ public class Video
 
 	public class MouseFields
 	{
-		public MouseCursorState Visible;
+		public MouseCursorMode Visible;
 		public MouseCursorShapes Shape;
 	}
 
 	public static readonly MouseFields Mouse =
 		new MouseFields()
 		{
-			Visible = MouseCursorState.Emulated,
+			Visible = MouseCursorMode.Emulated,
 			Shape = MouseCursorShapes.Arrow,
 		};
 
@@ -101,14 +99,18 @@ public class Video
 
 	/* -------------------------------------------------------- */
 
+	public static void Resize(Size newSize) => s_backend.Resize(newSize);
+
+	/* -------------------------------------------------------- */
+
 	public static bool IsScreenSaverEnabled => s_backend.IsScreenSaverEnabled;
 	public static void ToggleScreenSaver(bool enabled) => s_backend.ToggleScreenSaver(enabled);
 
 	/* -------------------------------------------------------- */
 	/* coordinate translation */
 
-	public Point Translate(Point v) => s_backend.Translate(v);
-	public Point GetLogicalCoordinates(Point p) => s_backend.GetLogicalCoordinates(p);
+	public static Point Translate(Point v) => s_backend.Translate(v);
+	public static Point GetLogicalCoordinates(Point p) => s_backend.GetLogicalCoordinates(p);
 
 	/* -------------------------------------------------------- */
 	/* input grab */
@@ -128,36 +130,31 @@ public class Video
 
 	/* -------------------------------------------------------- */
 
-	public static void SetMouseCursor(MouseCursorMode cursor)
-	{
-		// TODO
-	}
-
-	public static void SetMouseCursorState(MouseCursorState vis)
+	public static void SetMouseCursor(MouseCursorMode vis)
 	{
 		switch (vis)
 		{
-			case MouseCursorState.CycleState:
-				vis = (MouseCursorState)((((int)Mouse.Visible) + 1) % (int)MouseCursorState.CycleState);
+			case MouseCursorMode.CycleState:
+				vis = (MouseCursorMode)((((int)Mouse.Visible) + 1) % (int)MouseCursorMode.CycleState);
 
-				goto case MouseCursorState.Disabled;
-			case MouseCursorState.Disabled:
-			case MouseCursorState.System:
-			case MouseCursorState.Emulated:
+				goto case MouseCursorMode.Disabled;
+			case MouseCursorMode.Disabled:
+			case MouseCursorMode.System:
+			case MouseCursorMode.Emulated:
 				Mouse.Visible = vis;
 
 				switch (vis)
 				{
-					case MouseCursorState.Disabled: Status.FlashText("Mouse disabled"); break;
-					case MouseCursorState.System: Status.FlashText("Hardware mouse cursor enabled"); break;
-					case MouseCursorState.Emulated: Status.FlashText("Software mouse cursor enabled"); break;
+					case MouseCursorMode.Disabled: Status.FlashText("Mouse disabled"); break;
+					case MouseCursorMode.System: Status.FlashText("Hardware mouse cursor enabled"); break;
+					case MouseCursorMode.Emulated: Status.FlashText("Software mouse cursor enabled"); break;
 				}
 
 				break;
-			case MouseCursorState.ResetState:
+			case MouseCursorMode.ResetState:
 				break;
 			default:
-				Mouse.Visible = MouseCursorState.Emulated;
+				Mouse.Visible = MouseCursorMode.Emulated;
 				break;
 		}
 
@@ -229,13 +226,20 @@ public class Video
 	{
 		/* this handles all of the ACTUAL color stuff, and the callback handles the backend-specific stuff */
 
+		/* VGA palettes use components from 0..63, but the RGBA pixel colours we're generating need 0..255 */
+		int[,] scaled = new int[16, 3];
+
+		for (int i=0; i < 16; i++)
+			for (int c=0; c < 3; c++)
+				scaled[i, c] = (palette[i, c] << 2) | (palette[i, c] >> 6);
+
 		/* make our "base" space */
 		for (int i = 0; i < 16; i++)
 		{
 			uint rgb = unchecked((uint)(
-				(palette[i, 0] << 0) |
-				(palette[i, 1] << 8) |
-				(palette[i, 2] << 16)));
+				(scaled[i, 0] << 16) |
+				(scaled[i, 1] <<  8) |
+				(scaled[i, 2] <<  0)));
 
 			fun(i, rgb);
 		}
@@ -247,14 +251,14 @@ public class Video
 		{
 			int p = lastmap[i >> 5];
 
-			byte r = unchecked((byte)((palette[p].Red + (palette[p + 1].Red - palette[p].Red) * (i & 0x1F)) / 0x20));
-			byte g = unchecked((byte)((palette[p].Green + (palette[p + 1].Green - palette[p].Green) * (i & 0x1F)) / 0x20));
-			byte b = unchecked((byte)((palette[p].Blue + (palette[p + 1].Blue - palette[p].Blue) * (i & 0x1F)) / 0x20));
+			byte r = unchecked((byte)((scaled[p, 0] + (scaled[p + 1, 0] - scaled[p, 0]) * (i & 0x1F)) / 0x20));
+			byte g = unchecked((byte)((scaled[p, 1] + (scaled[p + 1, 1] - scaled[p, 1]) * (i & 0x1F)) / 0x20));
+			byte b = unchecked((byte)((scaled[p, 2] + (scaled[p + 1, 2] - scaled[p, 2]) * (i & 0x1F)) / 0x20));
 
 			uint rgb = unchecked((uint)(
-				(r << 0) |
+				(r << 16) |
 				(g << 8) |
-				(b << 16)));
+				(b << 0)));
 
 			fun(i + 128, rgb);
 		}

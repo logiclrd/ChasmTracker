@@ -44,28 +44,68 @@ public static class Paths
 	public static string GetPrettyName(string filename)
 		=> Path.GetFileName(filename.TrimEnd('/', '\\')).Replace('_', ' ').Trim();
 
-	[DllImport("c")]
-	static extern int lstat(string path, ref Stat buf);
+	[DllImport("c", EntryPoint = "lstat", CallingConvention = CallingConvention.Cdecl)]
+	static extern int lstat_32bit(string path, ref Stat32 buf);
+	[DllImport("c", EntryPoint = "lstat", CallingConvention = CallingConvention.Cdecl)]
+	static extern int lstat_64bit(string path, ref Stat64 buf);
 
-	[StructLayout(LayoutKind.Sequential)]
-	struct Stat
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	struct Stat32
 	{
 		public long st_dev;
-		public IntPtr st_ino;
+
+		ushort __pad1;
+
+		public long st_ino;
 		public int st_mode;
-		public IntPtr st_nlink;
+		public int st_nlink;
 		public int st_uid;
 		public int st_gid;
 		public long st_rdev;
+
+		ushort __pad2;
+
 		public long st_size;
-		public IntPtr st_blksize;
-		public IntPtr st_blocks;
-		public IntPtr st_atim_lo;
-		public IntPtr st_atim_hi;
-		public IntPtr st_mtim_lo;
-		public IntPtr st_mtim_hi;
-		public IntPtr st_ctim_lo;
-		public IntPtr st_ctim_hi;
+		public long st_blksize;
+		public long st_blocks;
+
+		public long st_atim_lo;
+		public long st_atim_hi;
+		public long st_mtim_lo;
+		public long st_mtim_hi;
+		public long st_ctim_lo;
+		public long st_ctim_hi;
+
+		long __glibc_reserved4;
+		long __glibc_reserved5;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	struct Stat64
+	{
+		public long st_dev;
+		public long st_ino;
+		public long st_nlink;
+		public int st_mode;
+		public int st_uid;
+		public int st_gid;
+
+		int __pad0;
+
+		public long st_rdev;
+		public long st_size;
+		public long st_blksize;
+		public long st_blocks;
+		public long st_atim_lo;
+		public long st_atim_hi;
+		public long st_mtim_lo;
+		public long st_mtim_hi;
+		public long st_ctim_lo;
+		public long st_ctim_hi;
+
+		long __glibc_reserved4;
+		long __glibc_reserved5;
+		long __glibc_reserved6;
 	}
 
 	const int S_IFMT = 0xF000;
@@ -79,14 +119,28 @@ public static class Paths
 		{
 			try
 			{
-				Stat buf = default;
+				if (IntPtr.Size == 4)
+				{
+					Stat32 buf = default;
 
-				int result = lstat(path, ref buf);
+					int result = lstat_32bit(path, ref buf);
 
-				if (result == 0)
-					return (buf.st_mode & S_IFMT) == S_IFREG;
+					if (result == 0)
+						return (buf.st_mode & S_IFMT) == S_IFREG;
+					else
+						return File.Exists(path);
+				}
 				else
-					return File.Exists(path);
+				{
+					Stat64 buf = default;
+
+					int result = lstat_64bit(path, ref buf);
+
+					if (result == 0)
+						return (buf.st_mode & S_IFMT) == S_IFREG;
+					else
+						return File.Exists(path);
+				}
 			}
 			catch
 			{

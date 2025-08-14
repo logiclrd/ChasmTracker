@@ -889,7 +889,7 @@ to change the default font!
 					return true;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
-					Video.SetMouseCursorState((Video.Mouse.Visible != MouseCursorState.Disabled) ? MouseCursorState.Disabled : MouseCursorState.Emulated);
+					Video.SetMouseCursor((Video.Mouse.Visible != MouseCursorMode.Disabled) ? MouseCursorMode.Disabled : MouseCursorMode.Emulated);
 					return true;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Alt))

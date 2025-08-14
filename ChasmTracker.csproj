@@ -17,24 +17,27 @@
 		<PackageReference Include="Mono.Posix" Version="7.1.0-final.1.21458.1" />
 		<PackageReference Include="SDL3-CS" Version="3.2.16.1" />
 		<PackageReference Include="SkiaSharp" Version="3.119.0" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
 		<PackageReference Include="VorbisPizza" Version="1.4.2" />
 		<PackageReference Include="X11" Version="1.0.6" />
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Logo.png" />
 		<EmbeddedResource Include="LogoBanner.png" />
+		<EmbeddedResource Include="LogoTiny.png" />
 		<EmbeddedResource Include="ImpulseTrackerLogo.png" />
 		<EmbeddedResource Include="Icon128.png" />
 
 		<EmbeddedResource Include="Help\Text\adlib-sample" />
 		<EmbeddedResource Include="Help\Text\copyright" />
-		<EmbeddedResource Include="Help\Text\global-keys" />
+		<EmbeddedResource Include="Help\Text\global" />
 		<EmbeddedResource Include="Help\Text\info-page" />
 		<EmbeddedResource Include="Help\Text\instrument-list" />
 		<EmbeddedResource Include="Help\Text\message-editor" />
 		<EmbeddedResource Include="Help\Text\midi-output" />
-		<EmbeddedResource Include="Help\Text\orderlist-pan" />
-		<EmbeddedResource Include="Help\Text\orderlist-vol" />
+		<EmbeddedResource Include="Help\Text\orderlist-panning" />
+		<EmbeddedResource Include="Help\Text\orderlist-volume" />
 		<EmbeddedResource Include="Help\Text\palettes" />
 		<EmbeddedResource Include="Help\Text\pattern-editor" />
 		<EmbeddedResource Include="Help\Text\sample-list" />
