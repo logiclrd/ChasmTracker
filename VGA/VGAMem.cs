@@ -130,9 +130,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = ((ch.C & 0x80) != 0)
-						? Font.AltUpper[yl + (ch.C & 0x7F) << 3]
-						: Font.Alt[yl + (ch.C & 0x7F) << 3];
+					dg = Font.Alt[yl + ch.C << 3];
 					break;
 				case FontTypes.HalfWidth:
 				{
@@ -236,9 +234,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = ((ch.C & 0x80) != 0)
-						? Font.AltUpper[yl + (ch.C & 0x7F) << 3]
-						: Font.Alt[yl + (ch.C & 0x7F) << 3];
+					dg = Font.Alt[yl + ch.C << 3];
 					break;
 				case FontTypes.HalfWidth:
 				{
@@ -342,9 +338,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = ((ch.C & 0x80) != 0)
-						? Font.AltUpper[yl + (ch.C & 0x7F) << 3]
-						: Font.Alt[yl + (ch.C & 0x7F) << 3];
+					dg = Font.Alt[yl + ch.C << 3];
 					break;
 				case FontTypes.HalfWidth:
 				{

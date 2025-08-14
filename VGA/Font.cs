@@ -11,10 +11,8 @@ public class Font
 	/* int font_width = 8, font_height = 8; */
 
 	public static byte[] Normal = Array.Empty<byte>();
-	public static byte[] NormalUpper = Array.Empty<byte>();
 	public static byte[] HalfData = Array.Empty<byte>();
 	public static byte[] Alt = Array.Empty<byte>();
-	public static byte[] AltUpper = Array.Empty<byte>();
 
 	public static byte[] Data = Normal;
 
@@ -33,8 +31,10 @@ public class Font
 
 		Data = Normal;
 
-		Alt = DefaultFonts.Lower.MakeCopy();
-		AltUpper = DefaultFonts.UpperAlt.MakeCopy();
+		Alt = new byte[2048];
+
+		DefaultFonts.Lower.CopyTo(Alt.AsSpan());
+		DefaultFonts.UpperAlt.CopyTo(Alt.Slice(1024));
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -78,13 +78,20 @@ public class Font
 	/* just the non-itf chars */
 	public static void ResetLower()
 	{
-		Normal = DefaultFonts.Lower.MakeCopy();
+		if (Normal.Length != 2048)
+			Normal = new byte[2048];
+
+		DefaultFonts.Lower.CopyTo(Normal.AsSpan());
 	}
 
 	/* just the itf chars */
 	public static void ResetUpper()
 	{
-		NormalUpper = DefaultFonts.UpperITF.MakeCopy();
+		if (Normal.Length != 2048)
+			Normal = new byte[2048];
+
+		DefaultFonts.UpperITF.CopyTo(Normal.Slice(1024));
+
 		MakeHalfWidthMidDot();
 	}
 
@@ -100,7 +107,8 @@ public class Font
 	{
 		ResetLower();
 
-		NormalUpper = DefaultFonts.UpperAlt.MakeCopy();
+		DefaultFonts.UpperAlt.CopyTo(Normal.Slice(1024));
+
 		MakeHalfWidthMidDot();
 	}
 
@@ -108,26 +116,18 @@ public class Font
 	public static void ResetCharacter(int ch)
 	{
 		byte[] @base;
-		byte[] dest;
 
 		ch <<= 3;
 
 		int cx = ch;
 
 		if (ch >= 1024)
-		{
 			@base = DefaultFonts.UpperITF;
-			dest = NormalUpper;
-			cx -= 1024;
-		}
 		else
-		{
 			@base = DefaultFonts.Lower;
-			dest = Normal;
-		}
 
 		/* update them both... */
-		Array.Copy(@base, cx, @dest, ch, 8);
+		Array.Copy(@base, cx, Normal, ch, 8);
 
 		/* update */
 		MakeHalfWidthMidDot();

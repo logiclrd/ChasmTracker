@@ -578,7 +578,8 @@ public static class EventHub
 		if (!SDL.InitSubSystem(SDL.InitFlags.Events))
 			return false;
 
-		SDL.SetWindowsMessageHook(Win32MsgHook, default);
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			SDL.SetWindowsMessageHook(Win32MsgHook, default);
 
 		return true;
 	}

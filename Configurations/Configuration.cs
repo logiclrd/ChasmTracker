@@ -127,6 +127,9 @@ public static class Configuration
 
 	public static void Load(string fileName)
 	{
+		if (!File.Exists(fileName))
+			return;
+
 		using (var reader = new StreamReader(fileName))
 			Load(fileName, reader);
 	}
@@ -188,16 +191,18 @@ public static class Configuration
 
 	public static void RegisterConfigurable(IConfigurable configurable)
 	{
+		s_configurables ??= new List<IConfigurable>();
 		s_configurables.Add(configurable);
 	}
 
 	public static void RegisterListGatherer(IGatherConfigurationSections configurable)
 	{
+		s_listGatherers ??= new List<IGatherConfigurationSections>();
 		s_listGatherers.Add(configurable);
 	}
 
-	static List<IConfigurable> s_configurables = new List<IConfigurable>();
-	static List<IGatherConfigurationSections> s_listGatherers = new List<IGatherConfigurationSections>();
+	static List<IConfigurable>? s_configurables;
+	static List<IGatherConfigurationSections>? s_listGatherers;
 
 	static MethodInfo s_configurableLoadConfigurationMethodDefinition = typeof(Configuration)
 		.GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
@@ -217,6 +222,9 @@ public static class Configuration
 	static void ConfigurableLoadConfiguration<T>(T config)
 		where T : ConfigurationSection
 	{
+		if (s_configurables == null)
+			return;
+
 		foreach (var configurable in s_configurables)
 			if (configurable is IConfigurable<T> configurablePage)
 				configurablePage.LoadConfiguration(config);
@@ -225,6 +233,9 @@ public static class Configuration
 	static void ConfigurableSaveConfiguration<T>(T config)
 		where T : ConfigurationSection
 	{
+		if (s_configurables == null)
+			return;
+
 		foreach (var configurable in s_configurables)
 			if (configurable is IConfigurable<T> configurablePage)
 				configurablePage.SaveConfiguration(config);
@@ -287,7 +298,7 @@ public static class Configuration
 			var gathererType = typeof(IGatherConfigurationSections<>).MakeGenericType(listSection.ElementType);
 			var listType = typeof(IList<>).MakeGenericType(listSection.ElementType);
 
-			if (listType.IsAssignableFrom(list.GetType()))
+			if (listType.IsAssignableFrom(list.GetType()) && (s_listGatherers != null))
 			{
 				foreach (var gatherer in s_listGatherers)
 					if (gathererType.IsAssignableFrom(gatherer.GetType()))

@@ -18,6 +18,7 @@ using ChasmTracker.Menus;
 using ChasmTracker.MIDI;
 using ChasmTracker.Pages;
 using ChasmTracker.Playback;
+using ChasmTracker.SDLBackends;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;

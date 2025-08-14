@@ -8,6 +8,7 @@ using ChasmTracker.Configurations;
 using ChasmTracker.Input;
 using ChasmTracker.Pages;
 using ChasmTracker.Utility;
+using ChasmTracker.SDLBackends;
 using ChasmTracker.VGA;
 
 public class Video

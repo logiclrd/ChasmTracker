@@ -54,8 +54,13 @@ public static class AllPages
 	public static WaterfallPage Waterfall = new WaterfallPage();
 
 	// Updated dynamically every time an InstrumentList__ page is set.
+	[NonCanonical]
 	public static InstrumentListPage InstrumentList = InstrumentListGeneral;
+	[NonCanonical]
 	public static OrderListPage OrderList = OrderListPanning;
+
+	[AttributeUsage(AttributeTargets.Field)]
+	public class NonCanonicalAttribute : Attribute { }
 
 	static Page[] s_pages;
 	static Dictionary<PageNumbers, Page> s_byPageNumber;
@@ -64,6 +69,7 @@ public static class AllPages
 	{
 		s_pages = typeof(AllPages).GetFields(BindingFlags.Public | BindingFlags.Static)
 			.Where(field => typeof(Page).IsAssignableFrom(field.FieldType))
+			.Where(field => field.GetCustomAttribute<NonCanonicalAttribute>() == null)
 			.Select(field => field.GetValue(null))
 			.OfType<Page>()
 			.ToArray();

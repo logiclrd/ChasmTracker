@@ -7,7 +7,6 @@ using System.Text;
 
 namespace ChasmTracker.Songs;
 
-using System.Diagnostics.CodeAnalysis;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
@@ -22,6 +21,8 @@ using ChasmTracker.Utility;
 
 public class Song
 {
+	public static MIDIConfiguration DefaultMIDIConfig = MIDIConfiguration.GetDefault();
+
 	public static Song CurrentSong = new Song();
 
 	public string Title = "";
@@ -928,13 +929,9 @@ public class Song
 
 	// -----------------------------------------------------------------------
 
-	public static MIDIConfiguration DefaultMIDIConfig;
-
 	static Song()
 	{
 		Configuration.RegisterConfigurable(new MIDIConfigurationThunk());
-
-		DefaultMIDIConfig = MIDIConfiguration.GetDefault();
 	}
 
 	class MIDIConfigurationThunk : IConfigurable<MIDIConfiguration>

@@ -4,9 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using SDL3;
-
-namespace ChasmTracker;
+namespace ChasmTracker.SDLBackends;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.Events;
@@ -14,6 +12,8 @@ using ChasmTracker.Input;
 using ChasmTracker.Interop;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
+
+using SDL3;
 
 public class SDLVideoBackend : VideoBackend
 {
@@ -93,7 +93,7 @@ public class SDLVideoBackend : VideoBackend
 			return false;
 		}
 
-		if (EventHub.Initialize())
+		if (!EventHub.Initialize())
 		{
 			SDL.QuitSubSystem(SDL.InitFlags.Video);
 			SDLLifetime.Quit();

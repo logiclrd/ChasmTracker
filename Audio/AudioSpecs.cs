@@ -10,5 +10,7 @@ public class AudioSpecs
 	public int Channels; /* channels */
 	public ushort BufferSizeSamples; /* buffer size in samples */
 
-	public Action<Memory<byte>>? Callback;
+	public IAudioSink? Sink;
+
+	public void Callback(Span<byte> data) => Sink?.Callback(data);
 }

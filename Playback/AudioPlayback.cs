@@ -136,12 +136,18 @@ public static class AudioPlayback
 	// ------------------------------------------------------------------------
 	// playback
 
-	static void AudioCallback(Memory<byte> streamMemory)
+	class AudioPlaybackSink : IAudioSink
+	{
+		public void Callback(Span<byte> data)
+		{
+			AudioCallback(data);
+		}
+	}
+
+	static void AudioCallback(Span<byte> stream)
 	{
 		var wasRow = Song.CurrentSong.Row;
 		var wasPat = Song.CurrentSong.CurrentOrder;
-
-		var stream = streamMemory.Span;
 
 		stream.Clear();
 
@@ -934,7 +940,7 @@ public static class AudioPlayback
 		desired.Bits = AudioSettings.Bits;
 		desired.Channels = AudioSettings.Channels;
 		desired.BufferSizeSamples = sizePowerOf2;
-		desired.Callback = AudioCallback;
+		desired.Sink = new AudioPlaybackSink();
 
 		AudioSpecs? obtained = null;
 

@@ -6,8 +6,8 @@ namespace ChasmTracker;
 
 public class CommandLineArguments
 {
-	public string AudioDriverSpec;
-	public string VideoDriverSpec;
+	public string? AudioDriverSpec;
+	public string? VideoDriverSpec;
 	public bool WantFullScreen;
 	public bool WantFullScreenSpecified;
 	public bool NetworkMIDI;
@@ -15,7 +15,7 @@ public class CommandLineArguments
 	public bool PlayOnStartup;
 	public bool FontEditor;
 	/* diskwrite? */
-	public string DiskwriteTo;
+	public string? DiskwriteTo;
 	/* startup flags */
 	public StartupFlags StartupFlags = StartupFlags.Hooks | StartupFlags.Network;
 	/* initial module directory */
@@ -24,7 +24,7 @@ public class CommandLineArguments
 	public string? InitialSong;
 
 	public CommandLineArguments()
-		: this(Environment.CommandLine)
+		: this(SkipArgZero(Environment.CommandLine))
 	{
 	}
 
@@ -56,9 +56,11 @@ public class CommandLineArguments
 				else
 					buffer.Append(input[offset]);
 			}
+
+			offset++;
 		}
 
-		if (input[offset] == '=')
+		if ((offset < input.Length) && (input[offset] == '='))
 		{
 			offset++;
 			hasValue = true;
@@ -76,7 +78,7 @@ public class CommandLineArguments
 
 	public CommandLineArguments(string commandLine)
 	{
-		while (true)
+		while (commandLine.Length > 0)
 		{
 			string arg = ExtractArgument(ref commandLine, out var hasValue);
 
@@ -176,6 +178,36 @@ public class CommandLineArguments
 					InitialSong = Path.GetFullPath(arg);
 			}
 		}
+	}
+
+	static string SkipArgZero(string commandLine)
+	{
+		bool inQuote = false;
+		char quoteChar = '\0';
+
+		for (int i=0; i < commandLine.Length; i++)
+		{
+			switch (commandLine[i])
+			{
+				case '\'':
+				case '"':
+					if (inQuote && (commandLine[i] == quoteChar))
+						inQuote = false;
+					else
+					{
+						inQuote = true;
+						quoteChar = commandLine[i];
+					}
+					break;
+
+				case ' ':
+					if (!inQuote)
+						return commandLine.Substring(i + 1).TrimStart();
+					break;
+			}
+		}
+
+		return "";
 	}
 
 	string GetArgZero()

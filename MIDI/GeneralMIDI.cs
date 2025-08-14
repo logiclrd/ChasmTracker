@@ -509,6 +509,8 @@ public static class GeneralMIDI
 
 		for (int a = 0; a < Constants.MaxMIDIChannels; a++)
 		{
+			csf.MIDIChannels[a] = new SongMIDIState();
+
 			// XXX
 			// XXX Porting note:
 			// XXX This might go wrong because the midi struct is already reset
