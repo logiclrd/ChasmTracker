@@ -125,16 +125,45 @@ public static class Configuration
 	public static void Load()
 		=> Load(Path.Combine(Directories.DotSchism, "config"));
 
+	interface ILineSource
+	{
+		string? ReadLine();
+	}
+
+	class TextReaderLineSource : ILineSource
+	{
+		TextReader _reader;
+
+		public TextReaderLineSource(TextReader reader)
+		{
+			_reader = reader;
+		}
+
+		public string? ReadLine() => _reader.ReadLine();
+	}
+
+	class NullLineSource : ILineSource
+	{
+		public string? ReadLine() => null;
+	}
+
 	public static void Load(string fileName)
 	{
 		if (!File.Exists(fileName))
-			return;
-
-		using (var reader = new StreamReader(fileName))
-			Load(fileName, reader);
+			Load(fileName, new NullLineSource());
+		else
+		{
+			using (var reader = new StreamReader(fileName))
+				Load(fileName, reader);
+		}
 	}
 
 	public static void Load(string fileName, TextReader reader)
+	{
+		Load(fileName, new TextReaderLineSource(reader));
+	}
+
+	static void Load(string fileName, ILineSource lineSource)
 	{
 		CommentsByOwner.Clear();
 
@@ -147,7 +176,7 @@ public static class Configuration
 
 		while (true)
 		{
-			string? line = reader.ReadLine();
+			string? line = lineSource.ReadLine();
 
 			if (line == null)
 				break;
@@ -215,9 +244,9 @@ public static class Configuration
 		.Single();
 
 	static void ConfigurableLoadConfiguration(ConfigurationSection section)
-		=> s_configurableLoadConfigurationMethodDefinition.CreateDelegate(section.GetType()).DynamicInvoke(section);
+		=> s_configurableLoadConfigurationMethodDefinition.MakeGenericMethod(section.GetType()).Invoke(null, [section]);
 	static void ConfigurableSaveConfiguration(ConfigurationSection section)
-		=> s_configurableSaveConfigurationMethodDefinition.CreateDelegate(section.GetType()).DynamicInvoke(section);
+		=> s_configurableSaveConfigurationMethodDefinition.MakeGenericMethod(section.GetType()).Invoke(null, [section]);
 
 	static void ConfigurableLoadConfiguration<T>(T config)
 		where T : ConfigurationSection
