@@ -68,12 +68,14 @@ public class ULT : SongFileConverter
 		{
 			smp = stream.ReadStructure<ULTSample>();
 
-			if (ver < 4)
+			if (ver >= 4)
+				smp.Speed *= 2;
+			else
 			{
 				// If these bytes are at the very end of the stream, the ReadStructure will spuriously fail, but
 				// I don't think that ever happens.
 				smp.FineTune = smp.Speed;
-				smp.Speed = 8363;
+				smp.Speed = 8363 * 2;
 
 				stream.Position -= 2;
 			}
@@ -244,7 +246,7 @@ public class ULT : SongFileConverter
 			b = stream.ReadByte();
 		}
 
-		note.Note = (b > 0 && b < 61) ? (byte)(b + 36) : SpecialNotes.None;
+		note.Note = (b > 0 && b < 61) ? (byte)(b + 24) : SpecialNotes.None;
 		note.Instrument = (byte)stream.ReadByte();
 		b = stream.ReadByte();
 		note.VolumeEffectByte = (byte)(b & 0xf);
