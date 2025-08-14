@@ -118,7 +118,7 @@ public abstract class Widget
 			return false;
 
 		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive)
-				&& (widget is OtherWidget)
+				&& ((widget is OtherWidget) || (widget is ListBoxWidget))
 				&& widget.HandleKey(k))
 			return true;
 
