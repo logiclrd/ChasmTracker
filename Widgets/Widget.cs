@@ -160,7 +160,11 @@ public abstract class Widget
 			return result;
 
 		// IsDepressed handling
-		if (k.Mouse == MouseState.Click)
+		bool activateWithReturn = (k.Sym == KeySym.Return);
+		bool activateWithSpace = (k.Sym == KeySym.Space) && (widget.Type != WidgetType.TextEntry);
+
+		if (k.Mouse == MouseState.Click
+			|| (k.Mouse == MouseState.None && (activateWithReturn || activateWithSpace)))
 		{
 			int pad = 0;
 
@@ -173,7 +177,7 @@ public abstract class Widget
 						|| k.MousePosition.X >= widget.Position.X + widget.Size.Width + pad
 						|| k.MousePosition.Y != widget.Position.Y) ? false : true;
 
-			bool n = (k.State == KeyState.Press && onw) ? true : false;
+			bool n = (k.State == KeyState.Press) ? true : false;
 
 			if (widget.IsDepressed != n)
 				Status.Flags |= StatusFlags.NeedUpdate;
@@ -184,7 +188,7 @@ public abstract class Widget
 
 			if (!(widget is TextEntryWidget) && !(widget is NumberEntryWidget))
 			{
-				if (k.State == KeyState.Press || !onw)
+				if (k.State == KeyState.Press)
 					return true;
 			}
 			else
@@ -223,9 +227,8 @@ public abstract class Widget
 			}
 			else
 			{
-				// TODO: if (!(widget is OtherWidget)) {
-				widget.OnActivated();
-				// }
+				if (!(widget is OtherWidget))
+					widget.OnActivated();
 			}
 
 			if (widget.HandleActivate(k) is bool activateResult)

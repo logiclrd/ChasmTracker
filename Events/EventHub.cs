@@ -95,6 +95,7 @@ public static class EventHub
 
 					var chasmEvent = new KeyboardEvent();
 
+					chasmEvent.EventType = KeyboardEventType.KeyDown;
 					chasmEvent.State = KeyState.Press;
 					chasmEvent.IsRepeat = e.Key.Repeat;
 
@@ -121,6 +122,7 @@ public static class EventHub
 
 					var chasmEvent = new KeyboardEvent();
 
+					chasmEvent.EventType = KeyboardEventType.KeyUp;
 					chasmEvent.State = KeyState.Release;
 					chasmEvent.Sym = (KeySym)e.Key.Key;
 					chasmEvent.ScanCode = (ScanCode)e.Key.Scancode;
