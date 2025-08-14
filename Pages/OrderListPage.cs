@@ -23,6 +23,7 @@ public abstract class OrderListPage : Page
 	public OrderListPage(PageNumbers number, string title, HelpTexts helpText)
 		: base(number, title, helpText)
 	{
+		AddSharedWidgets(s_commonWidgets);
 	}
 
 	static OrderListPage()
@@ -541,14 +542,14 @@ public abstract class OrderListPage : Page
 				{
 					if (k.State == KeyState.Release)
 						return true;
-					ChangeFocusTo(33);
+					ActiveWidgetContext?.ChangeFocusTo(33);
 				}
 				else
 				{
 					if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift)) return false;
 					if (k.State == KeyState.Release)
 						return true;
-					ChangeFocusTo(1);
+					ActiveWidgetContext?.ChangeFocusTo(1);
 				}
 				return true;
 			case KeySym.Left:
@@ -787,7 +788,7 @@ public abstract class OrderListPage : Page
 
 	public override bool? HandleKey(KeyEvent k)
 	{
-		int n = SelectedActiveWidgetIndex?.Value ?? 0;
+		int n = ActiveWidgetContext?.SelectedWidgetIndex?.Value ?? 0;
 
 		if (k.State == KeyState.Release)
 			return false;
@@ -808,7 +809,7 @@ public abstract class OrderListPage : Page
 		}
 
 		n = n.Clamp(1, 64);
-		if (SelectedActiveWidgetIndex! != n)
+		if (ActiveWidgetContext?.SelectedWidgetIndex! != n)
 			ChangeFocusTo(n);
 
 		return true;

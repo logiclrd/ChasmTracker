@@ -29,8 +29,8 @@ public class VideoChangeDialog : Dialog
 		buttonOK.Clicked += DialogButtonYes;
 		buttonCancel.Clicked += DialogButtonNo;
 
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 	}
 
 	protected override void SetInitialFocus()

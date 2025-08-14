@@ -117,21 +117,21 @@ public class PreferencesPage : Page
 			thumbBarMasterVolumeRight.Next.Tab = thumbBarMasterVolumeRight.Next.BackTab =
 				otherDeviceList;
 
-		Widgets.Add(thumbBarMasterVolumeLeft);
-		Widgets.Add(thumbBarMasterVolumeRight);
-		Widgets.AddRange(toggleButtonInterpolationModes);
+		AddWidget(thumbBarMasterVolumeLeft);
+		AddWidget(thumbBarMasterVolumeRight);
+		AddWidgets(toggleButtonInterpolationModes);
 
 		foreach (var band in thumbBarEqualizerBands)
 		{
-			Widgets.Add(band.Frequency);
-			Widgets.Add(band.Gain);
+			AddWidget(band.Frequency);
+			AddWidget(band.Gain);
 		}
 
-		Widgets.Add(toggleButtonRampVolumeEnabled);
-		Widgets.Add(toggleButtonRampVolumeDisabled);
-		Widgets.Add(buttonSaveOutputConfiguration);
-		Widgets.Add(otherDeviceList);
-		Widgets.Add(otherDriverList);
+		AddWidget(toggleButtonRampVolumeEnabled);
+		AddWidget(toggleButtonRampVolumeDisabled);
+		AddWidget(buttonSaveOutputConfiguration);
+		AddWidget(otherDeviceList);
+		AddWidget(otherDriverList);
 	}
 
 	/* --------------------------------------------------------------------- */

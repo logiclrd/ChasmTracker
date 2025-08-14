@@ -28,8 +28,8 @@ public class SamplePromptDialog : NumberPromptDialog
 		buttonCancel = new ButtonWidget(new Point(36, 30), 6, "Cancel", 1);
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(textEntryInput);
-		Widgets.Add(buttonCancel);
+		AddWidget(textEntryInput);
+		AddWidget(buttonCancel);
 	}
 
 	Point _titlePosition;

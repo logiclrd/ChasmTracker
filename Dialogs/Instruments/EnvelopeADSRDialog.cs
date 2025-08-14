@@ -28,11 +28,11 @@ public class EnvelopeADSRDialog : Dialog
 
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(thumbBarAttack);
-		Widgets.Add(thumbBarDecay);
-		Widgets.Add(thumbBarSustain);
-		Widgets.Add(thumbBarRelease);
-		Widgets.Add(buttonCancel);
+		AddWidget(thumbBarAttack);
+		AddWidget(thumbBarDecay);
+		AddWidget(thumbBarSustain);
+		AddWidget(thumbBarRelease);
+		AddWidget(buttonCancel);
 	}
 
 	public override void DrawConst()

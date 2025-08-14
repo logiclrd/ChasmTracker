@@ -46,8 +46,8 @@ public class MultiChannelDialog : Dialog
 
 		buttonOK.Clicked += DialogButtonYes;
 
-		Widgets.AddRange(toggleChannel);
-		Widgets.Add(buttonOK);
+		AddWidgets(toggleChannel);
+		AddWidget(buttonOK);
 	}
 
 	void AdvanceChannel()

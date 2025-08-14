@@ -80,27 +80,27 @@ public class ConfigurationPage : Page
 			toggleButtonMenuBarNo!.Changed += ChangeMenuBarSettings;
 		}
 
-		Widgets.Add(thumbBarChannelLimit);
-		Widgets.Add(numberEntryMixingRate);
-		Widgets.Add(menuToggleSampleSize);
-		Widgets.Add(menuToggleOutputChannels);
-		Widgets.Add(menuToggleVisualizationStyle);
-		Widgets.Add(toggleClassicMode);
-		Widgets.Add(menuToggleAccidentalsMode);
-		Widgets.Add(menuToggleTimeDisplay);
-		Widgets.Add(menuToggleMIDIMode);
-		Widgets.Add(toggleButtonFullScreenYes);
-		Widgets.Add(toggleButtonFullScreenNo);
-		Widgets.Add(toggleButtonVideoNearest);
-		Widgets.Add(toggleButtonVideoLinear);
-		Widgets.Add(toggleButtonVideoBest);
-		Widgets.Add(toggleButtonRenderingHardware);
-		Widgets.Add(toggleButtonRenderingSoftware);
+		AddWidget(thumbBarChannelLimit);
+		AddWidget(numberEntryMixingRate);
+		AddWidget(menuToggleSampleSize);
+		AddWidget(menuToggleOutputChannels);
+		AddWidget(menuToggleVisualizationStyle);
+		AddWidget(toggleClassicMode);
+		AddWidget(menuToggleAccidentalsMode);
+		AddWidget(menuToggleTimeDisplay);
+		AddWidget(menuToggleMIDIMode);
+		AddWidget(toggleButtonFullScreenYes);
+		AddWidget(toggleButtonFullScreenNo);
+		AddWidget(toggleButtonVideoNearest);
+		AddWidget(toggleButtonVideoLinear);
+		AddWidget(toggleButtonVideoBest);
+		AddWidget(toggleButtonRenderingHardware);
+		AddWidget(toggleButtonRenderingSoftware);
 
 		if (Video.HaveMenu)
 		{
-			Widgets.Add(toggleButtonMenuBarYes!);
-			Widgets.Add(toggleButtonMenuBarNo!);
+			AddWidget(toggleButtonMenuBarYes!);
+			AddWidget(toggleButtonMenuBarNo!);
 		}
 	}
 

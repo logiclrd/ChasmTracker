@@ -100,7 +100,7 @@ public abstract class InstrumentListPage : Page
 		for (int i = 0; i < _savedEnv.Length; i++)
 			_savedEnv[i] = new Envelope(32);
 
-		Widgets.AddRange(s_commonWidgets);
+		AddSharedWidgets(s_commonWidgets);
 	}
 
 	public override void SetPage()
@@ -629,7 +629,7 @@ public abstract class InstrumentListPage : Page
 					if (s_instrumentCursorPos == 25)
 					{
 						otherInstrumentList.OtherAcceptsText = false;
-						ChangeFocusTo(1);
+						AllPages.InstrumentList.ChangeFocusTo(1);
 					}
 					else if (s_instrumentCursorPos < 24)
 					{
@@ -1044,9 +1044,9 @@ public abstract class InstrumentListPage : Page
 
 		SetPage(page);
 
-		if ((SelectedActiveWidgetIndex != null)
-		 && (SelectedActiveWidgetIndex >= ActiveWidgets!.Count))
-			SelectedActiveWidgetIndex.Value = ActiveWidgets.Count - 1;
+		if ((ActiveWidgetContext != null)
+		 && (ActiveWidgetContext.SelectedWidgetIndex >= ActiveWidgetContext.Widgets.Count))
+			ActiveWidgetContext.SelectedWidgetIndex.Value = ActiveWidgetContext.Widgets.Count - 1;
 
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}

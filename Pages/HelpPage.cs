@@ -60,7 +60,7 @@ public class HelpPage : Page
 	public HelpPage()
 		: base(PageNumbers.Help, "Help", HelpTexts.Global)
 	{
-		Widgets.Add(new ButtonWidget(
+		AddWidget(new ButtonWidget(
 			new Point(35, 47),
 			8,
 			() => SetPage(Status.PreviousPageNumber),

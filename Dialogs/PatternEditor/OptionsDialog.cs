@@ -62,21 +62,21 @@ public class OptionsDialog : Dialog
 
 		thumbBarBaseOctave.Changed += thumbBarBaseOctave_Changed;
 
-		Widgets.Add(thumbBarBaseOctave);
-		Widgets.Add(thumbBarSkip);
-		Widgets.Add(thumbBarRowHighlightMinor);
-		Widgets.Add(thumbBarRowHighlightMajor);
+		AddWidget(thumbBarBaseOctave);
+		AddWidget(thumbBarSkip);
+		AddWidget(thumbBarRowHighlightMinor);
+		AddWidget(thumbBarRowHighlightMajor);
 
 		/* Although patterns as small as 1 row can be edited properly (as of c759f7a0166c), I have
 		discovered it's a bit annoying to hit 'home' here expecting to get 32 rows but end up with
 		just one row instead. so I'll allow editing these patterns, but not really provide a way to
 		set the size, at least until I decide how to present the option nonintrusively. */
-		Widgets.Add(thumbBarPatternLength);
+		AddWidget(thumbBarPatternLength);
 
-		Widgets.Add(toggleButtonCommandValueLink);
-		Widgets.Add(toggleButtonCommandValueSplit);
+		AddWidget(toggleButtonCommandValueLink);
+		AddWidget(toggleButtonCommandValueSplit);
 
-		Widgets.Add(
+		AddWidget(
 			new ButtonWidget(new Point(35, 41), 8, "Done", 3)
 			.AddChangedHandler(Dialog.DialogButtonYes));
 

@@ -77,19 +77,19 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 		toggleButtonDuplicateCheckActionNoteFade.Changed += UpdateValues;
 		textEntryFileName.Changed += UpdateFileName;
 
-		Widgets.Add(otherNoteTranslationTable);
-		Widgets.Add(toggleButtonNewNoteActionNoteCut);
-		Widgets.Add(toggleButtonNewNoteActionContinue);
-		Widgets.Add(toggleButtonNewNoteActionNoteOff);
-		Widgets.Add(toggleButtonNewNoteActionNoteFade);
-		Widgets.Add(toggleButtonDuplicateCheckTypeDisabled);
-		Widgets.Add(toggleButtonDuplicateCheckTypeNote);
-		Widgets.Add(toggleButtonDuplicateCheckTypeSample);
-		Widgets.Add(toggleButtonDuplicateCheckTypeInstrument);
-		Widgets.Add(toggleButtonDuplicateCheckActionNoteCut);
-		Widgets.Add(toggleButtonDuplicateCheckActionNoteOff);
-		Widgets.Add(toggleButtonDuplicateCheckActionNoteFade);
-		Widgets.Add(textEntryFileName);
+		AddWidget(otherNoteTranslationTable);
+		AddWidget(toggleButtonNewNoteActionNoteCut);
+		AddWidget(toggleButtonNewNoteActionContinue);
+		AddWidget(toggleButtonNewNoteActionNoteOff);
+		AddWidget(toggleButtonNewNoteActionNoteFade);
+		AddWidget(toggleButtonDuplicateCheckTypeDisabled);
+		AddWidget(toggleButtonDuplicateCheckTypeNote);
+		AddWidget(toggleButtonDuplicateCheckTypeSample);
+		AddWidget(toggleButtonDuplicateCheckTypeInstrument);
+		AddWidget(toggleButtonDuplicateCheckActionNoteCut);
+		AddWidget(toggleButtonDuplicateCheckActionNoteOff);
+		AddWidget(toggleButtonDuplicateCheckActionNoteFade);
+		AddWidget(textEntryFileName);
 	}
 
 	public override void SetPage()

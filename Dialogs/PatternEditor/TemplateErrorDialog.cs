@@ -19,7 +19,7 @@ public class TemplateErrorDialog : Dialog
 
 		buttonOK.Clicked += DialogButtonYes;
 
-		Widgets.Add(buttonOK);
+		AddWidget(buttonOK);
 	}
 
 	public override void DrawConst()

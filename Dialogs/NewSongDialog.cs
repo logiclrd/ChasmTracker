@@ -41,16 +41,16 @@ public class NewSongDialog : Dialog
 		buttonCancel = new ButtonWidget(new Point(41, 36), 8, "Cancel", 4);
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(toggleButtonPatternsKeep);
-		Widgets.Add(toggleButtonPatternsClear);
-		Widgets.Add(toggleButtonSamplesKeep);
-		Widgets.Add(toggleButtonSamplesClear);
-		Widgets.Add(toggleButtonInstrumentsKeep);
-		Widgets.Add(toggleButtonInstrumentsClear);
-		Widgets.Add(toggleButtonOrderListKeep);
-		Widgets.Add(toggleButtonOrderListClear);
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(toggleButtonPatternsKeep);
+		AddWidget(toggleButtonPatternsClear);
+		AddWidget(toggleButtonSamplesKeep);
+		AddWidget(toggleButtonSamplesClear);
+		AddWidget(toggleButtonInstrumentsKeep);
+		AddWidget(toggleButtonInstrumentsClear);
+		AddWidget(toggleButtonOrderListKeep);
+		AddWidget(toggleButtonOrderListClear);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 
 		toggleButtonPatternsClear.SetState(true);
 		toggleButtonSamplesClear.SetState(true);

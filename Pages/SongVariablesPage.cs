@@ -85,24 +85,24 @@ public class SongVariablesPage : Page
 		textEntryInstrumentsDirectory.Changed += InstrumentsDirectoryChanged;
 		buttonSaveAllPreferences.Clicked += Configuration.Save;
 
-		Widgets.Add(textEntrySongName);
-		Widgets.Add(thumbBarInitialTempo);
-		Widgets.Add(thumbBarInitialSpeed);
-		Widgets.Add(thumbBarGlobalVolume);
-		Widgets.Add(thumbBarMixingVolume);
-		Widgets.Add(thumbBarSeparation);
-		Widgets.Add(toggleITOldEffects);
-		Widgets.Add(toggleCompatibleGXX);
-		Widgets.Add(toggleButtonControlInstruments);
-		Widgets.Add(toggleButtonControlSamples);
-		Widgets.Add(toggleButtonPlaybackStereo);
-		Widgets.Add(toggleButtonPlaybackMono);
-		Widgets.Add(toggleButtonPitchSlideLinear);
-		Widgets.Add(toggleButtonPitchSlideAmiga);
-		Widgets.Add(textEntryModulesDirectory);
-		Widgets.Add(textEntrySamplesDirectory);
-		Widgets.Add(textEntryInstrumentsDirectory);
-		Widgets.Add(buttonSaveAllPreferences);
+		AddWidget(textEntrySongName);
+		AddWidget(thumbBarInitialTempo);
+		AddWidget(thumbBarInitialSpeed);
+		AddWidget(thumbBarGlobalVolume);
+		AddWidget(thumbBarMixingVolume);
+		AddWidget(thumbBarSeparation);
+		AddWidget(toggleITOldEffects);
+		AddWidget(toggleCompatibleGXX);
+		AddWidget(toggleButtonControlInstruments);
+		AddWidget(toggleButtonControlSamples);
+		AddWidget(toggleButtonPlaybackStereo);
+		AddWidget(toggleButtonPlaybackMono);
+		AddWidget(toggleButtonPitchSlideLinear);
+		AddWidget(toggleButtonPitchSlideAmiga);
+		AddWidget(textEntryModulesDirectory);
+		AddWidget(textEntrySamplesDirectory);
+		AddWidget(textEntryInstrumentsDirectory);
+		AddWidget(buttonSaveAllPreferences);
 	}
 
 	public override void DrawConst()

@@ -150,7 +150,7 @@ public class PanBarWidget : Widget
 
 				IsMuted = !IsMuted;
 
-				Page.ChangeFocusTo(Next.Down);
+				WidgetContext?.ChangeFocusTo(Next.Down);
 
 				OnChanged();
 

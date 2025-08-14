@@ -12,24 +12,11 @@ using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
 
-public class Dialog
+public class Dialog : WidgetContext
 {
 	public DialogTypes Type;
 	public Point Position;
 	public Size Size;
-	public List<Widget> Widgets = new List<Widget>();
-	public Shared<int> SelectedWidgetIndex = new Shared<int>();
-
-	public Widget? SelectedWidget
-	{
-		get
-		{
-			if ((SelectedWidgetIndex < 0) || (SelectedWidgetIndex >= Widgets.Count))
-				return null;
-
-			return Widgets[SelectedWidgetIndex];
-		}
-	}
 
 	public string? Text;
 	public int TextX;
@@ -48,7 +35,7 @@ public class Dialog
 	{
 		s_activeDialogs.Push(dialog);
 
-		Page.ActiveWidgets = dialog.Widgets;
+		Page.ActiveWidgetContext = dialog;
 
 		return dialog;
 	}
@@ -64,49 +51,6 @@ public class Dialog
 		}
 	}
 
-	public bool ChangeFocusToXY(Point pt)
-	{
-		for (int i = 0; i < Widgets.Count; i++)
-			if (Widgets[i].ContainsPoint(pt))
-				return ChangeFocusTo(Widgets[i]);
-
-		return false;
-	}
-
-	public bool ChangeFocusTo(Widget widget)
-	{
-		int index = Widgets.IndexOf(widget);
-
-		if (index >= 0)
-			return ChangeFocusTo(index);
-
-		return false;
-	}
-
-	public bool ChangeFocusTo(int newWidgetIndex)
-	{
-		if (newWidgetIndex == SelectedWidgetIndex)
-			return true;
-
-		if ((newWidgetIndex < 0)
-		 || (newWidgetIndex >= Widgets.Count))
-			return false;
-
-		if ((SelectedWidgetIndex >= 0) && (SelectedWidgetIndex < Widgets.Count))
-			ActiveWidget.IsDepressed = false;
-
-		SelectedWidgetIndex.Value = newWidgetIndex;
-
-		ActiveWidget.IsDepressed = false;
-
-		if (ActiveWidget is TextEntryWidget textEntry)
-			textEntry.CursorPosition = textEntry.Text.Length;
-
-		Status.Flags |= StatusFlags.NeedUpdate;
-
-		return true;
-	}
-
 	public static void Destroy()
 	{
 		if (!s_activeDialogs.Any())
@@ -118,12 +62,12 @@ public class Dialog
 		{
 			var dialog = s_activeDialogs.Peek();
 
-			Page.ActiveWidgets = dialog.Widgets;
+			Page.ActiveWidgetContext = dialog;
 			Status.DialogType = dialog.Type;
 		}
 		else
 		{
-			Page.ActiveWidgets = Status.CurrentPage.Widgets;
+			Page.ActiveWidgetContext = Status.CurrentPage;
 			Status.DialogType = DialogTypes.None;
 		}
 
@@ -287,7 +231,7 @@ public class Dialog
 
 		var buttonOK = new ButtonWidget(new Point(36, 30), 6, "OK", 3);
 
-		Widgets.Add(buttonOK);
+		AddWidget(buttonOK);
 
 		buttonOK.Clicked += DialogButtonYes;
 	}
@@ -318,8 +262,8 @@ public class Dialog
 		buttonOK.Clicked += DialogButtonYes;
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 	}
 
 	void DialogCreateYesNo()
@@ -346,8 +290,8 @@ public class Dialog
 		buttonOK.Clicked += DialogButtonYes;
 		buttonCancel.Clicked += DialogButtonNo;
 
-		Widgets.Add(buttonOK);
-		Widgets.Add(buttonCancel);
+		AddWidget(buttonOK);
+		AddWidget(buttonCancel);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -391,8 +335,7 @@ public class Dialog
 
 		s_activeDialogs.Push(this);
 
-		Page.ActiveWidgets = Widgets;
-		Page.SelectedActiveWidgetIndex = SelectedWidgetIndex;
+		Page.ActiveWidgetContext = this;
 
 		Status.DialogType = (DialogTypes)type;
 		Status.Flags |= StatusFlags.NeedUpdate;

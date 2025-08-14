@@ -463,7 +463,7 @@ public class SampleFileListPageBase : Page
 
 			int fg, bg;
 
-			if (n == _flist.SelectedIndex && SelectedActiveWidgetIndex?.Value == 0)
+			if (n == _flist.SelectedIndex && (ActiveWidgetContext?.SelectedWidget == otherFileList))
 			{
 				fg = 0;
 				bg = 3;

@@ -35,8 +35,8 @@ public class TimeJumpDialog : Dialog
 		buttonOK.Clicked += AcceptDialog;
 		buttonCancel.Clicked += DialogButtonCancel;
 
-		Widgets.Add(numEntryMinute);
-		Widgets.Add(numEntrySecond);
+		AddWidget(numEntryMinute);
+		AddWidget(numEntrySecond);
 	}
 
 	public override void DrawConst()
@@ -54,7 +54,7 @@ public class TimeJumpDialog : Dialog
 			if (SelectedWidgetIndex == 1 && numEntrySecond!.Value == 0)
 			{
 				if (k.State == KeyState.Release)
-					Page.ChangeFocusTo(0);
+					Page.ActiveWidgetContext?.ChangeFocusTo(0);
 				return true;
 			}
 		}
@@ -62,8 +62,8 @@ public class TimeJumpDialog : Dialog
 		{
 			if (k.State == KeyState.Release)
 			{
-				if ((Page.SelectedActiveWidgetIndex != null) && (Page.SelectedActiveWidgetIndex == 0))
-					Page.ChangeFocusTo(1);
+				if ((Page.ActiveWidgetContext != null) && (Page.ActiveWidgetContext.SelectedWidgetIndex == 0))
+					Page.ActiveWidgetContext.ChangeFocusTo(1);
 			}
 
 			return true;

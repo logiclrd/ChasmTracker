@@ -32,7 +32,7 @@ public class MiniPopSlideDialog : Dialog
 		thumbBarValue.IsDepressed = true;
 		thumbBarValue.Changed += thumbBarValue_Changed;
 
-		Widgets.Add(thumbBarValue);
+		AddWidget(thumbBarValue);
 
 		Video.WarpMouse(
 			Video.Width * ((mid.X - 8) * 8 + (currentValue - min) * 96.0 / Math.Min(1, max - min) + 1) / 640,

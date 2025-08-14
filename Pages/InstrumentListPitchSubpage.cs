@@ -49,12 +49,12 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 		thumbBarMIDIBankLow.Changed += UpdateValues;
 		thumbBarMIDIBankHigh.Changed += UpdateValues;
 
-		Widgets.Add(thumbBarDefaultCutoff);
-		Widgets.Add(thumbBarDefaultResonance);
-		Widgets.Add(bitSetMIDIChannels);
-		Widgets.Add(thumbBarMIDIProgram);
-		Widgets.Add(thumbBarMIDIBankLow);
-		Widgets.Add(thumbBarMIDIBankHigh);
+		AddWidget(thumbBarDefaultCutoff);
+		AddWidget(thumbBarDefaultResonance);
+		AddWidget(bitSetMIDIChannels);
+		AddWidget(thumbBarMIDIProgram);
+		AddWidget(thumbBarMIDIBankLow);
+		AddWidget(thumbBarMIDIBankHigh);
 	}
 
 	protected override Widget CreateEnvelopeEnabledWidget()

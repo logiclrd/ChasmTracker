@@ -134,26 +134,26 @@ public class SampleListPage : Page
 
 		thumbBarVibratoRate.Changed += UpdateValuesInSong;
 
-		Widgets.Add(otherSampleList);
-		Widgets.Add(thumbBarDefaultVolume);
-		Widgets.Add(thumbBarGlobalVolume);
-		Widgets.Add(toggleEnableDefaultPan);
-		Widgets.Add(thumbBarDefaultPan);
-		Widgets.Add(thumbBarVibratoSpeed);
-		Widgets.Add(thumbBarVibratoDepth);
-		Widgets.Add(textEntryFileName);
-		Widgets.Add(numberEntryC5Speed);
-		Widgets.Add(menuToggleLoopEnable);
-		Widgets.Add(numberEntryLoopStart);
-		Widgets.Add(numberEntryLoopEnd);
-		Widgets.Add(menuToggleSustainLoopEnable);
-		Widgets.Add(numberEntrySustainLoopStart);
-		Widgets.Add(numberEntrySustainLoopEnd);
-		Widgets.Add(toggleButtonVibratoSine);
-		Widgets.Add(toggleButtonVibratoRampDown);
-		Widgets.Add(toggleButtonVibratoSquare);
-		Widgets.Add(toggleButtonVibratoRandom);
-		Widgets.Add(thumbBarVibratoRate);
+		AddWidget(otherSampleList);
+		AddWidget(thumbBarDefaultVolume);
+		AddWidget(thumbBarGlobalVolume);
+		AddWidget(toggleEnableDefaultPan);
+		AddWidget(thumbBarDefaultPan);
+		AddWidget(thumbBarVibratoSpeed);
+		AddWidget(thumbBarVibratoDepth);
+		AddWidget(textEntryFileName);
+		AddWidget(numberEntryC5Speed);
+		AddWidget(menuToggleLoopEnable);
+		AddWidget(numberEntryLoopStart);
+		AddWidget(numberEntryLoopEnd);
+		AddWidget(menuToggleSustainLoopEnable);
+		AddWidget(numberEntrySustainLoopStart);
+		AddWidget(numberEntrySustainLoopEnd);
+		AddWidget(toggleButtonVibratoSine);
+		AddWidget(toggleButtonVibratoRampDown);
+		AddWidget(toggleButtonVibratoSquare);
+		AddWidget(toggleButtonVibratoRandom);
+		AddWidget(thumbBarVibratoRate);
 	}
 
 	bool otherSampleList_HandleKey(KeyEvent k)

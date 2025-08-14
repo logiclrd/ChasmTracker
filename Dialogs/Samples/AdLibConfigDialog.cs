@@ -224,7 +224,7 @@ public class AdLibConfigDialog : Dialog
 				default: throw new Exception("Internal error");
 			}
 
-			Widgets.Add(widget);
+			AddWidget(widget);
 		}
 	}
 
