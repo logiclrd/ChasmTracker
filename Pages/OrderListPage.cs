@@ -160,7 +160,7 @@ public abstract class OrderListPage : Page
 				newOrder = 0;
 				break;
 			}
-		} while (!Status.Flags.HasFlag(StatusFlags.ClassicMode)
+		} while (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 				&& lastPattern == Song.CurrentSong.OrderList[newOrder]
 				&& Song.CurrentSong.OrderList[newOrder] == SpecialOrders.Skip);
 
@@ -184,7 +184,7 @@ public abstract class OrderListPage : Page
 				newOrder = 255;
 				break;
 			}
-		} while (!Status.Flags.HasFlag(StatusFlags.ClassicMode)
+		} while (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 				&& lastPattern == Song.CurrentSong.OrderList[newOrder]
 				&& Song.CurrentSong.OrderList[newOrder] == SpecialOrders.Skip);
 
@@ -503,7 +503,7 @@ public abstract class OrderListPage : Page
 		switch (k.Sym)
 		{
 			case KeySym.Backspace:
-				if (Status.Flags.HasFlag(StatusFlags.ClassicMode)) return false;
+				if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode)) return false;
 				if (!k.Modifiers.HasAnyFlag(KeyMod.Alt)) return false;
 				if (k.State == KeyState.Press)
 					return true;
@@ -514,7 +514,7 @@ public abstract class OrderListPage : Page
 
 			case KeySym.Return:
 			case KeySym.KP_Enter:
-				if (Status.Flags.HasFlag(StatusFlags.ClassicMode)) return false;
+				if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode)) return false;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
 				{
 					if (k.State == KeyState.Press)
@@ -667,7 +667,7 @@ public abstract class OrderListPage : Page
 			{
 				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 					return false;
-				if (Status.Flags.HasFlag(StatusFlags.ClassicMode)) return false;
+				if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode)) return false;
 				if (k.State == KeyState.Press)
 					return true;
 				int p = AllPages.PatternEditor.CurrentPattern;

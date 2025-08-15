@@ -144,8 +144,8 @@ public class SongVariablesPage : Page
 		thumbBarInitialSpeed.Value = Song.CurrentSong.InitialSpeed;
 		thumbBarSeparation.Value = Song.CurrentSong.PanSeparation;
 
-		toggleITOldEffects.State = Song.CurrentSong.Flags.HasFlag(SongFlags.ITOldEffects);
-		toggleCompatibleGXX.State = Song.CurrentSong.Flags.HasFlag(SongFlags.CompatibleGXX);
+		toggleITOldEffects.State = Song.CurrentSong.Flags.HasAllFlags(SongFlags.ITOldEffects);
+		toggleCompatibleGXX.State = Song.CurrentSong.Flags.HasAllFlags(SongFlags.CompatibleGXX);
 
 		if (Song.CurrentSong.IsInstrumentMode)
 			toggleButtonControlInstruments.SetState(true);
@@ -157,7 +157,7 @@ public class SongVariablesPage : Page
 		else
 			toggleButtonPlaybackMono.SetState(true);
 
-		if (Song.CurrentSong.Flags.HasFlag(SongFlags.LinearSlides))
+		if (Song.CurrentSong.Flags.HasAllFlags(SongFlags.LinearSlides))
 			toggleButtonPitchSlideLinear.SetState(true);
 		else
 			toggleButtonPitchSlideAmiga.SetState(true);

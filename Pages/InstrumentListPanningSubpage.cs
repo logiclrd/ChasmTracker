@@ -51,9 +51,9 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 		DrawEnvelopeLabel("Panning", isSelected);
 
 		EnvelopeDraw(ins.PanningEnvelope, false, _currentEnvelopeNode,
-			ins.Flags.HasFlag(InstrumentFlags.PanningEnvelope),
-			ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeLoop),
-			ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeSustain),
+			ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope),
+			ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeLoop),
+			ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeSustain),
 			0);
 	}
 
@@ -147,10 +147,10 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 
 		var toggleEnabled = (ToggleWidget)widgetEnvelopeEnabled;
 
-		toggleEnabled.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelope);
-		toggleEnvelopeCarry.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry);
-		toggleEnvelopeLoop.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeLoop);
-		toggleEnvelopeSustainLoop.State = ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeSustain);
+		toggleEnabled.State = ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope);
+		toggleEnvelopeCarry.State = ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeCarry);
+		toggleEnvelopeLoop.State = ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeLoop);
+		toggleEnvelopeSustainLoop.State = ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeSustain);
 
 		if (env != null)
 		{
@@ -170,7 +170,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 			numberEntryEnvelopeSustainLoopEnd.Value = env.SustainEnd;
 		}
 
-		toggleDefaultPanning.State = ins.Flags.HasFlag(InstrumentFlags.SetPanning);
+		toggleDefaultPanning.State = ins.Flags.HasAllFlags(InstrumentFlags.SetPanning);
 		thumbBarPanningValue.Value = ins.Panning >> 2;
 		thumbBarPitchPanSeparation.Value = ins.PitchPanSeparation;
 		thumbBarPanningSwing.Value = ins.PanningSwing;
@@ -252,7 +252,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 		VGAMem.DrawText("Pitch-Pan Center", new Point(37, 45), (0, 2));
 		VGAMem.DrawText("Pitch-Pan Separation", new Point(33, 46), (0, 2));
 
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			/* Hmm. The 's' in swing isn't capitalised. ;) */
 			VGAMem.DrawText("Pan swing", new Point(44, 47), (0, 2));

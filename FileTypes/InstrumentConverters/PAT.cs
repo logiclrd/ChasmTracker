@@ -180,7 +180,7 @@ public class PAT : InstrumentFileConverter
 			for (; lo < hi; lo++)
 				g.SampleMap[lo + 12] = (byte)n;
 
-			if (gfsamp.SampleMode.HasFlag(GF1SampleMode._16Bit))
+			if (gfsamp.SampleMode.HasAllFlags(GF1SampleMode._16Bit))
 			{
 				gfsamp.SampleSize >>= 1;
 				gfsamp.LoopStart >>= 1;
@@ -195,21 +195,21 @@ public class PAT : InstrumentFileConverter
 			smp.Flags = 0;
 
 			var rs = SampleFormat.Mono | SampleFormat.LittleEndian; // channels; endianness
-			rs |= gfsamp.SampleMode.HasFlag(GF1SampleMode._16Bit) ? SampleFormat._16 : SampleFormat._8; // bit width
-			rs |= gfsamp.SampleMode.HasFlag(GF1SampleMode.Unsigned) ? SampleFormat.PCMUnsigned : SampleFormat.PCMSigned; // encoding
+			rs |= gfsamp.SampleMode.HasAllFlags(GF1SampleMode._16Bit) ? SampleFormat._16 : SampleFormat._8; // bit width
+			rs |= gfsamp.SampleMode.HasAllFlags(GF1SampleMode.Unsigned) ? SampleFormat.PCMUnsigned : SampleFormat.PCMSigned; // encoding
 
-			if (gfsamp.SampleMode.HasFlag(GF1SampleMode.Sustain))
+			if (gfsamp.SampleMode.HasAllFlags(GF1SampleMode.Sustain))
 			{
-				if (gfsamp.SampleMode.HasFlag(GF1SampleMode.Loop))
+				if (gfsamp.SampleMode.HasAllFlags(GF1SampleMode.Loop))
 					smp.Flags |= SampleFlags.SustainLoop;
-				if (gfsamp.SampleMode.HasFlag(GF1SampleMode.PingPongLoop))
+				if (gfsamp.SampleMode.HasAllFlags(GF1SampleMode.PingPongLoop))
 					smp.Flags |= SampleFlags.PingPongSustain;
 			}
 			else
 			{
-				if (gfsamp.SampleMode.HasFlag(GF1SampleMode.Loop))
+				if (gfsamp.SampleMode.HasAllFlags(GF1SampleMode.Loop))
 					smp.Flags |= SampleFlags.Loop;
-				if (gfsamp.SampleMode.HasFlag(GF1SampleMode.PingPongLoop))
+				if (gfsamp.SampleMode.HasAllFlags(GF1SampleMode.PingPongLoop))
 					smp.Flags |= SampleFlags.PingPongLoop;
 			}
 

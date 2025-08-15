@@ -4,6 +4,8 @@ using System.Linq;
 
 namespace ChasmTracker.Audio;
 
+using ChasmTracker.Utility;
+
 public abstract class AudioBackend
 {
 	public const int DefaultID = ~0;
@@ -56,7 +58,7 @@ public abstract class AudioBackend
 	public static void FlashReinitializedText(bool success)
 	{
 		if (success)
-			Status.FlashText(Status.Flags.HasFlag(StatusFlags.ClassicMode)
+			Status.FlashText(Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 				? "Sound Blaster 16 reinitialised"
 				: "Audio output reinitialised");
 		else /* ... */

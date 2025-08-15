@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -63,6 +62,8 @@ public abstract class Page : WidgetContext
 
 		Status.CurrentPageNumber = newPageNumber;
 		Status.CurrentPage.SetPage();
+
+		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	public static void NotifySongChangedGlobal()
@@ -109,8 +110,6 @@ public abstract class Page : WidgetContext
 
 	/* draw the labels, etc. that don't change */
 	public virtual void DrawConst() { }
-	/* redraw the page */
-	public virtual void Redraw() { }
 	/* called after the song is changed. this is to copy the new
 	 * values from the song to the widgets on the page. */
 	public virtual void NotifySongChanged() { }
@@ -312,9 +311,9 @@ public abstract class Page : WidgetContext
 			activePage.Widgets[n].DrawWidget(n == activePage.SelectedWidgetIndex);
 
 		/* redraw the area over the menu if there is one */
-		if (Status.DialogType.HasFlag(DialogTypes.Menu))
+		if (Status.DialogType.HasAllFlags(DialogTypes.Menu))
 			Menu.DrawActiveMenu();
-		else if (Status.DialogType.HasFlag(DialogTypes.Box))
+		else if (Status.DialogType.HasAllFlags(DialogTypes.Box))
 			Dialog.DrawActiveDialogs();
 	}
 
@@ -324,12 +323,12 @@ public abstract class Page : WidgetContext
 	{
 		int tl, br;
 
-		if (Status.Flags.HasFlag(StatusFlags.InvertedPalette))
+		if (Status.Flags.HasAllFlags(StatusFlags.InvertedPalette))
 			(tl, br) = (3, 1);
 		else
 			(tl, br) = (1, 3);
 
-		string banner = Version.GetBanner(Status.Flags.HasFlag(StatusFlags.ClassicMode));
+		string banner = Version.GetBanner(Status.Flags.HasAllFlags(StatusFlags.ClassicMode));
 
 		VGAMem.DrawText(banner, new Point((80 - banner.Length) / 2, 1), (0, 2));
 		VGAMem.DrawText("Song Name", new Point(2, 3), (0, 2));
@@ -421,7 +420,7 @@ public abstract class Page : WidgetContext
 		|| (Status.CurrentPageNumber == PageNumbers.SampleList)
 		|| (Status.CurrentPageNumber == PageNumbers.SampleLoad)
 		|| (Status.CurrentPageNumber == PageNumbers.SampleLibrary)
-		|| (!Status.Flags.HasFlag(StatusFlags.ClassicMode)
+		|| (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 			&& (Status.CurrentPage is OrderListPage)))
 			instrumentMode = false;
 		else
@@ -565,7 +564,7 @@ public abstract class Page : WidgetContext
 
 	static void VisualizationFakeMem()
 	{
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			int ems = MemoryUsage.EMS;
 			if (ems > 67108864) ems = 0;
@@ -592,7 +591,7 @@ public abstract class Page : WidgetContext
 
 	static void DrawVisualization()
 	{
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			/* classic mode requires fakemem display */
 			VisualizationFakeMem();
@@ -708,7 +707,7 @@ public abstract class Page : WidgetContext
 
 	public static void SaveCheck(Action ok, Action? cancel = null)
 	{
-		if (Status.Flags.HasFlag(StatusFlags.SongNeedsSave))
+		if (Status.Flags.HasAllFlags(StatusFlags.SongNeedsSave))
 			MessageBox.Show(MessageBoxTypes.OKCancel, "Current module not saved. Proceed?", ok, cancel);
 		else
 			ok();
@@ -734,7 +733,7 @@ public abstract class Page : WidgetContext
 				s_digraphN = 0;
 
 			}
-			else if (!Status.Flags.HasFlag(StatusFlags.ClassicMode) && (k.Sym == KeySym.LeftControl || k.Sym == KeySym.RightControl))
+			else if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode) && (k.Sym == KeySym.LeftControl || k.Sym == KeySym.RightControl))
 			{
 				if (k.State == KeyState.Release && s_digraphN >= 0)
 				{
@@ -821,7 +820,7 @@ public abstract class Page : WidgetContext
 					return true;
 				}
 			}
-			else if (!Status.Flags.HasFlag(StatusFlags.ClassicMode) && k.Modifiers.HasAnyFlag(KeyMod.Control) && k.Modifiers.HasAnyFlag(KeyMod.Shift))
+			else if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode) && k.Modifiers.HasAnyFlag(KeyMod.Control) && k.Modifiers.HasAnyFlag(KeyMod.Shift))
 			{
 				if (s_csUnicodeC >= 0)
 				{
@@ -871,7 +870,7 @@ public abstract class Page : WidgetContext
 
 					char unicode = (char)(s_altNumPad & 255);
 
-					if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+					if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 						Status.FlashText($"Enter DOS/ASCII: {(int)unicode} -> {unicode}");
 
 					MainHandleTextInput(unicode.ToString());
@@ -911,7 +910,7 @@ public abstract class Page : WidgetContext
 						s_altNumPad += v;
 						s_altNumPadC++;
 
-						if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+						if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 							Status.FlashText($"Enter DOS/ASCII: {s_altNumPad}", biosFont: true);
 
 						return true;
@@ -947,7 +946,7 @@ public abstract class Page : WidgetContext
 			return;
 
 		/* okay... */
-		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+		if (!Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 		{
 			if (Status.CurrentPage.PreHandleKey(k) ?? true)
 				return;
@@ -955,7 +954,7 @@ public abstract class Page : WidgetContext
 
 		if (HandleKeyGlobal(k))
 			return;
-		if (!Status.Flags.HasFlag(StatusFlags.DiskWriterActive) && Menu.HandleKey(k))
+		if (!Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive) && Menu.HandleKey(k))
 			return;
 		if (Widget.MainHandleKey(k))
 			return;
@@ -965,7 +964,7 @@ public abstract class Page : WidgetContext
 		{
 			case KeySym.Left:
 				if (k.State == KeyState.Release) return;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control) && Status.CurrentPageNumber != PageNumbers.PatternEditor)
 				{
 					FinishMiniPop();
@@ -976,7 +975,7 @@ public abstract class Page : WidgetContext
 				break;
 			case KeySym.Right:
 				if (k.State == KeyState.Release) return;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control) && Status.CurrentPageNumber != PageNumbers.PatternEditor)
 				{
 					FinishMiniPop();
@@ -1007,12 +1006,12 @@ public abstract class Page : WidgetContext
 				break;
 			case KeySym.Slash:
 				if (k.State == KeyState.Release) return;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive)) return;
 				Keyboard.CurrentOctave--;
 				break;
 			case KeySym.Asterisk:
 				if (k.State == KeyState.Release) return;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive)) return;
 				Keyboard.CurrentOctave++;
 				break;
 			case KeySym.LeftBracket:
@@ -1021,7 +1020,7 @@ public abstract class Page : WidgetContext
 				int add = (k.Sym == KeySym.LeftBracket) ? -1 : 1;
 
 				if (k.State == KeyState.Release) break;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
+				if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
 					Song.CurrentSong.SetCurrentSpeed(Song.CurrentSong.CurrentSpeed + add);
@@ -1029,7 +1028,7 @@ public abstract class Page : WidgetContext
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
-				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				{
 					Song.CurrentSong.SetCurrentTempo(Song.CurrentSong.CurrentTempo + add);
 					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
@@ -1052,7 +1051,7 @@ public abstract class Page : WidgetContext
 			Dialog.HandleKeyForCurrentDialog(k);
 		else
 		{
-			if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+			if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 				return;
 
 			Status.CurrentPage.HandleKey(k);
@@ -1067,7 +1066,7 @@ public abstract class Page : WidgetContext
 		if (Widget.HandleTextInput(textInput))
 			return;
 
-		if (!Status.DialogType.HasFlag(DialogTypes.Box))
+		if (!Status.DialogType.HasAllFlags(DialogTypes.Box))
 			Status.CurrentPage.HandleTextInput(textInput);
 	}
 
@@ -1149,7 +1148,7 @@ public abstract class Page : WidgetContext
 
 				if ((Status.CurrentPage is InstrumentListPage)
 				 || (Status.CurrentPage is SampleListPage)
-				 || (!Status.Flags.HasFlag(StatusFlags.ClassicMode)
+				 || (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 					&& (Status.CurrentPage is OrderListPage)))
 					instrumentMode = false;
 				else
@@ -1294,14 +1293,14 @@ public abstract class Page : WidgetContext
 				break;
 			case KeySym.Home:
 				if (!(k.Modifiers.HasAnyFlag(KeyMod.Alt))) break;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) break;
+				if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive)) break;
 				if (k.State == KeyState.Release)
 					return false;
 				Keyboard.CurrentOctave--;
 				return true;
 			case KeySym.End:
 				if (!(k.Modifiers.HasAnyFlag(KeyMod.Alt))) break;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) break;
+				if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive)) break;
 				if (k.State == KeyState.Release)
 					return false;
 				Keyboard.CurrentOctave++;
@@ -1311,7 +1310,7 @@ public abstract class Page : WidgetContext
 		}
 
 		/* next, if there's no dialog, check the rest of the keys */
-		if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+		if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 			return false;
 
 		switch (k.Sym)
@@ -1413,7 +1412,7 @@ public abstract class Page : WidgetContext
 					{
 						if (k.State == KeyState.Press)
 						{
-							if (Status.DialogType.HasFlag(DialogTypes.Menu))
+							if (Status.DialogType.HasAllFlags(DialogTypes.Menu))
 							{
 								return false;
 							}
@@ -1704,7 +1703,7 @@ public abstract class Page : WidgetContext
 					{
 						Song.CurrentSong.Flags ^= SongFlags.OrderListLocked;
 
-						if (Song.CurrentSong.Flags.HasFlag(SongFlags.OrderListLocked))
+						if (Song.CurrentSong.Flags.HasAllFlags(SongFlags.OrderListLocked))
 							Status.FlashText("Order list locked");
 						else
 							Status.FlashText("Order list unlocked");
@@ -1765,7 +1764,7 @@ public abstract class Page : WidgetContext
 					if (k.State == KeyState.Press)
 					{
 						MIDIEngine.Flags ^= MIDIFlags.DisableRecord;
-						if (MIDIEngine.Flags.HasFlag(MIDIFlags.DisableRecord))
+						if (MIDIEngine.Flags.HasAllFlags(MIDIFlags.DisableRecord))
 							Status.FlashText("MIDI Input Enabled");
 						else
 							Status.FlashText("MIDI Input Disabled");
@@ -1789,7 +1788,7 @@ public abstract class Page : WidgetContext
 					return true;
 				}
 			case KeySym.Pause:
-				if (k.Modifiers.HasFlag(KeyMod.LeftShift) && k.Modifiers.HasFlag(KeyMod.LeftAlt) && k.Modifiers.HasFlag(KeyMod.RightAlt) && k.Modifiers.HasFlag(KeyMod.RightControl))
+				if (k.Modifiers.HasAllFlags(KeyMod.LeftShift) && k.Modifiers.HasAllFlags(KeyMod.LeftAlt) && k.Modifiers.HasAllFlags(KeyMod.RightAlt) && k.Modifiers.HasAllFlags(KeyMod.RightControl))
 				{
 					FinishMiniPop();
 					if (k.State == KeyState.Press)

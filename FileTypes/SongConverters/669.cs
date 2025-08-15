@@ -323,7 +323,7 @@ public class _669 : SongFileConverter
 
 		/* sample data */
 
-		if (!flags.HasFlag(LoadFlags.NoSamples))
+		if (!flags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int smp = 1; smp <= nSmp; smp++)
 			{

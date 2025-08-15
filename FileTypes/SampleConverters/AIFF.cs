@@ -350,15 +350,15 @@ public class AIFF : SampleFileConverter
 	{
 		long startPosition = stream.Position;
 
-		if (smp.Flags.HasFlag(SampleFlags.AdLib))
+		if (smp.Flags.HasAllFlags(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		SampleFormat flags = SampleFormat.BigEndian | SampleFormat.PCMSigned;
 
-		flags |= smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
-		flags |= smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono;
+		flags |= smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
+		flags |= smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono;
 
-		int bps = AIFFFile.WriteAIFFHeader(stream, smp.Flags.HasFlag(SampleFlags._16Bit) ? 16 : 8, smp.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1,
+		int bps = AIFFFile.WriteAIFFHeader(stream, smp.Flags.HasAllFlags(SampleFlags._16Bit) ? 16 : 8, smp.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1,
 			smp.C5Speed, smp.Name, smp.Length, null);
 
 		if (WriteSample(stream, smp, flags, uint.MaxValue) != smp.Length * bps)

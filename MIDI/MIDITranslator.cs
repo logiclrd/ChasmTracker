@@ -43,14 +43,14 @@ public class MIDITranslator
 					if (data[3] < 0x80)
 					{
 						chan.Cutoff = data[3];
-						csf.SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
+						csf.SetUpChannelFilter(ref chan, !chan.Flags.HasAllFlags(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
 					}
 					break;
 				case 0x01: // set resonance
 					if (data[3] < 0x80)
 					{
 						chan.Resonance = data[3];
-						csf.SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
+						csf.SetUpChannelFilter(ref chan, !chan.Flags.HasAllFlags(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
 					}
 					break;
 			}
@@ -75,7 +75,7 @@ public class MIDITranslator
 	{
 		var mPtr = startingNote;
 
-		if (!csf.Flags.HasFlag(SongFlags.InstrumentMode) || Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+		if (!csf.Flags.HasAllFlags(SongFlags.InstrumentMode) || Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker))
 			return;
 
 		/*if(m)
@@ -213,7 +213,7 @@ public class MIDITranslator
 			csf.MIDIInsTracker[chan] = ins;
 
 		int mg = insPtr.MIDIProgram
-			+ (MIDIEngine.Flags.HasFlag(MIDIFlags.BaseProgram1) ? 1 : 0);
+			+ (MIDIEngine.Flags.HasAllFlags(MIDIFlags.BaseProgram1) ? 1 : 0);
 
 		int mbl = insPtr.MIDIBank;
 		int mbh = (insPtr.MIDIBank >> 7) & 127;
@@ -249,7 +249,7 @@ public class MIDITranslator
 				mg, 0, 0, ins); // program change
 		}
 
-		if (c.Flags.HasFlag(ChannelFlags.Mute))
+		if (c.Flags.HasAllFlags(ChannelFlags.Mute))
 		{
 			// don't send noteon events when muted
 		}
@@ -280,7 +280,7 @@ public class MIDITranslator
 		/* this was all wrong. -mrsb */
 		ref var chan = ref csf.Voices[nChan];
 
-		var pEnv = (csf.Flags.HasFlag(SongFlags.InstrumentMode)
+		var pEnv = (csf.Flags.HasAllFlags(SongFlags.InstrumentMode)
 						&& chan.LastInstrumentNumber < Constants.MaxInstruments)
 				? csf.GetInstrumentSlotSafe((useInstrumentNumber != 0) ? useInstrumentNumber : chan.LastInstrumentNumber)
 				: null;
@@ -388,7 +388,7 @@ public class MIDITranslator
 				case 'm':
 					/* Loop direction (judging from the macro letter, this was supposed to be
 						loop mode instead, but a wrong offset into the channel structure was used in IT.) */
-					data = chan.Flags.HasFlag(ChannelFlags.PingPongFlag) ? (byte)1 : (byte)0;
+					data = chan.Flags.HasAllFlags(ChannelFlags.PingPongFlag) ? (byte)1 : (byte)0;
 					break;
 				case 'o':
 					/* OpenMPT test case ZxxSecrets.it:

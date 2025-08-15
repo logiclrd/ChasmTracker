@@ -168,13 +168,13 @@ public class XM : SongFileConverter
 
 					var m = (XMNoteMask)stream.ReadByte();
 
-					if (m.HasFlag(XMNoteMask.IsPacked))
+					if (m.HasAllFlags(XMNoteMask.IsPacked))
 					{
-						if (m.HasFlag(XMNoteMask.HasNote)) note.Note = (byte)stream.ReadByte();
-						if (m.HasFlag(XMNoteMask.HasInstrument)) note.Instrument = (byte)stream.ReadByte();
-						if (m.HasFlag(XMNoteMask.HasVolume)) note.VolumeParameter = (byte)stream.ReadByte();
-						if (m.HasFlag(XMNoteMask.HasEffect)) note.EffectByte = (byte)stream.ReadByte();
-						if (m.HasFlag(XMNoteMask.HasParameter)) note.Parameter = (byte)stream.ReadByte();
+						if (m.HasAllFlags(XMNoteMask.HasNote)) note.Note = (byte)stream.ReadByte();
+						if (m.HasAllFlags(XMNoteMask.HasInstrument)) note.Instrument = (byte)stream.ReadByte();
+						if (m.HasAllFlags(XMNoteMask.HasVolume)) note.VolumeParameter = (byte)stream.ReadByte();
+						if (m.HasAllFlags(XMNoteMask.HasEffect)) note.EffectByte = (byte)stream.ReadByte();
+						if (m.HasAllFlags(XMNoteMask.HasParameter)) note.Parameter = (byte)stream.ReadByte();
 					}
 					else
 					{
@@ -442,14 +442,14 @@ public class XM : SongFileConverter
 			if (smp.Length == 0)
 				continue;
 
-			if (smp.Flags.HasFlag(SampleFlags._16Bit))
+			if (smp.Flags.HasAllFlags(SampleFlags._16Bit))
 			{
 				smp.Length >>= 1;
 				smp.LoopStart >>= 1;
 				smp.LoopEnd >>= 1;
 			}
 
-			if (smp.Flags.HasFlag(SampleFlags.Stereo))
+			if (smp.Flags.HasAllFlags(SampleFlags.Stereo))
 			{
 				smp.Length >>= 1;
 				smp.LoopStart >>= 1;
@@ -457,7 +457,7 @@ public class XM : SongFileConverter
 			}
 
 			if ((smp.AdLibBytes == null) || (smp.AdLibBytes[0] != 0xAD))
-				SampleFileConverter.ReadSample(smp, SampleFormat.LittleEndian | (smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono) | SampleFormat.PCMDeltaEncoded | (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8), stream);
+				SampleFileConverter.ReadSample(smp, SampleFormat.LittleEndian | (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono) | SampleFormat.PCMDeltaEncoded | (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8), stream);
 			else
 			{
 				smp.AdLibBytes[0] = 0;
@@ -579,7 +579,7 @@ public class XM : SongFileConverter
 			detected = Trackers.Other;
 
 		// FT2 pads the song title with spaces, some other trackers don't
-		if (detected.HasFlag(Trackers.FT2Generic) && song.Title.Contains('\0'))
+		if (detected.HasAllFlags(Trackers.FT2Generic) && song.Title.Contains('\0'))
 			detected = Trackers.FT2Clone | Trackers.MaybeModPlug;
 
 		for (int ni = 1; ni <= hdr.NumInstruments; ni++)
@@ -597,7 +597,7 @@ public class XM : SongFileConverter
 
 			ins.Name = stream.ReadString(22, nullTerminated: false);
 
-			if (detected.HasFlag(Trackers.Digitrakker) && ins.Name.Contains('\0'))
+			if (detected.HasAllFlags(Trackers.Digitrakker) && ins.Name.Contains('\0'))
 			{
 				detected &= ~Trackers.Digitrakker;
 				ins.Name = ins.Name.TrimZ();
@@ -606,7 +606,7 @@ public class XM : SongFileConverter
 			int b = stream.ReadByte();
 			if (iType == -1)
 				iType = b;
-			else if (iType != b && detected.HasFlag(Trackers.FT2Generic))
+			else if (iType != b && detected.HasAllFlags(Trackers.FT2Generic))
 			{
 				// FT2 writes some random junk for the instrument type field,
 				// but it's always the SAME junk for every instrument saved.
@@ -632,13 +632,13 @@ public class XM : SongFileConverter
 			if (numSamples == 0)
 			{
 				// lucky day! it's pretty easy to identify tracker if there's a blank instrument
-				if (!detected.HasFlag(Trackers.Confirmed)) {
-					if (detected.HasFlag(Trackers.MaybeModPlug) && headerLength == 263 && sampleHeaderLength == 0)
+				if (!detected.HasAllFlags(Trackers.Confirmed)) {
+					if (detected.HasAllFlags(Trackers.MaybeModPlug) && headerLength == 263 && sampleHeaderLength == 0)
 					{
 						detected = Trackers.Confirmed;
 						song.TrackerID = "Modplug Tracker";
 					}
-					else if (detected.HasFlag(Trackers.Digitrakker) && headerLength != 29)
+					else if (detected.HasAllFlags(Trackers.Digitrakker) && headerLength != 29)
 					{
 						detected &= ~Trackers.Digitrakker;
 					}
@@ -714,9 +714,9 @@ public class XM : SongFileConverter
 			for (int i = 0; i < envs.Length; i++)
 			{
 				var f = (EnvelopeFlags)stream.ReadByte();
-				if (f.HasFlag(EnvelopeFlags.Enable)) ins.Flags |= envs[i].EnableFlag;
-				if (f.HasFlag(EnvelopeFlags.Sustain)) ins.Flags |= envs[i].SustainLoopFlag;
-				if (f.HasFlag(EnvelopeFlags.Loop)) ins.Flags |= envs[i].LoopFlag;
+				if (f.HasAllFlags(EnvelopeFlags.Enable)) ins.Flags |= envs[i].EnableFlag;
+				if (f.HasAllFlags(EnvelopeFlags.Sustain)) ins.Flags |= envs[i].SustainLoopFlag;
+				if (f.HasAllFlags(EnvelopeFlags.Loop)) ins.Flags |= envs[i].LoopFlag;
 			}
 
 			var vibratoType = AutoVibratoImport[stream.ReadByte() & 0x7];
@@ -740,18 +740,18 @@ public class XM : SongFileConverter
 
 			ins.FadeOut = stream.ReadStructure<ushort>();
 
-			if (ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+			if (ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 			{
 				// fix note-fade if either volume loop is disabled or both end nodes are equal
-				if (!ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop) || ins.VolumeEnvelope.LoopStart == ins.VolumeEnvelope.LoopEnd)
+				if (!ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop) || ins.VolumeEnvelope.LoopStart == ins.VolumeEnvelope.LoopEnd)
 					ins.VolumeEnvelope.LoopStart = ins.VolumeEnvelope.LoopEnd = ins.VolumeEnvelope.Nodes.Count - 1;
 				else
 				{
 					// fix volume envelope
-					FixEnvelopeLoop(ins.VolumeEnvelope, ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain));
+					FixEnvelopeLoop(ins.VolumeEnvelope, ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain));
 				}
 
-				if (!ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain))
+				if (!ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain))
 					ins.VolumeEnvelope.SustainStart = ins.VolumeEnvelope.SustainEnd = ins.VolumeEnvelope.Nodes.Count - 1;
 				ins.Flags |= InstrumentFlags.VolumeEnvelopeLoop | InstrumentFlags.VolumeEnvelopeSustain;
 
@@ -773,7 +773,7 @@ public class XM : SongFileConverter
 				ins.Flags |= InstrumentFlags.VolumeEnvelope | InstrumentFlags.VolumeEnvelopeSustain;
 			}
 
-			if (ins.Flags.HasFlag(InstrumentFlags.PanningEnvelope) && ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeLoop))
+			if (ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope) && ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeLoop))
 			{
 				if (ins.PanningEnvelope.LoopStart == ins.PanningEnvelope.LoopEnd)
 				{
@@ -783,7 +783,7 @@ public class XM : SongFileConverter
 				else
 				{
 					// fix panning envelope
-					FixEnvelopeLoop(ins.PanningEnvelope, ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeSustain));
+					FixEnvelopeLoop(ins.PanningEnvelope, ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeSustain));
 				}
 			}
 
@@ -841,16 +841,16 @@ public class XM : SongFileConverter
 
 				if (flags.HasAnyFlag(XMSampleType.Loop | XMSampleType.PingPongLoop))
 					smp.Flags |= SampleFlags.Loop;
-				if (flags.HasFlag(XMSampleType.PingPongLoop))
+				if (flags.HasAllFlags(XMSampleType.PingPongLoop))
 					smp.Flags |= SampleFlags.PingPongLoop;
 
-				if (flags.HasFlag(XMSampleType._16Bit))
+				if (flags.HasAllFlags(XMSampleType._16Bit))
 				{
 					smp.Flags |= SampleFlags._16Bit;
 					// NOTE length and loop start/end are adjusted later
 				}
 
-				if (flags.HasFlag(XMSampleType.Stereo))
+				if (flags.HasAllFlags(XMSampleType.Stereo))
 				{
 					smp.Flags |= SampleFlags.Stereo;
 					// NOTE length and loop start/end are adjusted later
@@ -866,7 +866,7 @@ public class XM : SongFileConverter
 
 				reservedBytes |= reserved;
 
-				if (reserved == 0xAD && !flags.HasFlag(XMSampleType._16Bit) && !flags.HasFlag(XMSampleType.Stereo))
+				if (reserved == 0xAD && !flags.HasAllFlags(XMSampleType._16Bit) && !flags.HasAllFlags(XMSampleType.Stereo))
 					smp.AdLibBytes = new byte[] { 0xAD }; // temp storage
 
 				byte[] nameBytes = new byte[22];
@@ -875,7 +875,7 @@ public class XM : SongFileConverter
 
 				smp.Name = nameBytes.ToStringZ();
 
-				if (detected.HasFlag(Trackers.Digitrakker) && nameBytes.Any(b => b == 0))
+				if (detected.HasAllFlags(Trackers.Digitrakker) && nameBytes.Any(b => b == 0))
 					detected &= ~Trackers.Digitrakker;
 
 				smp.VibratoType = vibratoType;
@@ -894,7 +894,7 @@ public class XM : SongFileConverter
 			//	break;
 		}
 
-		if (detected.HasFlag(Trackers.FT2Clone))
+		if (detected.HasAllFlags(Trackers.FT2Clone))
 		{
 			if (reservedBytes == 0)
 				song.TrackerID = "Modplug Tracker";
@@ -905,7 +905,7 @@ public class XM : SongFileConverter
 				song.TrackerID = "FastTracker clone";
 			}
 		}
-		else if (detected.HasFlag(Trackers.Digitrakker) && reservedBytes == 0 && (iType != 0 ? iType : -1) == -1)
+		else if (detected.HasAllFlags(Trackers.Digitrakker) && reservedBytes == 0 && (iType != 0 ? iType : -1) == -1)
 			song.TrackerID = "Digitrakker";
 		else if (detected == Trackers.Unknown)
 			song.TrackerID = "Unknown tracker";
@@ -923,7 +923,7 @@ public class XM : SongFileConverter
 		song.Title = hdr.NameBytes.ToStringZ();
 		song.TrackerID = hdr.Tracker;
 
-		if (hdr.Flags.HasFlag(XMFileFlags.LinearSlides))
+		if (hdr.Flags.HasAllFlags(XMFileFlags.LinearSlides))
 			song.Flags |= SongFlags.LinearSlides;
 
 		song.Flags |= SongFlags.ITOldEffects | SongFlags.CompatibleGXX | SongFlags.InstrumentMode;

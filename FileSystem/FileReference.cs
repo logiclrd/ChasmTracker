@@ -96,9 +96,9 @@ public class FileReference : Reference, IComparable<FileReference> // dmoz_file
 		if (other == null)
 			return -1;
 
-		if (other.Type.HasFlag(FileTypes.Hidden) && !Type.HasFlag(FileTypes.Hidden))
+		if (other.Type.HasAllFlags(FileTypes.Hidden) && !Type.HasAllFlags(FileTypes.Hidden))
 			return -1; /* this goes first */
-		if (!other.Type.HasFlag(FileTypes.Hidden) && Type.HasFlag(FileTypes.Hidden))
+		if (!other.Type.HasAllFlags(FileTypes.Hidden) && Type.HasAllFlags(FileTypes.Hidden))
 			return 1; /* other goes first */
 		if (SortOrder < other.SortOrder)
 			return -1; /* this goes first */
@@ -139,7 +139,7 @@ public class FileReference : Reference, IComparable<FileReference> // dmoz_file
 
 	public bool FillExtendedData()
 	{
-		if (Type.HasFlag(FileTypes.ExtendedDataMask))
+		if (Type.HasAllFlags(FileTypes.ExtendedDataMask))
 			return true;
 		if (Type == FileTypes.Directory)
 			return true;

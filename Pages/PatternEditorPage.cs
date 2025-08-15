@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Clipboard;
 using ChasmTracker.Configurations;
@@ -15,7 +15,6 @@ using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
 using ChasmTracker.MIDI;
-using ChasmTracker.Pages;
 using ChasmTracker.Pages.TrackViews;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
@@ -132,7 +131,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 	{
 		int chanDrawPos = 5;
 
-		int maskColour = Status.Flags.HasFlag(StatusFlags.InvertedPalette) ? 1 : 3; /* mask colour */
+		int maskColour = Status.Flags.HasAllFlags(StatusFlags.InvertedPalette) ? 1 : 3; /* mask colour */
 
 		bool patternIsPlaying = AudioPlayback.IsPlaying && (_currentPattern == _playingPattern);
 
@@ -160,7 +159,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				"real" channels. i'd rather pm not replicate this cruft and
 				more or less hide the mixer from the interface... */
 			trackView.DrawChannelHeader(chan, new Point(chanDrawPos, 14),
-				(Song.CurrentSong.GetChannel(chan - 1)?.Flags.HasFlag(ChannelFlags.Mute) ?? false)
+				(Song.CurrentSong.GetChannel(chan - 1)?.Flags.HasAllFlags(ChannelFlags.Mute) ?? false)
 				? (byte)0 : (byte)3);
 
 			int row, rowPos;
@@ -220,7 +219,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				{
 					// yes! do write the cursor
 					cpos = _currentPosition;
-					if (cpos == 6 && _linkEffectColumn && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+					if (cpos == 6 && _linkEffectColumn && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 						cpos = 9; // highlight full effect and value
 				}
 				else
@@ -897,7 +896,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 					{
 						pNote.Instrument = (byte)CurrentInstrument;
 
-						if (_editCopyMask.HasFlag(PatternEditorMask.Volume))
+						if (_editCopyMask.HasAllFlags(PatternEditorMask.Volume))
 						{
 							pNote.VolumeEffect = _maskNote.VolumeEffect;
 							pNote.VolumeParameter = _maskNote.VolumeParameter;
@@ -908,7 +907,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 							pNote.VolumeParameter = 0;
 						}
 
-						if (_editCopyMask.HasFlag(PatternEditorMask.Effect))
+						if (_editCopyMask.HasAllFlags(PatternEditorMask.Effect))
 						{
 							pNote.Effect = _maskNote.Effect;
 							pNote.Parameter = _maskNote.Parameter;
@@ -1296,7 +1295,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		config.MaskCopySearchMode = _maskCopySearchMode;
 		config.InvertHomeEnd = _invertHomeEnd;
 
-		config.CrayolaMode = Status.Flags.HasFlag(StatusFlags.CrayolaMode);
+		config.CrayolaMode = Status.Flags.HasAllFlags(StatusFlags.CrayolaMode);
 
 		char[] channelData = new char[Constants.MaxChannels];
 
@@ -2387,7 +2386,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		bool[] mute = new bool[s.Channels];
 
 		for (int i = 0; i < s.Channels; i++)
-			mute[i] = Song.CurrentSong.GetChannel(i + baseChannel)?.Flags.HasFlag(ChannelFlags.Mute) ?? false;
+			mute[i] = Song.CurrentSong.GetChannel(i + baseChannel)?.Flags.HasAllFlags(ChannelFlags.Mute) ?? false;
 
 		for (int row = 0; row < s.Rows; row++)
 		{
@@ -2955,7 +2954,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				fx = VolumeEffects.VibratoDepth;
 				vol %= 10;
 			}
-			else if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+			else if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				return false;
 			else if (k.Sym == KeySym.Dollar)
 			{
@@ -3103,16 +3102,16 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 					continue;
 
 				curNote.Note = (byte)note;
-				if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
+				if (_editCopyMask.HasAllFlags(PatternEditorMask.Instrument))
 					curNote.Instrument = 0;
 
-				if (_editCopyMask.HasFlag(PatternEditorMask.Volume))
+				if (_editCopyMask.HasAllFlags(PatternEditorMask.Volume))
 				{
 					curNote.VolumeEffect = VolumeEffects.None;
 					curNote.VolumeParameter = 0;
 				}
 
-				if (_editCopyMask.HasFlag(PatternEditorMask.Effect))
+				if (_editCopyMask.HasAllFlags(PatternEditorMask.Effect))
 				{
 					curNote.Effect = Effects.None;
 					curNote.Parameter = 0;
@@ -3162,7 +3161,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		int offset = 0;
 
 		// this is a long one
-		if (MIDIEngine.Flags.HasFlag(MIDIFlags.TickQuantize) // if quantize is on
+		if (MIDIEngine.Flags.HasAllFlags(MIDIFlags.TickQuantize) // if quantize is on
 				&& songWasPlaying                       // and the song was playing
 				&& _playbackTracing                     // and we are following the song
 				&& tick > 0 && tick <= speed / 2 + 1)   // and the note is too late
@@ -3194,7 +3193,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				return false;
 
 			/* don't record noteoffs for no good reason... */
-			if (!(MIDIEngine.Flags.HasFlag(MIDIFlags.RecordNoteOff)
+			if (!(MIDIEngine.Flags.HasAllFlags(MIDIFlags.RecordNoteOff)
 					&& AudioPlayback.IsPlaying
 					&& _playbackTracing))
 				return false;
@@ -3234,7 +3233,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			{
 				curNote.Instrument = (byte)CurrentInstrument;
 
-				if (MIDIEngine.Flags.HasFlag(MIDIFlags.RecordVelocity))
+				if (MIDIEngine.Flags.HasAllFlags(MIDIFlags.RecordVelocity))
 				{
 					curNote.VolumeEffect = VolumeEffects.Volume;
 					curNote.VolumeParameter = (byte)v;
@@ -3242,7 +3241,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 				tick %= speed;
 
-				if (!MIDIEngine.Flags.HasFlag(MIDIFlags.TickQuantize)
+				if (!MIDIEngine.Flags.HasAllFlags(MIDIFlags.TickQuantize)
 				 && (curNote.Effect == Effects.None)
 				 && tick != 0)
 				{
@@ -3252,7 +3251,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			}
 		}
 
-		if (!MIDIEngine.Flags.HasFlag(MIDIFlags.PitchBend)
+		if (!MIDIEngine.Flags.HasAllFlags(MIDIFlags.PitchBend)
 		 || MIDIEngine.PitchWheelDepth == 0
 		 || k.MIDIBend == 0)
 		{
@@ -3394,12 +3393,12 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 			if (Song.CurrentSong.IsInstrumentMode)
 			{
-				if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
+				if (_editCopyMask.HasAllFlags(PatternEditorMask.Instrument))
 					ins = AllPages.InstrumentList.CurrentInstrument;
 			}
 			else
 			{
-				if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
+				if (_editCopyMask.HasAllFlags(PatternEditorMask.Instrument))
 					smp = AllPages.SampleList.CurrentSample;
 			}
 
@@ -3408,7 +3407,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				/* copy mask to note */
 				note = _maskNote.Note;
 
-				vol = (_editCopyMask.HasFlag(PatternEditorMask.Volume) && curNote.VolumeEffect == VolumeEffects.Volume)
+				vol = (_editCopyMask.HasAllFlags(PatternEditorMask.Volume) && curNote.VolumeEffect == VolumeEffects.Volume)
 					? _maskNote.VolumeParameter
 					: KeyJazz.DefaultVolume;
 			}
@@ -3419,7 +3418,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				if (note < 0)
 					return false;
 
-				if (_editCopyMask.HasFlag(PatternEditorMask.Volume) && _maskNote.VolumeEffect == VolumeEffects.Volume)
+				if (_editCopyMask.HasAllFlags(PatternEditorMask.Volume) && _maskNote.VolumeEffect == VolumeEffects.Volume)
 					vol = _maskNote.VolumeParameter;
 				else if (curNote.VolumeEffect == VolumeEffects.Volume)
 					vol = curNote.VolumeParameter;
@@ -3467,7 +3466,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 		if (_currentPosition == 0) /* note */
 		{
-			bool writeNote = _keyjazzCapsLock ? !k.Modifiers.HasFlag(KeyMod.Caps) : !k.Modifiers.HasFlag(KeyMod.CapsPressed);
+			bool writeNote = _keyjazzCapsLock ? !k.Modifiers.HasAllFlags(KeyMod.Caps) : !k.Modifiers.HasAllFlags(KeyMod.CapsPressed);
 
 			if (writeNote && !RecordNote(pattern, _currentRow, _currentChannel, note, true))
 			{
@@ -3488,7 +3487,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				erasing a note -- but DO write it when inserting a blank note with the space key. */
 				if (!(SongNote.IsControl(note) || (k.Sym != KeySym.Space && note == SpecialNotes.None)) && (_templateMode == TemplateMode.Off))
 				{
-					if (_editCopyMask.HasFlag(PatternEditorMask.Instrument))
+					if (_editCopyMask.HasAllFlags(PatternEditorMask.Instrument))
 					{
 						if (Song.CurrentSong.IsInstrumentMode)
 							curNote2.Instrument = (byte)AllPages.InstrumentList.CurrentInstrument;
@@ -3496,13 +3495,13 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 							curNote2.Instrument = (byte)AllPages.SampleList.CurrentSample;
 					}
 
-					if (_editCopyMask.HasFlag(PatternEditorMask.Volume))
+					if (_editCopyMask.HasAllFlags(PatternEditorMask.Volume))
 					{
 						curNote2.VolumeEffect = _maskNote.VolumeEffect;
 						curNote2.VolumeParameter = _maskNote.VolumeParameter;
 					}
 
-					if (_editCopyMask.HasFlag(PatternEditorMask.Effect))
+					if (_editCopyMask.HasAllFlags(PatternEditorMask.Effect))
 					{
 						curNote2.Effect = _maskNote.Effect;
 						curNote2.Parameter = _maskNote.Parameter;
@@ -4368,7 +4367,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			{
 				if (k.State == KeyState.Release)
 					return false;
-				if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || _currentPosition != 4)
+				if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode) || _currentPosition != 4)
 				{
 					CurrentInstrument--;
 					Status.Flags |= StatusFlags.NeedUpdate;
@@ -4379,7 +4378,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			{
 				if (k.State == KeyState.Release)
 					return false;
-				if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || _currentPosition != 4)
+				if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode) || _currentPosition != 4)
 				{
 					CurrentInstrument++;
 					Status.Flags |= StatusFlags.NeedUpdate;
@@ -4845,7 +4844,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			case KeySym.l:
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+					if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 						return false;
 
 					if (k.State == KeyState.Release)
@@ -4858,7 +4857,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 				return HandleKeyDefault(k);
 			case KeySym.a:
-				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				{
 					if (k.State == KeyState.Release)
 						return false;
@@ -4876,7 +4875,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 				return HandleKeyDefault(k);
 			case KeySym.f:
-				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				{
 					if (k.State == KeyState.Release)
 						return false;

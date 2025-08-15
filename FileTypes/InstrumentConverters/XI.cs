@@ -182,12 +182,12 @@ public class XI : InstrumentFileConverter
 		}
 
 		// Set up envelope types in instrument
-		if (xi.SampleHeader.VolumeType.HasFlag(XIEnvelopeFlags.Enabled))  g.Flags |= InstrumentFlags.VolumeEnvelope;
-		if (xi.SampleHeader.VolumeType.HasFlag(XIEnvelopeFlags.Sustain))  g.Flags |= InstrumentFlags.VolumeEnvelopeSustain;
-		if (xi.SampleHeader.VolumeType.HasFlag(XIEnvelopeFlags.Loop))     g.Flags |= InstrumentFlags.VolumeEnvelopeLoop;
-		if (xi.SampleHeader.PanningType.HasFlag(XIEnvelopeFlags.Enabled)) g.Flags |= InstrumentFlags.PanningEnvelope;
-		if (xi.SampleHeader.PanningType.HasFlag(XIEnvelopeFlags.Sustain)) g.Flags |= InstrumentFlags.PanningEnvelopeSustain;
-		if (xi.SampleHeader.PanningType.HasFlag(XIEnvelopeFlags.Loop))    g.Flags |= InstrumentFlags.PanningEnvelopeLoop;
+		if (xi.SampleHeader.VolumeType.HasAllFlags(XIEnvelopeFlags.Enabled))  g.Flags |= InstrumentFlags.VolumeEnvelope;
+		if (xi.SampleHeader.VolumeType.HasAllFlags(XIEnvelopeFlags.Sustain))  g.Flags |= InstrumentFlags.VolumeEnvelopeSustain;
+		if (xi.SampleHeader.VolumeType.HasAllFlags(XIEnvelopeFlags.Loop))     g.Flags |= InstrumentFlags.VolumeEnvelopeLoop;
+		if (xi.SampleHeader.PanningType.HasAllFlags(XIEnvelopeFlags.Enabled)) g.Flags |= InstrumentFlags.PanningEnvelope;
+		if (xi.SampleHeader.PanningType.HasAllFlags(XIEnvelopeFlags.Sustain)) g.Flags |= InstrumentFlags.PanningEnvelopeSustain;
+		if (xi.SampleHeader.PanningType.HasAllFlags(XIEnvelopeFlags.Loop))    g.Flags |= InstrumentFlags.PanningEnvelopeLoop;
 
 		int prevTick = -1;
 
@@ -235,17 +235,17 @@ public class XI : InstrumentFileConverter
 			SampleFormat rs;
 
 			rs = SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded; // endianness; encoding
-			rs |= xmss.Type.HasFlag(XMSampleType.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono; // channels
-			rs |= xmss.Type.HasFlag(XMSampleType._16Bit) ? SampleFormat._16 : SampleFormat._8; // bits
+			rs |= xmss.Type.HasAllFlags(XMSampleType.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono; // channels
+			rs |= xmss.Type.HasAllFlags(XMSampleType._16Bit) ? SampleFormat._16 : SampleFormat._8; // bits
 
-			if (xmss.Type.HasFlag(XMSampleType._16Bit))
+			if (xmss.Type.HasAllFlags(XMSampleType._16Bit))
 			{
 				xmss.LoopLength >>= 1;
 				xmss.LoopStart >>= 1;
 				xmss.SampleLength >>= 1;
 			}
 
-			if (xmss.Type.HasFlag(XMSampleType.Stereo))
+			if (xmss.Type.HasAllFlags(XMSampleType.Stereo))
 			{
 				xmss.LoopLength >>= 1;
 				xmss.LoopStart >>= 1;
@@ -278,7 +278,7 @@ public class XI : InstrumentFileConverter
 			{
 				smp.Flags |= SampleFlags.Loop;
 
-				if (xmss.Type.HasFlag(XMSampleType.PingPongLoop))
+				if (xmss.Type.HasAllFlags(XMSampleType.PingPongLoop))
 					smp.Flags |= SampleFlags.PingPongLoop;
 			}
 			smp.Volume = xmss.Volume << 2;
@@ -362,12 +362,12 @@ public class XI : InstrumentFileConverter
 		xi.Version = 0x0102;
 
 		/* envelope type */
-		if (instrument.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))         xi.SampleHeader.VolumeType |= XIEnvelopeFlags.Enabled;
-		if (instrument.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain))  xi.SampleHeader.VolumeType |= XIEnvelopeFlags.Sustain;
-		if (instrument.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop))     xi.SampleHeader.VolumeType |= XIEnvelopeFlags.Loop;
-		if (instrument.Flags.HasFlag(InstrumentFlags.PanningEnvelope))        xi.SampleHeader.PanningType |= XIEnvelopeFlags.Enabled;
-		if (instrument.Flags.HasFlag(InstrumentFlags.PanningEnvelopeSustain)) xi.SampleHeader.PanningType |= XIEnvelopeFlags.Sustain;
-		if (instrument.Flags.HasFlag(InstrumentFlags.PanningEnvelopeLoop))    xi.SampleHeader.PanningType |= XIEnvelopeFlags.Loop;
+		if (instrument.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))         xi.SampleHeader.VolumeType |= XIEnvelopeFlags.Enabled;
+		if (instrument.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain))  xi.SampleHeader.VolumeType |= XIEnvelopeFlags.Sustain;
+		if (instrument.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop))     xi.SampleHeader.VolumeType |= XIEnvelopeFlags.Loop;
+		if (instrument.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope))        xi.SampleHeader.PanningType |= XIEnvelopeFlags.Enabled;
+		if (instrument.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeSustain)) xi.SampleHeader.PanningType |= XIEnvelopeFlags.Sustain;
+		if (instrument.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeLoop))    xi.SampleHeader.PanningType |= XIEnvelopeFlags.Loop;
 
 		var volumeEnvelope = instrument.VolumeEnvelope ?? new Envelope(64);
 
@@ -454,12 +454,12 @@ public class XI : InstrumentFileConverter
 			xmss.LoopStart = smp.LoopStart;
 			xmss.LoopLength = smp.LoopEnd - smp.LoopStart;
 
-			if (smp.Flags.HasFlag(SampleFlags.PingPongLoop))
+			if (smp.Flags.HasAllFlags(SampleFlags.PingPongLoop))
 				xmss.Type |= XMSampleType.Loop | XMSampleType.PingPongLoop;
-			else if (smp.Flags.HasFlag(SampleFlags.Loop))
+			else if (smp.Flags.HasAllFlags(SampleFlags.Loop))
 				xmss.Type |= XMSampleType.Loop;
 
-			if (smp.Flags.HasFlag(SampleFlags._16Bit))
+			if (smp.Flags.HasAllFlags(SampleFlags._16Bit))
 			{
 				xmss.Type |= XMSampleType._16Bit;
 				xmss.LoopLength <<= 1;
@@ -467,7 +467,7 @@ public class XI : InstrumentFileConverter
 				xmss.SampleLength <<= 1;
 			}
 
-			if (smp.Flags.HasFlag(SampleFlags.Stereo))
+			if (smp.Flags.HasAllFlags(SampleFlags.Stereo))
 			{
 				xmss.Type |= XMSampleType.Stereo;
 				xmss.LoopLength <<= 1;
@@ -477,9 +477,9 @@ public class XI : InstrumentFileConverter
 
 			xmss.Volume = (byte)(smp.Volume >> 2);
 
-			if(instrument.Flags.HasFlag(InstrumentFlags.SetPanning))
+			if(instrument.Flags.HasAllFlags(InstrumentFlags.SetPanning))
 				xmss.Panning = (byte)instrument.Panning;
-			else if (smp.Flags.HasFlag(SampleFlags.Panning))
+			else if (smp.Flags.HasAllFlags(SampleFlags.Panning))
 				xmss.Panning = (byte)smp.Panning;
 			else
 				// Default panning enabled for instrument and sample--pan to center.
@@ -503,8 +503,8 @@ public class XI : InstrumentFileConverter
 				throw new Exception("Internal error");
 
 			SampleFileConverter.WriteSample(file, smp, SampleFormat.LittleEndian | SampleFormat.PCMDeltaEncoded
-			 | (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
-			 | (smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
+			 | (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
+			 | (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
 			 uint.MaxValue);
 		}
 

@@ -239,9 +239,9 @@ public class MIDIPage : Page
 
 			VGAMem.DrawTextLen(p.Name ?? "", 64, new Point(13, 15+i), (5, 0));
 
-			if (Status.Flags.HasFlag(StatusFlags.MIDIEventChanged)
+			if (Status.Flags.HasAllFlags(StatusFlags.MIDIEventChanged)
 					&& (now - Status.LastMIDITick) < TimeSpan.FromMilliseconds(3000)
-					&& (((Status.LastMIDIPort == null) && p.IO.HasFlag(MIDIIO.Output))
+					&& (((Status.LastMIDIPort == null) && p.IO.HasAllFlags(MIDIIO.Output))
 					|| p == Status.LastMIDIPort))
 			{
 				var buffer = new StringBuilder();
@@ -276,7 +276,7 @@ public class MIDIPage : Page
 
 	void UpdateIPPorts()
 	{
-		if ((thumbBarIPMIDIPorts.Value > 0) && Status.Flags.HasFlag(StatusFlags.NoNetwork))
+		if ((thumbBarIPMIDIPorts.Value > 0) && Status.Flags.HasAllFlags(StatusFlags.NoNetwork))
 		{
 			Status.FlashText("Networking is disabled");
 			thumbBarIPMIDIPorts.Value = 0;
@@ -312,14 +312,14 @@ public class MIDIPage : Page
 
 	void GetMIDIConfiguration()
 	{
-		toggleTickQuantize.State = MIDIEngine.Flags.HasFlag(MIDIFlags.TickQuantize);
-		toggleBaseProgram1.State = MIDIEngine.Flags.HasFlag(MIDIFlags.BaseProgram1);
-		toggleRecordNoteOff.State = MIDIEngine.Flags.HasFlag(MIDIFlags.RecordNoteOff);
-		toggleRecordVelocity.State = MIDIEngine.Flags.HasFlag(MIDIFlags.RecordVelocity);
-		toggleRecordAftertouch.State = MIDIEngine.Flags.HasFlag(MIDIFlags.RecordAftertouch);
-		toggleCutNoteOff.State = MIDIEngine.Flags.HasFlag(MIDIFlags.CutNoteOff);
-		toggleOutputMIDIPitch.State = MIDIEngine.Flags.HasFlag(MIDIFlags.PitchBend);
-		toggleEmbedMIDIConfig.State = Song.CurrentSong.Flags.HasFlag(SongFlags.EmbedMIDIConfig);
+		toggleTickQuantize.State = MIDIEngine.Flags.HasAllFlags(MIDIFlags.TickQuantize);
+		toggleBaseProgram1.State = MIDIEngine.Flags.HasAllFlags(MIDIFlags.BaseProgram1);
+		toggleRecordNoteOff.State = MIDIEngine.Flags.HasAllFlags(MIDIFlags.RecordNoteOff);
+		toggleRecordVelocity.State = MIDIEngine.Flags.HasAllFlags(MIDIFlags.RecordVelocity);
+		toggleRecordAftertouch.State = MIDIEngine.Flags.HasAllFlags(MIDIFlags.RecordAftertouch);
+		toggleCutNoteOff.State = MIDIEngine.Flags.HasAllFlags(MIDIFlags.CutNoteOff);
+		toggleOutputMIDIPitch.State = MIDIEngine.Flags.HasAllFlags(MIDIFlags.PitchBend);
+		toggleEmbedMIDIConfig.State = Song.CurrentSong.Flags.HasAllFlags(SongFlags.EmbedMIDIConfig);
 
 		thumbBarAmplification.Value = MIDIEngine.Amplification;
 		thumbBarC5NoteValue.Value = MIDIEngine.C5Note;
@@ -341,15 +341,15 @@ public class MIDIPage : Page
 			switch (p.IO)
 			{
 				case MIDIIO.None:
-					if (p.IOCap.HasFlag(MIDIIO.Input)) p.IO = MIDIIO.Input;
-					else if (p.IOCap.HasFlag(MIDIIO.Output)) p.IO = MIDIIO.Output;
+					if (p.IOCap.HasAllFlags(MIDIIO.Input)) p.IO = MIDIIO.Input;
+					else if (p.IOCap.HasAllFlags(MIDIIO.Output)) p.IO = MIDIIO.Output;
 					break;
 				case MIDIIO.Input:
-					if (p.IOCap.HasFlag(MIDIIO.Output)) p.IO = MIDIIO.Output;
+					if (p.IOCap.HasAllFlags(MIDIIO.Output)) p.IO = MIDIIO.Output;
 					else p.IO = MIDIIO.None;
 					break;
 				case MIDIIO.Output:
-					if (p.IOCap.HasFlag(MIDIIO.Input)) p.IO |= MIDIIO.Input;
+					if (p.IOCap.HasAllFlags(MIDIIO.Input)) p.IO |= MIDIIO.Input;
 					else p.IO = MIDIIO.None;
 					break;
 				case MIDIIO.Input | MIDIIO.Output:

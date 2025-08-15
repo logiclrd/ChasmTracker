@@ -45,11 +45,11 @@ public class NoteDotsWindow : InfoWindow
 			if (pos > fullHeight - 1)
 				continue;
 
-			int fg = voice.Flags.HasFlag(ChannelFlags.Mute) ? 1 : (Song.CurrentSong.GetSampleNumber(voice.Sample) % 4 + 2);
+			int fg = voice.Flags.HasAllFlags(ChannelFlags.Mute) ? 1 : (Song.CurrentSong.GetSampleNumber(voice.Sample) % 4 + 2);
 
 			int v;
 
-			if (_velocityMode || Status.Flags.HasFlag(StatusFlags.ClassicMode))
+			if (_velocityMode || Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				v = (voice.FinalVolume + 2047) >> 11;
 			else
 				v = (voice.VUMeter + 31) >> 5;

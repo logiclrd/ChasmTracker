@@ -108,7 +108,7 @@ public static class GeneralMIDI
 
 	static void MPU_Ctrl(Song csf, int c, int i, int v)
 	{
-		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+		if (!Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker))
 			return;
 
 		EnsureBuffer(3);
@@ -123,7 +123,7 @@ public static class GeneralMIDI
 
 	static void MPU_Patch(Song csf, int c, int p)
 	{
-		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+		if (!Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker))
 			return;
 
 		EnsureBuffer(2);
@@ -137,7 +137,7 @@ public static class GeneralMIDI
 
 	static void MPU_Bend(Song csf, int c, int w)
 	{
-		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+		if (!Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker))
 			return;
 
 		EnsureBuffer(3);
@@ -152,7 +152,7 @@ public static class GeneralMIDI
 
 	static void MPU_NoteOn(Song csf, int c, int k, int v)
 	{
-		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+		if (!Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker))
 			return;
 
 		EnsureBuffer(3);
@@ -167,7 +167,7 @@ public static class GeneralMIDI
 
 	static void MPU_NoteOff(Song csf, int c, int k, int v)
 	{
-		if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+		if (!Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker))
 			return;
 
 		if (csf.MIDIRunningStatus == 0x90 + c)
@@ -659,20 +659,20 @@ public static class GeneralMIDI
 		Touch(csf, c, vol);
 	}
 
-	[ThreadStatic]
-	static byte[] s_buf = new byte[3];
-
-	public static void SendSongStartCode(Song csf)    { s_buf[0] = 0xFA; MPU_SendCommand(csf, s_buf.Slice(0, 1), 0); csf.MIDILastSongCounter = 0; }
-	public static void SendSongStopCode(Song csf)     { s_buf[0] = 0xFC; MPU_SendCommand(csf, s_buf.Slice(0, 1), 0); csf.MIDILastSongCounter = 0; }
-	public static void SendSongContinueCode(Song csf) { s_buf[0] = 0xFB; MPU_SendCommand(csf, s_buf.Slice(0, 1), 0); csf.MIDILastSongCounter = 0; }
-	public static void SendSongTickCode(Song csf)     { s_buf[0] = 0xF8; MPU_SendCommand(csf, s_buf.Slice(0, 1), 0); }
+	public static void SendSongStartCode(Song csf)    { EnsureBuffer(1); s_buffer[0] = 0xFA; MPU_SendCommand(csf, s_buffer.Slice(0, 1), 0); csf.MIDILastSongCounter = 0; }
+	public static void SendSongStopCode(Song csf)     { EnsureBuffer(1); s_buffer[0] = 0xFC; MPU_SendCommand(csf, s_buffer.Slice(0, 1), 0); csf.MIDILastSongCounter = 0; }
+	public static void SendSongContinueCode(Song csf) { EnsureBuffer(1); s_buffer[0] = 0xFB; MPU_SendCommand(csf, s_buffer.Slice(0, 1), 0); csf.MIDILastSongCounter = 0; }
+	public static void SendSongTickCode(Song csf)     { EnsureBuffer(1); s_buffer[0] = 0xF8; MPU_SendCommand(csf, s_buffer.Slice(0, 1), 0); }
 
 	public static void SendSongPositionCode(Song csf, uint note16pos)
 	{
-		s_buf[0] = 0xF2;
-		s_buf[1] = unchecked((byte)(note16pos & 127));
-		s_buf[2] = unchecked((byte)((note16pos >> 7) & 127));
-		MPU_SendCommand(csf, s_buf, 0);
+		EnsureBuffer(3);
+
+		s_buffer[0] = 0xF2;
+		s_buffer[1] = unchecked((byte)(note16pos & 127));
+		s_buffer[2] = unchecked((byte)((note16pos >> 7) & 127));
+
+		MPU_SendCommand(csf, s_buffer, 0);
 		csf.MIDILastSongCounter = 0.0;
 	}
 

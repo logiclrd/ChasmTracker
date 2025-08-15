@@ -104,7 +104,7 @@ public class IPMIDIPort : MIDIPort, IDisposable
 	public override void SendNow(Span<byte> seq, TimeSpan delay)
 	{
 		if (seq.Length == 0) return;
-		if (!ActiveIO.HasFlag(MIDIIO.Output)) return; /* blah... */
+		if (!ActiveIO.HasAllFlags(MIDIIO.Output)) return; /* blah... */
 
 		var asin = new IPEndPoint(s_ipMIDIGroupAddress, IPMIDI.MIDIIPBase + Number);
 

@@ -1,12 +1,12 @@
-
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ChasmTracker.Memory;
 
-using System.Linq;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public static class MemoryUsage
 {
@@ -45,7 +45,7 @@ public static class MemoryUsage
 	/* packed patterns */
 	public static int GetPatternUsage()
 	{
-		if (s_cacheOK.HasFlag(CacheType.Patterns)) return s_cachePatterns;
+		if (s_cacheOK.HasAllFlags(CacheType.Patterns)) return s_cachePatterns;
 		s_cacheOK |= CacheType.Patterns;
 
 		int q = 0;
@@ -64,7 +64,7 @@ public static class MemoryUsage
 
 	public static int GetClipboardUsage()
 	{
-		if (s_cacheOK.HasFlag(CacheType.Clipboard)) return s_cacheClipboard;
+		if (s_cacheOK.HasAllFlags(CacheType.Clipboard)) return s_cacheClipboard;
 		s_cacheOK |= CacheType.Clipboard;
 
 		s_cacheClipboard = AllPages.PatternEditor.ClipboardMemoryUsage() * 256;
@@ -74,7 +74,7 @@ public static class MemoryUsage
 
 	public static int GetHistoryUsage()
 	{
-		if (s_cacheOK.HasFlag(CacheType.History)) return s_cacheHistory;
+		if (s_cacheOK.HasAllFlags(CacheType.History)) return s_cacheHistory;
 		s_cacheOK |= CacheType.History;
 
 		s_cacheHistory = AllPages.PatternEditor.HistoryMemoryUsage() * 256;
@@ -84,7 +84,7 @@ public static class MemoryUsage
 
 	public static int GetSampleUsage()
 	{
-		if (s_cacheOK.HasFlag(CacheType.Samples)) return s_cacheSamples;
+		if (s_cacheOK.HasAllFlags(CacheType.Samples)) return s_cacheSamples;
 		s_cacheOK |= CacheType.Samples;
 
 		int q = 0;
@@ -96,8 +96,8 @@ public static class MemoryUsage
 
 			int qs = s.Length;
 
-			if (s.Flags.HasFlag(SampleFlags.Stereo)) qs *= 2;
-			if (s.Flags.HasFlag(SampleFlags._16Bit)) qs *= 2;
+			if (s.Flags.HasAllFlags(SampleFlags.Stereo)) qs *= 2;
+			if (s.Flags.HasAllFlags(SampleFlags._16Bit)) qs *= 2;
 
 			q += qs;
 		}
@@ -109,7 +109,7 @@ public static class MemoryUsage
 
 	public static int GetInstrumentUsage()
 	{
-		if (s_cacheOK.HasFlag(CacheType.Instruments)) return s_cacheInstruments;
+		if (s_cacheOK.HasAllFlags(CacheType.Instruments)) return s_cacheInstruments;
 		s_cacheOK |= CacheType.Instruments;
 
 		int q = 0;
@@ -125,7 +125,7 @@ public static class MemoryUsage
 
 	public static int GetSongMessageUsage()
 	{
-		if (s_cacheOK.HasFlag(CacheType.SongMessage)) return s_cacheSongMessage;
+		if (s_cacheOK.HasAllFlags(CacheType.SongMessage)) return s_cacheSongMessage;
 		s_cacheOK |= CacheType.SongMessage;
 
 		s_cacheSongMessage = Song.CurrentSong.Message.Length * 2;

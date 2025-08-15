@@ -270,7 +270,7 @@ public class S3M : SongFileConverter
 			paraPatterns[i] = stream.ReadStructure<ushort>();
 
 		/* default pannings */
-		if (misc.HasFlag(LoaderFlags.ChanPan))
+		if (misc.HasAllFlags(LoaderFlags.ChanPan))
 		{
 			for (int n = 0; n < 32; n++)
 			{
@@ -318,12 +318,12 @@ public class S3M : SongFileConverter
 					stream.ReadByte();      /* unused byte */
 					stream.ReadByte();      /* packing info (never used) */
 					S3IFormatFlags c = stream.ReadStructure<S3IFormatFlags>();  /* flags */
-					if (c.HasFlag(S3IFormatFlags.Loop))
+					if (c.HasAllFlags(S3IFormatFlags.Loop))
 						sample.Flags |= SampleFlags.Loop;
 					sampleFormats[n] = SampleFormat.LittleEndian
-						| (misc.HasFlag(LoaderFlags.Unsigned) ? SampleFormat.PCMUnsigned : SampleFormat.PCMSigned)
-						| (c.HasFlag(S3IFormatFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
-						| (c.HasFlag(S3IFormatFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono);
+						| (misc.HasAllFlags(LoaderFlags.Unsigned) ? SampleFormat.PCMUnsigned : SampleFormat.PCMSigned)
+						| (c.HasAllFlags(S3IFormatFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
+						| (c.HasAllFlags(S3IFormatFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono);
 					if (sample.Length != 0)
 						anySamples = true;
 					break;
@@ -379,13 +379,13 @@ public class S3M : SongFileConverter
 		}
 
 		/* sample data */
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int n = 0; n < nSmp; n++)
 			{
 				var sample = song.EnsureSample(n + 1);
 
-				if ((sample.Length == 0) || sample.Flags.HasFlag(SampleFlags.AdLib))
+				if ((sample.Length == 0) || sample.Flags.HasAllFlags(SampleFlags.AdLib))
 					continue;
 
 				stream.Position = startOffset + paraSampleData[n] << 4;
@@ -398,7 +398,7 @@ public class S3M : SongFileConverter
 		if (gusAddresses > 1)
 			song.MixingVolume = 48;
 
-		if (!lflags.HasFlag(LoadFlags.NoPatterns))
+		if (!lflags.HasAllFlags(LoadFlags.NoPatterns))
 		{
 			for (int n = 0; n < nPat; n++)
 			{
@@ -436,7 +436,7 @@ public class S3M : SongFileConverter
 
 					ref var note = ref pattern.Rows[row][chn + 1];
 
-					if (mask.HasFlag(S3MNoteMask.NoteAndInstrument))
+					if (mask.HasAllFlags(S3MNoteMask.NoteAndInstrument))
 					{
 						/* note/instrument */
 						note.Note = (byte)stream.ReadByte();
@@ -458,7 +458,7 @@ public class S3M : SongFileConverter
 						}
 					}
 
-					if (mask.HasFlag(S3MNoteMask.Volume))
+					if (mask.HasAllFlags(S3MNoteMask.Volume))
 					{
 						/* volume */
 						note.VolumeEffect = VolumeEffects.Volume;
@@ -482,7 +482,7 @@ public class S3M : SongFileConverter
 						}
 					}
 
-					if (mask.HasFlag(S3MNoteMask.Effect))
+					if (mask.HasAllFlags(S3MNoteMask.Effect))
 					{
 						note.EffectByte = (byte)stream.ReadByte();
 						note.Parameter = (byte)stream.ReadByte();
@@ -582,11 +582,11 @@ public class S3M : SongFileConverter
 
 							if (trackerVersion == 0x1301 && ultraClickRemoval == 0)
 							{
-								if (!flags.HasAnyBitSet(~0x50) && mixVolume.HasBitSet(0x80) && misc.HasFlag(LoaderFlags.ChanPan))
+								if (!flags.HasAnyBitSet(~0x50) && mixVolume.HasBitSet(0x80) && misc.HasAllFlags(LoaderFlags.ChanPan))
 									trackerID = "UNMO3";
-								else if ((flags == 0) && song.InitialGlobalVolume == 96 && mixVolume == 176 && song.InitialTempo == 150 && !misc.HasFlag(LoaderFlags.ChanPan))
+								else if ((flags == 0) && song.InitialGlobalVolume == 96 && mixVolume == 176 && song.InitialTempo == 150 && !misc.HasAllFlags(LoaderFlags.ChanPan))
 									trackerID = "deMODifier";  // SoundSmith to S3M converter
-								else if ((flags == 0) && song.InitialGlobalVolume == 128 && song.InitialSpeed == 6 && song.InitialTempo == 125 && !misc.HasFlag(LoaderFlags.ChanPan))
+								else if ((flags == 0) && song.InitialGlobalVolume == 128 && song.InitialSpeed == 6 && song.InitialTempo == 125 && !misc.HasAllFlags(LoaderFlags.ChanPan))
 									trackerID = "Kosmic To-S3M";  // MTM to S3M converter by Zab/Kosmic
 							}
 						}
@@ -800,7 +800,7 @@ public class S3M : SongFileConverter
 
 				S3MNoteMask b = 0;
 
-				if (song.Channels[chan].Flags.HasFlag(ChannelFlags.Mute))
+				if (song.Channels[chan].Flags.HasAllFlags(ChannelFlags.Mute))
 				{
 					if ((@out.Instrument != 0) || (@out.EffectByte != 0))
 					{
@@ -858,7 +858,7 @@ public class S3M : SongFileConverter
 					{
 						S3IType type;
 
-						if (sample.Flags.HasFlag(SampleFlags.AdLib))
+						if (sample.Flags.HasAllFlags(SampleFlags.AdLib))
 							type = S3IType.AdMel;
 						else if (sample.HasData)
 							type = S3IType.PCM;
@@ -915,23 +915,23 @@ public class S3M : SongFileConverter
 				// write it!
 				stream.WriteByte((byte)b);
 
-				if (b.HasFlag(S3MNoteMask.NoteAndInstrument))
+				if (b.HasAllFlags(S3MNoteMask.NoteAndInstrument))
 				{
 					stream.WriteByte(@out.Note);
 					stream.WriteByte(@out.Instrument);
 				}
 
-				if (b.HasFlag(S3MNoteMask.Volume))
+				if (b.HasAllFlags(S3MNoteMask.Volume))
 					stream.WriteByte(@out.VolumeParameter);
 
-				if (b.HasFlag(S3MNoteMask.Effect))
+				if (b.HasAllFlags(S3MNoteMask.Effect))
 				{
 					stream.WriteByte(@out.EffectByte);
 					stream.WriteByte(@out.Parameter);
 				}
 			}
 
-			if (!warn.HasFlag(Warnings.MaxChannels))
+			if (!warn.HasAllFlags(Warnings.MaxChannels))
 			{
 				/* if the flag is already set, there's no point in continuing to search for stuff */
 				for (int chan = 32; chan < Constants.MaxChannels; chan++)
@@ -1041,7 +1041,7 @@ public class S3M : SongFileConverter
 						chanTypes[n] = (S3IType)junk++;
 					break;
 				case S3IType.None:
-					if (channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 					{
 						chanTypes[n] = (S3IType)255; // (--)
 						break;
@@ -1080,9 +1080,9 @@ public class S3M : SongFileConverter
 
 		var warn = Warnings.None;
 
-		if (song.Flags.HasFlag(SongFlags.InstrumentMode))
+		if (song.Flags.HasAllFlags(SongFlags.InstrumentMode))
 			warn |= Warnings.Instruments;
-		if (song.Flags.HasFlag(SongFlags.LinearSlides))
+		if (song.Flags.HasAllFlags(SongFlags.LinearSlides))
 			warn |= Warnings.LinearSlides;
 
 		int nOrd = song.OrderList.Count + 1;
@@ -1146,7 +1146,7 @@ public class S3M : SongFileConverter
 		* Just enforce both bounds here.
 		*/
 		hdr.MasterVolume = (byte)song.MixingVolume.Clamp(0x10, 0x7F);
-		if (!song.Flags.HasFlag(SongFlags.NoStereo))
+		if (!song.Flags.HasAllFlags(SongFlags.NoStereo))
 			hdr.MasterVolume |= 128;
 
 		hdr.UltraClick = 16; // ultraclick (the "Waste GUS channels" option)
@@ -1234,7 +1234,7 @@ public class S3M : SongFileConverter
 		{
 			var smp = song.EnsureSample(n + 1);
 
-			if (smp.Flags.HasFlag(SampleFlags.AdLib) || !smp.HasData)
+			if (smp.Flags.HasAllFlags(SampleFlags.AdLib) || !smp.HasData)
 			{
 				paraSampleData[n] = 0;
 				continue;
@@ -1244,8 +1244,8 @@ public class S3M : SongFileConverter
 			paraSampleData[n] = stream.Position - startOffset;
 
 			SampleFileConverter.WriteSample(stream, smp, SampleFormat.LittleEndian | SampleFormat.PCMUnsigned
-				| (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
-				| (smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
+				| (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
+				| (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
 				uint.MaxValue);
 		}
 
@@ -1296,8 +1296,8 @@ public class S3M : SongFileConverter
 			if (smp.GlobalVolume != 64)
 				warn |= Warnings.SampleVolume;
 
-			if (smp.Flags.HasFlag(SampleFlags.Loop | SampleFlags.PingPongLoop)
-					|| smp.Flags.HasFlag(SampleFlags.SustainLoop))
+			if (smp.Flags.HasAllFlags(SampleFlags.Loop | SampleFlags.PingPongLoop)
+					|| smp.Flags.HasAllFlags(SampleFlags.SustainLoop))
 				warn |= Warnings.Loops;
 
 			if (smp.VibratoDepth != 0)
@@ -1309,7 +1309,7 @@ public class S3M : SongFileConverter
 		/* announce all the things we broke */
 		foreach (var warningType in Enum.GetValues<Warnings>())
 		{
-			if ((warningType != Warnings.None) && warn.HasFlag(warningType))
+			if ((warningType != Warnings.None) && warn.HasAllFlags(warningType))
 				Log.Append(4, " Warning: {0} unsupported in S3M format", warningType.GetDescription());
 		}
 

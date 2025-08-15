@@ -28,7 +28,7 @@ public abstract class TrackViewWindowBase : InfoWindow
 	public override bool UsesFirstRow => true;
 
 	protected int GetBoxWidth() => GetNumChannels() * FullChannelWidth - (Separator ? 1 : 0);
-	protected virtual int GetRightEdge() => GetBoxWidth() + 4;
+	protected virtual int GetRightEdge() => GetBoxWidth() + 6;
 
 	static Pattern EmptyPattern = Pattern.CreateEmpty();
 
@@ -230,7 +230,7 @@ public abstract class TrackViewWindowBase : InfoWindow
 
 			byte fg;
 
-			if (channel.Flags.HasFlag(ChannelFlags.Mute))
+			if (channel.Flags.HasAllFlags(ChannelFlags.Mute))
 				fg = (chan == SelectedChannel) ? (byte)6 : (byte)1;
 			else
 				fg = (chan == SelectedChannel) ? (byte)3 : (isActive ? (byte)2 : (byte)0);

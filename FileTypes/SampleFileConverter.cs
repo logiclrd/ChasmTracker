@@ -49,32 +49,32 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 	{
 		int memSize = (int)(fp.Length - fp.Position);
 
-		if (sample.Flags.HasFlag(SampleFlags.AdLib))
+		if (sample.Flags.HasAllFlags(SampleFlags.AdLib))
 			return 0; // no sample data
 
 		if ((sample.Length < 1) || !fp.CanRead)
 			return 0;
 
 		// validate the read flags before anything else
-		if (!Enum.IsDefined(flags & SampleFormat.BitMask) || flags.HasFlag(SampleFormat.BitMask))
+		if (!Enum.IsDefined(flags & SampleFormat.BitMask) || flags.HasAllFlags(SampleFormat.BitMask))
 		{
 			Log.Append(4, "ReadSample: internal error: unsupported bit width {0}", flags & SampleFormat.BitMask);
 			return 0;
 		}
 
-		if (!Enum.IsDefined(flags & SampleFormat.ChannelMask) || flags.HasFlag(SampleFormat.ChannelMask))
+		if (!Enum.IsDefined(flags & SampleFormat.ChannelMask) || flags.HasAllFlags(SampleFormat.ChannelMask))
 		{
 			Log.Append(4, "ReadSample: internal error: unspported channel mask {0}", flags & SampleFormat.ChannelMask);
 			return 0;
 		}
 
-		if (!Enum.IsDefined(flags & SampleFormat.EndiannessMask) || flags.HasFlag(SampleFormat.EndiannessMask))
+		if (!Enum.IsDefined(flags & SampleFormat.EndiannessMask) || flags.HasAllFlags(SampleFormat.EndiannessMask))
 		{
 			Log.Append(4, "ReadSample: internal error: unsupported endianness {0}", flags & SampleFormat.EndiannessMask);
 			return 0;
 		}
 
-		if (!Enum.IsDefined(flags & SampleFormat.EncodingMask) || flags.HasFlag(SampleFormat.EncodingMask))
+		if (!Enum.IsDefined(flags & SampleFormat.EncodingMask) || flags.HasAllFlags(SampleFormat.EncodingMask))
 		{
 			Log.Append(4, "ReadSample: internal error: unsupported encoding {0}", flags & SampleFormat.EncodingMask);
 			return 0;
@@ -777,11 +777,11 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 			{
 				case SampleFormat.StereoInterleaved:
 				case SampleFormat.StereoSplit:
-					if (!sample.Flags.HasFlag(SampleFlags.Stereo))
+					if (!sample.Flags.HasAllFlags(SampleFlags.Stereo))
 						throw new NotSupportedException("channel mask " + (flags & SampleFormat.ChannelMask));
 					break;
 				case SampleFormat.Mono:
-					if (sample.Flags.HasFlag(SampleFlags.Stereo))
+					if (sample.Flags.HasAllFlags(SampleFlags.Stereo))
 						throw new NotSupportedException("channel mask " + (flags & SampleFormat.ChannelMask));
 					break;
 				default:
@@ -789,7 +789,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 			}
 
 			// TODO allow converting bit width, this will be useful
-			if ((flags & SampleFormat.BitMask) != (sample.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8))
+			if ((flags & SampleFormat.BitMask) != (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8))
 				throw new NotSupportedException("bit width " + (flags & SampleFormat.BitMask));
 
 			switch (flags & SampleFormat.EncodingMask)

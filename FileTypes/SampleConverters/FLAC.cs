@@ -116,7 +116,7 @@ public class FLAC : SampleFileConverter
 
 	public override SaveResult SaveSample(SongSample sample, Stream stream)
 	{
-		if (sample.Flags.HasFlag(SampleFlags.AdLib))
+		if (sample.Flags.HasAllFlags(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		/* metadata structures & the amount */
@@ -129,8 +129,8 @@ public class FLAC : SampleFileConverter
 			{
 				bool result = encoder.InitializeSaveHead(
 					stream,
-					sample.Flags.HasFlag(SampleFlags._16Bit) ? 16 : 8,
-					sample.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1,
+					sample.Flags.HasAllFlags(SampleFlags._16Bit) ? 16 : 8,
+					sample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1,
 					sample.C5Speed,
 					sample.Length);
 
@@ -241,13 +241,13 @@ public class FLAC : SampleFileConverter
 					return SaveResult.InternalError;
 
 				/* buffer this */
-				long totalBytes = sample.Length * (sample.Flags.HasFlag(SampleFlags._16Bit) ? 2 : 1) * (sample.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1);
+				long totalBytes = sample.Length * (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? 2 : 1) * (sample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1);
 				for (int outputOffset = 0; outputOffset < totalBytes; outputOffset += SampleBufferLength)
 				{
 					int needed = (int)Math.Min(totalBytes - outputOffset, SampleBufferLength);
 
 					bool succeeded =
-						sample.Flags.HasFlag(SampleFlags._16Bit)
+						sample.Flags.HasAllFlags(SampleFlags._16Bit)
 						? encoder.EmitSampleData(sample.Data16.Slice(outputOffset, needed))
 						: encoder.EmitSampleData(sample.Data8.Slice(outputOffset, needed));
 

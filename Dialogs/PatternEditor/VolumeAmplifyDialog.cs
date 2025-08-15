@@ -42,7 +42,7 @@ public class VolumeAmplifyDialog : Dialog
 	public override bool HandleKey(KeyEvent keyEvent)
 	{
 		if ((keyEvent.State == KeyState.Press)
-		 && keyEvent.Modifiers.HasFlag(KeyMod.Alt)
+		 && keyEvent.Modifiers.HasAllFlags(KeyMod.Alt)
 		 && keyEvent.Sym == KeySym.j)
 		{
 			DialogButtonYes();

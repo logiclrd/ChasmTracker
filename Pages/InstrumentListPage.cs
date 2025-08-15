@@ -11,7 +11,6 @@ using ChasmTracker.Dialogs.Instruments;
 using ChasmTracker.Events;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
-using ChasmTracker.FileTypes.Converters;
 using ChasmTracker.FileTypes.InstrumentConverters;
 using ChasmTracker.Input;
 using ChasmTracker.Memory;
@@ -177,17 +176,17 @@ public abstract class InstrumentListPage : Page
 				break;
 			case InstrumentFlags.PanningEnvelope:
 				_savedEnvFlags[slot] =
-					(ins.Flags.HasFlag(InstrumentFlags.PanningEnvelope) ? InstrumentFlags.VolumeEnvelope : 0) |
-					(ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeSustain) ? InstrumentFlags.VolumeEnvelopeSustain : 0) |
-					(ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeLoop) ? InstrumentFlags.VolumeEnvelopeLoop : 0) |
-					(ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry) ? InstrumentFlags.VolumeEnvelopeCarry : 0);
+					(ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope) ? InstrumentFlags.VolumeEnvelope : 0) |
+					(ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeSustain) ? InstrumentFlags.VolumeEnvelopeSustain : 0) |
+					(ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeLoop) ? InstrumentFlags.VolumeEnvelopeLoop : 0) |
+					(ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeCarry) ? InstrumentFlags.VolumeEnvelopeCarry : 0);
 				break;
 			case InstrumentFlags.PitchEnvelope:
 				_savedEnvFlags[slot] =
-					(ins.Flags.HasFlag(InstrumentFlags.PitchEnvelope) ? InstrumentFlags.VolumeEnvelope : 0) |
-					(ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeSustain) ? InstrumentFlags.VolumeEnvelopeSustain : 0) |
-					(ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeLoop) ? InstrumentFlags.VolumeEnvelopeLoop : 0) |
-					(ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry) ? InstrumentFlags.VolumeEnvelopeCarry : 0);
+					(ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelope) ? InstrumentFlags.VolumeEnvelope : 0) |
+					(ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeSustain) ? InstrumentFlags.VolumeEnvelopeSustain : 0) |
+					(ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeLoop) ? InstrumentFlags.VolumeEnvelopeLoop : 0) |
+					(ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeCarry) ? InstrumentFlags.VolumeEnvelopeCarry : 0);
 				break;
 		}
 	}
@@ -211,19 +210,19 @@ public abstract class InstrumentListPage : Page
 
 				case InstrumentFlags.PanningEnvelope:
 					ins.Flags &= ~(InstrumentFlags.PanningEnvelope | InstrumentFlags.PanningEnvelopeSustain | InstrumentFlags.PanningEnvelopeLoop | InstrumentFlags.PanningEnvelopeCarry);
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelope)) ins.Flags |= InstrumentFlags.PanningEnvelope;
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelopeSustain)) ins.Flags |= InstrumentFlags.PanningEnvelopeSustain;
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelopeLoop)) ins.Flags |= InstrumentFlags.PanningEnvelopeLoop;
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelopeCarry)) ins.Flags |= InstrumentFlags.PanningEnvelopeCarry;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelope)) ins.Flags |= InstrumentFlags.PanningEnvelope;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain)) ins.Flags |= InstrumentFlags.PanningEnvelopeSustain;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop)) ins.Flags |= InstrumentFlags.PanningEnvelopeLoop;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelopeCarry)) ins.Flags |= InstrumentFlags.PanningEnvelopeCarry;
 					ins.Flags |= (_savedEnvFlags[slot] & InstrumentFlags.SetPanning);
 					break;
 
 				case InstrumentFlags.PitchEnvelope:
 					ins.Flags &= ~(InstrumentFlags.PitchEnvelope | InstrumentFlags.PitchEnvelopeSustain | InstrumentFlags.PitchEnvelopeLoop | InstrumentFlags.PitchEnvelopeCarry);
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelope)) ins.Flags |= InstrumentFlags.PitchEnvelope;
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelopeSustain)) ins.Flags |= InstrumentFlags.PitchEnvelopeSustain;
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelopeLoop)) ins.Flags |= InstrumentFlags.PitchEnvelopeLoop;
-					if (_savedEnvFlags[slot].HasFlag(InstrumentFlags.VolumeEnvelopeCarry)) ins.Flags |= InstrumentFlags.PitchEnvelopeCarry;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelope)) ins.Flags |= InstrumentFlags.PitchEnvelope;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain)) ins.Flags |= InstrumentFlags.PitchEnvelopeSustain;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop)) ins.Flags |= InstrumentFlags.PitchEnvelopeLoop;
+					if (_savedEnvFlags[slot].HasAllFlags(InstrumentFlags.VolumeEnvelopeCarry)) ins.Flags |= InstrumentFlags.PitchEnvelopeCarry;
 					ins.Flags |= (_savedEnvFlags[slot] & InstrumentFlags.Filter);
 					break;
 			}
@@ -943,7 +942,7 @@ public abstract class InstrumentListPage : Page
 			case KeySym.Comma:
 				if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					if (!Status.Flags.HasFlag(StatusFlags.ClassicMode)
+					if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 					&& SelectedWidgetIndex == 5)
 						return false;
 				}
@@ -956,7 +955,7 @@ public abstract class InstrumentListPage : Page
 			case KeySym.Period:
 				if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					if (!Status.Flags.HasFlag(StatusFlags.ClassicMode)
+					if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 					&& SelectedWidgetIndex == 5)
 						return false;
 				}

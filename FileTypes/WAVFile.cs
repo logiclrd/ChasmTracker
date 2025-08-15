@@ -294,13 +294,13 @@ public static class WAVFile
 
 		SampleFormat flags = SampleFormat.LittleEndian;
 
-		if (smp.Flags.HasFlag(SampleFlags.AdLib))
+		if (smp.Flags.HasAllFlags(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
-		flags |= smp.Flags.HasFlag(SampleFlags._16Bit) ? (SampleFormat._16 | SampleFormat.PCMSigned) : (SampleFormat._8 | SampleFormat.PCMUnsigned);
-		flags |= smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono;
+		flags |= smp.Flags.HasAllFlags(SampleFlags._16Bit) ? (SampleFormat._16 | SampleFormat.PCMSigned) : (SampleFormat._8 | SampleFormat.PCMUnsigned);
+		flags |= smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono;
 
-		int bps = WriteHeader(stream, smp.Flags.HasFlag(SampleFlags._16Bit) ? 16 : 8, smp.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1,
+		int bps = WriteHeader(stream, smp.Flags.HasAllFlags(SampleFlags._16Bit) ? 16 : 8, smp.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1,
 			smp.C5Speed, smp.Length, out var _);
 
 		if (SampleFileConverter.WriteSample(stream, smp, flags, uint.MaxValue) != smp.Length * bps)

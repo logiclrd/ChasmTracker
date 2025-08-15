@@ -246,7 +246,7 @@ public class MTM : SongFileConverter
 		song.Message = ReadLinedMessage(stream, commentLen, 40);
 
 		/* sample data */
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int smp = 1; smp <= nSmp && smp <= Constants.MaxSamples; smp++)
 			{
@@ -257,7 +257,7 @@ public class MTM : SongFileConverter
 
 				SampleFileConverter.ReadSample(sample,
 					SampleFormat.LittleEndian | SampleFormat.PCMUnsigned | SampleFormat.Mono
-					| (sample.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8),
+					| (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8),
 					stream);
 			}
 		}

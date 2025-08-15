@@ -1,5 +1,7 @@
 namespace ChasmTracker.Songs;
 
+using ChasmTracker.Utility;
+
 public struct SongChannel
 {
 	public SongChannel() { }
@@ -10,7 +12,7 @@ public struct SongChannel
 
 	public bool IsMuted
 	{
-		get => Flags.HasFlag(ChannelFlags.Mute);
+		get => Flags.HasAllFlags(ChannelFlags.Mute);
 		set
 		{
 			if (value)

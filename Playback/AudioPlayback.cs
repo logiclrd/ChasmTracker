@@ -27,7 +27,7 @@ public static class AudioPlayback
 	static int s_deviceID;
 
 	public static string AudioDriver => s_driverName ?? "unknown";
-	public static string AudioDevice => s_deviceName ?? "unknown";
+	public static string? AudioDevice => s_deviceName;
 	public static int AudioDeviceID;
 
 	public static List<AudioDevice> AudioDeviceList = new List<AudioDevice>();
@@ -175,7 +175,7 @@ public static class AudioPlayback
 
 			int n;
 
-			if (Song.CurrentSong.Flags.HasFlag(SongFlags.EndReached))
+			if (Song.CurrentSong.Flags.HasAllFlags(SongFlags.EndReached))
 				n = 0;
 			else
 			{
@@ -263,11 +263,11 @@ public static class AudioPlayback
 	{
 		get
 		{
-			if (Song.CurrentSong.Flags.HasFlag(SongFlags.EndReached | SongFlags.Paused))
+			if (Song.CurrentSong.Flags.HasAllFlags(SongFlags.EndReached | SongFlags.Paused))
 				return AudioPlaybackMode.Stopped;
-			if (Song.CurrentSong.Flags.HasFlag(SongFlags.Paused))
+			if (Song.CurrentSong.Flags.HasAllFlags(SongFlags.Paused))
 				return AudioPlaybackMode.SingleStep;
-			if (Song.CurrentSong.Flags.HasFlag(SongFlags.PatternPlayback))
+			if (Song.CurrentSong.Flags.HasAllFlags(SongFlags.PatternPlayback))
 				return AudioPlaybackMode.PatternLoop;
 			return AudioPlaybackMode.Playing;
 		}
@@ -279,7 +279,7 @@ public static class AudioPlayback
 
 	public static bool Surround
 	{
-		get => !MixFlags.HasFlag(MixFlags.NoSurround);
+		get => !MixFlags.HasAllFlags(MixFlags.NoSurround);
 		set
 		{
 			if (value)
@@ -489,7 +489,7 @@ public static class AudioPlayback
 			ref var curNote = ref pattern[row][i];
 			ref var cx = ref Song.CurrentSong.Voices[i - 1];
 
-			if (cx.Flags.HasFlag(ChannelFlags.Mute))
+			if (cx.Flags.HasAllFlags(ChannelFlags.Mute))
 				continue; /* ick */
 
 			int vol;
@@ -590,7 +590,7 @@ public static class AudioPlayback
 		using (LockScope())
 		{
 			// Highly unintuitive, but SONG_PAUSED has nothing to do with pause.
-			if (!Song.CurrentSong.Flags.HasFlag(SongFlags.Paused))
+			if (!Song.CurrentSong.Flags.HasAllFlags(SongFlags.Paused))
 				Song.CurrentSong.Flags ^= SongFlags.EndReached;
 		}
 
@@ -780,7 +780,7 @@ public static class AudioPlayback
 		if (RampingSamples < 8)
 			RampingSamples = 8;
 
-		if (MixFlags.HasFlag(MixFlags.NoRamping))
+		if (MixFlags.HasAllFlags(MixFlags.NoRamping))
 			RampingSamples = 2;
 
 		DryROfsVol = DryLOfsVol = 0;
@@ -1074,7 +1074,7 @@ public static class AudioPlayback
 			driverName = Configuration.Audio.Driver ?? "default";
 
 		if (string.IsNullOrEmpty(deviceName))
-			deviceName = Configuration.Audio.Device ?? "default";
+			deviceName = Configuration.Audio.Device ?? "";
 
 		if (driverName == "oss")
 			driverName = "dsp";
@@ -1143,8 +1143,11 @@ public static class AudioPlayback
 				}
 			}
 
-			Log.AppendNewLine();
-			Log.Append(4, "Failed to load requested audio driver `{0}`!", driverName ?? "<null>");
+			if (!success)
+			{
+				Log.AppendNewLine();
+				Log.Append(4, "Failed to load requested audio driver `{0}`!", driverName ?? "<null>");
+			}
 		}
 
 		if (success)
@@ -1153,11 +1156,11 @@ public static class AudioPlayback
 
 			AudioBuffer = new short[bufferShorts];
 
-			SamplesPlayed = Status.Flags.HasFlag(StatusFlags.ClassicMode) ? SamplesPlayedInit : 0;
+			SamplesPlayed = Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? SamplesPlayedInit : 0;
 
 			openState?.Dispose();
 
-			AudioBackend.RefreshAudioDeviceList();
+			StartAudio();
 
 			return success;
 		}
@@ -1176,7 +1179,7 @@ public static class AudioPlayback
 			return false;
 		}
 
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 			Stop();
 
 		// if we got a device, cool, otherwise use our device ID,

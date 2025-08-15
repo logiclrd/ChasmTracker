@@ -154,7 +154,7 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 		/* draw the little mask thingy at the bottom. Could optimize this....  -delt.
 			Sure can! This could share the same track-view functions that the
 			pattern editor ought to be using. -Storlek */
-		if (isSelected && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (isSelected && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			switch (_noteTransCursorPos)
 			{
@@ -424,7 +424,7 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 							if (!SongNote.IsNote(n))
 								return false;
 							ins.NoteMap[_noteTransSelectedLine] = (byte)n;
-							if (_noteSampleMask || Status.Flags.HasFlag(StatusFlags.ClassicMode))
+							if (_noteSampleMask || Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 								ins.SampleMap[_noteTransSelectedLine] = (byte)AllPages.SampleList.CurrentSample;
 							newLine++;
 							break;
@@ -538,7 +538,7 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 		VGAMem.DrawBox(new Point(31, 15), new Point(42, 48), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 
 		/* Kind of a hack, and not really useful, but... :) */
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			VGAMem.DrawBox(new Point(55, 46), new Point(73, 48), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 			VGAMem.DrawText("    ", new Point(69, 47), (1, 0));

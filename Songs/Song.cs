@@ -312,7 +312,7 @@ public class Song
 	{
 		Flags ^= SongFlags.OrderListLocked;
 
-		return Flags.HasFlag(SongFlags.OrderListLocked);
+		return Flags.HasAllFlags(SongFlags.OrderListLocked);
 	}
 
 	// clear patterns => clear filename and save flag
@@ -327,13 +327,13 @@ public class Song
 
 			newSong.Flags = CurrentSong.Flags;
 
-			if (newSong.Flags.HasFlag(SongFlags.ITOldEffects))
+			if (newSong.Flags.HasAllFlags(SongFlags.ITOldEffects))
 			{
 				for (int i = 0; i < newSong.Voices.Length; i++)
 					newSong.Voices[i].VibratoPosition = 0x10;
 			}
 
-			if (flags.HasFlag(NewSongFlags.KeepPatterns))
+			if (flags.HasAllFlags(NewSongFlags.KeepPatterns))
 			{
 				newSong.FileName = CurrentSong.FileName;
 
@@ -342,7 +342,7 @@ public class Song
 				newSong.Patterns.AddRange(CurrentSong.Patterns);
 			}
 
-			if (flags.HasFlag(NewSongFlags.KeepSamples))
+			if (flags.HasAllFlags(NewSongFlags.KeepSamples))
 			{
 				int i;
 
@@ -353,7 +353,7 @@ public class Song
 					newSong.Samples.Add(CurrentSong.Samples[i]);
 			}
 
-			if (flags.HasFlag(NewSongFlags.KeepInstruments))
+			if (flags.HasAllFlags(NewSongFlags.KeepInstruments))
 			{
 				int i;
 
@@ -377,7 +377,7 @@ public class Song
 					newSong.Samples[sampleIndex] = CurrentSong.Samples[sampleIndex];
 			}
 
-			if (flags.HasFlag(NewSongFlags.KeepOrderList))
+			if (flags.HasAllFlags(NewSongFlags.KeepOrderList))
 			{
 				newSong.Title = CurrentSong.Title;
 				newSong.Message = CurrentSong.Message;
@@ -401,8 +401,6 @@ public class Song
 			}
 
 			CurrentSong = newSong;
-
-			AudioPlayback.Reset();
 
 			CurrentSong.ForgetHistory();
 		}
@@ -458,7 +456,7 @@ public class Song
 
 		if (resonance == 0 && cutoff >= 254)
 		{
-			if (chan.Flags.HasFlag(ChannelFlags.NewNote))
+			if (chan.Flags.HasAllFlags(ChannelFlags.NewNote))
 			{
 				// Z7F next to a note disables the filter, however in other cases this should not happen.
 				// Test cases: filter-reset.it, filter-reset-carry.it, filter-reset-envelope.it, filter-nna.it, FilterResetPatDelay.it, FilterPortaSmpChange.it, FilterPortaSmpChange-InsMode.it
@@ -1003,11 +1001,11 @@ public class Song
 
 	public SongFlags Flags;
 
-	public bool IsInstrumentMode => Flags.HasFlag(SongFlags.InstrumentMode);
+	public bool IsInstrumentMode => Flags.HasAllFlags(SongFlags.InstrumentMode);
 
 	public bool IsStereo
 	{
-		get => !Flags.HasFlag(SongFlags.NoStereo);
+		get => !Flags.HasAllFlags(SongFlags.NoStereo);
 		set
 		{
 			if (value)
@@ -1027,7 +1025,7 @@ public class Song
 
 	public bool ITOldEffects
 	{
-		get => Flags.HasFlag(SongFlags.ITOldEffects);
+		get => Flags.HasAllFlags(SongFlags.ITOldEffects);
 		set
 		{
 			if (value)
@@ -1039,7 +1037,7 @@ public class Song
 
 	public bool CompatibleGXX
 	{
-		get => Flags.HasFlag(SongFlags.CompatibleGXX);
+		get => Flags.HasAllFlags(SongFlags.CompatibleGXX);
 		set
 		{
 			if (value)
@@ -1051,7 +1049,7 @@ public class Song
 
 	public bool LinearPitchSlides
 	{
-		get => Flags.HasFlag(SongFlags.LinearSlides);
+		get => Flags.HasAllFlags(SongFlags.LinearSlides);
 		set
 		{
 			if (value)
@@ -1083,21 +1081,6 @@ public class Song
 		MixingVolume = 0x30;
 
 		Message = "";
-
-		// SNDMIX: These are flags for playback control
-		AudioPlayback.Reset();
-		AudioPlayback.RampingSamples = 64;
-		AudioPlayback.VULeft = 0;
-		AudioPlayback.VURight = 0;
-		AudioPlayback.DryLOfsVol = 0;
-		AudioPlayback.DryROfsVol = 0;
-		AudioPlayback.MaxVoices = 32; // ITT it is 1994
-
-		/* This is intentionally crappy quality, so that it's very obvious if it didn't get initialized */
-		AudioPlayback.MixFlags = 0;
-		AudioPlayback.MixFrequency = 4000;
-		AudioPlayback.MixBitsPerSample = 8;
-		AudioPlayback.MixChannels = 1;
 
 		RowHighlightMajor = 16;
 		RowHighlightMinor = 4;
@@ -1137,6 +1120,8 @@ public class Song
 
 	int _currentOrder;
 
+	public void SetCurrentOrderDirect(int newValue) => _currentOrder = newValue;
+
 	public int CurrentOrder
 	{
 		get => _currentOrder;
@@ -1147,7 +1132,7 @@ public class Song
 				ref var v = ref Voices[j];
 
 				// modplug sets vib pos to 16 outside of old effects mode
-				v.VibratoPosition = Flags.HasFlag(SongFlags.ITOldEffects) ? 0 : 0x10;
+				v.VibratoPosition = Flags.HasAllFlags(SongFlags.ITOldEffects) ? 0 : 0x10;
 				v.TremoloPosition = 0;
 			}
 
@@ -1617,7 +1602,7 @@ public class Song
 	// in current pattern.
 	public Pattern? GetPatternOffset(ref int patternNumber, ref int rowNumber, int offset)
 	{
-		if (AudioPlayback.Mode.HasFlag(AudioPlaybackMode.PatternLoop))
+		if (AudioPlayback.Mode.HasAllFlags(AudioPlaybackMode.PatternLoop))
 		{
 			// just wrap around current rows
 			rowNumber = (rowNumber + offset) % GetPatternLength(patternNumber);
@@ -2006,40 +1991,40 @@ public class Song
 		{
 			case PanSchemes.Stereo:
 				for (int n = 0; n < Channels.Length; n++)
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 						Channels[n].Panning = (n & 1) * 256;
 				break;
 			case PanSchemes.Amiga:
 				for (int n = 0; n < Channels.Length; n++)
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 						Channels[n].Panning = ((n + 1) & 2) * 128;
 				break;
 			case PanSchemes.Left:
 				for (int n = 0; n < Channels.Length; n++)
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 						Channels[n].Panning = 0;
 				break;
 			case PanSchemes.Right:
 				for (int n = 0; n < Channels.Length; n++)
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 						Channels[n].Panning = 256;
 				break;
 			case PanSchemes.Mono:
 				for (int n = 0; n < Channels.Length; n++)
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 						Channels[n].Panning = 128;
 				break;
 			case PanSchemes.Slash:
 			case PanSchemes.Backslash:
 			{
-				int active = Channels.Where(ch => !ch.Flags.HasFlag(ChannelFlags.Mute)).Count();
+				int active = Channels.Where(ch => !ch.Flags.HasAllFlags(ChannelFlags.Mute)).Count();
 
 				int b = (scheme == PanSchemes.Slash) ? 256 : 0;
 				int s = (scheme == PanSchemes.Slash) ? -1 : +1;
 
 				for (int n = 0, nc = 0; nc < active; n++)
 				{
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 					{
 						Channels[n].Panning = b + s * (nc * 256 / active - 1);
 					}
@@ -2050,7 +2035,7 @@ public class Song
 #if false
 			case PanSchemes.Cross:
 			{
-				int active = Channels.Where(ch => !ch.Flags.HasFlag(ChannelFlags.Mute)).Count();
+				int active = Channels.Where(ch => !ch.Flags.HasAllFlags(ChannelFlags.Mute)).Count();
 
 				int half = active / 2;
 
@@ -2058,7 +2043,7 @@ public class Song
 
 				for (n = 0, nc = 0; nc < half; n++)
 				{
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 					{
 						if ((nc & 1) != 0)
 						{
@@ -2077,7 +2062,7 @@ public class Song
 
 				for (; nc < active; n++)
 				{
-					if (!Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+					if (!Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 					{
 						if ((nc & 1) != 0)
 							Channels[n].Panning = (64 - (32 * (active - nc) / half)) * 4;
@@ -2160,11 +2145,11 @@ public class Song
 			else
 			{
 				/* only reset envelopes with carry off */
-				if (!chan.Instrument.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry))
+				if (!chan.Instrument.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeCarry))
 					chan.VolumeEnvelopePosition = 0;
-				if (!chan.Instrument.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry))
+				if (!chan.Instrument.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeCarry))
 					chan.PanningEnvelopePosition = 0;
-				if (!chan.Instrument.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry))
+				if (!chan.Instrument.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeCarry))
 					chan.PitchEnvelopePosition = 0;
 			}
 		}
@@ -2186,7 +2171,7 @@ public class Song
 			{
 				if (pi.IsMuted)
 				{
-					if (pi.Flags.HasFlag(ChannelFlags.NNAMute))
+					if (pi.Flags.HasAllFlags(ChannelFlags.NNAMute))
 						pi.Flags &= ~(ChannelFlags.NNAMute | ChannelFlags.Mute);
 					else
 						continue; /* this channel is muted; skip */
@@ -2213,12 +2198,12 @@ public class Song
 
 			int v = pj.Volume;
 
-			if (pj.Flags.HasFlag(ChannelFlags.NoteFade))
+			if (pj.Flags.HasAllFlags(ChannelFlags.NoteFade))
 				v = v * pj.FadeOutVolume;
 			else
 				v <<= 16;
 
-			if (pj.Flags.HasFlag(ChannelFlags.Loop))
+			if (pj.Flags.HasAllFlags(ChannelFlags.Loop))
 				v >>= 1;
 
 			if ((v < vol) || (v == vol && pj.VolumeEnvelopePosition > envPos))
@@ -2275,7 +2260,7 @@ public class Song
 			chan.ROfs = chan.LOfs = 0;
 			chan.LeftVolume = chan.RightVolume = 0;
 
-			if (chan.Flags.HasFlag(ChannelFlags.AdLib))
+			if (chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 			{
 				//Do this only if really an adlib chan. Important!
 				OPLNoteOff(nchan);
@@ -2357,7 +2342,7 @@ public class Song
 					case DuplicateCheckActions.NoteCut:
 						// TODO: fx_key_off(csf, i);
 						p.Volume = 0;
-						if (chan.Flags.HasFlag(ChannelFlags.AdLib))
+						if (chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 						{
 							//Do this only if really an adlib chan. Important!
 							//
@@ -2455,7 +2440,7 @@ public class Song
 		chan.FadeOutVolume = 0;
 		//chan.Length = 0;
 
-		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
+		if (chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 		{
 			//Do this only if really an adlib chan. Important!
 			OPLNoteOff(nchan);
@@ -2478,7 +2463,7 @@ public class Song
 			(int)chan.Flags);
 		*/
 
-		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
+		if (chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 		{
 			//Do this only if really an adlib chan. Important!\
 			OPLNoteOff(nchan);
@@ -2489,7 +2474,7 @@ public class Song
 		var pEnv = IsInstrumentMode ? chan.Instrument : null;
 
 		/*
-		if (chan.Flags.HasFlag(ChannelFlags.AdLib)
+		if (chan.Flags.HasAllFlags(ChannelFlags.AdLib)
 		|| ((pEnv != null) && (pEnv.MIDIChannelMask != 0)))
 		{
 			// When in AdLib / MIDI mode, end the sample
@@ -2502,19 +2487,19 @@ public class Song
 
 		chan.Flags |= ChannelFlags.KeyOff;
 
-		if (IsInstrumentMode && (chan.Instrument != null) && !chan.Flags.HasFlag(ChannelFlags.VolumeEnvelope))
+		if (IsInstrumentMode && (chan.Instrument != null) && !chan.Flags.HasAllFlags(ChannelFlags.VolumeEnvelope))
 			chan.Flags |= ChannelFlags.NoteFade;
 
 		if (chan.Length == 0)
 			return;
 
-		if (chan.Flags.HasFlag(ChannelFlags.SustainLoop) && (chan.Sample != null))
+		if (chan.Flags.HasAllFlags(ChannelFlags.SustainLoop) && (chan.Sample != null))
 		{
 			var pSmp = chan.Sample;
 
-			if (pSmp.Flags.HasFlag(SampleFlags.Loop))
+			if (pSmp.Flags.HasAllFlags(SampleFlags.Loop))
 			{
-				if (pSmp.Flags.HasFlag(SampleFlags.PingPongLoop))
+				if (pSmp.Flags.HasAllFlags(SampleFlags.PingPongLoop))
 					chan.Flags |= ChannelFlags.PingPongLoop;
 				else
 					chan.Flags &= ~(ChannelFlags.PingPongLoop | ChannelFlags.PingPongFlag);
@@ -2533,7 +2518,7 @@ public class Song
 			}
 		}
 
-		if ((pEnv != null) && (pEnv.FadeOut != 0) && pEnv.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop))
+		if ((pEnv != null) && (pEnv.FadeOut != 0) && pEnv.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop))
 			chan.Flags |= ChannelFlags.NoteFade;
 	}
 
@@ -2543,7 +2528,7 @@ public class Song
 		// IT Linear slides
 		if (frequency == 0) return 0;
 
-		if (flags.HasFlag(SongFlags.LinearSlides))
+		if (flags.HasAllFlags(SongFlags.LinearSlides))
 		{
 			int oldFrequency = frequency;
 
@@ -2600,37 +2585,37 @@ public class Song
 
 	void EffectFinePortamentoUp(SongFlags flags, ref SongVoice chan, int param)
 	{
-		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+		if (flags.HasAllFlags(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
 			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * 4, false);
 	}
 
 	void EffectFinePortamentoDown(SongFlags flags, ref SongVoice chan, int param)
 	{
-		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+		if (flags.HasAllFlags(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
 			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * -4, false);
 	}
 
 	void EffectExtraFinePortamentoUp(SongFlags flags, ref SongVoice chan, int param)
 	{
-		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+		if (flags.HasAllFlags(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
 			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param, false);
 	}
 
 	void EffectExtraFinePortamentoDown(SongFlags flags, ref SongVoice chan, int param)
 	{
-		if (flags.HasFlag(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
+		if (flags.HasAllFlags(SongFlags.FirstTick) && (chan.Frequency != 0) && (param != 0))
 			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, -param, false);
 	}
 
 	void EffectRegularPortamentoUp(SongFlags flags, ref SongVoice chan, int param)
 	{
-		if (!flags.HasFlag(SongFlags.FirstTick))
+		if (!flags.HasAllFlags(SongFlags.FirstTick))
 			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, param * 4, false);
 	}
 
 	void EffectRegularPortamentoDown(SongFlags flags, ref SongVoice chan, int param)
 	{
-		if (!flags.HasFlag(SongFlags.FirstTick))
+		if (!flags.HasAllFlags(SongFlags.FirstTick))
 			chan.Frequency = EffectDoFrequencySlide(flags, chan.Frequency, -param * 4, false);
 	}
 
@@ -2676,11 +2661,11 @@ public class Song
 	{
 		chan.Flags |= ChannelFlags.Portamento;
 
-		if ((chan.Frequency != 0) && (chan.PortamentoTarget != 0) && !flags.HasFlag(SongFlags.FirstTick))
+		if ((chan.Frequency != 0) && (chan.PortamentoTarget != 0) && !flags.HasAllFlags(SongFlags.FirstTick))
 		{
 			if ((param == 0) && chan.RowEffect == Effects.TonePortamentoVolume)
 			{
-				if (chan.Frequency > 1 && flags.HasFlag(SongFlags.LinearSlides))
+				if (chan.Frequency > 1 && flags.HasAllFlags(SongFlags.LinearSlides))
 					chan.Frequency--;
 				if (chan.Frequency < chan.PortamentoTarget)
 				{
@@ -2715,7 +2700,7 @@ public class Song
 	{
 		int x, y;
 
-		if (flags.HasFlag(SongFlags.FirstTick))
+		if (flags.HasAllFlags(SongFlags.FirstTick))
 		{
 			x = param & 0xf0;
 			if (x != 0)
@@ -2830,7 +2815,7 @@ public class Song
 			//         If x = F, then slide up volume by 15 straight away also (for S3M compat)
 			//         Every update, add x to the volume, check and clip values > 64 to 64
 			param >>= 4;
-			if (param == 0xf || !flags.HasFlag(SongFlags.FirstTick))
+			if (param == 0xf || !flags.HasAllFlags(SongFlags.FirstTick))
 				EffectVolumeUp(ref chan, param);
 		}
 		else if (param == (param & 0xf))
@@ -2838,21 +2823,21 @@ public class Song
 			// D0x     Set effect update for channel enabled if channel is ON.
 			//         If x = F, then slide down volume by 15 straight away also (for S3M)
 			//         Every update, subtract x from the volume, check and clip values < 0 to 0
-			if (param == 0xf || !flags.HasFlag(SongFlags.FirstTick))
+			if (param == 0xf || !flags.HasAllFlags(SongFlags.FirstTick))
 				EffectVolumeDown(ref chan, param);
 		}
 		else if ((param & 0xf) == 0xf)
 		{
 			// DxF     Add x to volume straight away. Check and clip values > 64 to 64
 			param >>= 4;
-			if (flags.HasFlag(SongFlags.FirstTick))
+			if (flags.HasAllFlags(SongFlags.FirstTick))
 				EffectVolumeUp(ref chan, param);
 		}
 		else if ((param & 0xf0) == 0xf0)
 		{
 			// DFx     Subtract x from volume straight away. Check and clip values < 0 to 0
 			param &= 0xf;
-			if (flags.HasFlag(SongFlags.FirstTick))
+			if (flags.HasAllFlags(SongFlags.FirstTick))
 				EffectVolumeDown(ref chan, param);
 		}
 	}
@@ -2868,7 +2853,7 @@ public class Song
 
 		if (((param & 0x0F) == 0x0F) && ((param & 0xF0) != 0))
 		{
-			if (flags.HasFlag(SongFlags.FirstTick))
+			if (flags.HasAllFlags(SongFlags.FirstTick))
 			{
 				param = (param & 0xF0) >> 2;
 				slide = -(int)param;
@@ -2876,12 +2861,12 @@ public class Song
 		}
 		else if (((param & 0xF0) == 0xF0) && ((param & 0x0F) != 0))
 		{
-			if (flags.HasFlag(SongFlags.FirstTick))
+			if (flags.HasAllFlags(SongFlags.FirstTick))
 				slide = (param & 0x0F) << 2;
 		}
 		else
 		{
-			if (!flags.HasFlag(SongFlags.FirstTick))
+			if (!flags.HasAllFlags(SongFlags.FirstTick))
 			{
 				if ((param & 0x0F) != 0)
 					slide = ((param & 0x0F) << 2);
@@ -2914,7 +2899,7 @@ public class Song
 		chan.Flags |= ChannelFlags.Tremolo;
 
 		// don't handle on first tick if old-effects mode
-		if (flags.HasFlag(SongFlags.FirstTick) && flags.HasFlag(SongFlags.ITOldEffects))
+		if (flags.HasAllFlags(SongFlags.FirstTick) && flags.HasAllFlags(SongFlags.ITOldEffects))
 			return;
 
 		switch (chan.TremoloType)
@@ -2952,7 +2937,7 @@ public class Song
 			chan.CountdownRetrig);
 		*/
 
-		if (Flags.HasFlag(SongFlags.FirstTick) && (chan.RowNote != SpecialNotes.None))
+		if (Flags.HasAllFlags(SongFlags.FirstTick) && (chan.RowNote != SpecialNotes.None))
 			chan.CountdownRetrigger = param & 0xf;
 		else if (--chan.CountdownRetrigger <= 0)
 		{
@@ -3001,17 +2986,17 @@ public class Song
 
 		if (((param & 0x0F) == 0x0F) && ((param & 0xF0) != 0))
 		{
-			if (flags.HasFlag(SongFlags.FirstTick))
+			if (flags.HasAllFlags(SongFlags.FirstTick))
 				slide = param >> 4;
 		}
 		else if (((param & 0xF0) == 0xF0) && ((param & 0x0F) != 0))
 		{
-			if (flags.HasFlag(SongFlags.FirstTick))
+			if (flags.HasAllFlags(SongFlags.FirstTick))
 				slide = -(int)(param & 0x0F);
 		}
 		else
 		{
-			if (!flags.HasFlag(SongFlags.FirstTick))
+			if (!flags.HasAllFlags(SongFlags.FirstTick))
 			{
 				if ((param & 0x0F) != 0)
 					slide = -(int)(param & 0x0F);
@@ -3038,17 +3023,17 @@ public class Song
 
 		if (((param & 0x0F) == 0x0F) && ((param & 0xF0) != 0))
 		{
-			if (Flags.HasFlag(SongFlags.FirstTick))
+			if (Flags.HasAllFlags(SongFlags.FirstTick))
 				slide = param >> 4;
 		}
 		else if (((param & 0xF0) == 0xF0) && ((param & 0x0F) != 0))
 		{
-			if (Flags.HasFlag(SongFlags.FirstTick))
+			if (Flags.HasAllFlags(SongFlags.FirstTick))
 				slide = -(int)(param & 0x0F);
 		}
 		else
 		{
-			if (!Flags.HasFlag(SongFlags.FirstTick))
+			if (!Flags.HasAllFlags(SongFlags.FirstTick))
 			{
 				if ((param & 0xF0) != 0)
 					slide = ((param & 0xF0) >> 4);
@@ -3127,7 +3112,7 @@ public class Song
 				break;
 			// S6x: Pattern Delay for x ticks
 			case 0x60:
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 				{
 					FrameDelay += param;
 					TickCount += param;
@@ -3135,7 +3120,7 @@ public class Song
 				break;
 			// S7x: Envelope Control
 			case 0x70:
-				if (!Flags.HasFlag(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				switch (param)
 				{
@@ -3176,7 +3161,7 @@ public class Song
 				break;
 			// S8x: Set 4-bit Panning
 			case 0x80:
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 				{
 					chan.Flags &= ~ChannelFlags.Surround;
 					chan.PanbrelloDelta = 0;
@@ -3188,7 +3173,7 @@ public class Song
 				break;
 			// S9x: Set Surround
 			case 0x90:
-				if (param == 1 && Flags.HasFlag(SongFlags.FirstTick))
+				if (param == 1 && Flags.HasAllFlags(SongFlags.FirstTick))
 				{
 					chan.Flags |= ChannelFlags.Surround;
 					chan.PanbrelloDelta = 0;
@@ -3199,17 +3184,17 @@ public class Song
 			// SAx: Set 64k Offset
 			// Note: don't actually APPLY the offset, and don't clear the regular offset value, either.
 			case 0xA0:
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 					chan.MemOffset = (param << 16) | (chan.MemOffset & ~0xf0000);
 				break;
 			// SBx: Pattern Loop
 			case 0xB0:
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 					EffectPatternLoop(ref chan, param & 0x0F);
 				break;
 			// SCx: Note Cut
 			case 0xC0:
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 					chan.CountdownNoteCut = (param != 0) ? param : 1;
 				else if (--chan.CountdownNoteCut == 0)
 					EffectNoteCut(nchan, true);
@@ -3217,7 +3202,7 @@ public class Song
 			// SDx: Note Delay
 			// SEx: Pattern Delay for x rows
 			case 0xE0:
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 				{
 					if (RowCount == 0) // ugh!
 						RowCount = param + 1;
@@ -3237,7 +3222,7 @@ public class Song
 	{
 		bool instrumentChanged = false;
 
-		if (instrument >= Instruments.Count)
+		if (instrument >= (IsInstrumentMode ? Instruments.Count : Samples.Count))
 			return;
 
 		var pEnv = IsInstrumentMode ? Instruments[instrument] : null;
@@ -3313,7 +3298,7 @@ public class Song
 		*
 		* OpenMPT test cases:
 		* PortaInsNumCompat.it, PortaSampleCompat.it, PortaCutCompat.it */
-		if ((chan.Sample != null) && (pSmp != chan.Sample) && portamento && (chan.Increment != 0) && Flags.HasFlag(SongFlags.CompatibleGXX))
+		if ((chan.Sample != null) && (pSmp != chan.Sample) && portamento && (chan.Increment != 0) && Flags.HasAllFlags(SongFlags.CompatibleGXX))
 			pSmp = chan.Sample;
 
 		/* OpenMPT test case InstrAfterMultisamplePorta.it:
@@ -3343,15 +3328,15 @@ public class Song
 			) || (
 				(instrumentColumn != 0)
 				&& portamento
-				&& Flags.HasFlag(SongFlags.CompatibleGXX)
+				&& Flags.HasAllFlags(SongFlags.CompatibleGXX)
 			) || (
 				(instrumentColumn != 0)
 				&& !portamento
 				&& chan.Flags.HasAnyFlag(ChannelFlags.NoteFade | ChannelFlags.KeyOff)
-				&& Flags.HasFlag(SongFlags.ITOldEffects)
+				&& Flags.HasAllFlags(SongFlags.ITOldEffects)
 			))
 				EnvelopeReset(ref chan, instrumentChanged || (chan.FadeOutVolume == 0) || !SongNote.IsNote(chan.RowNote));
-			else if (!pEnv.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+			else if (!pEnv.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 			{
 				// XXX why is this being done?
 				// I'm pretty sure this is just some stupid IT thing with portamentos
@@ -3386,7 +3371,7 @@ public class Song
 			return;
 		}
 
-		bool wasKeyOff = chan.Flags.HasFlag(ChannelFlags.KeyOff);
+		bool wasKeyOff = chan.Flags.HasAllFlags(ChannelFlags.KeyOff);
 
 		if (pSmp == chan.Sample && (chan.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (chan.Length != 0))
 		{
@@ -3403,11 +3388,11 @@ public class Song
 					 | ChannelFlags.VolumeEnvelope | ChannelFlags.PanningEnvelope | ChannelFlags.PitchEnvelope);
 		if (pEnv != null)
 		{
-			if (pEnv.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+			if (pEnv.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 				chan.Flags |= ChannelFlags.VolumeEnvelope;
-			if (pEnv.Flags.HasFlag(InstrumentFlags.PanningEnvelope))
+			if (pEnv.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope))
 				chan.Flags |= ChannelFlags.PanningEnvelope;
-			if (pEnv.Flags.HasFlag(InstrumentFlags.PitchEnvelope))
+			if (pEnv.Flags.HasAllFlags(InstrumentFlags.PitchEnvelope))
 				chan.Flags |= ChannelFlags.PitchEnvelope;
 			if ((pEnv.IFCutoff & 0x80) != 0)
 				chan.Cutoff = pEnv.IFCutoff & 0x7F;
@@ -3415,11 +3400,11 @@ public class Song
 				chan.Resonance = pEnv.IFResonance & 0x7F;
 		}
 
-		if (chan.RowNote == SpecialNotes.NoteOff && Flags.HasFlag(SongFlags.ITOldEffects) && pSmp != oldSample)
+		if (chan.RowNote == SpecialNotes.NoteOff && Flags.HasAllFlags(SongFlags.ITOldEffects) && pSmp != oldSample)
 		{
 			if (chan.Sample != null)
 				chan.Flags |= (ChannelFlags)chan.Sample.Flags & ChannelFlags.SampleFlags;
-			if (pSmp.Flags.HasFlag(SampleFlags.Panning))
+			if (pSmp.Flags.HasAllFlags(SampleFlags.Panning))
 				chan.Panning = pSmp.Panning;
 			chan.InstrumentVolume = oldInstrumentVolume;
 			chan.Volume = pSmp.Volume;
@@ -3445,15 +3430,15 @@ public class Song
 		chan.CurrentSampleData = pSmp.Data;
 		chan.Position = 0;
 
-		if (chan.Flags.HasFlag(ChannelFlags.SustainLoop) && (!portamento || ((pEnv != null) && !wasKeyOff)))
+		if (chan.Flags.HasAllFlags(ChannelFlags.SustainLoop) && (!portamento || ((pEnv != null) && !wasKeyOff)))
 		{
 			chan.LoopStart = pSmp.SustainStart;
 			chan.LoopEnd = pSmp.SustainEnd;
 			chan.Flags |= ChannelFlags.Loop;
-			if (chan.Flags.HasFlag(ChannelFlags.PingPongSustain))
+			if (chan.Flags.HasAllFlags(ChannelFlags.PingPongSustain))
 				chan.Flags |= ChannelFlags.PingPongLoop;
 		}
-		if (chan.Flags.HasFlag(ChannelFlags.Loop) && (chan.LoopEnd < chan.Length))
+		if (chan.Flags.HasAllFlags(ChannelFlags.Loop) && (chan.LoopEnd < chan.Length))
 			chan.Length = chan.LoopEnd;
 
 		/*
@@ -3504,7 +3489,7 @@ public class Song
 			{
 				case SpecialNotes.NoteOff:
 					// TODO: fx_key_off(csf, nchan);
-					if (!porta && Flags.HasFlag(SongFlags.ITOldEffects) && (chan.RowInstrumentNumber != 0))
+					if (!porta && Flags.HasAllFlags(SongFlags.ITOldEffects) && (chan.RowInstrumentNumber != 0))
 						chan.Flags &= ~(ChannelFlags.NoteFade | ChannelFlags.KeyOff);
 					break;
 				case SpecialNotes.NoteCut:
@@ -3554,17 +3539,17 @@ public class Song
 				chan.LoopStart = 0;
 				chan.Flags = (chan.Flags & ~ChannelFlags.SampleFlags) | ((ChannelFlags)pIns.Flags & ChannelFlags.SampleFlags);
 
-				if (chan.Flags.HasFlag(ChannelFlags.SustainLoop))
+				if (chan.Flags.HasAllFlags(ChannelFlags.SustainLoop))
 				{
 					chan.LoopStart = pIns.SustainStart;
 					chan.LoopEnd = pIns.SustainEnd;
 					chan.Flags &= ~ChannelFlags.PingPongFlag;
 					chan.Flags |= ChannelFlags.Loop;
 
-					if (chan.Flags.HasFlag(ChannelFlags.PingPongSustain)) chan.Flags |= ChannelFlags.PingPongLoop;
+					if (chan.Flags.HasAllFlags(ChannelFlags.PingPongSustain)) chan.Flags |= ChannelFlags.PingPongLoop;
 					if (chan.Length > chan.LoopEnd) chan.Length = chan.LoopEnd;
 				}
-				else if (chan.Flags.HasFlag(ChannelFlags.Loop))
+				else if (chan.Flags.HasAllFlags(ChannelFlags.Loop))
 				{
 					chan.LoopStart = pIns.LoopStart;
 					chan.LoopEnd = pIns.LoopEnd;
@@ -3579,9 +3564,9 @@ public class Song
 		else
 			porta = false;
 
-		if ((pEnv != null) && pEnv.Flags.HasFlag(InstrumentFlags.SetPanning))
+		if ((pEnv != null) && pEnv.Flags.HasAllFlags(InstrumentFlags.SetPanning))
 			chan.SetInstrumentPanning(pEnv!.Panning);
-		else if (pIns.Flags.HasFlag(SampleFlags.Panning))
+		else if (pIns.Flags.HasAllFlags(SampleFlags.Panning))
 			chan.SetInstrumentPanning(pIns.Panning);
 
 		// Pitch/Pan separation
@@ -3606,7 +3591,7 @@ public class Song
 		}
 
 		/* OpenMPT test cases Off-Porta.it, Off-Porta-CompatGxx.it */
-		if (!(porta && (!Flags.HasFlag(SongFlags.CompatibleGXX) || (chan.RowInstrumentNumber == 0))))
+		if (!(porta && (!Flags.HasAllFlags(SongFlags.CompatibleGXX) || (chan.RowInstrumentNumber == 0))))
 			chan.Flags &= ~ChannelFlags.KeyOff;
 
 		// Enable Ramping
@@ -3650,7 +3635,7 @@ public class Song
 
 			// Set Volume
 			case Effects.Volume:
-				if (!Flags.HasFlag(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				chan.Volume = (param < 64) ? param * 4 : 256;
 				chan.Flags |= ChannelFlags.FastVolumeRamp;
@@ -3687,7 +3672,7 @@ public class Song
 				break;
 
 			case Effects.Speed:
-				if (Flags.HasFlag(SongFlags.FirstTick) && (param != 0))
+				if (Flags.HasAllFlags(SongFlags.FirstTick) && (param != 0))
 				{
 					TickCount = param;
 					CurrentSpeed = param;
@@ -3695,7 +3680,7 @@ public class Song
 				break;
 
 			case Effects.Tempo:
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 				{
 					if (param != 0)
 						chan.MemTempo = param;
@@ -3726,7 +3711,7 @@ public class Song
 				break;
 
 			case Effects.Offset:
-				if (!Flags.HasFlag(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				if (param != 0)
 					chan.MemOffset = (chan.MemOffset & ~0xff00) | (param << 8);
@@ -3734,13 +3719,13 @@ public class Song
 				{
 					chan.Position = chan.MemOffset;
 					if (chan.Position > chan.Length)
-						chan.Position = Flags.HasFlag(SongFlags.ITOldEffects) ? chan.Length : 0;
+						chan.Position = Flags.HasAllFlags(SongFlags.ITOldEffects) ? chan.Length : 0;
 				}
 				break;
 
 			case Effects.Arpeggio:
 				chan.NCommand = Effects.Arpeggio;
-				if (!Flags.HasFlag(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				if (param != 0)
 					chan.MemArpeggio = param;
@@ -3755,11 +3740,11 @@ public class Song
 			case Effects.Tremor:
 				// Tremor logic lifted from DUMB, which is the only player that actually gets it right.
 				// I *sort of* understand it.
-				if (Flags.HasFlag(SongFlags.FirstTick))
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
 				{
 					if (param == 0)
 						param = chan.MemTremor;
-					else if (!Flags.HasFlag(SongFlags.ITOldEffects))
+					else if (!Flags.HasAllFlags(SongFlags.ITOldEffects))
 					{
 						if ((param & 0xf0) != 0) param -= 0x10;
 						if ((param & 0x0f) != 0) param -= 0x01;
@@ -3785,7 +3770,7 @@ public class Song
 				break;
 
 			case Effects.Panning:
-				if (!Flags.HasFlag(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				chan.Flags &= ~ChannelFlags.Surround;
 				chan.PanbrelloDelta = 0;
@@ -3817,7 +3802,7 @@ public class Song
 				break;
 
 			case Effects.ChannelVolume:
-				if (!Flags.HasFlag(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				// FIXME rename global_volume to channel_volume in the channel struct
 				if (param <= 64)
@@ -3836,7 +3821,7 @@ public class Song
 				break;
 
 			case Effects.SetEnvelopePosition:
-				if (!Flags.HasFlag(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				chan.VolumeEnvelopePosition = param;
 				chan.PanningEnvelopePosition = param;
@@ -3844,7 +3829,7 @@ public class Song
 				if (IsInstrumentMode && (chan.Instrument != null))
 				{
 					var pEnv = chan.Instrument;
-					if ((chan.Flags.HasFlag(ChannelFlags.PanningEnvelope))
+					if ((chan.Flags.HasAllFlags(ChannelFlags.PanningEnvelope))
 							&& (pEnv.PanningEnvelope != null)
 							&& (param > pEnv.PanningEnvelope.Nodes.Last().Tick))
 					{
@@ -3854,7 +3839,7 @@ public class Song
 				break;
 
 			case Effects.PositionJump:
-				if (!AudioPlayback.MixFlags.HasFlag(MixFlags.NoBackwardJumps) || ProcessOrder < param)
+				if (!AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoBackwardJumps) || ProcessOrder < param)
 					ProcessOrder = param - 1;
 				ProcessRow = ProcessNextOrder;
 				break;
@@ -4014,7 +3999,7 @@ public class Song
 				cmd == Effects.TonePortamentoVolume ||
 				volumeCommand == VolumeEffects.TonePortamento;
 
-			bool startNote = Flags.HasFlag(SongFlags.FirstTick);
+			bool startNote = Flags.HasAllFlags(SongFlags.FirstTick);
 
 			chan.Flags &= ~(ChannelFlags.FastVolumeRamp | ChannelFlags.NewNote);
 
@@ -4095,8 +4080,8 @@ public class Song
 
 				if (IsInstrumentMode && (instrumentNumber != 0) && !SongNote.IsNote(note))
 				{
-					if ((portamento && Flags.HasFlag(SongFlags.CompatibleGXX))
-						|| (!portamento && Flags.HasFlag(SongFlags.ITOldEffects)))
+					if ((portamento && Flags.HasAllFlags(SongFlags.CompatibleGXX))
+						|| (!portamento && Flags.HasAllFlags(SongFlags.ITOldEffects)))
 					{
 						EnvelopeReset(ref chan, always: true);
 						chan.FadeOutVolume = 65536;
@@ -4122,12 +4107,12 @@ public class Song
 
 					if (IsInstrumentMode)
 					{
-						if (instrumentNumber < Instruments.Count && (chan.Instrument != Instruments[instrumentNumber] || (chan.CurrentSampleData.Span == Memory<byte>.Empty.Span)))
+						if (instrumentNumber < Instruments.Count && (chan.Instrument != Instruments[instrumentNumber] || chan.CurrentSampleData.IsEmpty))
 							note = chan.NewNote;
 					}
 					else
 					{
-						if (instrumentNumber < Samples.Count && (chan.Sample != Samples[instrumentNumber] || (chan.CurrentSampleData.Span == Memory<byte>.Empty.Span)))
+						if (instrumentNumber < Samples.Count && (chan.Sample != Samples[instrumentNumber] || chan.CurrentSampleData.IsEmpty))
 							note = chan.NewNote;
 					}
 				}
@@ -4156,7 +4141,7 @@ public class Song
 							chan.Volume = Samples[sampleNumber]?.Volume ?? 0;
 					}
 
-					if (!Flags.HasFlag(SongFlags.ITOldEffects))
+					if (!Flags.HasAllFlags(SongFlags.ITOldEffects))
 						instrumentNumber = 0;
 				}
 
@@ -4165,7 +4150,7 @@ public class Song
 				{
 					/* This is required when the instrument changes (KeyOff is not called) */
 					/* Possibly a better bugfix could be devised. --Bisqwit */
-					if (chan.Flags.HasFlag(ChannelFlags.AdLib))
+					if (chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 					{
 						//Do this only if really an adlib chan. Important!
 						OPLNoteOff(nchan);
@@ -4204,7 +4189,7 @@ public class Song
 					var sample = Samples[instrumentNumber];
 
 					if ((sample != null)
-					 && sample.Flags.HasFlag(SampleFlags.AdLib)
+					 && sample.Flags.HasAllFlags(SampleFlags.AdLib)
 					 && (sample.AdLibBytes != null))
 						OPLPatch(nchan, sample.AdLibBytes);
 
@@ -4246,7 +4231,7 @@ public class Song
 							var sample = Samples[chan.NewInstrumentNumber];
 
 							if ((sample != null)
-							 && sample.Flags.HasFlag(SampleFlags.AdLib)
+							 && sample.Flags.HasAllFlags(SampleFlags.AdLib)
 							 && (sample.AdLibBytes != null))
 								OPLPatch(nchan, sample.AdLibBytes);
 
@@ -4278,10 +4263,10 @@ public class Song
 
 					if (tonePortamentoParam != 0)
 						chan.MemPortaNote = tonePortamentoParam;
-					else if ((tonePortamentoParam == 0) && !Flags.HasFlag(SongFlags.CompatibleGXX))
+					else if ((tonePortamentoParam == 0) && !Flags.HasAllFlags(SongFlags.CompatibleGXX))
 						chan.MemPortaNote = chan.MemPitchSlide;
 
-					if (!Flags.HasFlag(SongFlags.CompatibleGXX))
+					if (!Flags.HasAllFlags(SongFlags.CompatibleGXX))
 						chan.MemPitchSlide = chan.MemPortaNote;
 				}
 
@@ -4290,21 +4275,21 @@ public class Song
 					if (volume != 0)
 						chan.MemPortaNote = Tables.VolumeColumnPortamentoTable[volume & 0x0F];
 
-					if (!Flags.HasFlag(SongFlags.CompatibleGXX))
+					if (!Flags.HasAllFlags(SongFlags.CompatibleGXX))
 						chan.MemPitchSlide = chan.MemPortaNote;
 				}
 
 				if ((volume != 0) && (volumeCommand == VolumeEffects.PortamentoUp || volumeCommand == VolumeEffects.PortamentoDown))
 				{
 					chan.MemPitchSlide = 4 * volume;
-					if (!effectColumnTonePortamento && !Flags.HasFlag(SongFlags.CompatibleGXX))
+					if (!effectColumnTonePortamento && !Flags.HasAllFlags(SongFlags.CompatibleGXX))
 						chan.MemPortaNote = chan.MemPitchSlide;
 				}
 
 				if ((param != 0) && (cmd == Effects.PortamentoUp || cmd == Effects.PortamentoDown))
 				{
 					chan.MemPitchSlide = param;
-					if (!Flags.HasFlag(SongFlags.CompatibleGXX))
+					if (!Flags.HasAllFlags(SongFlags.CompatibleGXX))
 						chan.MemPortaNote = chan.MemPitchSlide;
 				}
 			}
@@ -4350,14 +4335,14 @@ public class Song
 					if (data[3] < 0x80)
 					{
 						chan.Cutoff = data[3];
-						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
+						SetUpChannelFilter(ref chan, !chan.Flags.HasAllFlags(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
 					}
 					break;
 				case 0x01: // set resonance
 					if (data[3] < 0x80)
 					{
 						chan.Resonance = data[3];
-						SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
+						SetUpChannelFilter(ref chan, !chan.Flags.HasAllFlags(ChannelFlags.Filter), 256, AudioPlayback.MixFrequency);
 					}
 					break;
 			}
@@ -4475,7 +4460,7 @@ public class Song
 
 			if (s != null)
 			{
-				if (c.Flags.HasFlag(ChannelFlags.AdLib) && (s.AdLibBytes != null))
+				if (c.Flags.HasAllFlags(ChannelFlags.AdLib) && (s.AdLibBytes != null))
 				{
 					OPLNoteOff(chanInternal);
 					OPLPatch(chanInternal, s.AdLibBytes);
@@ -4493,16 +4478,16 @@ public class Song
 				{
 					c.Instrument = i;
 
-					if (!i.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry)) c.VolumeEnvelopePosition = 0;
-					if (!i.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry)) c.PanningEnvelopePosition = 0;
-					if (!i.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry)) c.PitchEnvelopePosition = 0;
-					if (i.Flags.HasFlag(InstrumentFlags.VolumeEnvelope)) c.Flags |= ChannelFlags.VolumeEnvelope;
-					if (i.Flags.HasFlag(InstrumentFlags.PanningEnvelope)) c.Flags |= ChannelFlags.PanningEnvelope;
-					if (i.Flags.HasFlag(InstrumentFlags.PitchEnvelope)) c.Flags |= ChannelFlags.PitchEnvelope;
+					if (!i.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeCarry)) c.VolumeEnvelopePosition = 0;
+					if (!i.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeCarry)) c.PanningEnvelopePosition = 0;
+					if (!i.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeCarry)) c.PitchEnvelopePosition = 0;
+					if (i.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope)) c.Flags |= ChannelFlags.VolumeEnvelope;
+					if (i.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope)) c.Flags |= ChannelFlags.PanningEnvelope;
+					if (i.Flags.HasAllFlags(InstrumentFlags.PitchEnvelope)) c.Flags |= ChannelFlags.PitchEnvelope;
 
 					i.IsPlayed = true;
 
-					if (Status.Flags.HasFlag(StatusFlags.MIDILikeTracker))
+					if (Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker))
 					{
 						if (i.MIDIChannelMask != 0)
 						{
@@ -4548,12 +4533,12 @@ public class Song
 				c.GlobalVolume = 64;
 				// use the sample's panning if it's set, or use the default
 				c.ChannelPanning = (short)(c.Panning + 1);
-				if (c.Flags.HasFlag(ChannelFlags.Surround))
+				if (c.Flags.HasAllFlags(ChannelFlags.Surround))
 					c.ChannelPanning = (short)(c.ChannelPanning | 0x8000);
 
-				c.Panning = s.Flags.HasFlag(SampleFlags.Panning) ? s.Panning : 128;
+				c.Panning = s.Flags.HasAllFlags(SampleFlags.Panning) ? s.Panning : 128;
 				if (i != null)
-					c.Panning = i.Flags.HasFlag(InstrumentFlags.SetPanning) ? i.Panning : 128;
+					c.Panning = i.Flags.HasAllFlags(InstrumentFlags.SetPanning) ? i.Panning : 128;
 				c.Flags &= ChannelFlags.Surround;
 				// gotta set these by hand, too
 				c.C5Speed = s.C5Speed;
@@ -4572,7 +4557,7 @@ public class Song
 
 			CurrentSong.NoteChange(chanInternal, note, false, false, true);
 
-			if (!Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) && (i != null))
+			if (!Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker) && (i != null))
 			{
 				/* midi keyjazz shouldn't require a sample */
 				SongNote mc = default;
@@ -4597,7 +4582,7 @@ public class Song
 				for this note *right now* (this will fix keyjamming with effects like Oxx and SCx)
 			- Need to handle volume column effects with this function...
 			*/
-			if (CurrentSong.Flags.HasFlag(SongFlags.EndReached))
+			if (CurrentSong.Flags.HasAllFlags(SongFlags.EndReached))
 			{
 				CurrentSong.Flags &= ~SongFlags.EndReached;
 				CurrentSong.Flags |= SongFlags.Paused;
@@ -5014,8 +4999,8 @@ public class Song
 			using (stream)
 				ret = converter.SaveSong(this, stream);
 
-			if (Status.Flags.HasFlag(StatusFlags.MakeBackups))
-				DiskWriter.MakeBackup(mangle, Status.Flags.HasFlag(StatusFlags.NumberedBackups) ? DiskWriterBackupMode.BackupNumbered : DiskWriterBackupMode.BackupTilde);
+			if (Status.Flags.HasAllFlags(StatusFlags.MakeBackups))
+				DiskWriter.MakeBackup(mangle, Status.Flags.HasAllFlags(StatusFlags.NumberedBackups) ? DiskWriterBackupMode.BackupNumbered : DiskWriterBackupMode.BackupTilde);
 
 			File.Move(tempName, mangle, overwrite: true);
 		}
@@ -5251,7 +5236,7 @@ public class Song
 		bool wasPlaying;
 
 		// IT stops the song even if the new song can't be loaded
-		if (Status.Flags.HasFlag(StatusFlags.PlayAfterLoad))
+		if (Status.Flags.HasAllFlags(StatusFlags.PlayAfterLoad))
 			wasPlaying = (AudioPlayback.Mode == AudioPlaybackMode.Playing);
 		else
 		{
@@ -5286,9 +5271,6 @@ public class Song
 		lock (AudioPlayback.LockScope())
 		{
 			CurrentSong = newSong;
-
-			AudioPlayback.Reset();
-
 			CurrentSong.RepeatCount = 0;
 
 			AudioPlayback.MaxChannelsUsed = 0;
@@ -5299,7 +5281,7 @@ public class Song
 			AudioPlayback.InitializeModPlug();
 		}
 
-		if (wasPlaying && Status.Flags.HasFlag(StatusFlags.PlayAfterLoad))
+		if (wasPlaying && Status.Flags.HasAllFlags(StatusFlags.PlayAfterLoad))
 			AudioPlayback.Start();
 
 		Page.NotifySongChangedGlobal();
@@ -5362,7 +5344,7 @@ public class Song
 
 		if (GetInstrument(smpNumber).IsEmpty)
 			insNumber = smpNumber;
-		else if (Status.Flags.HasFlag(StatusFlags.ClassicMode) || !GetInstrument(insNumber).IsEmpty)
+		else if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode) || !GetInstrument(insNumber).IsEmpty)
 			insNumber = FirstBlankInstrumentNumber(0);
 
 		if (insNumber > 0)
@@ -5509,15 +5491,15 @@ public class Song
 							| ChannelFlags.SustainLoop
 							| ChannelFlags.Loop);
 
-					if (inst.Flags.HasFlag(SampleFlags.PingPongSustain))
+					if (inst.Flags.HasAllFlags(SampleFlags.PingPongSustain))
 						channel.Flags |= ChannelFlags.PingPongSustain;
-					if (inst.Flags.HasFlag(SampleFlags.PingPongLoop))
+					if (inst.Flags.HasAllFlags(SampleFlags.PingPongLoop))
 						channel.Flags |= ChannelFlags.PingPongLoop;
-					if (inst.Flags.HasFlag(SampleFlags.PingPongFlag))
+					if (inst.Flags.HasAllFlags(SampleFlags.PingPongFlag))
 						channel.Flags |= ChannelFlags.PingPongFlag;
-					if (inst.Flags.HasFlag(SampleFlags.SustainLoop))
+					if (inst.Flags.HasAllFlags(SampleFlags.SustainLoop))
 						channel.Flags |= ChannelFlags.SustainLoop;
-					if (inst.Flags.HasFlag(SampleFlags.Loop))
+					if (inst.Flags.HasAllFlags(SampleFlags.Loop))
 						channel.Flags |= ChannelFlags.Loop;
 
 					channel.InstrumentVolume = inst.GlobalVolume;

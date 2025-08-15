@@ -203,7 +203,7 @@ public class PaletteEditorPage : Page
 				return null;
 		}
 
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			if (n < 0)
 				return false;

@@ -62,7 +62,7 @@ public struct KeyEvent
 			if ((OriginalSym >= KeySym._0) && (OriginalSym <= KeySym._9))
 				return OriginalSym - KeySym._0;
 
-			if (Modifiers.HasFlag(KeyMod.Num))
+			if (Modifiers.HasAllFlags(KeyMod.Num))
 			{
 				if (OriginalSym == KeySym.KP_0)
 					return 0;
@@ -107,17 +107,17 @@ public struct KeyEvent
 		if (Modifiers.HasAnyFlag(KeyMod.GUI))
 		{
 			Modifiers = (Modifiers & ~KeyMod.GUI)
-				| (Status.Flags.HasFlag(StatusFlags.MetaIsControl)
+				| (Status.Flags.HasAllFlags(StatusFlags.MetaIsControl)
 					? KeyMod.Control : KeyMod.Alt);
 		}
 
-		if (Modifiers.HasFlag(KeyMod.Mode) && Status.Flags.HasFlag(StatusFlags.AltGrIsAlt))
+		if (Modifiers.HasAllFlags(KeyMod.Mode) && Status.Flags.HasAllFlags(StatusFlags.AltGrIsAlt))
 		{
 			/* Treat AltGr as Alt (delt) */
 			Modifiers = (Modifiers & ~KeyMod.Mode) | KeyMod.Alt;
 		}
 
-		if (Modifiers.HasFlag(KeyMod.Num))
+		if (Modifiers.HasAllFlags(KeyMod.Num))
 		{
 			switch (Sym)
 			{
@@ -193,7 +193,7 @@ public struct KeyEvent
 
 			if (Sym == KeySym.KP_1 || Sym == KeySym.KP_Period)
 			{
-				if (!Modifiers.HasFlag(KeyMod.Num))
+				if (!Modifiers.HasAllFlags(KeyMod.Num))
 					return -1;
 			}
 

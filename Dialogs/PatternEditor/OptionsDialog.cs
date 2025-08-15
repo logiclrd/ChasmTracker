@@ -40,7 +40,7 @@ public class OptionsDialog : Dialog
 		SelectedWidgetIndex.Value = s_selectedWidgetIndex;
 
 		ActionYes = Close;
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 			ActionCancel = Close;
 		else
 			ActionCancel = CloseCancel;

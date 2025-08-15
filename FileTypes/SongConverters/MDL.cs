@@ -687,7 +687,7 @@ public class MDL : SongFileConverter
 				{
 					var noteMask = (MDLNoteFlags)x;
 
-					if (noteMask.HasFlag(MDLNoteFlags.Note))
+					if (noteMask.HasAllFlags(MDLNoteFlags.Note))
 					{
 						b = stream.ReadByte();
 						// convenient! :)
@@ -695,7 +695,7 @@ public class MDL : SongFileConverter
 						// checking some time)
 						track[row].Note = (b > 120) ? SpecialNotes.NoteOff : (byte)b;
 					}
-					if (noteMask.HasFlag(MDLNoteFlags.Sample))
+					if (noteMask.HasAllFlags(MDLNoteFlags.Sample))
 					{
 						b = stream.ReadByte();
 						if (b >= Constants.MaxInstruments)
@@ -703,11 +703,11 @@ public class MDL : SongFileConverter
 						track[row].Instrument = (byte)b;
 					}
 
-					byte vol = (byte)(noteMask.HasFlag(MDLNoteFlags.Volume) ? stream.ReadByte() : 0);
+					byte vol = (byte)(noteMask.HasAllFlags(MDLNoteFlags.Volume) ? stream.ReadByte() : 0);
 
 					byte e1, e2;
 
-					if (noteMask.HasFlag(MDLNoteFlags.Effects))
+					if (noteMask.HasAllFlags(MDLNoteFlags.Effects))
 					{
 						b = stream.ReadByte();
 						e1 = (byte)(b & 0xf);
@@ -718,8 +718,8 @@ public class MDL : SongFileConverter
 						e1 = e2 = 0;
 					}
 
-					byte p1 = (byte)(noteMask.HasFlag(MDLNoteFlags.Param1) ? stream.ReadByte() : 0);
-					byte p2 = (byte)(noteMask.HasFlag(MDLNoteFlags.Param2) ? stream.ReadByte() : 0);
+					byte p1 = (byte)(noteMask.HasAllFlags(MDLNoteFlags.Param1) ? stream.ReadByte() : 0);
+					byte p2 = (byte)(noteMask.HasAllFlags(MDLNoteFlags.Param2) ? stream.ReadByte() : 0);
 
 					lostEffects += CramEffects(ref track[row], vol, e1, e2, p1, p2);
 					row++;
@@ -831,11 +831,11 @@ public class MDL : SongFileConverter
 				sIns.PanningEnvelopeNumber = (int)(sampleHeader.PanningEnvelopeFlags & MDLSampleEnvelopeFlags.EnvelopeNumberMask);
 				sIns.PitchEnvelopeNumber = (int)(sampleHeader.FrequencyEnvelopeFlags & MDLSampleEnvelopeFlags.EnvelopeNumberMask);
 
-				if (sampleHeader.VolumeEnvelopeFlags.HasFlag(MDLSampleEnvelopeFlags.Enabled))
+				if (sampleHeader.VolumeEnvelopeFlags.HasAllFlags(MDLSampleEnvelopeFlags.Enabled))
 					sIns.Flags |= InstrumentFlags.VolumeEnvelope;
-				if (sampleHeader.PanningEnvelopeFlags.HasFlag(MDLSampleEnvelopeFlags.Enabled))
+				if (sampleHeader.PanningEnvelopeFlags.HasAllFlags(MDLSampleEnvelopeFlags.Enabled))
 					sIns.Flags |= InstrumentFlags.PanningEnvelope;
-				if (sampleHeader.FrequencyEnvelopeFlags.HasFlag(MDLSampleEnvelopeFlags.Enabled))
+				if (sampleHeader.FrequencyEnvelopeFlags.HasAllFlags(MDLSampleEnvelopeFlags.Enabled))
 					sIns.Flags |= InstrumentFlags.PitchEnvelope;
 
 				// DT fadeout = 0000-1fff, or 0xffff for "cut"
@@ -850,7 +850,7 @@ public class MDL : SongFileConverter
 				// ... huh? what happens if the volume isn't used?
 				smp.Volume = sampleHeader.Volume; //mphack (range 0-255, s/b 0-64)
 				smp.Panning = ((Math.Min(sampleHeader.Panning, (byte)127) + 1) >> 1) * 4; //mphack
-				if (sampleHeader.PanningEnvelopeFlags.HasFlag(MDLSampleEnvelopeFlags.SetPanning))
+				if (sampleHeader.PanningEnvelopeFlags.HasAllFlags(MDLSampleEnvelopeFlags.SetPanning))
 					smp.Flags |= SampleFlags.Panning;
 
 				smp.VibratoSpeed = sampleHeader.VibratoSpeed; // XXX bother checking ranges for vibrato
@@ -890,7 +890,7 @@ public class MDL : SongFileConverter
 				smp.Flags |= SampleFlags.Loop;
 			}
 
-			if (sampleInfo.Flags.HasFlag(MDLSampleFlags._16Bit))
+			if (sampleInfo.Flags.HasAllFlags(MDLSampleFlags._16Bit))
 			{
 				smp.Flags |= SampleFlags._16Bit;
 				smp.Length >>= 1;
@@ -898,7 +898,7 @@ public class MDL : SongFileConverter
 				smp.LoopEnd >>= 1;
 			}
 
-			if (sampleInfo.Flags.HasFlag(MDLSampleFlags.PingPongLoop))
+			if (sampleInfo.Flags.HasAllFlags(MDLSampleFlags.PingPongLoop))
 				smp.Flags |= SampleFlags.PingPongLoop;
 
 			packType[sampleInfo.SampleNumber] = (MDLPackType)(sampleInfo.Flags & MDLSampleFlags.PackTypeMask);
@@ -944,7 +944,7 @@ public class MDL : SongFileConverter
 				smp.LoopEnd >>= 1;
 			}
 
-			if (sampleInfo.Flags.HasFlag(MDLSampleFlags.PingPongLoop))
+			if (sampleInfo.Flags.HasAllFlags(MDLSampleFlags.PingPongLoop))
 				smp.Flags |= SampleFlags.PingPongLoop;
 
 			packType[sampleInfo.SampleNumber] = (MDLPackType)(sampleInfo.Flags & MDLSampleFlags.PackTypeMask);
@@ -997,9 +997,9 @@ public class MDL : SongFileConverter
 			const InstrumentFlags LoopFlags = InstrumentFlags.VolumeEnvelopeLoop | InstrumentFlags.PanningEnvelopeLoop | InstrumentFlags.PitchEnvelopeLoop;
 
 			env.InstrumentFlags = 0;
-			if (envelopeHeader.Flags.HasFlag(MDLEnvelopeFlags.Sustain))
+			if (envelopeHeader.Flags.HasAllFlags(MDLEnvelopeFlags.Sustain))
 				env.InstrumentFlags |= flags & SustainFlags;
-			if (envelopeHeader.Flags.HasFlag(MDLEnvelopeFlags.Loop))
+			if (envelopeHeader.Flags.HasAllFlags(MDLEnvelopeFlags.Loop))
 				env.InstrumentFlags |= flags & LoopFlags;
 		}
 	}
@@ -1076,62 +1076,62 @@ public class MDL : SongFileConverter
 			switch (tag)
 			{
 				case MDLBlocks.Info:
-					if (!readFlags.HasFlag(ReadFlags.HasInfo))
+					if (!readFlags.HasAllFlags(ReadFlags.HasInfo))
 					{
 						readFlags |= ReadFlags.HasInfo;
 						restartPos = ReadInfo(stream, song);
 					}
 					break;
 				case MDLBlocks.Message:
-					if (!readFlags.HasFlag(ReadFlags.HasMessage))
+					if (!readFlags.HasAllFlags(ReadFlags.HasMessage))
 					{
 						readFlags |= ReadFlags.HasMessage;
 						ReadMessage(stream, song, blockLength);
 					}
 					break;
 				case MDLBlocks.Patterns:
-					if (!readFlags.HasFlag(ReadFlags.HasPatterns))
+					if (!readFlags.HasAllFlags(ReadFlags.HasPatterns))
 					{
 						readFlags |= ReadFlags.HasPatterns;
 						patPtr = formatVersion.HasAnyBitSet(0xF0) ? ReadPatterns(stream, song) : ReadPatternsV0(stream, song);
 					}
 					break;
 				case MDLBlocks.Tracks:
-					if (!readFlags.HasFlag(ReadFlags.HasTracks))
+					if (!readFlags.HasAllFlags(ReadFlags.HasTracks))
 					{
 						readFlags |= ReadFlags.HasTracks;
 						ReadTracks(stream, tracks);
 					}
 					break;
 				case MDLBlocks.Instruments:
-					if (!readFlags.HasFlag(ReadFlags.HasInstruments))
+					if (!readFlags.HasAllFlags(ReadFlags.HasInstruments))
 					{
 						readFlags |= ReadFlags.HasInstruments;
 						ReadInstruments(stream, song);
 					}
 					break;
 				case MDLBlocks.VolumeEnvelopes:
-					if (!readFlags.HasFlag(ReadFlags.HasVolumeEnvelopes))
+					if (!readFlags.HasAllFlags(ReadFlags.HasVolumeEnvelopes))
 					{
 						readFlags |= ReadFlags.HasVolumeEnvelopes;
 						ReadEnvelopes(stream, volumeEnvelopes, InstrumentFlags.VolumeEnvelopeLoop | InstrumentFlags.VolumeEnvelopeSustain);
 					}
 					break;
 				case MDLBlocks.PanningEnvelopes:
-					if (!readFlags.HasFlag(ReadFlags.HasPanningEnvelopes))
+					if (!readFlags.HasAllFlags(ReadFlags.HasPanningEnvelopes))
 					{
 						readFlags |= ReadFlags.HasPanningEnvelopes;
 						ReadEnvelopes(stream, panningEnvelopes, InstrumentFlags.PanningEnvelopeLoop | InstrumentFlags.PanningEnvelopeSustain);
 					}
 					break;
 				case MDLBlocks.FrequencyEnvelopes:
-					if (!readFlags.HasFlag(ReadFlags.HasFrequencyEnvelopes)) {
+					if (!readFlags.HasAllFlags(ReadFlags.HasFrequencyEnvelopes)) {
 						readFlags |= ReadFlags.HasFrequencyEnvelopes;
 						ReadEnvelopes(stream, frequencyEnvelopes, InstrumentFlags.PitchEnvelopeLoop | InstrumentFlags.PitchEnvelopeSustain);
 					}
 					break;
 				case MDLBlocks.SampleInfo:
-					if (!readFlags.HasFlag(ReadFlags.HasSampleInfo))
+					if (!readFlags.HasAllFlags(ReadFlags.HasSampleInfo))
 					{
 						readFlags |= ReadFlags.HasSampleInfo;
 
@@ -1146,7 +1146,7 @@ public class MDL : SongFileConverter
 					// lengths and packing information is stored there.
 					// Best we can do at the moment is to remember where this block was so we can jump
 					// back to it later.
-					if (!readFlags.HasFlag(ReadFlags.HasSampleData)) {
+					if (!readFlags.HasAllFlags(ReadFlags.HasSampleData)) {
 						readFlags |= ReadFlags.HasSampleData;
 						sampleDataPos = stream.Position;
 					}
@@ -1170,7 +1170,7 @@ public class MDL : SongFileConverter
 			stream.Position = nextPos;
 		}
 
-		if (!readFlags.HasFlag(ReadFlags.HasInstruments))
+		if (!readFlags.HasAllFlags(ReadFlags.HasInstruments))
 		{
 			// Probably a v0 file, fake an instrument
 			for (int n = 1; n < Constants.MaxSamples; n++)
@@ -1186,7 +1186,7 @@ public class MDL : SongFileConverter
 			}
 		}
 
-		if (readFlags.HasFlag(ReadFlags.HasSampleInfo))
+		if (readFlags.HasAllFlags(ReadFlags.HasSampleInfo))
 		{
 			// Sample headers loaded!
 			// if the sample data was encountered, load it now
@@ -1214,14 +1214,14 @@ public class MDL : SongFileConverter
 						Log.Append(4, " Warning: Sample {0}: unknown packing type {1}", n, thisPackType);
 						thisPackType = MDLPackType.Unpacked; // ?
 					}
-					else if (thisPackType == (sample.Flags.HasFlag(SampleFlags._16Bit) ? MDLPackType.MDL8Bit : MDLPackType.MDL16Bit))
+					else if (thisPackType == (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? MDLPackType.MDL8Bit : MDLPackType.MDL16Bit))
 					{
 						Log.Append(4, " Warning: Sample {0}: bit width / pack type mismatch", n);
 					}
 
 					flags = SampleFormat.LittleEndian | SampleFormat.Mono;
 					flags |= (thisPackType != MDLPackType.Unpacked) ? SampleFormat.MDLHuffmanCompressed : SampleFormat.PCMSigned;
-					flags |= sample.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
+					flags |= sample.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
 
 					SampleFileConverter.ReadSample(sample, flags, stream);
 				}
@@ -1233,7 +1233,7 @@ public class MDL : SongFileConverter
 			}
 		}
 
-		if (readFlags.HasFlag(ReadFlags.HasTracks))
+		if (readFlags.HasAllFlags(ReadFlags.HasTracks))
 		{
 			// first off, fix all the instrument numbers to compensate
 			// for the screwy envelope craziness
@@ -1283,12 +1283,12 @@ public class MDL : SongFileConverter
 				InstallEnvelope(ins, EnvelopeType.Panning, panningEnvelopes);
 				InstallEnvelope(ins, EnvelopeType.Pitch, frequencyEnvelopes);
 
-				if (ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+				if (ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 				{
 					// fix note-fade
-					if (!ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop))
+					if (!ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop))
 						ins.VolumeEnvelope!.LoopStart = ins.VolumeEnvelope.LoopEnd = ins.VolumeEnvelope.Nodes.Count - 1;
-					if (!ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain))
+					if (!ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain))
 						ins.VolumeEnvelope!.SustainStart = ins.VolumeEnvelope.SustainEnd = ins.VolumeEnvelope.Nodes.Count - 1;
 
 					ins.Flags |= InstrumentFlags.VolumeEnvelopeLoop | InstrumentFlags.VolumeEnvelopeSustain;
@@ -1297,7 +1297,7 @@ public class MDL : SongFileConverter
 				if (ins.FadeOut == MDLFadeCut)
 				{
 					// fix note-off
-					if (!ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+					if (!ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 					{
 						ins.VolumeEnvelope = new Envelope(64);
 						ins.VolumeEnvelope.SustainStart = ins.VolumeEnvelope.SustainEnd = 0;

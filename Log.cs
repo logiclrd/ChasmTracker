@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
-using ChasmTracker.VGA;
 
 namespace ChasmTracker;
+
+using ChasmTracker.Utility;
+using ChasmTracker.VGA;
 
 public class Log
 {
@@ -26,7 +28,7 @@ public class Log
 
 	public static void Append(LogLine logLine)
 	{
-		if (Status.Flags.HasFlag(StatusFlags.Headless))
+		if (Status.Flags.HasAllFlags(StatusFlags.Headless))
 			Console.WriteLine(logLine.Text);
 		else
 		{

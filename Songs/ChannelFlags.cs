@@ -7,7 +7,7 @@ public enum ChannelFlags
 {
 	None = 0,
 
-	_16bit              = 0x01, // 16-bit sample
+	_16Bit              = 0x01, // 16-bit sample
 	Loop                = 0x02, // looped sample
 	PingPongLoop        = 0x04, // bi-directional (useless unless CHN_LOOP is also set)
 	SustainLoop         = 0x08, // sample with sustain loop
@@ -42,6 +42,6 @@ public enum ChannelFlags
 	LoopWrapped         = 0x40000000, // loop has just wrapped to the beginning
 
 	SampleFlags =
-		_16bit | Loop | PingPongLoop | SustainLoop | PingPongSustain |
+		_16Bit | Loop | PingPongLoop | SustainLoop | PingPongSustain |
 		Panning | Stereo | PingPongFlag | AdLib
 }

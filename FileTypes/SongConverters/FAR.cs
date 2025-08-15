@@ -220,7 +220,7 @@ public class FAR : SongFileConverter
 		* some screwy ultra-wide text mode, so this displays more or less like crap. */
 		song.Message = ReadLinedMessage(stream, fhdr.MessageLength, 132);
 
-		if (lflags.HasFlag(LoadFlags.NoSamples | LoadFlags.NoPatterns))
+		if (lflags.HasAllFlags(LoadFlags.NoSamples | LoadFlags.NoPatterns))
 			return song;
 
 		var orderList = new byte[256];
@@ -285,7 +285,7 @@ public class FAR : SongFileConverter
 
 		song.InsertRestartPos(restartPos);
 
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			long data = stream.ReadStructure<long>();
 
@@ -297,7 +297,7 @@ public class FAR : SongFileConverter
 
 				song.Samples[n + 1] = smp;
 
-				if (!data.HasFlag(1 << (n % 8))) /* LOLWHAT */
+				if (!data.HasBitSet(1 << (n % 8))) /* LOLWHAT */
 					continue;
 
 				ReadSample(stream, out var fsmp);
@@ -309,19 +309,19 @@ public class FAR : SongFileConverter
 				smp.LoopEnd = fsmp.LoopEnd;
 				smp.Volume = fsmp.Volume << 4; // "not supported", but seems to exist anyway
 
-				if (fsmp.Type.HasFlag(FARSampleType._16bit))
+				if (fsmp.Type.HasAllFlags(FARSampleType._16bit))
 				{
 					smp.Length >>= 1;
 					smp.LoopStart >>= 1;
 					smp.LoopEnd >>= 1;
 				}
 
-				if (smp.LoopEnd > smp.LoopStart && fsmp.Loop.HasFlag(FARLoopFlags.Enabled))
+				if (smp.LoopEnd > smp.LoopStart && fsmp.Loop.HasAllFlags(FARLoopFlags.Enabled))
 					smp.Flags |= SampleFlags.Loop;
 				smp.C5Speed = 16726;
 				smp.GlobalVolume = 64;
 
-				SampleFileConverter.ReadSample(smp, SampleFormat.LittleEndian | SampleFormat.Mono | SampleFormat.PCMSigned | (fsmp.Type.HasFlag(FARSampleType._16bit) ? SampleFormat._16 : SampleFormat._8), stream);
+				SampleFileConverter.ReadSample(smp, SampleFormat.LittleEndian | SampleFormat.Mono | SampleFormat.PCMSigned | (fsmp.Type.HasAllFlags(FARSampleType._16bit) ? SampleFormat._16 : SampleFormat._8), stream);
 			}
 		}
 

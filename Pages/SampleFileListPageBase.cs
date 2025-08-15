@@ -186,7 +186,7 @@ public class SampleFileListPageBase : Page
 			return 5;
 		if (!type.HasAnyFlag(FileTypes.ExtendedDataMask))
 			return 4; /* unchecked */
-		if (type.HasFlag(FileTypes.BrowsableMask))
+		if (type.HasAllFlags(FileTypes.BrowsableMask))
 			return 6; /* library */
 		if (type == FileTypes.Unknown)
 			return 2;
@@ -229,9 +229,9 @@ public class SampleFileListPageBase : Page
 
 		numberEntrySampleSpeed!.Value = f?.SampleSpeed ?? 0;
 
-		if ((f != null) && f.SampleFlags.HasFlag(SampleFlags.PingPongLoop))
+		if ((f != null) && f.SampleFlags.HasAllFlags(SampleFlags.PingPongLoop))
 			menuToggleLoop!.State = 2;
-		else if ((f != null) && f.SampleFlags.HasFlag(SampleFlags.Loop))
+		else if ((f != null) && f.SampleFlags.HasAllFlags(SampleFlags.Loop))
 			menuToggleLoop!.State = 1;
 		else
 			menuToggleLoop!.State = 0;
@@ -239,9 +239,9 @@ public class SampleFileListPageBase : Page
 		numberEntryLoopStart!.Value = f?.SampleLoopStart ?? 0;
 		numberEntryLoopEnd!.Value = f?.SampleLoopEnd ?? 0;
 
-		if ((f != null) && f.SampleFlags.HasFlag(SampleFlags.PingPongSustain))
+		if ((f != null) && f.SampleFlags.HasAllFlags(SampleFlags.PingPongSustain))
 			menuToggleSustainLoop!.State = 2;
-		else if ((f != null) && f.SampleFlags.HasFlag(SampleFlags.SustainLoop))
+		else if ((f != null) && f.SampleFlags.HasAllFlags(SampleFlags.SustainLoop))
 			menuToggleSustainLoop!.State = 1;
 		else
 			menuToggleSustainLoop!.State = 0;
@@ -258,7 +258,7 @@ public class SampleFileListPageBase : Page
 		if (f != null)
 		{
 			/* autoload some files */
-			if (f.Type.HasFlag(FileTypes.SampleExtended)
+			if (f.Type.HasAllFlags(FileTypes.SampleExtended)
 					&& f.FileSize < 0x4000000 && f.SampleLength < 0x1000000)
 				HandlePreload();
 		}
@@ -350,14 +350,14 @@ public class SampleFileListPageBase : Page
 
 			if ((f.SampleLength == 0) && (f.SampleFileName == null) && (f.SampleFlags == default))
 				VGAMem.DrawTextLen("No sample", 13, new Point(64, 21), (2, 0));
-			else if (f.SampleFlags.HasFlag(SampleFlags.Stereo))
+			else if (f.SampleFlags.HasAllFlags(SampleFlags.Stereo))
 				VGAMem.DrawTextLen(
-					f.SampleFlags.HasFlag(SampleFlags._16Bit)
+					f.SampleFlags.HasAllFlags(SampleFlags._16Bit)
 					? "16 bit Stereo" : "8 bit Stereo",
 					13, new Point(64, 21), (2, 0));
 			else
 				VGAMem.DrawTextLen(
-					f.SampleFlags.HasFlag(SampleFlags._16Bit)
+					f.SampleFlags.HasAllFlags(SampleFlags._16Bit)
 					? "16 bit" : "8 bit",
 					13, new Point(64, 21), (2, 0));
 
@@ -432,7 +432,7 @@ public class SampleFileListPageBase : Page
 
 		/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 		if (_flist.NumFiles > 0
-				&& !Status.Flags.HasFlag(StatusFlags.SamplesDirectoryChanged)
+				&& !Status.Flags.HasAllFlags(StatusFlags.SamplesDirectoryChanged)
 				&& (Directory.GetLastWriteTimeUtc(s_sampleCwd) == _directoryModifiedTimeUTC))
 			return;
 
@@ -551,7 +551,7 @@ public class SampleFileListPageBase : Page
 		MemoryUsage.NotifySongChanged();
 		var smp = Song.CurrentSong.GetSample(cur);
 
-		if ((smp != null) && smp.Flags.HasFlag(SampleFlags.Stereo))
+		if ((smp != null) && smp.Flags.HasAllFlags(SampleFlags.Stereo))
 		{
 			var dialog = Dialog.Show<StereoConversionDialog>();
 
@@ -689,7 +689,7 @@ public class SampleFileListPageBase : Page
 
 		newFile = newFile.Clamp(0, _flist.NumFiles - 1);
 
-		if (!Status.Flags.HasFlag(StatusFlags.ClassicMode) && k.Sym == KeySym.n && k.Modifiers.HasAnyFlag(KeyMod.Alt))
+		if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode) && k.Sym == KeySym.n && k.Modifiers.HasAnyFlag(KeyMod.Alt))
 		{
 			if (k.State == KeyState.Release)
 				AudioPlayback.ToggleMultichannelMode();

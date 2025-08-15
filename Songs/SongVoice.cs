@@ -122,7 +122,7 @@ public struct SongVoice
 
 	public bool IsMuted
 	{
-		get => Flags.HasFlag(ChannelFlags.Mute);
+		get => Flags.HasAllFlags(ChannelFlags.Mute);
 		set
 		{
 			if (value)
@@ -147,11 +147,11 @@ public struct SongVoice
 			else
 			{
 				/* only reset envelopes with carry off */
-				if (!Instrument.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry))
+				if (!Instrument.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeCarry))
 					VolumeEnvelopePosition = 0;
-				if (!Instrument.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry))
+				if (!Instrument.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeCarry))
 					PanningEnvelopePosition = 0;
-				if (!Instrument.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry))
+				if (!Instrument.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeCarry))
 					PitchEnvelopePosition = 0;
 			}
 		}
@@ -165,7 +165,7 @@ public struct SongVoice
 	{
 		ChannelPanning = (short)(Panning + 1);
 
-		if (Flags.HasFlag(ChannelFlags.Surround))
+		if (Flags.HasAllFlags(ChannelFlags.Surround))
 			ChannelPanning |= -0x8000;
 
 		Panning = panning;

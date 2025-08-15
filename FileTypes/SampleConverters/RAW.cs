@@ -1,9 +1,11 @@
 using System;
 using System.IO;
-using ChasmTracker.FileSystem;
-using ChasmTracker.Songs;
 
 namespace ChasmTracker.FileTypes.SampleConverters;
+
+using ChasmTracker.FileSystem;
+using ChasmTracker.Songs;
+using ChasmTracker.Utility;
 
 public class RAW : SampleFileConverter
 {
@@ -43,8 +45,8 @@ public class RAW : SampleFileConverter
 	public override SaveResult SaveSample(SongSample sample, Stream stream)
 	{
 		WriteSample(stream, sample, SampleFormat.LittleEndian
-			| (sample.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 | SampleFormat.PCMSigned : SampleFormat._8 | SampleFormat.PCMUnsigned)
-			| (sample.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono),
+			| (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 | SampleFormat.PCMSigned : SampleFormat._8 | SampleFormat.PCMUnsigned)
+			| (sample.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono),
 			uint.MaxValue);
 
 		return SaveResult.Success;

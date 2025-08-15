@@ -115,7 +115,7 @@ public static class SongRenderer
 
 		uint vdepth;
 
-		if (csf.Flags.HasFlag(SongFlags.ITOldEffects))
+		if (csf.Flags.HasAllFlags(SongFlags.ITOldEffects))
 		{
 			vdepth = 5;
 			vdelta = -vdelta; // yes, IT does vibrato backwards in old-effects mode. try it.
@@ -128,7 +128,7 @@ public static class SongRenderer
 		frequency = csf.EffectDoFrequencySlide(csf.Flags, frequency, vdelta, false);
 
 		// handle on tick-N, or all ticks if not in old-effects mode
-		if (!csf.Flags.HasFlag(SongFlags.FirstTick) || !csf.Flags.HasFlag(SongFlags.ITOldEffects))
+		if (!csf.Flags.HasAllFlags(SongFlags.FirstTick) || !csf.Flags.HasAllFlags(SongFlags.ITOldEffects))
 			chan.VibratoPosition = (vibpos + 4 * chan.VibratoSpeed) & 0xFF;
 
 		return frequency;
@@ -216,7 +216,7 @@ public static class SongRenderer
 
 		int vol = nVol;
 
-		if ((chan.Flags.HasFlag(ChannelFlags.VolumeEnvelope) || pEnv.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+		if ((chan.Flags.HasAllFlags(ChannelFlags.VolumeEnvelope) || pEnv.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 		 && (pEnv.VolumeEnvelope != null)
 		 && pEnv.VolumeEnvelope.Nodes.Any())
 		{
@@ -274,7 +274,7 @@ public static class SongRenderer
 
 		if (pEnv == null) return;
 
-		if ((chan.Flags.HasFlag(ChannelFlags.PanningEnvelope) || pEnv.Flags.HasFlag(InstrumentFlags.PanningEnvelope))
+		if ((chan.Flags.HasAllFlags(ChannelFlags.PanningEnvelope) || pEnv.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope))
 		 && (pEnv.PanningEnvelope != null)
 		 && pEnv.PanningEnvelope.Nodes.Any())
 		{
@@ -338,7 +338,7 @@ public static class SongRenderer
 
 		if (pEnv == null) return;
 
-		if (chan.Flags.HasFlag(ChannelFlags.NoteFade))
+		if (chan.Flags.HasAllFlags(ChannelFlags.NoteFade))
 		{
 			int fadeout = pEnv.FadeOut;
 
@@ -384,7 +384,7 @@ public static class SongRenderer
 		* OpenMPT also doesn't entirely support IT's version of this macro, which is
 		* just another demotivator for actually implementing it correctly *sigh* */
 
-		if (chan.RowEffect == Effects.MIDI && (csf.Flags.HasFlag(SongFlags.FirstTick)))
+		if (chan.RowEffect == Effects.MIDI && (csf.Flags.HasAllFlags(SongFlags.FirstTick)))
 		{
 			int vel = chan.Sample != null
 				? (int)(((chan.Volume + chan.VolumeSwing) * csf.CurrentGlobalVolume) * (long)(chan.GlobalVolume * chan.InstrumentVolume) / (1 << 20))
@@ -425,7 +425,7 @@ public static class SongRenderer
 
 		if (pEnv == null) return;
 
-		if ((chan.Flags.HasFlag(ChannelFlags.PitchEnvelope) || pEnv.Flags.HasAnyFlag(InstrumentFlags.PitchEnvelope | InstrumentFlags.Filter))
+		if ((chan.Flags.HasAllFlags(ChannelFlags.PitchEnvelope) || pEnv.Flags.HasAnyFlag(InstrumentFlags.PitchEnvelope | InstrumentFlags.Filter))
 		 && (pEnv.PitchEnvelope != null)
 		 && pEnv.PitchEnvelope.Nodes.Any())
 		{
@@ -478,7 +478,7 @@ public static class SongRenderer
 			envPitch = envPitch.Clamp(-256, 256);
 
 			// Pitch Envelope
-			if (!pEnv.Flags.HasFlag(InstrumentFlags.Filter))
+			if (!pEnv.Flags.HasAllFlags(InstrumentFlags.Filter))
 			{
 				int l = Math.Abs(envPitch);
 
@@ -503,17 +503,17 @@ public static class SongRenderer
 
 		int start = 0, end = 0x7fffffff;
 
-		if (!chan.Flags.HasFlag(envFlag))
+		if (!chan.Flags.HasAllFlags(envFlag))
 			return;
 
 		/* OpenMPT test case EnvOffLength.it */
-		if (pEnv.Flags.HasFlag(susFlag) && !chan.OldFlags.HasFlag(ChannelFlags.KeyOff))
+		if (pEnv.Flags.HasAllFlags(susFlag) && !chan.OldFlags.HasAllFlags(ChannelFlags.KeyOff))
 		{
 			start = envelope.Nodes[envelope.SustainStart].Tick;
 			end = envelope.Nodes[envelope.SustainEnd].Tick + 1;
 			fadeFlag = 0;
 		}
-		else if (pEnv.Flags.HasFlag(loopFlag))
+		else if (pEnv.Flags.HasAllFlags(loopFlag))
 		{
 			start = envelope.Nodes[envelope.LoopStart].Tick;
 			end = envelope.Nodes[envelope.LoopEnd].Tick + 1;
@@ -554,12 +554,12 @@ public static class SongRenderer
 	static bool UpdateSample(Song csf, ref SongVoice chan, int nChan, int masterVolume)
 	{
 		// Adjusting volumes
-		if ((AudioPlayback.MixChannels < 2) || csf.Flags.HasFlag(SongFlags.NoStereo))
+		if ((AudioPlayback.MixChannels < 2) || csf.Flags.HasAllFlags(SongFlags.NoStereo))
 		{
 			chan.RightVolumeNew = (chan.FinalVolume * masterVolume) >> 8;
 			chan.LeftVolumeNew = chan.RightVolumeNew;
 		}
-		else if (chan.Flags.HasFlag(ChannelFlags.Surround) && !AudioPlayback.MixFlags.HasFlag(MixFlags.NoSurround))
+		else if (chan.Flags.HasAllFlags(ChannelFlags.Surround) && !AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoSurround))
 		{
 			chan.RightVolumeNew = (chan.FinalVolume * masterVolume) >> 8;
 			chan.LeftVolumeNew = -chan.RightVolumeNew;
@@ -570,7 +570,7 @@ public static class SongRenderer
 			pan *= (int) csf.PanSeparation;
 			pan /= 128;
 
-			if ((csf.Flags.HasFlag(SongFlags.InstrumentMode))
+			if ((csf.Flags.HasAllFlags(SongFlags.InstrumentMode))
 			 && (chan.Instrument != null)
 			 && (chan.Instrument.MIDIChannelMask > 0))
 				GeneralMIDI.Pan(csf, nChan, unchecked((sbyte)pan));
@@ -578,7 +578,7 @@ public static class SongRenderer
 			pan += 128;
 			pan = pan.Clamp(0, 256);
 
-			if (AudioPlayback.MixFlags.HasFlag(MixFlags.ReverseStereo))
+			if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.ReverseStereo))
 				pan = 256 - pan;
 
 			int realVol = (chan.FinalVolume * masterVolume) >> (8 - 1);
@@ -595,7 +595,7 @@ public static class SongRenderer
 			chan.LeftVolumeNew  = 0xFFFF;
 
 		// Check IDO
-		if (AudioPlayback.MixFlags.HasFlag(MixFlags.NoResampling))
+		if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoResampling))
 		{
 			chan.Flags &= ~ChannelFlags.HQSource;
 			chan.Flags |= ChannelFlags.NoIDO;
@@ -606,8 +606,8 @@ public static class SongRenderer
 				chan.Flags |= ChannelFlags.NoIDO;
 			else
 			{
-				if (!(AudioPlayback.MixFlags.HasFlag(MixFlags.HQResampler))
-				 && !(AudioPlayback.MixFlags.HasFlag(MixFlags.UltraHQSourceMode)))
+				if (!(AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler))
+				 && !(AudioPlayback.MixFlags.HasAllFlags(MixFlags.UltraHQSourceMode)))
 				{
 					if (chan.Increment >= 0xFF00)
 						chan.Flags |= ChannelFlags.NoIDO;
@@ -621,15 +621,15 @@ public static class SongRenderer
 		chan.LeftRamp  = 0;
 
 		// Checking Ping-Pong Loops
-		if (chan.Flags.HasFlag(ChannelFlags.PingPongFlag))
+		if (chan.Flags.HasAllFlags(ChannelFlags.PingPongFlag))
 			chan.Increment = -chan.Increment;
 
-		if (chan.Flags.HasFlag(ChannelFlags.Mute))
+		if (chan.Flags.HasAllFlags(ChannelFlags.Mute))
 		{
 			chan.LeftVolume = chan.RightVolume = 0;
 		}
-		else if (!AudioPlayback.MixFlags.HasFlag(MixFlags.NoRamping)
-		      && chan.Flags.HasFlag(ChannelFlags.VolumeRamp)
+		else if (!AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoRamping)
+		      && chan.Flags.HasAllFlags(ChannelFlags.VolumeRamp)
 		      && (chan.RightVolume != chan.RightVolumeNew || chan.LeftVolume != chan.LeftVolumeNew))
 		{
 			// Setting up volume ramp
@@ -637,11 +637,11 @@ public static class SongRenderer
 			int rightDelta = (chan.RightVolumeNew - chan.RightVolume) << Constants.VolumeRampPrecision;
 			int leftDelta  = (chan.LeftVolumeNew  - chan.LeftVolume) << Constants.VolumeRampPrecision;
 
-			if (AudioPlayback.MixFlags.HasFlag(MixFlags.HQResampler))
+			if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler))
 			{
 				if (((chan.RightVolume | chan.LeftVolume) != 0)
 				 && ((chan.RightVolumeNew | chan.LeftVolumeNew) != 0)
-				 && !chan.Flags.HasFlag(ChannelFlags.FastVolumeRamp))
+				 && !chan.Flags.HasAllFlags(ChannelFlags.FastVolumeRamp))
 				{
 					rampLength = csf.BufferCount;
 
@@ -692,13 +692,13 @@ public static class SongRenderer
 	// chan.InstrumentVolume = 0..64  (corresponds to the sample global volume and instrument global volume)
 	static void GenerateKey(Song csf, ref SongVoice chan, int chanNum, int freq, int vol)
 	{
-		if (chan.Flags.HasFlag(ChannelFlags.Mute))
+		if (chan.Flags.HasAllFlags(ChannelFlags.Mute))
 		{
 			// don't do anything
 			return;
 		}
 
-		if (csf.Flags.HasFlag(SongFlags.InstrumentMode)
+		if (csf.Flags.HasAllFlags(SongFlags.InstrumentMode)
 		 && (chan.Instrument != null)
 		 && (chan.Instrument.MIDIChannelMask > 0))
 		{
@@ -711,7 +711,7 @@ public static class SongRenderer
 
 			int volume = vol;
 
-			if (chan.Flags.HasFlag(ChannelFlags.AdLib) && volume > 0)
+			if (chan.Flags.HasAllFlags(ChannelFlags.AdLib) && volume > 0)
 			{
 				// find_volume translates volume from range 0..16384 to range 0..127. But why with that method?
 				volume = FindVolume((ushort)volume) * chan.InstrumentVolume / 64;
@@ -722,10 +722,10 @@ public static class SongRenderer
 				volume = volume * chan.InstrumentVolume / 8192;
 			}
 
-			GeneralMIDI.SetFrequencyAndVolume(csf, chanNum, freq, (byte)volume, bendMode, chan.Flags.HasFlag(ChannelFlags.KeyOff));
+			GeneralMIDI.SetFrequencyAndVolume(csf, chanNum, freq, (byte)volume, bendMode, chan.Flags.HasAllFlags(ChannelFlags.KeyOff));
 		}
 
-		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
+		if (chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 		{
 			// Scaling is needed to get a frequency that matches with ST3 notes.
 			// 8363 is st3s middle C sample rate. 261.625 is the Hertz for middle C in a tempered scale (A4 = 440)
@@ -734,14 +734,14 @@ public static class SongRenderer
 			// OPL_Patch is called in csf_process_effects, from csf_read_note or ProcessTick, before calling this method.
 			int oplmilliHertz = (int)(freq * 261625L / 8363);
 
-			csf.OPLHertzTouch(chanNum, oplmilliHertz, chan.Flags.HasFlag(ChannelFlags.KeyOff));
+			csf.OPLHertzTouch(chanNum, oplmilliHertz, chan.Flags.HasAllFlags(ChannelFlags.KeyOff));
 
 			// ST32 ignores global & master volume in adlib mode, guess we should do the same -Bisqwit
 			// This gives a value in the range 0..63.
 			// log_appendf(2,"vol: %d, voiceinsvol: %d", vol , chan.InstrumentVolume);
 			csf.OPLTouch(chanNum, vol * chan.InstrumentVolume * 63 / (1 << 20));
 
-			csf.OPLPan(chanNum, csf.Flags.HasFlag(SongFlags.NoStereo) ? 128 : chan.FinalPanning);
+			csf.OPLPan(chanNum, csf.Flags.HasAllFlags(SongFlags.NoStereo) ? 128 : chan.FinalPanning);
 		}
 	}
 
@@ -777,7 +777,7 @@ public static class SongRenderer
 
 		bufLeft = max;
 
-		if (song.Flags.HasFlag(SongFlags.EndReached))
+		if (song.Flags.HasAllFlags(SongFlags.EndReached))
 			bufLeft = 0; // skip the loop
 
 		while (bufLeft > 0)
@@ -786,7 +786,7 @@ public static class SongRenderer
 
 			if (song.BufferCount == 0)
 			{
-				if (!AudioPlayback.MixFlags.HasFlag(MixFlags.DirectToDisk))
+				if (!AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 					song.BufferCount = bufLeft;
 
 				if (!ReadNote(song))
@@ -799,7 +799,7 @@ public static class SongRenderer
 					if (bufLeft == max)
 						break;
 
-					if (!(AudioPlayback.MixFlags.HasFlag(MixFlags.DirectToDisk)))
+					if (!(AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk)))
 						song.BufferCount = bufLeft;
 				}
 
@@ -839,13 +839,13 @@ public static class SongRenderer
 			{
 				Equalizer.EqualizeStereo(song.MixBuffer);
 				// FIXME: disable this when we're writing WAVs
-				if (!AudioPlayback.MixFlags.HasFlag(MixFlags.DirectToDisk))
+				if (!AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 					Equalizer.NormalizeStereo(song.MixBuffer);
 			}
 			else
 			{
 				Equalizer.EqualizeMono(song.MixBuffer);
-				if (!AudioPlayback.MixFlags.HasFlag(MixFlags.DirectToDisk))
+				if (!AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 					Equalizer.NormalizeMono(song.MixBuffer);
 			}
 
@@ -925,7 +925,7 @@ public static class SongRenderer
 		csf.BreakRow = 0;                  /* [BreakRow = 0] */
 
 		/* some ugly copypasta, this should be less dumb */
-		if (csf.Flags.HasFlag(SongFlags.PatternPlayback))
+		if (csf.Flags.HasAllFlags(SongFlags.PatternPlayback))
 		{
 			/* ProcessOrder is hijacked as a "playback initiated" flag -- otherwise repeat count
 			would be incremented as soon as pattern playback started. (this is a stupid hack) */
@@ -945,16 +945,16 @@ public static class SongRenderer
 			else
 				csf.ProcessOrder = 1;
 		}
-		else if (!csf.Flags.HasFlag(SongFlags.OrderListLocked))
+		else if (!csf.Flags.HasAllFlags(SongFlags.OrderListLocked))
 		{
 			/* [Increase ProcessOrder] */
 			/* [while Order[ProcessOrder] = 0xFEh, increase ProcessOrder] */
 			do
 				csf.ProcessOrder++;
-			while (csf.OrderList[csf.ProcessOrder] == SpecialOrders.Skip);
+			while ((csf.ProcessOrder < csf.OrderList.Count) && (csf.OrderList[csf.ProcessOrder] == SpecialOrders.Skip));
 
 			/* [if Order[ProcessOrder] = 0xFFh, ProcessOrder = 0] (... or just stop playing) */
-			if (csf.OrderList[csf.ProcessOrder] == SpecialOrders.Last)
+			if ((csf.ProcessOrder >= csf.OrderList.Count) || (csf.OrderList[csf.ProcessOrder] == SpecialOrders.Last))
 			{
 				if (++csf.RepeatCount != 0)
 				{
@@ -968,11 +968,11 @@ public static class SongRenderer
 				}
 
 				csf.ProcessOrder = 0;
-				while (csf.OrderList[csf.ProcessOrder] == SpecialOrders.Skip)
+				while ((csf.ProcessOrder < csf.OrderList.Count) && (csf.OrderList[csf.ProcessOrder] == SpecialOrders.Skip))
 					csf.ProcessOrder++;
 			}
 
-			if (csf.OrderList[csf.ProcessOrder] >= csf.Patterns.Count)
+			if ((csf.ProcessOrder >= csf.OrderList.Count) || (csf.OrderList[csf.ProcessOrder] >= csf.Patterns.Count))
 			{
 				// what the butt?
 				csf.ProcessRow = Song.ProcessNextOrder;
@@ -980,7 +980,7 @@ public static class SongRenderer
 			}
 
 			/* [CurrentPattern = Order[ProcessOrder]] */
-			csf.CurrentOrder = csf.ProcessOrder;
+			csf.SetCurrentOrderDirect(csf.ProcessOrder);
 			csf.CurrentPattern = csf.OrderList[csf.ProcessOrder];
 		}
 
@@ -1031,6 +1031,8 @@ public static class SongRenderer
 				/* [CurrentRow = ProcessRow] */
 				csf.Row = csf.ProcessRow;
 
+				AudioPlayback.CurrentRow = csf.Row;
+
 				/* [Update Pattern Variables]
 				(this is handled along with update effects) */
 				csf.FrameDelay = 0;
@@ -1050,7 +1052,7 @@ public static class SongRenderer
 			{
 				ref var chan = ref csf.Voices[nChan];
 
-				var mRef = new SongNoteRef(pattern, csf.Row, nChan);
+				var mRef = new SongNoteRef(pattern, csf.Row, nChan + 1);
 
 				// this is where we're going to spit out our midi
 				// commands... ALL WE DO is dump raw midi data to
@@ -1105,7 +1107,7 @@ public static class SongRenderer
 	public static bool ReadNote(Song csf)
 	{
 		// Checking end of row ?
-		if (csf.Flags.HasFlag(SongFlags.Paused))
+		if (csf.Flags.HasAllFlags(SongFlags.Paused))
 		{
 			if (csf.CurrentSpeed == 0)
 				csf.CurrentSpeed = csf.InitialSpeed != 0 ? csf.InitialSpeed : 6;
@@ -1176,10 +1178,10 @@ public static class SongRenderer
 				(int)cn, chan.frequency, chan.position, chan.length, chan.Flags);*/
 
 			// reset this ~first~
-			if (!chan.Flags.HasFlag(ChannelFlags.AdLib))
+			if (!chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 				chan.VUMeter = 0;
 
-			if (chan.Flags.HasFlag(ChannelFlags.NoteFade) &&
+			if (chan.Flags.HasAllFlags(ChannelFlags.NoteFade) &&
 					((chan.FadeOutVolume | chan.RightVolume | chan.LeftVolume) == 0))
 			{
 				chan.Length = 0;
@@ -1190,7 +1192,7 @@ public static class SongRenderer
 
 			// Check for unused channel
 			if (cn >= Constants.MaxChannels)
-				if ((chan.Length == 0) && !chan.Flags.HasFlag(ChannelFlags.AdLib))
+				if ((chan.Length == 0) && !chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 					continue;
 
 			// Reset channel data
@@ -1209,7 +1211,7 @@ public static class SongRenderer
 			{
 				int vol = chan.Volume;
 
-				if (chan.Flags.HasFlag(ChannelFlags.Tremolo))
+				if (chan.Flags.HasAllFlags(ChannelFlags.Tremolo))
 					vol += chan.TremoloDelta;
 
 				vol = vol.Clamp(0, 256);
@@ -1223,7 +1225,7 @@ public static class SongRenderer
 				vol = vol << 6;
 
 				// Process Envelopes
-				if (csf.Flags.HasFlag(SongFlags.InstrumentMode) && (chan.Instrument != null))
+				if (csf.Flags.HasAllFlags(SongFlags.InstrumentMode) && (chan.Instrument != null))
 				{
 					/* OpenMPT test cases s77.it and EnvLoops.it */
 					IncrementEnvelopePositions(ref chan);
@@ -1233,7 +1235,7 @@ public static class SongRenderer
 				{
 					// No Envelope: key off => note cut
 					// 1.41-: ChannelFlags.KeyOff|ChannelFlags.NoteFade
-					if (chan.Flags.HasFlag(ChannelFlags.NoteFade))
+					if (chan.Flags.HasAllFlags(ChannelFlags.NoteFade))
 					{
 						chan.FadeOutVolume = 0;
 						vol = 0;
@@ -1255,7 +1257,7 @@ public static class SongRenderer
 
 				int frequency = chan.Frequency;
 
-				if (chan.Flags.HasFlag(ChannelFlags.Glissando | ChannelFlags.Portamento))
+				if (chan.Flags.HasAllFlags(ChannelFlags.Glissando | ChannelFlags.Portamento))
 					frequency = SongNote.FrequencyFromNote(SongNote.NoteFromFrequency(frequency, chan.C5Speed), chan.C5Speed);
 
 				// Arpeggio ?
@@ -1268,11 +1270,11 @@ public static class SongRenderer
 				// Pitch/Filter Envelope
 				int envPitch = 0;
 
-				if (csf.Flags.HasFlag(SongFlags.InstrumentMode) && (chan.Instrument != null))
+				if (csf.Flags.HasAllFlags(SongFlags.InstrumentMode) && (chan.Instrument != null))
 					PitchFilterEnvelope(ref chan, ref envPitch, ref frequency);
 
 				// Vibrato
-				if (chan.Flags.HasFlag(ChannelFlags.Vibrato))
+				if (chan.Flags.HasAllFlags(ChannelFlags.Vibrato))
 				{
 					/* OpenMPT test case VibratoDouble.it:
 						vibrato is applied twice if vibrato is applied in the volume and effect columns */
@@ -1288,15 +1290,15 @@ public static class SongRenderer
 					frequency = SampleVibrato(ref chan, frequency);
 				}
 
-				if (!chan.Flags.HasFlag(ChannelFlags.NoteFade))
+				if (!chan.Flags.HasAllFlags(ChannelFlags.NoteFade))
 					GenerateKey(csf, ref chan, cn, frequency, vol);
 
-				if (chan.Flags.HasFlag(ChannelFlags.NewNote))
+				if (chan.Flags.HasAllFlags(ChannelFlags.NewNote))
 					csf.SetUpChannelFilter(ref chan, true, 256, AudioPlayback.MixFrequency);
 
 				// Filter Envelope: controls cutoff frequency
-				if ((chan.Instrument != null) && chan.Instrument.Flags.HasFlag(InstrumentFlags.Filter))
-					csf.SetUpChannelFilter(ref chan, !chan.Flags.HasFlag(ChannelFlags.Filter), envPitch, AudioPlayback.MixFrequency);
+				if ((chan.Instrument != null) && chan.Instrument.Flags.HasAllFlags(InstrumentFlags.Filter))
+					csf.SetUpChannelFilter(ref chan, !chan.Flags.HasAllFlags(ChannelFlags.Filter), envPitch, AudioPlayback.MixFrequency);
 
 				chan.SampleFrequency = frequency;
 
@@ -1330,7 +1332,7 @@ public static class SongRenderer
 
 			// Process the VU meter. This is filled in with real
 			// data in the mixer loops.
-			if (chan.Flags.HasFlag(ChannelFlags.AdLib))
+			if (chan.Flags.HasAllFlags(ChannelFlags.AdLib))
 			{
 				// ...except with AdLib, which fakes it for now
 				if (chan.Strike > 2)
@@ -1371,7 +1373,7 @@ public static class SongRenderer
 		}
 
 		// Checking Max Mix Channels reached: ordering by volume
-		if (csf.NumVoices >= csf.Voices.Length && !AudioPlayback.MixFlags.HasFlag(MixFlags.DirectToDisk))
+		if (csf.NumVoices >= csf.Voices.Length && !AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 		{
 			for (int i = 0; i < csf.NumVoices; i++)
 			{

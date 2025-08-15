@@ -562,11 +562,11 @@ public class IMF : SongFileConverter
 		// this would be less retarded if the envelopes all had their own flags...
 		var envFlags = EnvelopeFlags[e];
 
-		if (imfEnv.Flags.HasFlag(IMFEnvelopeFlags.Enable))
+		if (imfEnv.Flags.HasAllFlags(IMFEnvelopeFlags.Enable))
 			ins.Flags |= envFlags.Enable;
-		if (imfEnv.Flags.HasFlag(IMFEnvelopeFlags.SustainLoop))
+		if (imfEnv.Flags.HasAllFlags(IMFEnvelopeFlags.SustainLoop))
 			ins.Flags |= envFlags.SustainLoop;
-		if (imfEnv.Flags.HasFlag(IMFEnvelopeFlags.Loop))
+		if (imfEnv.Flags.HasAllFlags(IMFEnvelopeFlags.Loop))
 			ins.Flags |= envFlags.Loop;
 
 		return env;
@@ -588,7 +588,7 @@ public class IMF : SongFileConverter
 		song.Title = hdr.Title.ToStringZ();
 		song.TrackerID = Description;
 
-		if (hdr.Flags.HasFlag(IMFModuleFlags.LinearSlides))
+		if (hdr.Flags.HasAllFlags(IMFModuleFlags.LinearSlides))
 			song.Flags |= SongFlags.LinearSlides;
 		song.Flags |= SongFlags.InstrumentMode;
 		song.InitialSpeed = hdr.Tempo;
@@ -684,7 +684,7 @@ public class IMF : SongFileConverter
 			samples upon note-off when no envelope is active. Whether or not this depends on the fadeout
 			value, I don't know, and since the fadeout doesn't even seem to be implemented in the gui,
 			I might never find out. :P */
-			if (!ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope))
+			if (!ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 			{
 				ins.VolumeEnvelope.Nodes.Clear();
 				ins.VolumeEnvelope.Nodes.Add((0, 64));
@@ -709,11 +709,11 @@ public class IMF : SongFileConverter
 				sample.C5Speed = imfSmp.C5Speed;
 				sample.Volume = imfSmp.Volume * 4; //mphack
 				sample.Panning = imfSmp.Panning; //mphack (IT uses 0-64, IMF uses the full 0-255)
-				if (imfSmp.Flags.HasFlag(IMFSampleFlags.Loop))
+				if (imfSmp.Flags.HasAllFlags(IMFSampleFlags.Loop))
 					sample.Flags |= SampleFlags.Loop;
-				if (imfSmp.Flags.HasFlag(IMFSampleFlags.PingPongLoop))
+				if (imfSmp.Flags.HasAllFlags(IMFSampleFlags.PingPongLoop))
 					sample.Flags |= SampleFlags.PingPongLoop;
-				if (imfSmp.Flags.HasFlag(IMFSampleFlags._16Bit))
+				if (imfSmp.Flags.HasAllFlags(IMFSampleFlags._16Bit))
 				{
 					sFlags |= SampleFormat._16;
 					sample.Length >>= 1;
@@ -723,13 +723,13 @@ public class IMF : SongFileConverter
 				else
 					sFlags |= SampleFormat._8;
 
-				if (imfSmp.Flags.HasFlag(IMFSampleFlags.Panning))
+				if (imfSmp.Flags.HasAllFlags(IMFSampleFlags.Panning))
 					sample.Flags |= SampleFlags.Panning;
 
-				if (!flags.HasFlag(LoadFlags.NoSamples))
+				if (!flags.HasAllFlags(LoadFlags.NoSamples))
 					SampleFileConverter.ReadSample(sample, sFlags, stream);
 				else
-					stream.Position += imfSmp.Length * (sFlags.HasFlag(SampleFormat._16) ? 2 : 1);
+					stream.Position += imfSmp.Length * (sFlags.HasAllFlags(SampleFormat._16) ? 2 : 1);
 			}
 
 			firstSample += imfIns.SampleCount;

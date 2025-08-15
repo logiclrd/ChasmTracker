@@ -532,7 +532,7 @@ public abstract class MODBase : SongFileConverter
 					stream.Position -= 5;
 				}
 
-				if (lflags.HasFlag(LoadFlags.NoSamples))
+				if (lflags.HasAllFlags(LoadFlags.NoSamples))
 				{
 					/* just skip the data, I guess */
 					stream.Position += sample.Length;
@@ -578,7 +578,7 @@ public abstract class MODBase : SongFileConverter
 
 		if (song.IsInstrumentMode)
 			warn |= Warnings.Instruments;
-		if (song.Flags.HasFlag(SongFlags.LinearSlides))
+		if (song.Flags.HasAllFlags(SongFlags.LinearSlides))
 			warn |= Warnings.LinearSlides;
 
 		int nSmp = song.GetSampleCount();
@@ -607,7 +607,7 @@ public abstract class MODBase : SongFileConverter
 
 			if (sample.GlobalVolume != 64)
 				warn |= Warnings.SampleVolume;
-			if (sample.Flags.HasFlag(SampleFlags.Loop | SampleFlags.PingPongLoop) || sample.Flags.HasFlag(SampleFlags.SustainLoop))
+			if (sample.Flags.HasAllFlags(SampleFlags.Loop | SampleFlags.PingPongLoop) || sample.Flags.HasAllFlags(SampleFlags.SustainLoop))
 				warn |= Warnings.Loops;
 			if (sample.VibratoDepth != 0)
 				warn |= Warnings.SampleVibrato;
@@ -638,7 +638,7 @@ public abstract class MODBase : SongFileConverter
 
 			stream.WriteByte((byte)((sample.Volume + 1) / 4)); /* volume, 0..64 */
 
-			if (sample.Flags.HasFlag(SampleFlags.Loop))
+			if (sample.Flags.HasAllFlags(SampleFlags.Loop))
 			{
 				w = Math.Min((ushort)(sample.LoopStart >> 1), (ushort)0xFFFF);
 				w = ByteSwap.Swap(w);
@@ -843,7 +843,7 @@ public abstract class MODBase : SongFileConverter
 
 			if ((smp != null) && smp.HasData)
 			{
-				if (smp.Flags.HasFlag(SampleFlags.Loop) && (smp.LoopStart < smp.LoopEnd) && (smp.LoopEnd <= Math.Min(smp.Length, 0x1FFFE)))
+				if (smp.Flags.HasAllFlags(SampleFlags.Loop) && (smp.LoopStart < smp.LoopEnd) && (smp.LoopEnd <= Math.Min(smp.Length, 0x1FFFE)))
 					SampleFileConverter.WriteSample(stream, smp, SampleFormat.PCMSigned | SampleFormat._8 | SampleFormat.Mono | SampleFormat.LittleEndian, 0x1FFFE);
 				else if (smp.Length >= 1)
 				{
@@ -862,7 +862,7 @@ public abstract class MODBase : SongFileConverter
 		/* announce all the things we broke - ripped from s3m.c */
 
 		foreach (var warning in Enum.GetValues<Warnings>())
-			if (warn.HasFlag(warning))
+			if (warn.HasAllFlags(warning))
 				Log.Append(4, " Warning: {0} unsupported in MOD format", warning.GetDescription());
 
 		return SaveResult.Success;
