@@ -1087,7 +1087,7 @@ public static class VGAMem
 			{
 				ref var channel = ref Song.CurrentSong.Voices[channelList[n]];
 
-				if (channel.CurrentSampleData.Span != sample.Data.AsSpan())
+				if (channel.CurrentSampleData.RawData != sample.RawData)
 					continue;
 
 				if (channel.FinalVolume == 0)
@@ -1163,7 +1163,7 @@ public static class VGAMem
 			}
 		}
 
-		if ((sample.Length == 0) || (sample.Data == ArraySegment<byte>.Empty))
+		if ((sample.Length == 0) || sample.Data.IsEmpty)
 		{
 			ApplyOverlay(r);
 			return;
