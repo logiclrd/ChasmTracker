@@ -51,10 +51,7 @@ public class ModuleLoadPage : ModuleLoadSavePageBase
 			return;
 
 		if (Song.Load(ptr) is Song loaded)
-		{
 			Song.CurrentSong = loaded;
-			AudioPlayback.Reset();
-		}
 		else
 		{
 			Log.Append(4, "Failed to load: " + Path.GetFileName(ptr));

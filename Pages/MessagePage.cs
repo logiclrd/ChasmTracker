@@ -63,7 +63,11 @@ public class MessagePage : Page
 	 * probably happen, so don't do that. */
 	int GetNthLine(int start, int n, out int ptr)
 	{
-		Assert.IsTrue(() => _text != null, "should never get a NULL pointer here");
+		if (_text == null)
+		{
+			Assert.IsTrue(_text != null, "_text != null", "should never get a NULL pointer here");
+			throw new Exception();
+		}
 
 		ptr = start;
 

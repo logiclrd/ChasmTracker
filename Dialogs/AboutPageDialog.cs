@@ -3,6 +3,7 @@ using System;
 namespace ChasmTracker.Dialogs;
 
 using ChasmTracker.Input;
+using ChasmTracker.Pages;
 using ChasmTracker.Playback;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -23,7 +24,7 @@ public class AboutPageDialog : Dialog
 	{
 		Point topLeft, bottomRight;
 
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			topLeft = new Point(23, 17);
 			bottomRight = new Point(58, 24);
@@ -37,7 +38,7 @@ public class AboutPageDialog : Dialog
 		s_logoImage = VGAMem.AllocateOverlay(topLeft, bottomRight);
 
 		string logoFileName =
-			Status.Flags.HasFlag(StatusFlags.ClassicMode)
+			Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 			? "ChasmTracker.ImpulseTrackerLogo.png"
 			: "ChasmTracker.LogoBanner.png";
 
@@ -51,13 +52,13 @@ public class AboutPageDialog : Dialog
 
 	public AboutPageDialog()
 		: base(
-			new Point(11, Status.Flags.HasFlag(StatusFlags.ClassicMode) ? 16 : 12),
-			new Size(58, Status.Flags.HasFlag(StatusFlags.ClassicMode) ? 20 : 24))
+			new Point(11, Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? 16 : 12),
+			new Size(58, Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? 20 : 24))
 	{
 		_fakeDriver = ((new Random().Next() & 3) != 0) ? 0 : 1;
 
 		/* this is currently pretty gross */
-		byte fg = Status.Flags.HasFlag(StatusFlags.ClassicMode) ? (byte)11 : (byte)0;
+		byte fg = Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? (byte)11 : (byte)0;
 		byte bg = 2;
 
 		for (int y = 0; y < s_logo.Size.Height; y++)
@@ -98,7 +99,7 @@ public class AboutPageDialog : Dialog
 			//	BoxTypes.Thin | BoxTypes.Outer | BoxTypes.FlatDark);
 		}
 
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			VGAMem.DrawBox(
 				new Point(25, 25),

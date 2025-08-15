@@ -21,7 +21,7 @@ public class TrackView1Window : TrackViewWindowBase
 	protected override int GetRightEdge()
 	{
 		/* IT draws nine more blank "channels" on the right */
-		return Status.Flags.HasFlag(StatusFlags.ClassicMode) ? 73 : 64;
+		return Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? 73 : 64;
 	}
 
 	protected override void DrawChannelHeader(int chan, int column, int @base, byte fg)
@@ -43,7 +43,7 @@ public class TrackView1Window : TrackViewWindowBase
 
 			byte fg;
 
-			if (channel.Flags.HasFlag(ChannelFlags.Mute))
+			if (channel.Flags.HasAllFlags(ChannelFlags.Mute))
 				fg = (chan == SelectedChannel) ? (byte)6 : (byte)1;
 			else
 				fg = (chan == SelectedChannel) ? (byte)3 : (isActive ? (byte)2 : (byte)0);

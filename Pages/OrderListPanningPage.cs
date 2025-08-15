@@ -59,7 +59,7 @@ public class OrderListPanningPage : OrderListPage
 	public void RecheckMutedChannels()
 	{
 		for (int n = 0; n < 64; n++)
-			panBarChannelPanning[n].IsMuted = Song.CurrentSong.Channels[n].Flags.HasFlag(ChannelFlags.Mute);
+			panBarChannelPanning[n].IsMuted = Song.CurrentSong.Channels[n].Flags.HasAllFlags(ChannelFlags.Mute);
 
 		if (Status.CurrentPage is OrderListPanningPage)
 			Status.Flags |= StatusFlags.NeedUpdate;
@@ -72,8 +72,8 @@ public class OrderListPanningPage : OrderListPage
 			ref var chn = ref Song.CurrentSong.Channels[n];
 
 			panBarChannelPanning[n].Value = chn.Panning / 4;
-			panBarChannelPanning[n].IsSurround = chn.Flags.HasFlag(ChannelFlags.Surround);
-			panBarChannelPanning[n].IsMuted = chn.Flags.HasFlag(ChannelFlags.Mute);
+			panBarChannelPanning[n].IsSurround = chn.Flags.HasAllFlags(ChannelFlags.Surround);
+			panBarChannelPanning[n].IsMuted = chn.Flags.HasAllFlags(ChannelFlags.Mute);
 		}
 	}
 

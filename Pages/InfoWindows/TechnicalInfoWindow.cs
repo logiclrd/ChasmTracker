@@ -71,10 +71,10 @@ public class TechnicalInfoWindow : InfoWindow
 			int fg;
 
 			if (c == SelectedChannel)
-				fg = channel.Flags.HasFlag(ChannelFlags.Mute) ? 6 : 3;
+				fg = channel.Flags.HasAllFlags(ChannelFlags.Mute) ? 6 : 3;
 			else
 			{
-				if (channel.Flags.HasFlag(ChannelFlags.Mute))
+				if (channel.Flags.HasAllFlags(ChannelFlags.Mute))
 					fg = 2;
 				else
 					fg = isActive ? 1 : 0;
@@ -103,11 +103,11 @@ public class TechnicalInfoWindow : InfoWindow
 				{
 					ref var v = ref Song.CurrentSong.Voices[nv];
 
-					if (v.MasterChannel == c && (((v.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (v.Length != 0)) || v.Flags.HasFlag(ChannelFlags.AdLib)))
+					if (v.MasterChannel == c && (((v.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (v.Length != 0)) || v.Flags.HasAllFlags(ChannelFlags.AdLib)))
 						tot++;
 				}
 
-				if (((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length != 0)) || voice.Flags.HasFlag(ChannelFlags.AdLib))
+				if (((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length != 0)) || voice.Flags.HasAllFlags(ChannelFlags.AdLib))
 					tot++;
 
 				VGAMem.DrawText(tot.ToString("d3"), new Point(63, pos), (2, 0));
@@ -115,7 +115,7 @@ public class TechnicalInfoWindow : InfoWindow
 
 			int smp;
 
-			if (((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length != 0)) || voice.Flags.HasFlag(ChannelFlags.AdLib) && (voice.Sample != null))
+			if (((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length != 0)) || voice.Flags.HasAllFlags(ChannelFlags.AdLib) && (voice.Sample != null))
 			{
 				// again with the hacks...
 				smp = Song.CurrentSong.Samples.IndexOf(voice.Sample);
@@ -140,7 +140,7 @@ public class TechnicalInfoWindow : InfoWindow
 			VGAMem.DrawText((voice.FadeOutVolume / 128).ToString("d3"), new Point(48, pos), (2, 0)); // Fde
 
 			// Pn
-			if (voice.Flags.HasFlag(ChannelFlags.Surround))
+			if (voice.Flags.HasAllFlags(ChannelFlags.Surround))
 				VGAMem.DrawText("Su", new Point(52, pos), (2, 0));
 			else
 				VGAMem.DrawText((voice.Panning >> 2).ToString("d2"), new Point(52, pos), (2, 0));

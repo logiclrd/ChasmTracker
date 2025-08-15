@@ -78,7 +78,7 @@ public abstract class InstrumentFileListPageBase : Page
 			return 5;
 		if (!type.HasAnyFlag(FileTypes.ExtendedDataMask))
 			return 4; /* unchecked */
-		if (type.HasFlag(FileTypes.BrowsableMask))
+		if (type.HasAllFlags(FileTypes.BrowsableMask))
 			return 6; /* library */
 		if (type == FileTypes.Unknown)
 			return 2;
@@ -179,7 +179,7 @@ public abstract class InstrumentFileListPageBase : Page
 
 		/* if we have a list, the directory didn't change, and the mtime is the same, we're set */
 		if (_flist.NumFiles > 0
-				&& !Status.Flags.HasFlag(StatusFlags.InstrumentsDirectoryChanged)
+				&& !Status.Flags.HasAllFlags(StatusFlags.InstrumentsDirectoryChanged)
 				&& Directory.Exists(s_instrumentCwd)
 				&& Directory.GetLastWriteTimeUtc(s_instrumentCwd) == _directoryLastWriteTimeUTC)
 			return;

@@ -200,7 +200,7 @@ public class DSM : SongFileConverter
 
 				ref var note = ref ppd.Pattern.Rows[row][channel + 1];
 
-				if (mask.HasFlag(DSMPatternFlags.NotePresent))
+				if (mask.HasAllFlags(DSMPatternFlags.NotePresent))
 				{
 					int c = stream.ReadByte();
 
@@ -208,10 +208,10 @@ public class DSM : SongFileConverter
 						note.Note = (byte)(c + 12);
 				}
 
-				if (mask.HasFlag(DSMPatternFlags.InstrumentPresent))
+				if (mask.HasAllFlags(DSMPatternFlags.InstrumentPresent))
 					note.Instrument = (byte)stream.ReadByte();
 
-				if (mask.HasFlag(DSMPatternFlags.VolumePresent))
+				if (mask.HasAllFlags(DSMPatternFlags.VolumePresent))
 				{
 					/* volume */
 					int param = stream.ReadByte();
@@ -223,7 +223,7 @@ public class DSM : SongFileConverter
 					}
 				}
 
-				if (mask.HasFlag(DSMPatternFlags.CommandPresent))
+				if (mask.HasAllFlags(DSMPatternFlags.CommandPresent))
 				{
 					note.ImportMODEffect(
 						modEffect: (byte)stream.ReadByte(),
@@ -307,7 +307,7 @@ public class DSM : SongFileConverter
 					if (s > Constants.MaxSamples)
 						throw new NotSupportedException(); /* punt */
 
-					if (!lflags.HasFlag(LoadFlags.NoSamples))
+					if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 					{
 						IFF.Receive(stream, chunk, ChunkInstrumentRead);
 
@@ -316,13 +316,13 @@ public class DSM : SongFileConverter
 
 						SampleFormat flags = SampleFormat.LittleEndian | SampleFormat._8 | SampleFormat.Mono;
 
-						if (chunkInstrument.Flags.HasFlag(DSMSampleFlags.LoopActive))
+						if (chunkInstrument.Flags.HasAllFlags(DSMSampleFlags.LoopActive))
 							sample.Flags |= SampleFlags.Loop;
 
 						/* these are mutually exclusive (?) */
-						if (chunkInstrument.Flags.HasFlag(DSMSampleFlags.PCMSigned))
+						if (chunkInstrument.Flags.HasAllFlags(DSMSampleFlags.PCMSigned))
 							flags |= SampleFormat.PCMSigned;
-						else if (chunkInstrument.Flags.HasFlag(DSMSampleFlags.PCMDeltaEncoded))
+						else if (chunkInstrument.Flags.HasAllFlags(DSMSampleFlags.PCMDeltaEncoded))
 							flags |= SampleFormat.PCMDeltaEncoded;
 						else
 							flags |= SampleFormat.PCMUnsigned;
@@ -348,7 +348,7 @@ public class DSM : SongFileConverter
 					if (p > Constants.MaxPatterns)
 						throw new NotSupportedException(); /* punt */
 
-					if (!lflags.HasFlag(LoadFlags.NoPatterns))
+					if (!lflags.HasAllFlags(LoadFlags.NoPatterns))
 					{
 						ppd.Pattern = new Pattern(length: 64);
 						ppd.ChannelDoesNotMatch = channelDoesNotMatch;

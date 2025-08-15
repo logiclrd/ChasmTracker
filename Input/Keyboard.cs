@@ -114,7 +114,7 @@ public class Keyboard
 				|| (effect == '.')))
 		{
 			/* don't accept pseudo-effects */
-			if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+			if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				return byte.MaxValue;
 		}
 

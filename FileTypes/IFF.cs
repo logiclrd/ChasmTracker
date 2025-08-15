@@ -35,12 +35,12 @@ public class IFF
 			chunk.ID = ByteSwap.Swap(stream.ReadStructure<uint>());
 			chunk.Size = stream.ReadStructure<int>();
 
-			if (!flags.HasFlag(ChunkFlags.SizeLittleEndian))
+			if (!flags.HasAllFlags(ChunkFlags.SizeLittleEndian))
 				chunk.Size = ByteSwap.Swap(chunk.Size);
 
 			chunk.Offset = stream.Position;
 
-			if (flags.HasFlag(ChunkFlags.Aligned))
+			if (flags.HasAllFlags(ChunkFlags.Aligned))
 				stream.Position += chunk.Size + (chunk.Size & 1);
 			else
 				stream.Position += chunk.Size;
@@ -292,7 +292,7 @@ public class IFF
 		xtraData.Write(16);
 
 		/* flags */
-		xtraData.Write(smp.Flags.HasFlag(SampleFlags.Panning) ? 0x20 : 0);
+		xtraData.Write(smp.Flags.HasAllFlags(SampleFlags.Panning) ? 0x20 : 0);
 
 		/* default pan -- 0..256 */
 		xtraData.Write((short)smp.Panning);
@@ -341,8 +341,8 @@ public class IFF
 
 	public static void FillSmplChunk(SongSample smp, BinaryWriter smplData)
 	{
-		bool writeLoop = smp.Flags.HasFlag(SampleFlags.Loop);
-		bool writeSustainLoop = smp.Flags.HasFlag(SampleFlags.SustainLoop);
+		bool writeLoop = smp.Flags.HasAllFlags(SampleFlags.Loop);
+		bool writeSustainLoop = smp.Flags.HasAllFlags(SampleFlags.SustainLoop);
 
 		/* legendary hackaround from OpenMPT:
 		*
@@ -388,10 +388,10 @@ public class IFF
 		smplData.Write(0);
 
 		if (writeSustainLoop)
-			FillSmplChunkLoop(smplData, smp.SustainStart, smp.SustainEnd, smp.Flags.HasFlag(SampleFlags.PingPongSustain));
+			FillSmplChunkLoop(smplData, smp.SustainStart, smp.SustainEnd, smp.Flags.HasAllFlags(SampleFlags.PingPongSustain));
 
 		if (writeLoop)
-			FillSmplChunkLoop(smplData, smp.LoopStart, smp.LoopEnd, smp.Flags.HasFlag(SampleFlags.PingPongLoop));
+			FillSmplChunkLoop(smplData, smp.LoopStart, smp.LoopEnd, smp.Flags.HasAllFlags(SampleFlags.PingPongLoop));
 		else if (writeSustainLoop)
 		{
 			// Emit a dummy loop, because a loop count of 2 is the only way for

@@ -211,7 +211,7 @@ public class STX : STM
 				subversion = 0;
 		}
 
-		if (!lflags.HasFlag(LoadFlags.NoPatterns))
+		if (!lflags.HasAllFlags(LoadFlags.NoPatterns))
 		{
 			for (int n = 0; n < numPatterns; n++)
 			{
@@ -310,7 +310,7 @@ public class STX : STM
 		}
 
 		/* sample data */
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int n = 1; n <= numSamples; n++)
 			{

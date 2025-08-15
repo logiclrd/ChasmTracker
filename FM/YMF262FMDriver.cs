@@ -269,7 +269,7 @@ public class YMF262FMDriver : FMDriver
 	{
 		/* set status flag masking out disabled IRQs */
 		status |= (flag & statusmask);
-		if(!status.HasFlag(StatusFlags.IRQEnabled))
+		if(!status.HasAllFlags(StatusFlags.IRQEnabled))
 		{
 			if (status.HasAnyFlag(~StatusFlags.IRQEnabled))
 			{   /* IRQ on */
@@ -285,7 +285,7 @@ public class YMF262FMDriver : FMDriver
 	{
 		/* reset status flag */
 		status &= ~flag;
-		if	(status.HasFlag(StatusFlags.IRQEnabled))
+		if	(status.HasAllFlags(StatusFlags.IRQEnabled))
 		{
 			if (!status.HasAnyFlag(~StatusFlags.IRQEnabled))
 			{
@@ -1199,8 +1199,8 @@ public class YMF262FMDriver : FMDriver
 							StatusFlags vf = (StatusFlags)v;
 
 							/* set IRQ mask ,timer enable */
-							bool st1 = vf.HasFlag(StatusFlags.ST1);
-							bool st2 = vf.HasFlag(StatusFlags.ST2);
+							bool st1 = vf.HasAllFlags(StatusFlags.ST1);
+							bool st2 = vf.HasAllFlags(StatusFlags.ST2);
 
 							/* IRQRST,T1MSK,t2MSK,x,x,x,ST2,ST1 */
 							ResetStatus(vf & (StatusFlags.TimerA | StatusFlags.TimerB));
@@ -1864,7 +1864,7 @@ public class YMF262FMDriver : FMDriver
 				break;
 		}
 
-		return status.HasFlag(StatusFlags.IRQEnabled);
+		return status.HasAllFlags(StatusFlags.IRQEnabled);
 	}
 
 	public override byte Read(int a)
@@ -1903,7 +1903,7 @@ public class YMF262FMDriver : FMDriver
 		/* reload timer */
 		OnTimer(c, TimerBase * T[c]);
 
-		return status.HasFlag(StatusFlags.IRQEnabled);
+		return status.HasAllFlags(StatusFlags.IRQEnabled);
 	}
 
 	// `buffers` is an array of 18 pointers, all pointing to separate 32-bit interlaced stereo

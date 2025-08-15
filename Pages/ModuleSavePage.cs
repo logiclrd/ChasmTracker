@@ -150,7 +150,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 
 	void DoSaveSongOverwrite(string ptr)
 	{
-		if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			// say what?
 			DoSaveSong(ptr);

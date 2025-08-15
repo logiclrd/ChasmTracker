@@ -396,7 +396,7 @@ public class PSM : SongFileConverter
 
 					ref var note = ref row[channel + 1];
 
-					if (flags.HasFlag(PSMPatternFlags.Note))
+					if (flags.HasAllFlags(PSMPatternFlags.Note))
 					{
 						/* note */
 						int n = fp.ReadByte();
@@ -420,7 +420,7 @@ public class PSM : SongFileConverter
 						}
 					}
 
-					if (flags.HasFlag(PSMPatternFlags.Instrument))
+					if (flags.HasAllFlags(PSMPatternFlags.Instrument))
 					{
 						int s = fp.ReadByte();
 						if (s == EOF)
@@ -429,7 +429,7 @@ public class PSM : SongFileConverter
 						note.Instrument = (byte)(s + 1);
 					}
 
-					if (flags.HasFlag(PSMPatternFlags.Volume))
+					if (flags.HasAllFlags(PSMPatternFlags.Volume))
 					{
 						int v = fp.ReadByte();
 						if (v == EOF)
@@ -439,7 +439,7 @@ public class PSM : SongFileConverter
 						note.VolumeParameter = (byte)((Math.Min(v, 127) + 1) / 2);
 					}
 
-					if (flags.HasFlag(PSMPatternFlags.Effect) && !ImportEffect(ref note, fp, sinaria))
+					if (flags.HasAllFlags(PSMPatternFlags.Effect) && !ImportEffect(ref note, fp, sinaria))
 						return false;
 				}
 			}
@@ -508,7 +508,7 @@ public class PSM : SongFileConverter
 		for (int i = 0; i < pbodChunks.Count; i++)
 			ReadPattern(stream, pbodChunks[i], song, ref sinaria, ref numChannels);
 
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int i = 0; i < dsmpChunks.Count; i++)
 			{
@@ -536,7 +536,7 @@ public class PSM : SongFileConverter
 
 				/* now, put everything we just read into the sample slot */
 				smp.Flags = 0;
-				if (flags.HasFlag(PSMSampleFlags.Loop))
+				if (flags.HasAllFlags(PSMSampleFlags.Loop))
 					smp.Flags |= SampleFlags.Loop;
 
 				smp.Name = name;
@@ -788,7 +788,7 @@ public class PSM : SongFileConverter
 
 			if ((ppanChunk != null) && (songChunks.Count > 0) /* TODO handle other subsongs */)
 			{
-				Assert.IsTrue(() => ppanChunk.Size > subsongChannels * 2, "PSM: PPAN chunk is too small");
+				Assert.IsTrue(ppanChunk.Size > subsongChannels * 2, "ppanChunk.Size > subsongChannels * 2", "PSM: PPAN chunk is too small");
 
 				stream.Position = ppanChunk.Offset;
 

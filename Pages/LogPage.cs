@@ -3,17 +3,25 @@ namespace ChasmTracker.Pages;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
+using ChasmTracker.Widgets;
 
 /* It's lo-og, lo-og, it's big, it's heavy, it's wood!
  * It's lo-og, lo-og, it's better than bad, it's good! */
 
 public class LogPage : Page
 {
+	OtherWidget otherLogView;
+
 	int _topLine = 0;
 
 	public LogPage()
 		: base(PageNumbers.Log, "Message Log Viewer (Ctrl-F11)", HelpTexts.Copyright /* I guess */)
 	{
+		otherLogView = new OtherWidget(new Point(2, 13), new Size(76, 35));
+
+		otherLogView.OtherRedraw += otherLogView_Redraw;
+
+		AddWidget(otherLogView);
 	}
 
 	public override void DrawConst()
@@ -83,9 +91,9 @@ public class LogPage : Page
 		return true;
 	}
 
-	public override void Redraw()
+	void otherLogView_Redraw()
 	{
-		for (int n = 0, i = _topLine; i < Log.Lines.Count && n < 33; n++)
+		for (int n = 0, i = _topLine; i < Log.Lines.Count && n < 33; n++, i++)
 		{
 			var line = Log.Lines[i];
 

@@ -5,8 +5,8 @@ namespace ChasmTracker.FileSystem;
 [Flags]
 public enum FileTypes
 {
-	BrowsableMask = 0x1, /* if type.HasFlag(BrowsableMask) it's readable as a library */
-	FileMask = 0x2, /* if type.HasFlag(FileMask) it's a regular file */
+	BrowsableMask = 0x1, /* if type.HasAllFlags(BrowsableMask) it's readable as a library */
+	FileMask = 0x2, /* if type.HasAllFlags(FileMask) it's a regular file */
 	Directory = 0x4 | BrowsableMask, /* if (type == Directory) ... guess what! */
 	NonRegular = 0x8, /* if (type == NonRegular) it's something weird, e.g. a socket */
 
@@ -15,7 +15,7 @@ public enum FileTypes
 	/* this has to match BrowsableMask for directories */
 	ExtendedDataMask = 0xFFF01, /* if (type.HasAnyFlag(ExtendedDataMaks)) the extended data has been checked */
 
-	ModuleMask = 0xF00, /* if type.HasFlag(ModuleMask) it's loadable as a module */
+	ModuleMask = 0xF00, /* if type.HasAllFlags(ModuleMask) it's loadable as a module */
 	ModuleMOD = 0x100 | BrowsableMask | FileMask,
 	ModuleS3M = 0x200 | BrowsableMask | FileMask,
 	ModuleXM = 0x300 | BrowsableMask | FileMask,

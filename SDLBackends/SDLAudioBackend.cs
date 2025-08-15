@@ -25,6 +25,10 @@ public class SDLAudioBackend : AudioBackend
 
 		public IAudioSink? Sink = null;
 
+		// Prevent garbage collection. We give this to SDL, and SDL expects to be able to
+		// keep calling it indefinitely.
+		public SDL.AudioStreamCallback? SDLCallback;
+
 		public void Callback(Span<byte> data) => Sink?.Callback(data);
 	}
 
@@ -38,7 +42,7 @@ public class SDLAudioBackend : AudioBackend
 	{
 		bool ret;
 
-		using (new EnvironmentVariableScope("SDL_AUDIO_DRIVER", driverName))
+		using (new SDLHintScope(SDL.Hints.AudioDriver, driverName ?? "default"))
 			 ret = SDL.InitSubSystem(SDL.InitFlags.Audio);
 
 		// force poll for audio devices
@@ -124,7 +128,7 @@ public class SDLAudioBackend : AudioBackend
 
 	/* -------------------------------------------------------- */
 
-	unsafe void AudioCallback(IntPtr userdata, IntPtr stream, int additionalAmount, int totalAamount)
+	unsafe void AudioCallback(IntPtr userdata, IntPtr stream, int additionalAmount, int totalAmount)
 	{
 		int deviceIndex = (int)userdata;
 
@@ -178,23 +182,23 @@ public class SDLAudioBackend : AudioBackend
 			// As it turns out, SDL is still just a shell script in disguise, and requires you to
 			// pass everything as strings in order to change behavior. As for why they don't just
 			// include this in the spec structure anymore is beyond me.
-			SDL.SetHint(SDL.Hints.AudioDeviceSampleFrames, desired.BufferSizeSamples.ToString());
-
 			uint sdlDeviceID = (deviceID == DefaultID || deviceID >= _devices.Length)
 				? SDL.AudioDeviceDefaultPlayback
 				: _devices![deviceID];
 
-			dev.Stream = SDL.OpenAudioDeviceStream(
-				sdlDeviceID,
-				sdlDesired,
-				AudioCallback,
-				devNumber);
+			using (new SDLHintScope(SDL.Hints.AudioDeviceSampleFrames, desired.BufferSizeSamples.ToString()))
+			{
+				dev.SDLCallback = AudioCallback;
 
-			// reset this before checking if opening succeeded
-			SDL.ResetHint(SDL.Hints.AudioDeviceSampleFrames);
+				dev.Stream = SDL.OpenAudioDeviceStream(
+					sdlDeviceID,
+					sdlDesired,
+					dev.SDLCallback,
+					devNumber);
 
-			if (dev.Stream == IntPtr.Zero)
-				throw new Exception("Device initialization failed");
+				if (dev.Stream == IntPtr.Zero)
+					throw new Exception("Device initialization failed");
+			}
 
 			// PAUSE!
 			SDL.PauseAudioDevice(SDL.GetAudioStreamDevice(dev.Stream));

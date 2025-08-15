@@ -326,7 +326,7 @@ public class MID : SongFileConverter
 						}
 						else
 						{
-							if (nextFreeSampleNumber == 1 && !lflags.HasFlag(LoadFlags.NoSamples))
+							if (nextFreeSampleNumber == 1 && !lflags.HasAllFlags(LoadFlags.NoSamples))
 							{
 								// no samples defined yet - fake a program change
 								patchSamples[0] = 1;
@@ -373,7 +373,7 @@ public class MID : SongFileConverter
 						int x = stream.ReadByte();
 						midich[cn].Instrument = (byte)x;
 						// look familiar? this was copied from the .mus loader
-						if ((patchSamples[x] == 0) && !lflags.HasFlag(LoadFlags.NoSamples))
+						if ((patchSamples[x] == 0) && !lflags.HasAllFlags(LoadFlags.NoSamples))
 						{
 							// New sample!
 							patchSamples[x] = (byte)nextFreeSampleNumber;
@@ -541,7 +541,7 @@ public class MID : SongFileConverter
 		song.InitialSpeed = 3;
 		song.InitialTempo = 120;
 
-		if (lflags.HasFlag(LoadFlags.NoPatterns))
+		if (lflags.HasAllFlags(LoadFlags.NoPatterns))
 			return song;
 
 		prev = null;

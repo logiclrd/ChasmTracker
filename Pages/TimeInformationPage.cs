@@ -35,7 +35,7 @@ public class TimeInformationPage : Page
 				if (k.State != KeyState.Release)
 					return false;
 
-				if (k.Modifiers.HasFlag(KeyMod.RightAlt) && k.Modifiers.HasFlag(KeyMod.RightShift))
+				if (k.Modifiers.HasAllFlags(KeyMod.RightAlt) && k.Modifiers.HasAllFlags(KeyMod.RightShift))
 				{
 					_displaySession = !_displaySession;
 					Status.Flags |= StatusFlags.NeedUpdate;
@@ -46,7 +46,7 @@ public class TimeInformationPage : Page
 				if (k.State != KeyState.Release)
 					return false;
 
-				if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				{
 					_displaySession = !_displaySession;
 					Status.Flags |= StatusFlags.NeedUpdate;

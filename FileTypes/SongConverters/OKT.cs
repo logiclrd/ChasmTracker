@@ -407,21 +407,21 @@ public class OKT : SongFileConverter
 			switch (tag)
 			{
 				case OKTBlockTypes.CMOD:
-					if (!readFlags.HasFlag(ReadFlags.HasCMOD))
+					if (!readFlags.HasAllFlags(ReadFlags.HasCMOD))
 					{
 						readFlags |= ReadFlags.HasCMOD;
 						nChn = ReadCMOD(stream, song);
 					}
 					break;
 				case OKTBlockTypes.SAMP:
-					if (!readFlags.HasFlag(ReadFlags.HasSAMP))
+					if (!readFlags.HasAllFlags(ReadFlags.HasSAMP))
 					{
 						readFlags |= ReadFlags.HasSAMP;
 						ReadSAMPBlock(stream, song, blockLength, smpFormat);
 					}
 					break;
 				case OKTBlockTypes.SPEE:
-					if (!readFlags.HasFlag(ReadFlags.HasSPEE))
+					if (!readFlags.HasAllFlags(ReadFlags.HasSPEE))
 					{
 						readFlags |= ReadFlags.HasSPEE;
 
@@ -437,7 +437,7 @@ public class OKT : SongFileConverter
 					// Don't care.
 					break;
 				case OKTBlockTypes.PLEN:
-					if (!readFlags.HasFlag(ReadFlags.HasPLEN))
+					if (!readFlags.HasAllFlags(ReadFlags.HasPLEN))
 					{
 						readFlags |= ReadFlags.HasPLEN;
 						short w = stream.ReadStructure<short>();
@@ -445,7 +445,7 @@ public class OKT : SongFileConverter
 					}
 					break;
 				case OKTBlockTypes.PATT:
-					if (!readFlags.HasFlag(ReadFlags.HasPATT))
+					if (!readFlags.HasAllFlags(ReadFlags.HasPATT))
 					{
 						readFlags |= ReadFlags.HasPATT;
 
@@ -491,10 +491,10 @@ public class OKT : SongFileConverter
 			stream.Position = nextPos;
 		}
 
-		if (!readFlags.HasFlag(ReadFlags.HasCMOD | ReadFlags.HasSPEE))
+		if (!readFlags.HasAllFlags(ReadFlags.HasCMOD | ReadFlags.HasSPEE))
 			throw new FormatException();
 
-		if (!lflags.HasFlag(LoadFlags.NoPatterns))
+		if (!lflags.HasAllFlags(LoadFlags.NoPatterns))
 		{
 			for (int pat = 0; pat < nPat; pat++)
 			{
@@ -504,14 +504,14 @@ public class OKT : SongFileConverter
 
 			if (effectWarn != 0)
 			{
-				if (effectWarn.HasFlag((OKTEffects)1))
+				if (effectWarn.HasAllFlags((OKTEffects)1))
 					Log.Append(4, " Warning: Out-of-range effects (junk data?)");
 
 				for (int e = 2; e <= 32; e++)
 				{
 					var unimplementedEffect = (OKTEffects)(1 << (e - 1));
 
-					if (effectWarn.HasFlag(unimplementedEffect))
+					if (effectWarn.HasAllFlags(unimplementedEffect))
 					{
 						Log.Append(4, " Warning: Unimplemented effect {0}xx",
 							(char)(e + (e < 10 ? '0' : ('A' - 10))));
@@ -520,7 +520,7 @@ public class OKT : SongFileConverter
 			}
 		}
 
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			int sh;
 			int sd = 1;

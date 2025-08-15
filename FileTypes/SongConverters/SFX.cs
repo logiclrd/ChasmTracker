@@ -111,7 +111,7 @@ public class SFX : SongFileConverter
 
 		stream.Position += 14; /* unknown bytes (reserved?) - see below */
 
-		if (lflags.HasFlag(LoadFlags.NoSamples))
+		if (lflags.HasAllFlags(LoadFlags.NoSamples))
 			stream.Position += 30 * fmt.NumSamples;
 		else
 		{
@@ -164,7 +164,7 @@ public class SFX : SongFileConverter
 		(they all seem to have zero here) */
 		stream.Position += fmt.Dunno;
 
-		if (lflags.HasFlag(LoadFlags.NoPatterns))
+		if (lflags.HasAllFlags(LoadFlags.NoPatterns))
 			stream.Position += numPatterns * 1024;
 		else
 		{
@@ -262,7 +262,7 @@ public class SFX : SongFileConverter
 		}
 
 		/* sample data */
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int n = 0; n < fmt.NumSamples; n++)
 			{

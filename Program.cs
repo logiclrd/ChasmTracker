@@ -420,7 +420,7 @@ public class Program
 
 			if (Status.Flags.HasAnyFlag(StatusFlags.ClippyPasteSelection | StatusFlags.ClippyPasteBuffer))
 			{
-				Clippy.Paste(Status.Flags.HasFlag(StatusFlags.ClippyPasteBuffer)
+				Clippy.Paste(Status.Flags.HasAllFlags(StatusFlags.ClippyPasteBuffer)
 					? ClippySource.Buffer : ClippySource.Select);
 				Status.Flags &= ~(StatusFlags.ClippyPasteSelection | StatusFlags.ClippyPasteBuffer);
 			}
@@ -455,7 +455,7 @@ public class Program
 				lastAudioPoll = DateTime.UtcNow;
 			}
 
-			if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+			if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 			{
 				var q = DiskWriter.Sync();
 
@@ -480,7 +480,7 @@ public class Program
 			/* let dmoz build directory lists, etc
 			 *
 			 * as long as there's no user-event going on... */
-			while (!Status.Flags.HasFlag(StatusFlags.NeedUpdate) && DirectoryScanner.TakeAsynchronousFileListStep() && !EventHub.HaveEvent())
+			while (!Status.Flags.HasAllFlags(StatusFlags.NeedUpdate) && DirectoryScanner.TakeAsynchronousFileListStep() && !EventHub.HaveEvent())
 				;
 
 			/* sleep for a little bit to not hog CPU time */
@@ -491,13 +491,13 @@ public class Program
 
 	public static void Exit(int x)
 	{
-		if (s_shutdownProcess.HasFlag(ShutdownFlags.RunHook))
+		if (s_shutdownProcess.HasAllFlags(ShutdownFlags.RunHook))
 			Hooks.Exit();
 
-		if (s_shutdownProcess.HasFlag(ShutdownFlags.SaveConfiguration))
+		if (s_shutdownProcess.HasAllFlags(ShutdownFlags.SaveConfiguration))
 			Configuration.Save();
 
-		if (s_shutdownProcess.HasFlag(ShutdownFlags.SDLQuit))
+		if (s_shutdownProcess.HasAllFlags(ShutdownFlags.SDLQuit))
 		{
 			Video.Refresh();
 
@@ -538,7 +538,7 @@ public class Program
 
 		s_args = new CommandLineArguments(); /* shouldn't this be like, first? */
 
-		if (s_args.StartupFlags.HasFlag(StartupFlags.Headless))
+		if (s_args.StartupFlags.HasAllFlags(StartupFlags.Headless))
 			Status.Flags |= StatusFlags.Headless;
 
 		/* Eh. */
@@ -547,7 +547,7 @@ public class Program
 
 		Configuration.InitializeDirectory();
 
-		if (s_args.StartupFlags.HasFlag(StartupFlags.Hooks))
+		if (s_args.StartupFlags.HasAllFlags(StartupFlags.Hooks))
 		{
 			Hooks.Startup();
 			s_shutdownProcess |= ShutdownFlags.RunHook;
@@ -568,17 +568,17 @@ public class Program
 		{
 			Status.Flags &= ~StatusFlags.ClassicMode;
 
-			if (s_args.StartupFlags.HasFlag(StartupFlags.Classic))
+			if (s_args.StartupFlags.HasAllFlags(StartupFlags.Classic))
 				Status.Flags |= StatusFlags.ClassicMode;
 		}
 
-		if (!s_args.StartupFlags.HasFlag(StartupFlags.Network))
+		if (!s_args.StartupFlags.HasAllFlags(StartupFlags.Network))
 			Status.Flags |= StatusFlags.NoNetwork;
 
 		s_shutdownProcess |= ShutdownFlags.SaveConfiguration;
 		s_shutdownProcess |= ShutdownFlags.SDLQuit;
 
-		if (s_args.StartupFlags.HasFlag(StartupFlags.Headless))
+		if (s_args.StartupFlags.HasAllFlags(StartupFlags.Headless))
 		{
 			if (s_args.DiskwriteTo == null)
 			{
@@ -610,7 +610,7 @@ public class Program
 					Exit(1);
 
 				// Wait for diskwrite to complete
-				while (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+				while (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 				{
 					var q = DiskWriter.Sync();
 
@@ -632,7 +632,9 @@ public class Program
 			}
 		}
 
-		Assert.IsTrue(() => Video.Startup(), "Failed to initialize video!");
+		var ret = Video.Startup();
+
+		Assert.IsTrue(ret, "Video.Startup()", "Failed to initialize video!");
 
 		if (s_args.WantFullScreenSpecified)
 			Video.Fullscreen(s_args.WantFullScreen);
@@ -658,7 +660,7 @@ public class Program
 			Configuration.Directories.InstrumentsDirectory = s_args.InitialDirectory;
 		}
 
-		if (s_args.StartupFlags.HasFlag(StartupFlags.FontEdit))
+		if (s_args.StartupFlags.HasAllFlags(StartupFlags.FontEdit))
 		{
 			Status.Flags |= StatusFlags.StartupFontEdit;
 			Page.SetPage(PageNumbers.FontEditor);
@@ -690,7 +692,7 @@ public class Program
 					if (Song.CurrentSong.ExportSong(s_args.DiskwriteTo, driver) != SaveResult.Success)
 						Exit(1);
 				}
-				else if (s_args.StartupFlags.HasFlag(StartupFlags.Play))
+				else if (s_args.StartupFlags.HasAllFlags(StartupFlags.Play))
 				{
 					AudioPlayback.Start();
 					Page.SetPage(PageNumbers.Info);
@@ -723,7 +725,7 @@ public class Program
 		}
 		else if (Status.CurrentPage is FontEditorPage)
 		{
-			if (Status.Flags.HasFlag(StatusFlags.StartupFontEdit))
+			if (Status.Flags.HasAllFlags(StatusFlags.StartupFontEdit))
 			{
 				MessageBox.Show(MessageBoxTypes.OKCancel, "Exit Font Editor?", () => Program.Exit(0));
 			}
@@ -739,7 +741,7 @@ public class Program
 			/* don't draw an exit prompt on top of an existing one */
 			MessageBox.Show(
 				MessageBoxTypes.OKCancel,
-				Status.Flags.HasFlag(StatusFlags.ClassicMode)
+				Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 				? "Exit Impulse Tracker?"
 				: "Exit Schism Tracker?",
 				() => Page.SaveCheck(() => Program.Exit(0)));

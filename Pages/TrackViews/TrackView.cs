@@ -39,7 +39,7 @@ public abstract class TrackView
 					((cursorPos == 0) ? 1 : 0) |
 					((cursorPos == pos) ? 2 : 0) |
 					((cursorPos == pos2) ? 2 : 0) |
-					(mask.HasFlag(field) ? 4 : 0)
+					(mask.HasAllFlags(field) ? 4 : 0)
 				];
 
 	protected char HexDigit(int n)

@@ -225,10 +225,10 @@ public class ITI : InstrumentFileConverter
 		env.Nodes[0].Tick = 0; // sanity check
 
 		foreach (var flag in Enum.GetValues<ITEnvelopeFlags>())
-			if (itEnv.Flags.HasFlag(flag))
+			if (itEnv.Flags.HasAllFlags(flag))
 				flags |= EnvelopeFlagTranslation[envType][flag];
 
-		if ((envType == EnvelopeType.Pitch) && (itEnv.Flags.HasFlag(ITEnvelopeFlags.Filter)))
+		if ((envType == EnvelopeType.Pitch) && (itEnv.Flags.HasAllFlags(ITEnvelopeFlags.Filter)))
 			flags |= InstrumentFlags.Filter;
 
 		return flags;
@@ -263,11 +263,11 @@ public class ITI : InstrumentFileConverter
 		if (!LoadNoteTranslation(null, instrument, stream))
 			return false;
 
-		if (ihdr.Flags.HasFlag(ITEnvelopeFlags.Enable))
+		if (ihdr.Flags.HasAllFlags(ITEnvelopeFlags.Enable))
 			instrument.Flags |= InstrumentFlags.VolumeEnvelope;
-		if (ihdr.Flags.HasFlag(ITEnvelopeFlags.Loop))
+		if (ihdr.Flags.HasAllFlags(ITEnvelopeFlags.Loop))
 			instrument.Flags |= InstrumentFlags.VolumeEnvelopeLoop;
-		if (ihdr.Flags.HasFlag(ITEnvelopeFlags.SustainLoop))
+		if (ihdr.Flags.HasAllFlags(ITEnvelopeFlags.SustainLoop))
 			instrument.Flags |= InstrumentFlags.VolumeEnvelopeSustain;
 
 		instrument.VolumeEnvelope = new Envelope();
@@ -388,31 +388,31 @@ public class ITI : InstrumentFileConverter
 		var panningEnvelope = ins.PanningEnvelope ?? new Envelope(0);
 		var pitchEnvelope = ins.PitchEnvelope ?? new Envelope(0);
 
-		vol.Flags = ((ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope) ? ITEnvelopeFlags.Enable : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop) ? ITEnvelopeFlags.Loop : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain) ? ITEnvelopeFlags.SustainLoop : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry) ? ITEnvelopeFlags.Carry : 0));
+		vol.Flags = ((ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope) ? ITEnvelopeFlags.Enable : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop) ? ITEnvelopeFlags.Loop : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain) ? ITEnvelopeFlags.SustainLoop : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeCarry) ? ITEnvelopeFlags.Carry : 0));
 		vol.NumberOfNodes = (byte)volumeEnvelope.Nodes.Count;
 		vol.LoopBegin = (byte)volumeEnvelope.LoopStart;
 		vol.LoopEnd = (byte)volumeEnvelope.LoopEnd;
 		vol.SustainLoopBegin = (byte)volumeEnvelope.SustainStart;
 		vol.SustainLoopEnd = (byte)volumeEnvelope.SustainEnd;
 
-		pan.Flags = ((ins.Flags.HasFlag(InstrumentFlags.PanningEnvelope) ? ITEnvelopeFlags.Enable : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeLoop) ? ITEnvelopeFlags.Loop : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeSustain) ? ITEnvelopeFlags.SustainLoop : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.PanningEnvelopeCarry) ? ITEnvelopeFlags.Carry : 0));
+		pan.Flags = ((ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope) ? ITEnvelopeFlags.Enable : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeLoop) ? ITEnvelopeFlags.Loop : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeSustain) ? ITEnvelopeFlags.SustainLoop : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeCarry) ? ITEnvelopeFlags.Carry : 0));
 		pan.NumberOfNodes = (byte)panningEnvelope.Nodes.Count;
 		pan.LoopBegin = (byte)panningEnvelope.LoopStart;
 		pan.LoopEnd = (byte)panningEnvelope.LoopEnd;
 		pan.SustainLoopBegin = (byte)panningEnvelope.SustainStart;
 		pan.SustainLoopEnd = (byte)panningEnvelope.SustainEnd;
 
-		pitch.Flags = ((ins.Flags.HasFlag(InstrumentFlags.PitchEnvelope) ? ITEnvelopeFlags.Enable : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeLoop) ? ITEnvelopeFlags.Loop : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeSustain) ? ITEnvelopeFlags.SustainLoop : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry) ? ITEnvelopeFlags.Carry : 0))
-			| ((ins.Flags.HasFlag(InstrumentFlags.Filter) ? ITEnvelopeFlags.Filter : 0));
+		pitch.Flags = ((ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelope) ? ITEnvelopeFlags.Enable : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeLoop) ? ITEnvelopeFlags.Loop : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeSustain) ? ITEnvelopeFlags.SustainLoop : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeCarry) ? ITEnvelopeFlags.Carry : 0))
+			| ((ins.Flags.HasAllFlags(InstrumentFlags.Filter) ? ITEnvelopeFlags.Filter : 0));
 		pitch.NumberOfNodes = (byte)pitchEnvelope.Nodes.Count;
 		pitch.LoopBegin = (byte)pitchEnvelope.LoopStart;
 		pitch.LoopEnd = (byte)pitchEnvelope.LoopEnd;
@@ -465,7 +465,7 @@ public class ITI : InstrumentFileConverter
 		iti.GlobalVolume = (byte)instrument.GlobalVolume;
 
 		iti.DefaultPanning = (byte)(instrument.Panning / 4);
-		if (!instrument.Flags.HasFlag(InstrumentFlags.SetPanning))
+		if (!instrument.Flags.HasAllFlags(InstrumentFlags.SetPanning))
 			iti.DefaultPanning |= 0x80;
 
 		iti.VolumeSwing = (byte)instrument.VolumeSwing;
@@ -542,7 +542,7 @@ public class ITI : InstrumentFileConverter
 
 			long pos = file.Position;
 
-			Assert.IsTrue(() => pos == 554, "ITI file headers should always be 554 bytes long");
+			Assert.IsTrue(pos == 554, "pos == 554", "ITI file headers should always be 554 bytes long");
 
 			/* okay, now go through samples */
 			for (int j = 0; j < itiNumAllocated; j++)
@@ -571,8 +571,8 @@ public class ITI : InstrumentFileConverter
 				file.Position = op;
 
 				SampleFileConverter.WriteSample(file, smp, SampleFormat.LittleEndian | SampleFormat.PCMSigned
-					| (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
-					| (smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
+					| (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
+					| (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
 					uint.MaxValue);
 			}
 		}

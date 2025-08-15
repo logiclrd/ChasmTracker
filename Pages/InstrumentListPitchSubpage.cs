@@ -77,9 +77,9 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 		DrawEnvelopeLabel("Pitch", isSelected);
 
 		EnvelopeDraw(ins.PitchEnvelope, false, _currentEnvelopeNode,
-			ins.Flags.HasFlag(InstrumentFlags.PitchEnvelope),
-			ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeLoop),
-			ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeSustain),
+			ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelope),
+			ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeLoop),
+			ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeSustain),
 			0);
 	}
 
@@ -120,13 +120,13 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 		var menuToggleEnabled = (MenuToggleWidget)widgetEnvelopeEnabled;
 
 		menuToggleEnabled.State =
-			ins.Flags.HasFlag(InstrumentFlags.PitchEnvelope)
-			? (ins.Flags.HasFlag(InstrumentFlags.Filter) ? 2 : 1)
+			ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelope)
+			? (ins.Flags.HasAllFlags(InstrumentFlags.Filter) ? 2 : 1)
 			: 0;
 
-		toggleEnvelopeCarry.State = ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeCarry);
-		toggleEnvelopeLoop.State = ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeLoop);
-		toggleEnvelopeSustainLoop.State = ins.Flags.HasFlag(InstrumentFlags.PitchEnvelopeSustain);
+		toggleEnvelopeCarry.State = ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeCarry);
+		toggleEnvelopeLoop.State = ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeLoop);
+		toggleEnvelopeSustainLoop.State = ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeSustain);
 
 		if (env != null)
 		{

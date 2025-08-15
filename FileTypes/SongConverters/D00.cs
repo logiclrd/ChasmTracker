@@ -618,7 +618,7 @@ public class D00 : SongFileConverter
 			(hdr.Version < 4) ? "Unknown AdLib tracker" : "EdLib Tracker";
 
 		foreach (var warning in Enum.GetValues<Warnings>())
-			if (warn.HasFlag(warning))
+			if (warn.HasAllFlags(warning))
 				Log.Append(4, " Warning: {0}", warning.GetDescription());
 
 		return song;

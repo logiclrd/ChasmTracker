@@ -314,7 +314,7 @@ public abstract class Widget
 			}
 			case KeySym.Left:
 			{
-				if (HandleArrow(k) is var arrowOverrideResult)
+				if (HandleArrow(k) is bool arrowOverrideResult)
 					return arrowOverrideResult;
 
 				WidgetContext?.ChangeFocusTo(Next.Left);
@@ -323,7 +323,7 @@ public abstract class Widget
 			}
 			case KeySym.Right:
 			{
-				if (HandleArrow(k) is var arrowOverrideResult)
+				if (HandleArrow(k) is bool arrowOverrideResult)
 					return arrowOverrideResult;
 
 				WidgetContext?.ChangeFocusTo(Next.Right);

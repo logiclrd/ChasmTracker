@@ -8,9 +8,44 @@ namespace ChasmTracker.Utility;
 
 public static class EnumExtensions
 {
+	// Typesafe and 5x faster than Enum.HasFlag
+	public static bool HasAllFlags<T>(this T value, T flags)
+		where T : Enum
+	{
+		unsafe
+		{
+			// WARNING: crazy code. Assumes can always read 32 bits. In practice this seems to be true;
+			// enums with byte and short storage appear to be zero-padded to 32 bits.
+			//
+			// Actually checking the size of the enum is really slow. :-(
+
+	#pragma warning disable 8500
+			int *ap = (int *)(void *)&value;
+			int *bp = (int *)(void *)&flags;
+	#pragma warning restore 8500
+
+			return (*ap & *bp) == *bp;
+		}
+	}
+
 	public static bool HasAnyFlag<T>(this T value, T flags)
 		where T : Enum
-		=> (Convert.ToInt32(value) & Convert.ToInt32(flags)) != 0;
+	{
+		unsafe
+		{
+			// WARNING: crazy code. Assumes can always read 32 bits. In practice this seems to be true;
+			// enums with byte and short storage appear to be zero-padded to 32 bits.
+			//
+			// Actually checking the size of the enum is really slow. :-(
+
+	#pragma warning disable 8500
+			int *ap = (int *)(void *)&value;
+			int *bp = (int *)(void *)&flags;
+	#pragma warning restore 8500
+
+			return (*ap & *bp) != 0;
+		}
+	}
 
 	public static string GetDescription<T>(this T value)
 		where T : Enum

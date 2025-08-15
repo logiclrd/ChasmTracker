@@ -630,8 +630,8 @@ public static class Mixer
 
 			StoreVUMeter(volLX, volRX);
 
-			pVol[0] = volLX;
-			pVol[1] = volRX;
+			pVol[0] += volLX;
+			pVol[1] += volRX;
 		}
 	}
 
@@ -649,8 +649,8 @@ public static class Mixer
 
 			StoreVUMeter(volLX, volRX);
 
-			pVol[0] = volLX;
-			pVol[1] = volRX;
+			pVol[0] += volLX;
+			pVol[1] += volRX;
 		}
 	}
 
@@ -780,7 +780,7 @@ public static class Mixer
 		{
 			int position = chan.PositionFrac;
 			Span<TSample> p = MemoryMarshal.Cast<byte, TSample>(chan.CurrentSampleData.Span.Slice(chan.Position));
-			if (chan.Flags.HasFlag(ChannelFlags.Stereo)) p = p.Slice(chan.Position);
+			if (chan.Flags.HasAllFlags(ChannelFlags.Stereo)) p = p.Slice(chan.Position);
 			int max = chan.VUMeter;
 
 			int leftRampVolume = chan.LeftRampVolume;
@@ -795,6 +795,8 @@ public static class Mixer
 				GetVolume.Do(p, position, out l, out r);
 				Filter.Do(ref chan, ref l, ref r);
 				Store.Do(l, r, ref leftRampVolume, ref rightRampVolume, ref chan, pVol);
+
+				max = Math.Max(max, (Math.Abs(l) + Math.Abs(r)) >> 1);
 
 				pVol = pVol.Slice(2);
 				position += chan.Increment;
@@ -1109,7 +1111,7 @@ public static class Mixer
 
 	static int GetSampleCount(ref SongVoice chan, int samples)
 	{
-		int loopStart = chan.Flags.HasFlag(ChannelFlags.Loop) ? chan.LoopStart : 0;
+		int loopStart = chan.Flags.HasAllFlags(ChannelFlags.Loop) ? chan.LoopStart : 0;
 		int increment = chan.Increment;
 
 		if (samples <= 0 || (increment == 0) || (chan.Length == 0))
@@ -1137,7 +1139,7 @@ public static class Mixer
 				// go forward
 				chan.Flags &= ~ChannelFlags.PingPongFlag;
 
-				if ((!chan.Flags.HasFlag(ChannelFlags.Loop))
+				if ((!chan.Flags.HasAllFlags(ChannelFlags.Loop))
 				 || (chan.Position >= chan.Length))
 				{
 					chan.Position = chan.Length;
@@ -1156,10 +1158,10 @@ public static class Mixer
 		else if (chan.Position >= chan.Length)
 		{
 			// not looping -> stop this channel
-			if (!chan.Flags.HasFlag(ChannelFlags.Loop))
+			if (!chan.Flags.HasAllFlags(ChannelFlags.Loop))
 				return 0;
 
-			if (chan.Flags.HasFlag(ChannelFlags.PingPongLoop))
+			if (chan.Flags.HasAllFlags(ChannelFlags.PingPongLoop))
 			{
 				// Invert loop
 				if (increment > 0)
@@ -1301,22 +1303,22 @@ public static class Mixer
 
 			int flags = 0;
 
-			if (channel.Flags.HasFlag(ChannelFlags._16bit))
+			if (channel.Flags.HasAllFlags(ChannelFlags._16Bit))
 				flags |= MixIndex_16Bit;
 
-			if (channel.Flags.HasFlag(ChannelFlags.Stereo))
+			if (channel.Flags.HasAllFlags(ChannelFlags.Stereo))
 				flags |= MixIndex_Stereo;
 
-			if (channel.Flags.HasFlag(ChannelFlags.Filter))
+			if (channel.Flags.HasAllFlags(ChannelFlags.Filter))
 				flags |= MixIndex_Filter;
 
-			if (!channel.Flags.HasFlag(ChannelFlags.NoIDO) &&
-				!AudioPlayback.MixFlags.HasFlag(MixFlags.NoResampling))
+			if (!channel.Flags.HasAllFlags(ChannelFlags.NoIDO) &&
+				!AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoResampling))
 			{
 				// use hq-fir mixer?
-				if (AudioPlayback.MixFlags.HasFlag(MixFlags.HQResampler | MixFlags.UltraHQSourceMode))
+				if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler | MixFlags.UltraHQSourceMode))
 					flags |= MixIndex_FIRSource;
-				else if (AudioPlayback.MixFlags.HasFlag(MixFlags.HQResampler))
+				else if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler))
 					flags |= MixIndex_SplineSource;
 				else
 					flags |= MixIndex_LinearSource;    // use
@@ -1389,7 +1391,7 @@ public static class Mixer
 				* unless we're in AdLib or MIDI mode (to prevent
 				* artificial KeyOffs)
 				*/
-				if (!channel.Flags.HasFlag(ChannelFlags.AdLib))
+				if (!channel.Flags.HasAllFlags(ChannelFlags.AdLib))
 					sampleCount = GetSampleCount(ref channel, nrampsamples);
 
 				if (sampleCount <= 0)
@@ -1410,7 +1412,7 @@ public static class Mixer
 
 				// Should we mix this channel ?
 
-				if ((numChannelsMixed >= AudioPlayback.MaxVoices && !AudioPlayback.MixFlags.HasFlag(MixFlags.DirectToDisk))
+				if ((numChannelsMixed >= AudioPlayback.MaxVoices && !AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 					|| ((channel.RampLength == 0) && ((channel.LeftVolume | channel.RightVolume) == 0)))
 				{
 					int delta = BufferLengthToSamples(sampleCount, ref channel);
@@ -1421,7 +1423,7 @@ public static class Mixer
 
 					pBuffer = pBuffer.Slice(sampleCount * 2);
 				}
-				else if (!channel.Flags.HasFlag(ChannelFlags.AdLib))
+				else if (!channel.Flags.HasAllFlags(ChannelFlags.AdLib))
 				{
 					// Mix the stream, unless we're in AdLib mode
 
@@ -1453,7 +1455,7 @@ public static class Mixer
 
 							channel.CurrentSampleData = lookaheadPtr;
 						}
-						else if ((channel.Flags.HasFlag(ChannelFlags.LoopWrapped)) && at_loop_start)
+						else if (channel.Flags.HasAllFlags(ChannelFlags.LoopWrapped) && atLoopStart)
 						{
 							// Interpolate properly after looping
 							sampleCount = SamplesToBufferLength(channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize - channel.Position, ref channel);
@@ -1493,7 +1495,7 @@ public static class Mixer
 						channel.LeftVolume = channel.LeftVolumeNew;
 						channel.RightRamp = channel.LeftRamp = 0;
 
-						if (channel.Flags.HasFlag(ChannelFlags.NoteFade)
+						if (channel.Flags.HasAllFlags(ChannelFlags.NoteFade)
 						 && (channel.FadeOutVolume == 0))
 						{
 							channel.Length = 0;

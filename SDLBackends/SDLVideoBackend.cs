@@ -338,7 +338,7 @@ public class SDLVideoBackend : VideoBackend
 				SDL.DestroyRenderer(_renderer);
 				break;
 			case VideoType.Surface:
-				Assert.IsTrue(() => SDL.WindowHasSurface(_window),
+				Assert.IsTrue(SDL.WindowHasSurface(_window), "SDL.WindowHasSurface(_window)",
 					"Internal video type says surface, but the window doesn't have one");
 				SDL.DestroyWindowSurface(_window);
 				break;
@@ -355,7 +355,7 @@ public class SDLVideoBackend : VideoBackend
 				break;
 			case VideoType.Renderer:
 				_renderer = SDL.CreateRenderer(_window, hardware ? null : SoftwareRendererName);
-				Assert.IsTrue(() => _renderer != IntPtr.Zero, "Failed to create a renderer");
+				Assert.IsTrue(_renderer != IntPtr.Zero, "_renderer != IntPtr.Zero", "Failed to create a renderer");
 				break;
 		}
 
@@ -376,7 +376,7 @@ public class SDLVideoBackend : VideoBackend
 				SDL.DestroyRenderer(_renderer);
 				break;
 			case VideoType.Surface:
-				Assert.IsTrue(() => SDL.WindowHasSurface(_window),
+				Assert.IsTrue(SDL.WindowHasSurface(_window), "SDL.WindowHasSurface(_window)",
 					"Internal video type says surface, but the window doesn't have one");
 				SDL.DestroyWindowSurface(_window);
 				break;
@@ -550,10 +550,10 @@ public class SDLVideoBackend : VideoBackend
 	}
 
 	public override bool IsFocused
-		=> SDL.GetWindowFlags(_window).HasFlag(SDL.WindowFlags.InputFocus);
+		=> SDL.GetWindowFlags(_window).HasAllFlags(SDL.WindowFlags.InputFocus);
 
 	public override bool IsVisible
-		=> !SDL.GetWindowFlags(_window).HasFlag(SDL.WindowFlags.Hidden);
+		=> !SDL.GetWindowFlags(_window).HasAllFlags(SDL.WindowFlags.Hidden);
 
 	public override bool IsWindowManagerAvailable
 	{
@@ -1026,7 +1026,7 @@ public class SDLVideoBackend : VideoBackend
 		{
 			var flags = SDL.GetWindowFlags(_window);
 
-			return flags.HasFlag(SDL.WindowFlags.Fullscreen);
+			return flags.HasAllFlags(SDL.WindowFlags.Fullscreen);
 		}
 	}
 
@@ -1196,7 +1196,7 @@ public class SDLVideoBackend : VideoBackend
 
 		var flags = SDL.GetWindowFlags(_window);
 
-		bool cacheSize = !flags.HasFlag(SDL.WindowFlags.Maximized);
+		bool cacheSize = !flags.HasAllFlags(SDL.WindowFlags.Maximized);
 
 		void DoTheToggle()
 		{

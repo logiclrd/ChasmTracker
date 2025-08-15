@@ -1,13 +1,12 @@
 using System;
 using System.IO;
 
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Input;
-using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
@@ -35,7 +34,7 @@ public class FontEditorPage : Page
 
 		otherSink = new OtherWidget();
 
-
+		AddWidget(otherSink);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -201,7 +200,7 @@ to change the default font!
 	{
 		if (f.SortOrder == -100)
 			return true; /* this is our font.cfg, at the top of the list */
-		if (f.Type.HasFlag(FileSystem.FileTypes.BrowsableMask))
+		if (f.Type.HasAllFlags(FileSystem.FileTypes.BrowsableMask))
 			return false; /* we don't care about directories and stuff */
 
 		string ext = Path.GetExtension(f.BaseName);
@@ -301,7 +300,7 @@ to change the default font!
 			case KeySym.F12:
 				return HandleKey(k);
 			case KeySym.Return:
-				if (Status.DialogType.HasFlag(Dialogs.DialogTypes.Menu | Dialogs.DialogTypes.Box))
+				if (Status.DialogType.HasAllFlags(Dialogs.DialogTypes.Menu | Dialogs.DialogTypes.Box))
 					return false;
 				if (_selectedItem == FontEditorItem.FontList)
 				{
@@ -1065,7 +1064,7 @@ to change the default font!
 		if (len > innerSize.Width + 2)
 			len = innerSize.Width + 2;
 
-		int c = Status.Flags.HasFlag(StatusFlags.InvertedPalette) ? 1 : 3;
+		int c = Status.Flags.HasAllFlags(StatusFlags.InvertedPalette) ? 1 : 3;
 
 		VGAMem.DrawBox(position.Advance(0, 1), position.Advance(innerSize).Advance(5, 6),
 			BoxTypes.Thick | BoxTypes.Corner | BoxTypes.Outset);

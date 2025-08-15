@@ -40,7 +40,7 @@ public class IPMIDI : MIDIProvider<IPMIDIPort>
 	{
 		if (_outFD == null) return;
 
-		if (Status.Flags.HasFlag(StatusFlags.NoNetwork)) return;
+		if (Status.Flags.HasAllFlags(StatusFlags.NoNetwork)) return;
 
 		_desiredNumPorts = n;
 
@@ -84,7 +84,7 @@ public class IPMIDI : MIDIProvider<IPMIDIPort>
 					lock (Sync)
 					{
 						foreach (var port in Ports)
-							if (port.ActiveIO.HasFlag(MIDIIO.Input)
+							if (port.ActiveIO.HasAllFlags(MIDIIO.Input)
 							 && checkRead.Contains(port.Socket))
 								doRead.Add(port);
 					}
@@ -151,7 +151,7 @@ public class IPMIDI : MIDIProvider<IPMIDIPort>
 
 	public override bool SetUp()
 	{
-		if (Status.Flags.HasFlag(StatusFlags.NoNetwork)) return false;
+		if (Status.Flags.HasAllFlags(StatusFlags.NoNetwork)) return false;
 
 		_wakeUp[0] = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 		_wakeUp[1] = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);

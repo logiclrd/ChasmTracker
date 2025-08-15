@@ -12,7 +12,7 @@ public class ByteSwap
 
 		for (int i = 0; i < 256; i++)
 			for (int j = 0; j < 256; j++)
-				s_swap16[i + j << 8] = unchecked((ushort)(i << 8 + j));
+				s_swap16[i + (j << 8)] = unchecked((ushort)((i << 8) + j));
 	}
 
 	public static ushort Swap(ushort value)

@@ -149,30 +149,30 @@ public static class Status
 
 	static void SaveConfiguration(GeneralConfiguration config)
 	{
-		config.StopOnLoad = !Flags.HasFlag(StatusFlags.PlayAfterLoad);
-		config.ClassicMode = Flags.HasFlag(StatusFlags.ClassicMode);
-		config.MakeBackups = Flags.HasFlag(StatusFlags.MakeBackups);
-		config.NumberedBackups = Flags.HasFlag(StatusFlags.NumberedBackups);
+		config.StopOnLoad = !Flags.HasAllFlags(StatusFlags.PlayAfterLoad);
+		config.ClassicMode = Flags.HasAllFlags(StatusFlags.ClassicMode);
+		config.MakeBackups = Flags.HasAllFlags(StatusFlags.MakeBackups);
+		config.NumberedBackups = Flags.HasAllFlags(StatusFlags.NumberedBackups);
 
 		config.TimeDisplay = TimeDisplay;
 		config.VisualizationStyle = VisualizationStyle;
 
-		config.MetaIsControl = Flags.HasFlag(StatusFlags.MetaIsControl);
-		config.AltGrIsAlt = Flags.HasFlag(StatusFlags.AltGrIsAlt);
+		config.MetaIsControl = Flags.HasAllFlags(StatusFlags.MetaIsControl);
+		config.AltGrIsAlt = Flags.HasAllFlags(StatusFlags.AltGrIsAlt);
 
-		config.MIDILikeTracker = Flags.HasFlag(StatusFlags.MIDILikeTracker);
+		config.MIDILikeTracker = Flags.HasAllFlags(StatusFlags.MIDILikeTracker);
 	}
 
 	static void SaveConfiguration(VideoConfiguration config)
 	{
-		config.LazyRedraw = Flags.HasFlag(StatusFlags.LazyRedraw);
+		config.LazyRedraw = Flags.HasAllFlags(StatusFlags.LazyRedraw);
 	}
 
 	/* --------------------------------------------------------------------- */
 
 	static int LoopCount(int pos)
 	{
-		if ((Song.CurrentSong.RepeatCount < 1) || Flags.HasFlag(StatusFlags.ClassicMode))
+		if ((Song.CurrentSong.RepeatCount < 1) || Flags.HasAllFlags(StatusFlags.ClassicMode))
 			pos += VGAMem.DrawText("Playing", new Point(pos, 9), (0, 2));
 		else
 		{

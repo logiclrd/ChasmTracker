@@ -271,24 +271,24 @@ public class PSM16 : PSM
 				var psmFlags = (PSM16SampleFlags)b;
 
 				/* convert bit flags to internal bit flags */
-				var flags = SampleFormat.Mono | SampleFormat.LittleEndian | (psmFlags.HasFlag(PSM16SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8);
+				var flags = SampleFormat.Mono | SampleFormat.LittleEndian | (psmFlags.HasAllFlags(PSM16SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8);
 
-				if (psmFlags.HasFlag(PSM16SampleFlags.Unsigned))
+				if (psmFlags.HasAllFlags(PSM16SampleFlags.Unsigned))
 					flags |= SampleFormat.PCMUnsigned;
-				else if (psmFlags.HasFlag(PSM16SampleFlags.Delta) || !psmFlags.HasFlag(PSM16SampleFlags.Sample))
+				else if (psmFlags.HasAllFlags(PSM16SampleFlags.Delta) || !psmFlags.HasAllFlags(PSM16SampleFlags.Sample))
 					flags |= SampleFormat.PCMDeltaEncoded;
 				else
 					flags |= SampleFormat.PCMSigned;
 
-				if (psmFlags.HasFlag(PSM16SampleFlags.BidiLoop))
+				if (psmFlags.HasAllFlags(PSM16SampleFlags.BidiLoop))
 					smp.Flags |= SampleFlags.PingPongLoop;
 
-				if (psmFlags.HasFlag(PSM16SampleFlags.Loop))
+				if (psmFlags.HasAllFlags(PSM16SampleFlags.Loop))
 					smp.Flags |= SampleFlags.Loop;
 
 				smp.Length = stream.ReadStructure<int>();
 
-				if (psmFlags.HasFlag(PSM16SampleFlags._16Bit))
+				if (psmFlags.HasAllFlags(PSM16SampleFlags._16Bit))
 					smp.Length >>= 1;
 
 				smp.LoopStart = stream.ReadStructure<int>();
@@ -309,7 +309,7 @@ public class PSM16 : PSM
 				/* voodoo magic effortlessly copied from openmpt  :) */
 				smp.C5Speed = (int)Math.Round(c2Freq * Math.Pow(2.0, ((finetune ^ 0x08) - 0x78) / (12.0 * 16.0)));
 
-				if (!lflags.HasFlag(LoadFlags.NoSamples))
+				if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 				{
 					stream.Position = offsetSampleData;
 					SampleFileConverter.ReadSample(smp, flags, stream);
@@ -317,7 +317,7 @@ public class PSM16 : PSM
 			}
 		}
 
-		if (!lflags.HasFlag(LoadFlags.NoPatterns) && CheckParapointer(stream, offsetPatterns, "PPAT"))
+		if (!lflags.HasAllFlags(LoadFlags.NoPatterns) && CheckParapointer(stream, offsetPatterns, "PPAT"))
 		{
 			/* ok, let's do this */
 			for (int i = 0; i < numPatterns; i++)
@@ -353,7 +353,7 @@ public class PSM16 : PSM
 
 					ref var n = ref pattern.Rows[row][chan];
 
-					if (command.HasFlag(PSM16PatternCommand.NoteAndInstrument))
+					if (command.HasAllFlags(PSM16PatternCommand.NoteAndInstrument))
 					{
 						int note = stream.ReadByte();
 						if (note == EOF) break;
@@ -365,7 +365,7 @@ public class PSM16 : PSM
 						n.Instrument = (byte)instr;
 					}
 
-					if (command.HasFlag(PSM16PatternCommand.Volume))
+					if (command.HasAllFlags(PSM16PatternCommand.Volume))
 					{
 						int volume = stream.ReadByte();
 						if (volume == EOF) break;
@@ -374,7 +374,7 @@ public class PSM16 : PSM
 						n.VolumeParameter = (byte)Math.Min(volume, 64);
 					}
 
-					if (command.HasFlag(PSM16PatternCommand.Effect))
+					if (command.HasAllFlags(PSM16PatternCommand.Effect))
 					{
 						int effect = stream.ReadByte();
 						if (effect == EOF) break;

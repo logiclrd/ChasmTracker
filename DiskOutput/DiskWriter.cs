@@ -262,7 +262,7 @@ public class DiskWriter : IDisposable, IConfigurable<DiskWriterConfiguration> //
 
 			savedAudioPlaybackState = AudioPlayback.SaveState();
 
-			AudioPlayback.SetWaveConfig(OutputRate, OutputBits, song.Flags.HasFlag(SongFlags.NoStereo) ? 1 : OutputChannels);
+			AudioPlayback.SetWaveConfig(OutputRate, OutputBits, song.Flags.HasAllFlags(SongFlags.NoStereo) ? 1 : OutputChannels);
 
 			AudioPlayback.MixFlags |= MixFlags.DirectToDisk | MixFlags.NoBackwardJumps;
 
@@ -373,7 +373,7 @@ public class DiskWriter : IDisposable, IConfigurable<DiskWriterConfiguration> //
 					ds.Truncate(Constants.MaxSampleLength * bps);
 					ds.Song.Flags |= SongFlags.EndReached;
 				}
-			} while (!ds.Song.Flags.HasFlag(SongFlags.EndReached));
+			} while (!ds.Song.Flags.HasAllFlags(SongFlags.EndReached));
 
 			var sample = Song.CurrentSong.EnsureSample(sampleNumber);
 
@@ -465,7 +465,7 @@ public class DiskWriter : IDisposable, IConfigurable<DiskWriterConfiguration> //
 						break;
 					}
 				}
-			} while (!song.Flags.HasFlag(SongFlags.EndReached));
+			} while (!song.Flags.HasAllFlags(SongFlags.EndReached));
 
 			int teardownChannel;
 
@@ -697,7 +697,7 @@ public class DiskWriter : IDisposable, IConfigurable<DiskWriterConfiguration> //
 		// ??? ExportDS[0].Length += s_buffer.Length;
 		Status.Flags |= StatusFlags.NeedUpdate;
 
-		if (s_exportSong.Flags.HasFlag(SongFlags.EndReached))
+		if (s_exportSong.Flags.HasAllFlags(SongFlags.EndReached))
 		{
 			Finish();
 			return SyncResult.Done;

@@ -75,7 +75,7 @@ public class ThumbBarWidget : Widget
 	{
 		if (k.Mouse == MouseState.Click)
 		{
-			if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+			if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 				return false;
 
 			/* swallow it */

@@ -218,7 +218,7 @@ public class AU : SampleFileConverter
 
 	public override SaveResult SaveSample(SongSample smp, Stream stream)
 	{
-		if (smp.Flags.HasFlag(SampleFlags.AdLib))
+		if (smp.Flags.HasAllFlags(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		var au = new AUHeader();
@@ -229,7 +229,7 @@ public class AU : SampleFileConverter
 
 		int ln = smp.Length;
 
-		if (smp.Flags.HasFlag(SampleFlags._16Bit))
+		if (smp.Flags.HasAllFlags(SampleFlags._16Bit))
 		{
 			ln *= 2;
 			au.Encoding = ByteSwap.Swap(AUEncoding.PCM16);
@@ -239,7 +239,7 @@ public class AU : SampleFileConverter
 
 		au.SampleRate = ByteSwap.Swap(smp.C5Speed);
 
-		if (smp.Flags.HasFlag(SampleFlags.Stereo))
+		if (smp.Flags.HasAllFlags(SampleFlags.Stereo))
 		{
 			ln *= 2;
 			au.Channels = ByteSwap.Swap(2);
@@ -263,8 +263,8 @@ public class AU : SampleFileConverter
 			stream.Write(sampleName, 0, 25);
 
 		WriteSample(stream, smp, SampleFormat.BigEndian | SampleFormat.PCMSigned
-				| (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
-				| (smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono),
+				| (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
+				| (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono),
 				uint.MaxValue);
 
 		return SaveResult.Success;

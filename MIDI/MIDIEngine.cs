@@ -173,8 +173,8 @@ public class MIDIEngine : IMIDISink
 
 						c.Name = ss;
 						c.Provider = p.Name.TrimStart();
-						c.Input = q.IO.HasFlag(MIDIIO.Input);
-						c.Output = q.IO.HasFlag(MIDIIO.Output);
+						c.Input = q.IO.HasAllFlags(MIDIIO.Input);
+						c.Output = q.IO.HasAllFlags(MIDIIO.Output);
 					}
 				}
 			}
@@ -305,9 +305,9 @@ public class MIDIEngine : IMIDISink
 
 			/* okay found port */
 
-			if (q.IOCap.HasFlag(MIDIIO.Input) && c.Input)
+			if (q.IOCap.HasAllFlags(MIDIIO.Input) && c.Input)
 				q.IO |= MIDIIO.Input;
-			if (q.IOCap.HasFlag(MIDIIO.Output) && c.Output)
+			if (q.IOCap.HasAllFlags(MIDIIO.Output) && c.Output)
 				q.IO |= MIDIIO.Output;
 
 			q.Enable();
@@ -514,7 +514,7 @@ public class MIDIEngine : IMIDISink
 			return false;
 
 		foreach (var ptr in s_ports.OfType<MIDIPort>())
-			if (ptr.IO.HasFlag(MIDIIO.Output) && !ptr.CanDrain && ptr.CanSendNow)
+			if (ptr.IO.HasAllFlags(MIDIIO.Output) && !ptr.CanDrain && ptr.CanSendNow)
 				return true;
 
 		return false;
@@ -528,7 +528,7 @@ public class MIDIEngine : IMIDISink
 		lock (s_recordMutex)
 		{
 			foreach (var ptr in s_ports)
-				if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output) && ptr.CanDrain)
+				if ((ptr != null) && ptr.IO.HasAllFlags(MIDIIO.Output) && ptr.CanDrain)
 					ptr.Drain();
 		}
 	}
@@ -564,7 +564,7 @@ public class MIDIEngine : IMIDISink
 
 		kk.IsSynthetic = false;
 
-		if (Flags.HasFlag(MIDIFlags.DisableRecord))
+		if (Flags.HasAllFlags(MIDIFlags.DisableRecord))
 			return false;
 
 		switch (ev)
@@ -585,7 +585,7 @@ public class MIDIEngine : IMIDISink
 
 				kk.MIDIChannel = midiNote.Channel + 1;
 				kk.MIDINote = (midiNote.Note + 1 + C5Note) - 60;
-				if (Flags.HasFlag(MIDIFlags.RecordVelocity))
+				if (Flags.HasAllFlags(MIDIFlags.RecordVelocity))
 					kk.MIDIVolume = midiNote.Velocity;
 				else
 					kk.MIDIVolume = 128;
@@ -648,7 +648,7 @@ public class MIDIEngine : IMIDISink
 				/* everyone plays */
 				foreach (var ptr in s_ports!)
 				{
-					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
+					if ((ptr != null) && ptr.IO.HasAllFlags(MIDIIO.Output))
 					{
 						if (ptr.CanSendNow)
 							ptr.SendNow(data, TimeSpan.Zero);
@@ -661,7 +661,7 @@ public class MIDIEngine : IMIDISink
 				/* only "now" plays */
 				foreach (var ptr in s_ports!)
 				{
-					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
+					if ((ptr != null) && ptr.IO.HasAllFlags(MIDIIO.Output))
 					{
 						if (ptr.CanSendNow)
 							ptr.SendNow(data, TimeSpan.Zero);
@@ -672,7 +672,7 @@ public class MIDIEngine : IMIDISink
 				/* only "later" plays */
 				foreach (var ptr in s_ports!)
 				{
-					if ((ptr != null) && ptr.IO.HasFlag(MIDIIO.Output))
+					if ((ptr != null) && ptr.IO.HasAllFlags(MIDIIO.Output))
 					{
 						if (ptr.CanSendLater)
 							ptr.SendLater(data, delay);
@@ -711,7 +711,8 @@ public class MIDIEngine : IMIDISink
 	void IMIDISink.OutRaw(Song csf, Span<byte> data, int samplesDelay)
 	{
 		Assert.IsTrue(
-			() => Song.CurrentSong == csf,
+			csf == Song.CurrentSong,
+			"csf == Song.CurrentSong",
 			"Hardware MIDI out should only be processed for the current playing song"); // AGH!
 
 #if SCHISM_MIDI_DEBUG
@@ -825,7 +826,10 @@ public class MIDIEngine : IMIDISink
 
 	public void OutRaw(Song csf, Span<byte> data, TimeSpan pos)
 	{
-		Assert.IsTrue(() => Song.CurrentSong == csf, "Hardware MIDI out should only be processed for the current playing song"); // AGH!
+		Assert.IsTrue(
+			csf == Song.CurrentSong,
+			"csf == Song.CurrentSong",
+			"Hardware MIDI out should only be processed for the current playing song"); // AGH!
 
 #if SCHISM_MIDI_DEBUG
 		/* prints all of the raw midi messages into the terminal; useful for debugging output */

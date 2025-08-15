@@ -75,7 +75,7 @@ public static class SampleEditOperations
 		{
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
-			if (sample.Flags.HasFlag(SampleFlags._16Bit))
+			if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				SignConvert16(sample.RawData);
 			else
 				SignConvert8(sample.RawData);
@@ -133,16 +133,16 @@ public static class SampleEditOperations
 		{
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
-			if (sample.Flags.HasFlag(SampleFlags.Stereo))
+			if (sample.Flags.HasAllFlags(SampleFlags.Stereo))
 			{
-				if (sample.Flags.HasFlag(SampleFlags._16Bit)) // FIXME This is UB!
+				if (sample.Flags.HasAllFlags(SampleFlags._16Bit)) // FIXME This is UB!
 					ReverseStereo<short>(sample.RawData);
 				else
 					ReverseStereo<sbyte>(sample.RawData);
 			}
 			else
 			{
-				if (sample.Flags.HasFlag(SampleFlags._16Bit))
+				if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 					ReverseMono<short>(sample.RawData);
 				else
 					ReverseMono<sbyte>(sample.RawData);
@@ -204,7 +204,7 @@ public static class SampleEditOperations
 
 			if (convertData)
 			{
-				if (sample.Flags.HasFlag(SampleFlags._16Bit))
+				if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				{
 					sample.RawData = QualityConvert8to16(sample.RawData);
 				}
@@ -215,7 +215,7 @@ public static class SampleEditOperations
 			}
 			else
 			{
-				if (sample.Flags.HasFlag(SampleFlags._16Bit))
+				if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				{
 					sample.Length >>= 1;
 					sample.LoopStart >>= 1;
@@ -281,7 +281,7 @@ public static class SampleEditOperations
 		{
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
-			if (sample.Flags.HasFlag(SampleFlags._16Bit))
+			if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				Centralise16(sample.RawData);
 			else
 				Centralise8(sample.RawData);
@@ -328,7 +328,7 @@ public static class SampleEditOperations
 
 	public static void Downmix(SongSample sample)
 	{
-		if (!sample.Flags.HasFlag(SampleFlags.Stereo))
+		if (!sample.Flags.HasAllFlags(SampleFlags.Stereo))
 			return; /* what are we doing here with a mono sample? */
 
 		lock (AudioPlayback.LockScope())
@@ -338,7 +338,7 @@ public static class SampleEditOperations
 
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
-			if (sample.Flags.HasFlag(SampleFlags._16Bit))
+			if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				sample.RawData = Downmix16(sample.RawData);
 			else
 				sample.RawData = Downmix8(sample.RawData);
@@ -373,7 +373,7 @@ public static class SampleEditOperations
 		{
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
-			if (sample.Flags.HasFlag(SampleFlags._16Bit))
+			if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				Amplify16(sample.RawData, percent);
 			else
 				Amplify8(sample.RawData, percent);
@@ -444,7 +444,7 @@ public static class SampleEditOperations
 	{
 		lock (AudioPlayback.LockScope())
 		{
-			if (sample.Flags.HasFlag(SampleFlags._16Bit))
+			if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				DeltaDecode16(MemoryMarshal.Cast<byte, short>(sample.RawData));
 			else
 				DeltaDecode8(MemoryMarshal.Cast<byte, sbyte>(sample.RawData));
@@ -472,7 +472,7 @@ public static class SampleEditOperations
 	{
 		lock (AudioPlayback.LockScope())
 		{
-			if (sample.Flags.HasFlag(SampleFlags._16Bit))
+			if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 				Invert16(MemoryMarshal.Cast<byte, short>(sample.RawData));
 			else
 				Invert8(MemoryMarshal.Cast<byte, sbyte>(sample.RawData));
@@ -601,8 +601,8 @@ public static class SampleEditOperations
 			// hopefully this won't (re)introduce crashes. --Storlek
 			Song.CurrentSong.StopSample(sample);
 
-			int bps = (sample.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1)
-				* (sample.Flags.HasFlag(SampleFlags._16Bit) ? 2 : 1);
+			int bps = (sample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1)
+				* (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? 2 : 1);
 
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
@@ -617,19 +617,19 @@ public static class SampleEditOperations
 			int oldLen = sample.Length;
 			sample.Length = newLen;
 
-			if (sample.Flags.HasFlag(SampleFlags._16Bit))
+			if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 			{
 				if (antialias)
-					sample.RawData = Resize16AntiAlias(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize16AntiAlias(sample.RawData, newLen, sample.Flags.HasAllFlags(SampleFlags.Stereo));
 				else
-					sample.RawData = Resize16(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize16(sample.RawData, newLen, sample.Flags.HasAllFlags(SampleFlags.Stereo));
 			}
 			else
 			{
 				if (antialias)
-					sample.RawData = Resize8AntiAlias(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize8AntiAlias(sample.RawData, newLen, sample.Flags.HasAllFlags(SampleFlags.Stereo));
 				else
-					sample.RawData = Resize8(sample.RawData, newLen, sample.Flags.HasFlag(SampleFlags.Stereo));
+					sample.RawData = Resize8(sample.RawData, newLen, sample.Flags.HasAllFlags(SampleFlags.Stereo));
 			}
 
 			sample.AdjustLoop();
@@ -671,9 +671,9 @@ public static class SampleEditOperations
 		{
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
-			if (sample.Flags.HasFlag(SampleFlags.Stereo))
+			if (sample.Flags.HasAllFlags(SampleFlags.Stereo))
 			{
-				if (sample.Flags.HasFlag(SampleFlags._16Bit))
+				if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 					sample.RawData = MonoLR16(sample.RawData, takeLeftChannel: true);
 				else
 					sample.RawData = MonoLR8(sample.RawData, takeLeftChannel: true);
@@ -691,11 +691,11 @@ public static class SampleEditOperations
 		{
 			Status.Flags |= StatusFlags.SongNeedsSave;
 
-			if (sample.Flags.HasFlag(SampleFlags.Stereo))
+			if (sample.Flags.HasAllFlags(SampleFlags.Stereo))
 			{
 				var buffer = new byte[sample.RawData!.Length];
 
-				if (sample.Flags.HasFlag(SampleFlags._16Bit))
+				if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 					sample.RawData = MonoLR16(sample.RawData, takeLeftChannel: false);
 				else
 					sample.RawData = MonoLR8(sample.RawData, takeLeftChannel: false);
@@ -760,7 +760,7 @@ public static class SampleEditOperations
 			if (loopEnd <= loopStart || loopEnd > smp.Length) return;
 			if (loopStart < fadeLength) return;
 
-			int channels = smp.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1;
+			int channels = smp.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1;
 			int start = (loopStart - fadeLength) * channels;
 			int end = (loopEnd - fadeLength) * channels;
 			int afterLoopStart = loopStart * channels;
@@ -775,7 +775,7 @@ public static class SampleEditOperations
 			var rawData8 = MemoryMarshal.Cast<byte, sbyte>(smp.RawData);
 			var rawData16 = MemoryMarshal.Cast<byte, short>(smp.RawData);
 
-			if (smp.Flags.HasFlag(SampleFlags._16Bit))
+			if (smp.Flags.HasAllFlags(SampleFlags._16Bit))
 			{
 				CrossFade16(
 					rawData16.Slice(start, fadeLength),

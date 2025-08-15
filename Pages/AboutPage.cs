@@ -1,8 +1,7 @@
-namespace ChasmTracker;
+namespace ChasmTracker.Pages;
 
 using ChasmTracker.Dialogs;
 using ChasmTracker.Input;
-using ChasmTracker.Pages;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 

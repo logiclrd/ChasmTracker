@@ -861,7 +861,7 @@ public abstract class ModuleLoadSavePageBase : Page
 	protected bool UpdateDirectory()
 	{
 		/* if we have a list, the directory didn't change, and the mtime is the same, we're set. */
-		if (!Status.Flags.HasFlag(StatusFlags.ModulesDirectoryChanged)
+		if (!Status.Flags.HasAllFlags(StatusFlags.ModulesDirectoryChanged)
 		 && Directory.Exists(Configuration.Directories.ModulesDirectory)
 		 && Directory.GetLastWriteTimeUtc(Configuration.Directories.ModulesDirectory) == s_directoryLastWriteTimeUTC)
 			return false;

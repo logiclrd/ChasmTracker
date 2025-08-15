@@ -171,18 +171,18 @@ public static class Video
 	{
 		var now = DateTime.UtcNow;
 
-		if (s_backend.IsVisible && Status.Flags.HasFlag(StatusFlags.NeedUpdate))
+		if (s_backend.IsVisible && Status.Flags.HasAllFlags(StatusFlags.NeedUpdate))
 		{
 			Status.Flags &= ~StatusFlags.NeedUpdate;
 
-			if (!s_backend.IsFocused && Status.Flags.HasFlag(StatusFlags.LazyRedraw))
+			if (!s_backend.IsFocused && Status.Flags.HasAllFlags(StatusFlags.LazyRedraw))
 			{
 				if (now < s_nextUpdate)
 					return;
 
 				s_nextUpdate = now.AddMilliseconds(500);
 			}
-			else if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive) || Status.Flags.HasFlag(StatusFlags.DiskWriterActiveForPattern))
+			else if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive) || Status.Flags.HasAllFlags(StatusFlags.DiskWriterActiveForPattern))
 			{
 				if (now < s_nextUpdate)
 					return;
@@ -194,7 +194,7 @@ public static class Video
 			Refresh();
 			s_backend.Blit();
 		}
-		else if (Status.Flags.HasFlag(StatusFlags.SoftwareMouseMoved))
+		else if (Status.Flags.HasAllFlags(StatusFlags.SoftwareMouseMoved))
 		{
 			s_backend.Blit();
 			Status.Flags &= ~StatusFlags.SoftwareMouseMoved;

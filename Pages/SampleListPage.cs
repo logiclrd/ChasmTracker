@@ -419,7 +419,7 @@ public class SampleListPage : Page
 			if (sample.IsPlayed)
 				VGAMem.DrawCharacter((isPlaying[n] > 1) ? (char)183 : (char)173, new Point(1, 13 + pos), (isPlaying[n] > 0) ? (3, 2) : (1, 2));
 
-			VGAMem.DrawText(n.ToString99(), new Point(2, 13 + pos), (sample.Flags.HasFlag(SampleFlags.Mute)) ? (1, 1) : (0, 2));
+			VGAMem.DrawText(n.ToString99(), new Point(2, 13 + pos), (sample.Flags.HasAllFlags(SampleFlags.Mute)) ? (1, 1) : (0, 2));
 
 			// wow, this is entirely horrible
 			int pn = (sample.Name.Length >= 25) ? sample.Name[24] : int.MaxValue;
@@ -542,10 +542,10 @@ public class SampleListPage : Page
 
 		/* global volume */
 		thumbBarGlobalVolume.Value = sample.GlobalVolume;
-		thumbBarGlobalVolume.TextAtMinimum = sample.Flags.HasFlag(SampleFlags.Mute) ? "  Muted  " : "";
+		thumbBarGlobalVolume.TextAtMinimum = sample.Flags.HasAllFlags(SampleFlags.Mute) ? "  Muted  " : "";
 
 		/* default pan (another modplug hack) */
-		toggleEnableDefaultPan.State = sample.Flags.HasFlag(SampleFlags.Panning);
+		toggleEnableDefaultPan.State = sample.Flags.HasAllFlags(SampleFlags.Panning);
 		thumbBarDefaultPan.Value = sample.Panning / 4;
 
 		thumbBarVibratoSpeed.Value = sample.VibratoSpeed;
@@ -554,11 +554,11 @@ public class SampleListPage : Page
 		numberEntryC5Speed.Value = sample.C5Speed;
 
 		menuToggleLoopEnable.State =
-			(sample.Flags.HasFlag(SampleFlags.Loop) ? (sample.Flags.HasFlag(SampleFlags.PingPongLoop) ? 2 : 1) : 0);
+			(sample.Flags.HasAllFlags(SampleFlags.Loop) ? (sample.Flags.HasAllFlags(SampleFlags.PingPongLoop) ? 2 : 1) : 0);
 		numberEntryLoopStart.Value = sample.LoopStart;
 		numberEntryLoopEnd.Value = sample.LoopEnd;
 		menuToggleSustainLoopEnable.State =
-			(sample.Flags.HasAnyFlag(SampleFlags.SustainLoop) ? (sample.Flags.HasFlag(SampleFlags.PingPongSustain) ? 2 : 1) : 0);
+			(sample.Flags.HasAnyFlag(SampleFlags.SustainLoop) ? (sample.Flags.HasAllFlags(SampleFlags.PingPongSustain) ? 2 : 1) : 0);
 		numberEntrySustainLoopStart.Value = sample.SustainStart;
 		numberEntrySustainLoopEnd.Value = sample.SustainEnd;
 
@@ -583,7 +583,7 @@ public class SampleListPage : Page
 		string buf;
 
 		if (hasData)
-			buf = (sample.Flags.HasFlag(SampleFlags._16Bit) ? "16" : "8") + " bit" + (sample.Flags.HasFlag(SampleFlags.Stereo) ? " Stereo" : "");
+			buf = (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? "16" : "8") + " bit" + (sample.Flags.HasAllFlags(SampleFlags.Stereo) ? " Stereo" : "");
 		else
 			buf = "No sample";
 
@@ -844,7 +844,7 @@ public class SampleListPage : Page
 	{
 		var sample = Song.CurrentSong.GetSample(_currentSample);
 
-		bool canMod = (sample != null) && sample.HasData && !sample.Flags.HasFlag(SampleFlags.AdLib);
+		bool canMod = (sample != null) && sample.HasData && !sample.Flags.HasAllFlags(SampleFlags.AdLib);
 
 		if (k.State == KeyState.Release)
 			return;
@@ -857,16 +857,16 @@ public class SampleListPage : Page
 				return;
 			case KeySym.b:
 				if (canMod && (sample!.LoopStart > 0
-								|| (sample.Flags.HasFlag(SampleFlags.SustainLoop) && sample.SustainStart > 0)))
+								|| (sample.Flags.HasAllFlags(SampleFlags.SustainLoop) && sample.SustainStart > 0)))
 				{
 					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", DoPreLoopCut)
 						.SelectedWidgetIndex.Value = 1;
 				}
 				return;
 			case KeySym.d:
-				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+				if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 				{
-					if (canMod && sample!.Flags.HasFlag(SampleFlags.Stereo))
+					if (canMod && sample!.Flags.HasAllFlags(SampleFlags.Stereo))
 					{
 						MessageBox.Show(MessageBoxTypes.OKCancel, "Downmix sample to mono?", DoDownmix);
 					}
@@ -880,7 +880,7 @@ public class SampleListPage : Page
 			case KeySym.e:
 				if (canMod)
 				{
-					if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+					if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 						ShowResampleSampleDialog(true);
 					else
 						ShowResizeSampleDialog(true);
@@ -889,7 +889,7 @@ public class SampleListPage : Page
 			case KeySym.f:
 				if (canMod)
 				{
-					if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
+					if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && !Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 						ShowResampleSampleDialog(false);
 					else
 						ShowResizeSampleDialog(false);
@@ -909,7 +909,7 @@ public class SampleListPage : Page
 				break;
 			case KeySym.l:
 				if (canMod && (sample!.LoopEnd > 0
-								|| (sample.Flags.HasFlag(SampleFlags.SustainLoop) && sample.SustainEnd > 0)))
+								|| (sample.Flags.HasAllFlags(SampleFlags.SustainLoop) && sample.SustainEnd > 0)))
 				{
 					MessageBox.Show(MessageBoxTypes.OKCancel, "Cut sample?", DoPostLoopCut)
 						.SelectedWidgetIndex.Value = 1;
@@ -954,7 +954,7 @@ public class SampleListPage : Page
 				ShowExportSampleDialog();
 				return;
 			case KeySym.v:
-				if (!canMod || (Status.Flags.HasFlag(StatusFlags.ClassicMode)))
+				if (!canMod || (Status.Flags.HasAllFlags(StatusFlags.ClassicMode)))
 					return;
 
 				if (!sample!.Flags.HasAnyFlag(SampleFlags.Loop | SampleFlags.SustainLoop))
@@ -1189,7 +1189,7 @@ public class SampleListPage : Page
 	{
 		if (Song.CurrentSong.GetSample(_currentSample) is SongSample sample)
 		{
-			if (sample.Flags.HasFlag(SampleFlags.Stereo))
+			if (sample.Flags.HasAllFlags(SampleFlags.Stereo))
 				Status.FlashText("Can't toggle quality for stereo samples");
 			else
 				SampleEditOperations.ToggleQuality(sample, false);
@@ -1212,7 +1212,7 @@ public class SampleListPage : Page
 	{
 		if (Song.CurrentSong.GetSample(_currentSample) is SongSample sample)
 		{
-			int pos = sample.Flags.HasFlag(SampleFlags.SustainLoop)
+			int pos = sample.Flags.HasAllFlags(SampleFlags.SustainLoop)
 				? Math.Max(sample.LoopEnd, sample.SustainEnd)
 				: sample.LoopEnd;
 
@@ -1238,7 +1238,7 @@ public class SampleListPage : Page
 	{
 		if (Song.CurrentSong.GetSample(_currentSample) is SongSample sample)
 		{
-			int pos = sample.Flags.HasFlag(SampleFlags.SustainLoop)
+			int pos = sample.Flags.HasAllFlags(SampleFlags.SustainLoop)
 				? Math.Min(sample.LoopStart, sample.SustainStart)
 				: sample.LoopStart;
 
@@ -1344,7 +1344,7 @@ public class SampleListPage : Page
 		sample.Length = 1;
 		sample.AllocateData();
 
-		if (!sample.Flags.HasFlag(SampleFlags.AdLib))
+		if (!sample.Flags.HasAllFlags(SampleFlags.AdLib))
 		{
 			sample.Flags |= SampleFlags.AdLib;
 			Status.FlashText("Created adlib sample");
@@ -1623,7 +1623,7 @@ public class SampleListPage : Page
 
 		if (mute)
 		{
-			if (smp.Flags.HasFlag(SampleFlags.Mute))
+			if (smp.Flags.HasAllFlags(SampleFlags.Mute))
 				return;
 
 			smp.SavedGlobalVolume = smp.GlobalVolume;
@@ -1632,7 +1632,7 @@ public class SampleListPage : Page
 		}
 		else
 		{
-			if (!smp.Flags.HasFlag(SampleFlags.Mute))
+			if (!smp.Flags.HasAllFlags(SampleFlags.Mute))
 				return;
 
 			smp.GlobalVolume = smp.SavedGlobalVolume;
@@ -1644,14 +1644,14 @@ public class SampleListPage : Page
 	{
 		var smp = Song.CurrentSong.EnsureSample(n);
 
-		SetMute(n, !smp.Flags.HasFlag(SampleFlags.Mute));
+		SetMute(n, !smp.Flags.HasAllFlags(SampleFlags.Mute));
 	}
 
 	void ToggleSolo(int n)
 	{
 		bool solo = false;
 
-		if (Song.CurrentSong.EnsureSample(n).Flags.HasFlag(SampleFlags.Mute))
+		if (Song.CurrentSong.EnsureSample(n).Flags.HasAllFlags(SampleFlags.Mute))
 		{
 			solo = true;
 		}
@@ -1661,7 +1661,7 @@ public class SampleListPage : Page
 			{
 				var smp = Song.CurrentSong.GetSample(i);
 
-				if (i != n && (smp != null) && !smp.Flags.HasFlag(SampleFlags.Mute))
+				if (i != n && (smp != null) && !smp.Flags.HasAllFlags(SampleFlags.Mute))
 				{
 					solo = true;
 					break;
@@ -1697,7 +1697,7 @@ public class SampleListPage : Page
 				case 1: sample.Flags |= SampleFlags.SustainLoop; break;
 			}
 
-			if (sample.Flags.HasFlag(SampleFlags.Loop))
+			if (sample.Flags.HasAllFlags(SampleFlags.Loop))
 			{
 				if (sample.LoopStart == sample.Length)
 					sample.LoopStart = 0;
@@ -1705,7 +1705,7 @@ public class SampleListPage : Page
 					sample.LoopEnd = sample.Length;
 			}
 
-			if (sample.Flags.HasFlag(SampleFlags.SustainLoop))
+			if (sample.Flags.HasAllFlags(SampleFlags.SustainLoop))
 			{
 				if (sample.SustainStart == sample.Length)
 					sample.SustainStart = 0;

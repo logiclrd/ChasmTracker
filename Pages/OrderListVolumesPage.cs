@@ -37,7 +37,7 @@ public class OrderListVolumesPage : OrderListPage
 		{
 			int fg = 0;
 
-			if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+			if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 			{
 				if (ActiveWidgetContext?.SelectedWidgetIndex?.Value == n)
 					fg = 3;
@@ -49,7 +49,7 @@ public class OrderListVolumesPage : OrderListPage
 
 			fg = 0;
 
-			if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+			if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 			{
 				if (ActiveWidgetContext?.SelectedWidgetIndex?.Value == n + 32)
 					fg = 3;

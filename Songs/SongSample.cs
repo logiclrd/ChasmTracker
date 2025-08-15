@@ -47,7 +47,7 @@ public class SongSample
 
 		Data = ArraySegment<byte>.Empty;
 
-		bool _16bit = Flags.HasFlag(SampleFlags._16Bit);
+		bool _16bit = Flags.HasAllFlags(SampleFlags._16Bit);
 
 		int bps = _16bit ? 2 : 1;
 
@@ -61,7 +61,7 @@ public class SongSample
 
 		if (firstSample > 0)
 		{
-			bool stereo = Flags.HasFlag(SampleFlags.Stereo);
+			bool stereo = Flags.HasAllFlags(SampleFlags.Stereo);
 
 			if (stereo)
 			{
@@ -69,7 +69,7 @@ public class SongSample
 				sampleCount <<= 1;
 			}
 
-			bool _16bit = Flags.HasFlag(SampleFlags._16Bit);
+			bool _16bit = Flags.HasAllFlags(SampleFlags._16Bit);
 
 			int bps = _16bit ? 2 : 1;
 
@@ -98,7 +98,7 @@ public class SongSample
 			Flags &= ~(SampleFlags.Loop | SampleFlags.PingPongLoop);
 		}
 
-		if (Flags.HasFlag(SampleFlags._16Bit))
+		if (Flags.HasAllFlags(SampleFlags._16Bit))
 			PrecomputeLoops16();
 		else
 			PrecomputeLoops8();
@@ -159,7 +159,7 @@ public class SongSample
 		if (RawData == null)
 			return;
 
-		int channels = Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1;
+		int channels = Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1;
 		int copySamples = channels * Constants.MaxInterpolationLookaheadBufferSize;
 
 		int smpStartOffset = Data.Offset;
@@ -178,24 +178,24 @@ public class SongSample
 			}
 		}
 
-		if (Flags.HasFlag(SampleFlags.Loop))
+		if (Flags.HasAllFlags(SampleFlags.Loop))
 		{
 			PrecomputeLoopImpl8(
 				loopLookaheadStartOffset,
 				LoopStart * channels,
 				LoopEnd - LoopStart,
 				channels,
-				Flags.HasFlag(SampleFlags.PingPongLoop));
+				Flags.HasAllFlags(SampleFlags.PingPongLoop));
 		}
 
-		if (Flags.HasFlag(SampleFlags.SustainLoop))
+		if (Flags.HasAllFlags(SampleFlags.SustainLoop))
 		{
 			PrecomputeLoopImpl8(
 				sustainLookaheadStartOffset,
 				SustainStart * channels,
 				SustainEnd - SustainStart,
 				channels,
-				Flags.HasFlag(SampleFlags.PingPongSustain));
+				Flags.HasAllFlags(SampleFlags.PingPongSustain));
 		}
 	}
 
@@ -261,7 +261,7 @@ public class SongSample
 		var RawData16 = MemoryMarshal.Cast<byte, short>(RawData);
 		var Data16 = RawData16.Slice(Data.Offset / 2, Data.Count / 2);
 
-		int channels = Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1;
+		int channels = Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1;
 		int copySamples = channels * Constants.MaxInterpolationLookaheadBufferSize;
 
 		int smpStartOffset = Data.Offset / 2;
@@ -280,24 +280,24 @@ public class SongSample
 			}
 		}
 
-		if (Flags.HasFlag(SampleFlags.Loop))
+		if (Flags.HasAllFlags(SampleFlags.Loop))
 		{
 			PrecomputeLoopImpl16(
 				loopLookaheadStartOffset,
 				LoopStart * channels,
 				LoopEnd - LoopStart,
 				channels,
-				Flags.HasFlag(SampleFlags.PingPongLoop));
+				Flags.HasAllFlags(SampleFlags.PingPongLoop));
 		}
 
-		if (Flags.HasFlag(SampleFlags.SustainLoop))
+		if (Flags.HasAllFlags(SampleFlags.SustainLoop))
 		{
 			PrecomputeLoopImpl16(
 				sustainLookaheadStartOffset,
 				SustainStart * channels,
 				SustainEnd - SustainStart,
 				channels,
-				Flags.HasFlag(SampleFlags.PingPongSustain));
+				Flags.HasAllFlags(SampleFlags.PingPongSustain));
 		}
 	}
 

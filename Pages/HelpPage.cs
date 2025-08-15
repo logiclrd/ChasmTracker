@@ -46,6 +46,9 @@ public class HelpPage : Page
 		}
 	}
 
+	OtherWidget otherHelpView;
+	ButtonWidget buttonDone;
+
 	string[] _lines;
 	int _topLine;
 	Dictionary<HelpTexts, CacheEntry> _helpCache = new Dictionary<HelpTexts, CacheEntry>();
@@ -60,12 +63,18 @@ public class HelpPage : Page
 	public HelpPage()
 		: base(PageNumbers.Help, "Help", HelpTexts.Global)
 	{
-		AddWidget(new ButtonWidget(
+		otherHelpView = new OtherWidget(new Point(2, 13), new Size(76, 32));
+		buttonDone = new ButtonWidget(
 			new Point(35, 47),
 			8,
 			() => SetPage(Status.PreviousPageNumber),
 			"Done",
-			padding: 3));
+			padding: 3);
+
+		otherHelpView.OtherRedraw += otherHelpView_Redraw;
+
+		AddWidget(otherHelpView);
+		AddWidget(buttonDone);
 
 		_lines = Array.Empty<string>();
 	}
@@ -113,7 +122,7 @@ public class HelpPage : Page
 
 	static readonly char[] NewLineCharacters = { '\r', '\n' };
 
-	public override void Redraw()
+	void otherHelpView_Redraw()
 	{
 		VGAMem.DrawFillCharacters(
 			new Point(2, 13),
@@ -168,10 +177,10 @@ public class HelpPage : Page
 	{
 		ChangeFocusTo(Widgets[0]);
 
-		if (_classicMode != Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (_classicMode != Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 		{
 			_helpCache.Clear();
-			_classicMode = Status.Flags.HasFlag(StatusFlags.ClassicMode);
+			_classicMode = Status.Flags.HasAllFlags(StatusFlags.ClassicMode);
 		}
 
 		if (!_helpCache.TryGetValue(Status.CurrentHelpIndex, out var cacheEntry))
@@ -188,7 +197,7 @@ public class HelpPage : Page
 		{
 			var linesBuffer = new List<string>();
 
-			bool classicMode = Status.Flags.HasFlag(StatusFlags.ClassicMode);
+			bool classicMode = Status.Flags.HasAllFlags(StatusFlags.ClassicMode);
 
 			void AddLine(string line)
 			{

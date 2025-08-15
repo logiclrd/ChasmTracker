@@ -65,7 +65,7 @@ public static class VGAMem
 
 	static void CheckInvert(ref byte tl, ref byte br)
 	{
-		if (Status.Flags.HasFlag(StatusFlags.InvertedPalette))
+		if (Status.Flags.HasAllFlags(StatusFlags.InvertedPalette))
 			(tl, br) = (br, tl);
 	}
 
@@ -415,7 +415,10 @@ public static class VGAMem
 
 	public static void DrawCharacterUnicode(uint c, Point position, VGAMemColours colours)
 	{
-		Assert.IsTrue(() => position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50, "Coordinates should always be inbounds");
+		Assert.IsTrue(
+			position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50,
+			"position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50",
+			"Coordinates should always be in bounds");
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
@@ -426,7 +429,10 @@ public static class VGAMem
 
 	public static void DrawCharacter(char c, Point position, VGAMemColours colours)
 	{
-		Assert.IsTrue(() => position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50, "Coordinates should always be inbounds");
+		Assert.IsTrue(
+			position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50,
+			"position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50",
+			"Coordinates should always be in bounds");
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
@@ -437,7 +443,10 @@ public static class VGAMem
 
 	public static void DrawCharacter(byte c, Point position, VGAMemColours colours)
 	{
-		Assert.IsTrue(() => position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50, "Coordinates should always be inbounds");
+		Assert.IsTrue(
+			position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50,
+			"position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50",
+			"Coordinates should always be in bounds");
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
@@ -448,7 +457,10 @@ public static class VGAMem
 
 	public static void DrawCharacterBIOS(char c, Point position, VGAMemColours colours)
 	{
-		Assert.IsTrue(() => position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50, "Coordinates should always be inbounds");
+		Assert.IsTrue(
+			position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50,
+			"position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50",
+			"Coordinates should always be in bounds");
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
@@ -459,7 +471,10 @@ public static class VGAMem
 
 	public static void DrawCharacterBIOS(byte c, Point position, VGAMemColours colours)
 	{
-		Assert.IsTrue(() => position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50, "Coordinates should always be inbounds");
+		Assert.IsTrue(
+			position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50,
+			"position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50",
+			"Coordinates should always be in bounds");
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
@@ -648,7 +663,10 @@ public static class VGAMem
 
 	public static void DrawHalfWidthCharacters(char c1, char c2, Point position, VGAMemColours colours, VGAMemColours colours2)
 	{
-		Assert.IsTrue(() => position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50, "Coordinates should always be inbounds");
+		Assert.IsTrue(
+			position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50,
+			"position.X >= 0 && position.Y >= 0 && position.X < 80 && position.Y < 50",
+			"Coordinates should always be in bounds");
 
 		ref var ch = ref Memory[position.X + (position.Y * 80)];
 
@@ -771,7 +789,7 @@ public static class VGAMem
 		if (value < minimum || value > maximum)
 		{
 			DrawFillCharacters(position, position.Advance(width - 1),
-				(DefaultForeground, Status.Flags.HasFlag(StatusFlags.ClassicMode) ? (byte)2 : (byte)0));
+				(DefaultForeground, Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? (byte)2 : (byte)0));
 			return;
 		}
 
@@ -810,7 +828,7 @@ public static class VGAMem
 
 		int leftover = val & 7;
 		val >>= 3;
-		if ((val < chunks - 1) || Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if ((val < chunks - 1) || Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 			peak = color;
 
 		DrawCharacter(VUMeterEndText[leftover, 0], position.Advance(3 * val + 0), (peak, 0));
@@ -1016,9 +1034,9 @@ public static class VGAMem
 	/* loop drawing */
 	static void DrawSampleLoop(VGAMemOverlay r, SongSample sample)
 	{
-		byte c = Status.Flags.HasFlag(StatusFlags.ClassicMode) ? SampleDataColour : SampleLoopColour;
+		byte c = Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? SampleDataColour : SampleLoopColour;
 
-		if (!sample.Flags.HasFlag(SampleFlags.Loop))
+		if (!sample.Flags.HasAllFlags(SampleFlags.Loop))
 			return;
 
 		int loopStart = sample.LoopStart * (r.Size.Width - 1) / sample.Length;
@@ -1036,9 +1054,9 @@ public static class VGAMem
 
 	static void DrawSampleSuspendLoop(VGAMemOverlay r, SongSample sample)
 	{
-		byte c = Status.Flags.HasFlag(StatusFlags.ClassicMode) ? SampleDataColour : SampleLoopColour;
+		byte c = Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? SampleDataColour : SampleLoopColour;
 
-		if (!sample.Flags.HasFlag(SampleFlags.SustainLoop))
+		if (!sample.Flags.HasAllFlags(SampleFlags.SustainLoop))
 			return;
 
 		int loopStart = sample.SustainStart * (r.Size.Width - 1) / sample.Length;
@@ -1075,7 +1093,7 @@ public static class VGAMem
 				if (channel.FinalVolume == 0)
 					continue;
 
-				byte c = channel.Flags.HasFlag(ChannelFlags.KeyOff | ChannelFlags.NoteFade) ? SampleBackgroundMarkColour : SampleMarkColour;
+				byte c = channel.Flags.HasAllFlags(ChannelFlags.KeyOff | ChannelFlags.NoteFade) ? SampleBackgroundMarkColour : SampleMarkColour;
 
 				int x = channel.Position * (r.Size.Width - 1) / sample.Length;
 
@@ -1110,7 +1128,7 @@ public static class VGAMem
 	{
 		r.Clear(0);
 
-		if (sample.Flags.HasFlag(SampleFlags.AdLib))
+		if (sample.Flags.HasAllFlags(SampleFlags.AdLib))
 		{
 			r.Clear(2);
 
@@ -1152,16 +1170,16 @@ public static class VGAMem
 		}
 
 		/* do the actual drawing */
-		int chans = sample.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1;
+		int chans = sample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1;
 
-		if (sample.Flags.HasFlag(SampleFlags._16Bit))
+		if (sample.Flags.HasAllFlags(SampleFlags._16Bit))
 			DrawSampleData16(r, sample.Data16.Slice(0, sample.Length * chans),
 					chans, chans);
 		else
 			DrawSampleData8(r, sample.Data8.Slice(0, sample.Length * chans),
 					chans, chans);
 
-		if (Status.Flags.HasFlag(StatusFlags.ClassicMode))
+		if (Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 			DrawSamplePlayMarks(r, sample);
 
 		DrawSampleLoop(r, sample);

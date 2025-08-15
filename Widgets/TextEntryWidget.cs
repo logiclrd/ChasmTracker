@@ -146,7 +146,7 @@ public class TextEntryWidget : Widget
 
 	public override bool? HandleActivate(KeyEvent k)
 	{
-		if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
+		if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 			return false;
 
 		/* LOL WOW THIS SUCKS */

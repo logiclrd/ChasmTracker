@@ -374,11 +374,11 @@ public class ULT : SongFileConverter
 			if (usmp.FineTune != 0)
 				smp.C5Speed = (int)(smp.C5Speed * Math.Pow(2, (usmp.FineTune / (12.0 * 32768))));
 
-			if (usmp.Flags.HasFlag(ULTSampleFlags.Loop))
+			if (usmp.Flags.HasAllFlags(ULTSampleFlags.Loop))
 				smp.Flags |= SampleFlags.Loop;
-			if (usmp.Flags.HasFlag(ULTSampleFlags.PingPongLoop))
+			if (usmp.Flags.HasAllFlags(ULTSampleFlags.PingPongLoop))
 				smp.Flags |= SampleFlags.PingPongLoop;
-			if (usmp.Flags.HasFlag(ULTSampleFlags._16bit))
+			if (usmp.Flags.HasAllFlags(ULTSampleFlags._16bit))
 			{
 				smp.Flags |= SampleFlags._16Bit;
 				smp.LoopStart >>= 1;
@@ -420,7 +420,7 @@ public class ULT : SongFileConverter
 		for (int n = 0; n < 64; n++)
 			song.Channels[n].Panning *= 4;
 
-		if (lflags.HasFlag(LoadFlags.NoSamples | LoadFlags.NoPatterns))
+		if (lflags.HasAllFlags(LoadFlags.NoSamples | LoadFlags.NoPatterns))
 			return song;
 
 		for (int pat = 0; pat < numPatterns; pat++)
@@ -463,14 +463,14 @@ public class ULT : SongFileConverter
 		if (lostEffects > 0)
 			Log.Append(4, " Warning: {0} effect{1} dropped", lostEffects, lostEffects == 1 ? "" : "s");
 
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int n = 1; n <= numSamples; n++)
 			{
 				var smp = song.EnsureSample(n);
 
 				SampleFileConverter.ReadSample(smp,
-					SampleFormat.LittleEndian | SampleFormat.Mono | SampleFormat.PCMSigned | (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8),
+					SampleFormat.LittleEndian | SampleFormat.Mono | SampleFormat.PCMSigned | (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8),
 					stream);
 			}
 		}

@@ -148,7 +148,7 @@ public class Dialog : WidgetContext
 						case MessageBoxTypes.YesNo:
 							/* in Impulse Tracker, 'n' means cancel, not "no"!
 							(results in different behavior on sample quality convert dialog) */
-							if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+							if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 							{
 								DialogButtonNo();
 								return true;
@@ -300,14 +300,14 @@ public class Dialog : WidgetContext
 	protected Dialog(MessageBoxTypes type, string text, Action? actionYes,
 		Action? actionNo, int defaultWidget)
 	{
-		if (!type.HasFlag(MessageBoxDialogTypes.Box))
+		if (!type.HasAllFlags(MessageBoxDialogTypes.Box))
 		{
 			Console.Error.WriteLine("dialog_create called with bogus dialog type {0}", type);
 			throw new ArgumentException(nameof(type));
 		}
 
 		/* FIXME | hmm... a menu should probably be hiding itself when a widget gets selected. */
-		if (Status.DialogType.HasFlag(DialogTypes.Menu))
+		if (Status.DialogType.HasAllFlags(DialogTypes.Menu))
 			Menu.Hide();
 
 		Text = text;

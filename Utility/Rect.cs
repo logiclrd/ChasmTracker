@@ -1,5 +1,4 @@
-using System.ComponentModel;
-using Id3.Frames;
+using System;
 
 namespace ChasmTracker.Utility;
 
@@ -9,6 +8,11 @@ public struct Rect
 	public Size Size;
 
 	public Rect()
+	{
+	}
+
+	public Rect(Point topLeft, Point bottomRight)
+		: this(topLeft, bottomRight - topLeft)
 	{
 	}
 
@@ -22,6 +26,8 @@ public struct Rect
 		: this(new Point(x, y), new Size(width, height))
 	{
 	}
+
+	public bool IsEmpty => (Size.Width <= 0) || (Size.Height <= 0);
 
 	public Rect Advance(int x, int y)
 		=> Advance(x, y, 0, 0);
@@ -53,5 +59,12 @@ public struct Rect
 			return false;
 
 		return true;
+	}
+
+	public Rect Intersection(Rect other)
+	{
+		return new Rect(
+			new Point(Math.Max(TopLeft.X, other.TopLeft.X), Math.Max(TopLeft.Y, other.TopLeft.Y)),
+			new Point(Math.Min(BottomRight.X, other.BottomRight.X), Math.Min(BottomRight.Y, other.BottomRight.Y)));
 	}
 }

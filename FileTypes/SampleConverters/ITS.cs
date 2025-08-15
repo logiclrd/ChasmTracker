@@ -71,24 +71,24 @@ public class ITS : SampleFileConverter
 			file.SampleLength = its.Length;
 			file.SampleFlags = 0;
 
-			if (its.Flags.HasFlag(ITSampleFlags._16Bit))
+			if (its.Flags.HasAllFlags(ITSampleFlags._16Bit))
 				file.SampleFlags |= SampleFlags._16Bit;
 
-			if (its.Flags.HasFlag(ITSampleFlags.Loop))
+			if (its.Flags.HasAllFlags(ITSampleFlags.Loop))
 			{
 				file.SampleFlags |= SampleFlags.Loop;
-				if (its.Flags.HasFlag(ITSampleFlags.PingPongLoop))
+				if (its.Flags.HasAllFlags(ITSampleFlags.PingPongLoop))
 					file.SampleFlags |= SampleFlags.PingPongLoop;
 			}
 
-			if (its.Flags.HasFlag(ITSampleFlags.SustainLoop)) {
+			if (its.Flags.HasAllFlags(ITSampleFlags.SustainLoop)) {
 				file.SampleFlags |= SampleFlags.SustainLoop;
-				if (its.Flags.HasFlag(ITSampleFlags.PingPongSustain))
+				if (its.Flags.HasAllFlags(ITSampleFlags.PingPongSustain))
 					file.SampleFlags |= SampleFlags.PingPongSustain;
 			}
 
 			if (its.DefaultPanning.HasBitSet(128)) file.SampleFlags |= SampleFlags.Panning;
-			if (its.Flags.HasFlag(ITSampleFlags.Stereo)) file.SampleFlags |= SampleFlags.Stereo;
+			if (its.Flags.HasAllFlags(ITSampleFlags.Stereo)) file.SampleFlags |= SampleFlags.Stereo;
 
 			file.SampleDefaultVolume = its.Volume;
 			file.SampleGlobalVolume = its.GlobalVolume;
@@ -128,20 +128,20 @@ public class ITS : SampleFileConverter
 
 		/* alright, let's get started */
 		smp.Length = its.Length;
-		if (its.Flags.HasFlag(ITSampleFlags.HasData))
+		if (its.Flags.HasAllFlags(ITSampleFlags.HasData))
 			return false; // sample associated with header
 
 		smp.GlobalVolume = its.GlobalVolume;
-		if (its.Flags.HasFlag(ITSampleFlags.Loop))
+		if (its.Flags.HasAllFlags(ITSampleFlags.Loop))
 		{
 			smp.Flags |= SampleFlags.Loop;
-			if (its.Flags.HasFlag(ITSampleFlags.PingPongLoop))
+			if (its.Flags.HasAllFlags(ITSampleFlags.PingPongLoop))
 				smp.Flags |= SampleFlags.PingPongLoop;
 		}
-		if (its.Flags.HasFlag(ITSampleFlags.SustainLoop))
+		if (its.Flags.HasAllFlags(ITSampleFlags.SustainLoop))
 		{
 			smp.Flags |= SampleFlags.SustainLoop;
-			if (its.Flags.HasFlag(ITSampleFlags.PingPongSustain))
+			if (its.Flags.HasAllFlags(ITSampleFlags.PingPongSustain))
 				smp.Flags |= SampleFlags.PingPongSustain;
 		}
 
@@ -180,7 +180,7 @@ public class ITS : SampleFileConverter
 
 		bool r;
 
-		if (its.Flags.HasFlag(ITSampleFlags.HasData) && its.Convert == 64 && its.Length == 12)
+		if (its.Flags.HasAllFlags(ITSampleFlags.HasData) && its.Convert == 64 && its.Length == 12)
 		{
 			// OPL instruments in OpenMPT MPTM files (which are essentially extended IT files)
 			fp.Position = its.SamplePointer;
@@ -196,15 +196,15 @@ public class ITS : SampleFileConverter
 
 			r = true;
 		}
-		else if (its.Flags.HasFlag(ITSampleFlags.HasData))
+		else if (its.Flags.HasAllFlags(ITSampleFlags.HasData))
 		{
 			fp.Position = its.SamplePointer;
 
 			// endianness (always zero)
 			SampleFormat flags = SampleFormat.LittleEndian;
 			// channels
-			flags |= its.Flags.HasFlag(ITSampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono;
-			if (its.Flags.HasFlag(ITSampleFlags.Compressed))
+			flags |= its.Flags.HasAllFlags(ITSampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono;
+			if (its.Flags.HasAllFlags(ITSampleFlags.Compressed))
 				flags |= its.Convert.HasBitSet(4) ? SampleFormat.IT215Compressed : SampleFormat.IT214Compressed; // compression algorithm
 			else
 			{
@@ -218,7 +218,7 @@ public class ITS : SampleFileConverter
 			}
 
 			// bit width
-			flags |= its.Flags.HasFlag(ITSampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
+			flags |= its.Flags.HasAllFlags(ITSampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
 
 			r = (ReadSample(smp, flags, fp) != 0);
 		}
@@ -250,17 +250,17 @@ public class ITS : SampleFileConverter
 		its.GlobalVolume = (byte)smp.GlobalVolume;
 		if (smp.HasData && (smp.Length != 0))
 			its.Flags |= ITSampleFlags.HasData;
-		if (smp.Flags.HasFlag(SampleFlags._16Bit))
+		if (smp.Flags.HasAllFlags(SampleFlags._16Bit))
 			its.Flags |= ITSampleFlags._16Bit;
-		if (smp.Flags.HasFlag(SampleFlags.Stereo))
+		if (smp.Flags.HasAllFlags(SampleFlags.Stereo))
 			its.Flags |= ITSampleFlags.Stereo;
-		if (smp.Flags.HasFlag(SampleFlags.Loop))
+		if (smp.Flags.HasAllFlags(SampleFlags.Loop))
 			its.Flags |= ITSampleFlags.Loop;
-		if (smp.Flags.HasFlag(SampleFlags.SustainLoop))
+		if (smp.Flags.HasAllFlags(SampleFlags.SustainLoop))
 			its.Flags |= ITSampleFlags.SustainLoop;
-		if (smp.Flags.HasFlag(SampleFlags.PingPongLoop))
+		if (smp.Flags.HasAllFlags(SampleFlags.PingPongLoop))
 			its.Flags |= ITSampleFlags.PingPongLoop;
-		if (smp.Flags.HasFlag(SampleFlags.PingPongSustain))
+		if (smp.Flags.HasAllFlags(SampleFlags.PingPongSustain))
 			its.Flags |= ITSampleFlags.PingPongSustain;
 
 		its.Volume = (byte)(smp.Volume / 4);
@@ -268,7 +268,7 @@ public class ITS : SampleFileConverter
 		its.Name[25] = 0;
 		its.Convert = 1; // signed samples
 		its.DefaultPanning = (byte)(smp.Panning / 4);
-		if (smp.Flags.HasFlag(SampleFlags.Panning))
+		if (smp.Flags.HasAllFlags(SampleFlags.Panning))
 			its.DefaultPanning |= 0x80;
 		its.Length = smp.Length;
 		its.LoopBegin = smp.LoopStart;
@@ -294,7 +294,7 @@ public class ITS : SampleFileConverter
 
 	public override SaveResult SaveSample(SongSample smp, Stream stream)
 	{
-		if (smp.Flags.HasFlag(SampleFlags.AdLib))
+		if (smp.Flags.HasAllFlags(SampleFlags.AdLib))
 			return SaveResult.Unsupported;
 
 		SaveHeader(smp, stream);
@@ -302,8 +302,8 @@ public class ITS : SampleFileConverter
 		long dataOffset = stream.Position;
 
 		WriteSample(stream, smp, SampleFormat.LittleEndian | SampleFormat.PCMSigned
-			| (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
-			| (smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
+			| (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
+			| (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
 			uint.MaxValue);
 
 		/* Write the sample pointer. In an ITS file, the sample data is right after the header,

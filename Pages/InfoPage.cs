@@ -506,7 +506,7 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 			}
 		}
 
-		Assert.IsTrue(() => _windows.Count > 0, "Should always have at least one window.");
+		Assert.IsTrue(_windows.Count > 0, "_windows.Count > 0", "Should always have at least one window.");
 
 		_windows[_windows.Count - 1].Height = 50 - pos;
 

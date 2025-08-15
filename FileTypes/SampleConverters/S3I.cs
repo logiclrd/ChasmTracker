@@ -65,7 +65,7 @@ public class S3I : SampleFileConverter
 
 			if (type == S3IType.PCM)
 			{
-				int bytesPerSample = flags.HasFlag(S3IFormatFlags.Stereo) ? 2 : 1;
+				int bytesPerSample = flags.HasAllFlags(S3IFormatFlags.Stereo) ? 2 : 1;
 
 				fp.Position = startPosition + 15;
 
@@ -75,13 +75,13 @@ public class S3I : SampleFileConverter
 					return false;
 
 				/* convert flags */
-				if (flags.HasFlag(S3IFormatFlags.Loop))
+				if (flags.HasAllFlags(S3IFormatFlags.Loop))
 					smp.Flags |= SampleFlags.Loop;
 
-				if (flags.HasFlag(S3IFormatFlags.Stereo))
+				if (flags.HasAllFlags(S3IFormatFlags.Stereo))
 					smp.Flags |= SampleFlags.Stereo;
 
-				if (flags.HasFlag(S3IFormatFlags._16Bit))
+				if (flags.HasAllFlags(S3IFormatFlags._16Bit))
 					smp.Flags |= SampleFlags._16Bit;
 
 				if (withData)
@@ -225,7 +225,7 @@ public class S3I : SampleFileConverter
 
 	public void WriteHeader(SongSample smp, uint sdata, Stream fp)
 	{
-		if (smp.Flags.HasFlag(SampleFlags.AdLib))
+		if (smp.Flags.HasAllFlags(SampleFlags.AdLib))
 		{
 			var hdr = new S3IHeaderAdMel();
 
@@ -249,9 +249,9 @@ public class S3I : SampleFileConverter
 			hdr.Length = smp.Length;
 			hdr.LoopStart = smp.LoopStart;
 			hdr.LoopEnd = smp.LoopEnd;
-			hdr.Flags = (smp.Flags.HasFlag(SampleFlags.Loop) ? S3IFormatFlags.Loop : 0)
-				| (smp.Flags.HasFlag(SampleFlags.Stereo) ? S3IFormatFlags.Stereo : 0)
-				| (smp.Flags.HasFlag(SampleFlags._16Bit) ? S3IFormatFlags._16Bit : 0);
+			hdr.Flags = (smp.Flags.HasAllFlags(SampleFlags.Loop) ? S3IFormatFlags.Loop : 0)
+				| (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? S3IFormatFlags.Stereo : 0)
+				| (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? S3IFormatFlags._16Bit : 0);
 			hdr.Tag = "SCRS";
 
 			hdr.FileName = smp.FileName;
@@ -275,13 +275,13 @@ public class S3I : SampleFileConverter
 	{
 		WriteHeader(sample, 0, stream);
 
-		if (sample.Flags.HasFlag(SampleFlags.AdLib))
+		if (sample.Flags.HasAllFlags(SampleFlags.AdLib))
 			return SaveResult.Success; // already done
 		else if (sample.HasData)
 		{
 			SampleFormat format = SampleFormat.Mono | SampleFormat.LittleEndian; // endianness; channels
 
-			format |= sample.Flags.HasFlag(SampleFlags._16Bit)
+			format |= sample.Flags.HasAllFlags(SampleFlags._16Bit)
 				? (SampleFormat._16 | SampleFormat.PCMSigned)
 				: (SampleFormat._8 | SampleFormat.PCMUnsigned); // bits; encoding
 

@@ -175,13 +175,13 @@ public class DirectoryScanner
 				foreach (var entry in new DirectoryInfo(directory).EnumerateFileSystemInfos())
 				{
 					/* ignore hidden/backup files */
-					if (entry.Attributes.HasFlag(FileAttributes.Hidden))
+					if (entry.Attributes.HasAllFlags(FileAttributes.Hidden))
 						continue;
 
 					if (entry.Name.EndsWith("~"))
 						continue;
 
-					if (entry.Attributes.HasFlag(FileAttributes.Directory))
+					if (entry.Attributes.HasAllFlags(FileAttributes.Directory))
 						_ = dirList?.AddDir(entry.FullName, 0) ?? fileList.AddFile(entry.FullName, 0);
 					else
 						fileList.AddFile(entry.FullName, 1);
@@ -310,7 +310,7 @@ public class DirectoryScanner
 
 				file.Type = FileTypes.SampleExtended;
 				file.Description = "Impulse Tracker Sample"; /* FIXME: this lies for XI and PAT */
-				file.FileSize = sample.Length * (sample.Flags.HasFlag(SampleFlags.Stereo) ? 2 : 1) * (sample.Flags.HasFlag(SampleFlags._16Bit) ? 2 : 1);
+				file.FileSize = sample.Length * (sample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1) * (sample.Flags.HasAllFlags(SampleFlags._16Bit) ? 2 : 1);
 				file.SampleSpeed = sample.C5Speed;
 				file.SampleLoopStart = sample.LoopStart;
 				file.SampleLoopEnd = sample.LoopEnd;

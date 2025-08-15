@@ -89,7 +89,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 
 	void EnvelopeDrawNode(Point pt, bool on)
 	{
-		byte c = Status.Flags.HasFlag(StatusFlags.ClassicMode) ? (byte)12 : (byte)5;
+		byte c = Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? (byte)12 : (byte)5;
 
 		s_envOverlay[pt.X - 1, pt.Y - 1] = c;
 		s_envOverlay[pt.X - 1, pt.Y] = c;
@@ -118,7 +118,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 	void EnvelopeDrawLoop(int xs, int xe, bool sustain)
 	{
 		int y = 0;
-		byte c = Status.Flags.HasFlag(StatusFlags.ClassicMode) ? (byte)12 : (byte)3;
+		byte c = Status.Flags.HasAllFlags(StatusFlags.ClassicMode) ? (byte)12 : (byte)3;
 
 		if (sustain)
 		{
@@ -225,7 +225,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 					if (x > lastPt.X)
 						x = lastPt.X;
 
-					byte c = Status.Flags.HasFlag(StatusFlags.ClassicMode)
+					byte c = Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 						? (byte)12
 						: (channel.Flags.HasAnyFlag(ChannelFlags.KeyOff | ChannelFlags.NoteFade) ? (byte)8 : (byte)6);
 
@@ -566,7 +566,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 					else if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 					{
 						RestoreEnvelope(n, env, sec);
-						if (!Status.Flags.HasFlag(StatusFlags.ClassicMode))
+						if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 							Status.FlashText("Pasted envelope from slot " + n);
 					}
 					return 1;

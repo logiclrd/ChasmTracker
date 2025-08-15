@@ -20,8 +20,6 @@ public struct WidgetNext
 		{
 			var @this = widgets[i];
 
-			var centreMass = @this.Position.Advance(@this.Size / 2);
-
 			ref var next = ref widgets[i].Next;
 
 			if ((next.BackTab == null) && (i > 0))
@@ -30,7 +28,7 @@ public struct WidgetNext
 				next.Tab = widgets.FindNextWithLoop(i + 1, w => w.IsTabStop);
 
 			Widget? Search(int dx, int dy, int expandX, int expandY)
-				=> WidgetNext.Search(widgets, @this, centreMass, dx, dy, expandX, expandY);
+				=> WidgetNext.Search(widgets, @this, dx, dy, expandX, expandY);
 
 			if (next.Up == null)
 				next.Up = Search(0, -1, 1, 0) ?? Search(0, -1, 100, 0);
@@ -68,30 +66,32 @@ public struct WidgetNext
 		return Search(widgets, @this, origin, dx, dy, Math.Abs(dy), Math.Abs(dx));
 	}
 
+	static Widget? Search(IReadOnlyList<Widget> widgets, Widget @this, int dx, int dy, int expandX, int expandY)
+	{
+		var centreMass = @this.Position.Advance(@this.Size / 2);
+
+		var origin = centreMass;
+
+		if (dx < 0)
+			origin.X = @this.Position.X;
+		if (dx > 0)
+			origin.X = @this.Position.X + @this.Size.Width - 1;
+
+		if (dy < 0)
+			origin.Y = @this.Position.Y;
+		if (dy > 0)
+			origin.Y = @this.Position.Y + @this.Size.Height - 1;
+
+		return Search(widgets, @this, origin, dx, dy, expandX, expandY);
+	}
+
 	static Widget? Search(IReadOnlyList<Widget> widgets, Widget @this, Point origin, int dx, int dy, int expandX, int expandY)
 	{
 		Widget? bestCandidate = null;
 		double bestCandidateDistance = double.MaxValue;
 
-		Point scanStart = @this.Position;
-		Point scanEnd = @this.Position.Advance(@this.Size);
-
-		bool Intersects(Widget test)
-		{
-			var topLeft = test.Position;
-			var bottomRight = test.Position.Advance(test.Size);
-
-			if (topLeft.X > scanEnd.X)
-				return false;
-			if (topLeft.Y > scanEnd.Y)
-				return false;
-			if (bottomRight.X < scanStart.X)
-				return false;
-			if (bottomRight.Y < scanEnd.Y)
-				return false;
-
-			return true;
-		}
+		Point scanStart = origin;
+		Point scanEnd = origin.Advance(1, 1);
 
 		bool ScanIsOnScreen()
 		{
@@ -113,11 +113,16 @@ public struct WidgetNext
 				if (other.Size.IsEmpty)
 					continue;
 
-				if (Intersects(other))
-				{
-					var otherCenterMass = other.Position.Advance(other.Size / 2);
+				var overlap = new Rect(other.Position, other.Size).Intersection(
+					new Rect(scanStart, scanEnd - scanStart));
 
-					var distance = origin.DistanceTo(otherCenterMass);
+				if (!overlap.IsEmpty)
+				{
+					var pointOfContact = new Point(
+						origin.X.Clamp(overlap.TopLeft.X, overlap.BottomRight.X),
+						origin.Y.Clamp(overlap.TopLeft.Y, overlap.BottomRight.Y));
+
+					var distance = origin.DistanceTo(pointOfContact);
 
 					if (distance < bestCandidateDistance)
 					{
@@ -137,7 +142,7 @@ public struct WidgetNext
 			scanEnd.X += expandX;
 
 			scanStart.Y -= expandY;
-			scanStart.Y += expandY;
+			scanEnd.Y += expandY;
 		}
 
 		return bestCandidate;

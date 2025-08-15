@@ -90,7 +90,7 @@ public static class EventHub
 					// pop any pending keydowns
 					PopPendingKeyDown(null);
 
-					if (e.Key.Key.HasFlag(SDL.Keycode.ExtendedMask))
+					if (e.Key.Key.HasAllFlags(SDL.Keycode.ExtendedMask))
 						break; // I don't know how to handle these
 
 					var chasmEvent = new KeyboardEvent();
@@ -117,7 +117,7 @@ public static class EventHub
 					// pop any pending keydowns
 					PopPendingKeyDown(null);
 
-					if (e.Key.Key.HasFlag(SDL.Keycode.ExtendedMask))
+					if (e.Key.Key.HasAllFlags(SDL.Keycode.ExtendedMask))
 						break; // I don't know how to handle these
 
 					var chasmEvent = new KeyboardEvent();
@@ -251,37 +251,37 @@ public static class EventHub
 	{
 		KeyMod res = KeyMod.None;
 
-		if (mod.HasFlag(SDL.Keymod.LShift))
+		if (mod.HasAllFlags(SDL.Keymod.LShift))
 			res |= KeyMod.LeftShift;
 
-		if (mod.HasFlag(SDL.Keymod.RShift))
+		if (mod.HasAllFlags(SDL.Keymod.RShift))
 			res |= KeyMod.RightShift;
 
-		if (mod.HasFlag(SDL.Keymod.LCtrl))
+		if (mod.HasAllFlags(SDL.Keymod.LCtrl))
 			res |= KeyMod.LeftControl;
 
-		if (mod.HasFlag(SDL.Keymod.RCtrl))
+		if (mod.HasAllFlags(SDL.Keymod.RCtrl))
 			res |= KeyMod.RightControl;
 
-		if (mod.HasFlag(SDL.Keymod.LAlt))
+		if (mod.HasAllFlags(SDL.Keymod.LAlt))
 			res |= KeyMod.LeftAlt;
 
-		if (mod.HasFlag(SDL.Keymod.RAlt))
+		if (mod.HasAllFlags(SDL.Keymod.RAlt))
 			res |= KeyMod.RightAlt;
 
-		if (mod.HasFlag(SDL.Keymod.LGUI))
+		if (mod.HasAllFlags(SDL.Keymod.LGUI))
 			res |= KeyMod.LeftGUI;
 
-		if (mod.HasFlag(SDL.Keymod.RGUI))
+		if (mod.HasAllFlags(SDL.Keymod.RGUI))
 			res |= KeyMod.RightGUI;
 
-		if (mod.HasFlag(SDL.Keymod.Num))
+		if (mod.HasAllFlags(SDL.Keymod.Num))
 			res |= KeyMod.Num;
 
-		if (mod.HasFlag(SDL.Keymod.Caps))
+		if (mod.HasAllFlags(SDL.Keymod.Caps))
 			res |= KeyMod.Caps;
 
-		if (mod.HasFlag(SDL.Keymod.Mode))
+		if (mod.HasAllFlags(SDL.Keymod.Mode))
 			res |= KeyMod.Mode;
 
 		return res;
@@ -358,7 +358,7 @@ public static class EventHub
 			// We get bogus keydowns for Ctrl-Pause.
 			// As a workaround, we can check what Windows thinks, but only for Right Ctrl.
 			// Left Ctrl just gets completely ignored and there's nothing we can do about it.
-			if ((keyEvent.Sym == KeySym.ScrollLock) && keyEvent.Modifiers.HasFlag(KeyMod.RightControl) && (0 == (0x80 & Win32.GetKeyState(Win32.VK_SCROLL))))
+			if ((keyEvent.Sym == KeySym.ScrollLock) && keyEvent.Modifiers.HasAllFlags(KeyMod.RightControl) && (0 == (0x80 & Win32.GetKeyState(Win32.VK_SCROLL))))
 				keyEvent.Sym = KeySym.Pause;
 
 			return keyEvent;

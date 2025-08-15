@@ -231,7 +231,7 @@ public class IT : SongFileConverter
 			else
 				maskVar = lastMask[chan];
 
-			if (maskVar.HasFlag(NoteFields.Note))
+			if (maskVar.HasAllFlags(NoteFields.Note))
 			{
 				int c = fp.ReadByte();
 
@@ -252,20 +252,20 @@ public class IT : SongFileConverter
 				lastNote[chan].Note = patternRow[chan].Note;
 			}
 
-			if (maskVar.HasFlag(NoteFields.Sample))
+			if (maskVar.HasAllFlags(NoteFields.Sample))
 			{
 				patternRow[chan].Instrument = (byte)fp.ReadByte();
 				lastNote[chan].Instrument = patternRow[chan].Instrument;
 			}
 
-			if (maskVar.HasFlag(NoteFields.Volume))
+			if (maskVar.HasAllFlags(NoteFields.Volume))
 			{
 				ImportVolumeEffect(ref patternRow[chan], (byte)fp.ReadByte());
 				lastNote[chan].VolumeEffect = patternRow[chan].VolumeEffect;
 				lastNote[chan].VolumeParameter = patternRow[chan].VolumeParameter;
 			}
 
-			if (maskVar.HasFlag(NoteFields.Effect))
+			if (maskVar.HasAllFlags(NoteFields.Effect))
 			{
 				patternRow[chan].EffectByte = (byte)(fp.ReadByte() & 0x1f);
 				patternRow[chan].Parameter = (byte)fp.ReadByte();
@@ -288,18 +288,18 @@ public class IT : SongFileConverter
 				lastNote[chan].Parameter = patternRow[chan].Parameter;
 			}
 
-			if (maskVar.HasFlag(NoteFields.SameNote))
+			if (maskVar.HasAllFlags(NoteFields.SameNote))
 				patternRow[chan].Note = lastNote[chan].Note;
-			if (maskVar.HasFlag(NoteFields.SameSample))
+			if (maskVar.HasAllFlags(NoteFields.SameSample))
 				patternRow[chan].Instrument = lastNote[chan].Instrument;
 
-			if (maskVar.HasFlag(NoteFields.SameVolume))
+			if (maskVar.HasAllFlags(NoteFields.SameVolume))
 			{
 				patternRow[chan].VolumeEffect = lastNote[chan].VolumeEffect;
 				patternRow[chan].VolumeParameter = lastNote[chan].VolumeParameter;
 			}
 
-			if (maskVar.HasFlag(NoteFields.SameEffect))
+			if (maskVar.HasAllFlags(NoteFields.SameEffect))
 			{
 				patternRow[chan].Effect = lastNote[chan].Effect;
 				patternRow[chan].Parameter = lastNote[chan].Parameter;
@@ -415,7 +415,7 @@ public class IT : SongFileConverter
 
 		if (!hdr.Flags.HasBitSet(1))
 			song.Flags |= SongFlags.NoStereo;
-		// (hdr.Flags.HasFlag(2)) no longer used (was vol0 optimizations)
+		// (hdr.Flags.HasAllFlags(2)) no longer used (was vol0 optimizations)
 		if (hdr.Flags.HasBitSet(4))
 			song.Flags |= SongFlags.InstrumentMode;
 		if (hdr.Flags.HasBitSet(8))
@@ -598,7 +598,7 @@ public class IT : SongFileConverter
 			song.Message = buffer.ToStringZ();
 		}
 
-		if (!flags.HasFlag(LoadFlags.NoSamples))
+		if (!flags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			var iti = new ITI();
 			var its = new ITS();
@@ -628,7 +628,7 @@ public class IT : SongFileConverter
 			}
 		}
 
-		if (!flags.HasFlag(LoadFlags.NoPatterns))
+		if (!flags.HasAllFlags(LoadFlags.NoPatterns))
 		{
 			for (int n = 0; n < hdr.PatNum; n++)
 			{
@@ -1090,7 +1090,7 @@ public class IT : SongFileConverter
 		{
 			var i = song.Instruments[n];
 			if (i == null) continue;
-			if (i.Flags.HasFlag(InstrumentFlags.Filter))
+			if (i.Flags.HasAllFlags(InstrumentFlags.Filter))
 			{
 				hdr.CompatibleWithTrackerVersion = 0x0217;
 				break;
@@ -1100,19 +1100,19 @@ public class IT : SongFileConverter
 		hdr.Flags = 0;
 		hdr.Special = 2 | 4;            // 2 = edit history, 4 = row highlight
 
-		if (!song.Flags.HasFlag(SongFlags.NoStereo)) hdr.Flags |= 1;
-		if (song.Flags.HasFlag(SongFlags.InstrumentMode)) hdr.Flags |= 4;
-		if (song.Flags.HasFlag(SongFlags.LinearSlides)) hdr.Flags |= 8;
-		if (song.Flags.HasFlag(SongFlags.ITOldEffects)) hdr.Flags |= 16;
-		if (song.Flags.HasFlag(SongFlags.CompatibleGXX)) hdr.Flags |= 32;
+		if (!song.Flags.HasAllFlags(SongFlags.NoStereo)) hdr.Flags |= 1;
+		if (song.Flags.HasAllFlags(SongFlags.InstrumentMode)) hdr.Flags |= 4;
+		if (song.Flags.HasAllFlags(SongFlags.LinearSlides)) hdr.Flags |= 8;
+		if (song.Flags.HasAllFlags(SongFlags.ITOldEffects)) hdr.Flags |= 16;
+		if (song.Flags.HasAllFlags(SongFlags.CompatibleGXX)) hdr.Flags |= 32;
 
-		if (MIDIEngine.Flags.HasFlag(MIDIFlags.PitchBend))
+		if (MIDIEngine.Flags.HasAllFlags(MIDIFlags.PitchBend))
 		{
 			hdr.Flags |= 64;
 			hdr.PitchWheelDepth = (byte)MIDIEngine.PitchWheelDepth;
 		}
 
-		if (song.Flags.HasFlag(SongFlags.EmbedMIDIConfig))
+		if (song.Flags.HasAllFlags(SongFlags.EmbedMIDIConfig))
 		{
 			hdr.Flags |= 128;
 			hdr.Special |= 8;
@@ -1145,10 +1145,10 @@ public class IT : SongFileConverter
 
 		for (int n = 0; n < MaxChannels; n++)
 		{
-			hdr.ChannelPan[n] = (byte)(song.Channels[n].Flags.HasFlag(ChannelFlags.Surround)
+			hdr.ChannelPan[n] = (byte)(song.Channels[n].Flags.HasAllFlags(ChannelFlags.Surround)
 					 ? 100 : (song.Channels[n].Panning / 4));
 			hdr.ChannelVolume[n] = (byte)song.Channels[n].Volume;
-			if (song.Channels[n].Flags.HasFlag(ChannelFlags.Mute))
+			if (song.Channels[n].Flags.HasAllFlags(ChannelFlags.Mute))
 				hdr.ChannelPan[n] += 128;
 		}
 
@@ -1218,7 +1218,7 @@ public class IT : SongFileConverter
 		// here comes MIDI configuration
 		// here comes MIDI configuration
 		// right down MIDI configuration lane
-		if (song.Flags.HasFlag(SongFlags.EmbedMIDIConfig))
+		if (song.Flags.HasAllFlags(SongFlags.EmbedMIDIConfig))
 			WriteMIDIConfig(song.MIDIConfig, fp);
 
 		fp.Write(msgBytes);
@@ -1281,18 +1281,18 @@ public class IT : SongFileConverter
 				if (smp.HasData)
 				{
 					SampleFileConverter.WriteSample(fp, smp, SampleFormat.LittleEndian | SampleFormat.PCMSigned
-						| (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
-						| (smp.Flags.HasFlag(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
+						| (smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
+						| (smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoSplit : SampleFormat.Mono),
 						uint.MaxValue);
 				}
 
-				if (smp.Flags.HasFlag(SampleFlags.AdLib))
+				if (smp.Flags.HasAllFlags(SampleFlags.AdLib))
 					warn |= Warnings.AdLibSamples;
 			}
 		}
 
 		foreach (var warningType in Enum.GetValues<Warnings>())
-			if (warn.HasFlag(warningType))
+			if (warn.HasAllFlags(warningType))
 				Log.Append(4, " Warning: {0} unsupported in IT format", ITWarnings[warningType]);
 
 		// rewrite the parapointers

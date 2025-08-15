@@ -46,9 +46,9 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 		DrawEnvelopeLabel("Volume", isSelected);
 
 		EnvelopeDraw(ins.VolumeEnvelope, false, _currentEnvelopeNode,
-			ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope),
-			ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop),
-			ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain),
+			ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope),
+			ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop),
+			ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain),
 			0);
 	}
 
@@ -88,10 +88,10 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 
 		var toggleEnabled = (ToggleWidget)widgetEnvelopeEnabled;
 
-		toggleEnabled.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelope);
-		toggleEnvelopeCarry.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeCarry);
-		toggleEnvelopeLoop.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeLoop);
-		toggleEnvelopeSustainLoop.State = ins.Flags.HasFlag(InstrumentFlags.VolumeEnvelopeSustain);
+		toggleEnabled.State = ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope);
+		toggleEnvelopeCarry.State = ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeCarry);
+		toggleEnvelopeLoop.State = ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop);
+		toggleEnvelopeSustainLoop.State = ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain);
 
 		/* FIXME: this is the wrong place for this.
 		... and it's probably not even right -- how does Impulse Tracker handle loop constraints?

@@ -266,7 +266,7 @@ public class YM3812FMDriver : FMDriver
 	{
 		/* set status flag */
 		status |= flag;
-		if(!status.HasFlag(StatusFlags.IRQEnabled))
+		if(!status.HasAllFlags(StatusFlags.IRQEnabled))
 		{
 			if(status.HasAnyFlag(statusmask))
 			{
@@ -283,7 +283,7 @@ public class YM3812FMDriver : FMDriver
 	{
 		/* reset status flag */
 		status &=~flag;
-		if(status.HasFlag(StatusFlags.IRQEnabled))
+		if(status.HasAllFlags(StatusFlags.IRQEnabled))
 		{
 			if (!status.HasAnyFlag(statusmask))
 			{
@@ -950,7 +950,7 @@ public class YM3812FMDriver : FMDriver
 				switch (r & 0x1f)
 				{
 					case 0x01:  /* waveform select enable */
-						if (type.HasFlag(OPLType.WaveformSelect))
+						if (type.HasAllFlags(OPLType.WaveformSelect))
 						{
 							wavesel = v.HasBitSet(0x20);
 							/* do not change the waveform previously selected */
@@ -974,8 +974,8 @@ public class YM3812FMDriver : FMDriver
 							StatusFlags vf = (StatusFlags)v;
 
 							/* set IRQ mask ,timer enable*/
-							bool st1 = vf.HasFlag(StatusFlags.ST1);
-							bool st2 = vf.HasFlag(StatusFlags.ST2);
+							bool st1 = vf.HasAllFlags(StatusFlags.ST1);
+							bool st2 = vf.HasAllFlags(StatusFlags.ST2);
 
 							/* IRQRST,T1MSK,t2MSK,EOSMSK,BRMSK,x,ST2,ST1 */
 							ResetStatus(vf & ~(StatusFlags.IRQEnabled | StatusFlags.BufferReady | StatusFlags.X | StatusFlags.ST2 | StatusFlags.ST1));
@@ -1123,7 +1123,7 @@ public class YM3812FMDriver : FMDriver
 					(verifed on real YM3812) */
 					/* if notesel == 0 -> lsb of kcode is bit 10 (MSB) of fnum  */
 					/* if notesel == 1 -> lsb of kcode is bit 9 (MSB-1) of fnum */
-					if (mode.HasFlag(StatusFlags.TimerA))
+					if (mode.HasAllFlags(StatusFlags.TimerA))
 						CH.kcode |= unchecked((byte)((CH.block_fnum & 0x100) >> 8)); /* notesel == 1 */
 					else
 						CH.kcode |= unchecked((byte)((CH.block_fnum & 0x200) >> 9)); /* notesel == 0 */
@@ -1304,7 +1304,7 @@ public class YM3812FMDriver : FMDriver
 			WriteRegister(address, v);
 		}
 
-		return status.HasFlag(StatusFlags.IRQEnabled);
+		return status.HasAllFlags(StatusFlags.IRQEnabled);
 	}
 
 	public override byte Read(int a)
@@ -1333,7 +1333,7 @@ public class YM3812FMDriver : FMDriver
 			SetStatus(StatusFlags.TimerA);
 
 			/* CSM mode key,TL controll */
-			if (mode.HasFlag(StatusFlags.IRQEnabled))
+			if (mode.HasAllFlags(StatusFlags.IRQEnabled))
 			{
 				/* CSM mode total level latch and auto key on */
 				OnUpdate(0);
@@ -1346,7 +1346,7 @@ public class YM3812FMDriver : FMDriver
 		/* reload timer */
 		OnTimer(c, TimerBase * T[c]);
 
-		return status.HasFlag(StatusFlags.IRQEnabled);
+		return status.HasAllFlags(StatusFlags.IRQEnabled);
 	}
 
 	/* like update_one, but does it for each channel independently

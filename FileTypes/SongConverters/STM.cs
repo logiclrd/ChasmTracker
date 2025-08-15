@@ -345,7 +345,7 @@ public class STM : SongFileConverter
 			}
 		}
 
-		if (lflags.HasFlag(LoadFlags.NoPatterns))
+		if (lflags.HasAllFlags(LoadFlags.NoPatterns))
 			stream.Position += nPat * 64 * 4 * 4;
 		else
 		{
@@ -357,7 +357,7 @@ public class STM : SongFileConverter
 			}
 		}
 
-		if (!lflags.HasFlag(LoadFlags.NoSamples))
+		if (!lflags.HasAllFlags(LoadFlags.NoSamples))
 		{
 			for (int n = 1; n <= 31; n++)
 			{

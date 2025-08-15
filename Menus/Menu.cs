@@ -21,7 +21,7 @@ public class Menu
 	static bool EnsureMenu()
 	{
 #if DEBUG
-		if (!Status.DialogType.HasFlag(Dialogs.DialogTypes.Menu))
+		if (!Status.DialogType.HasAllFlags(Dialogs.DialogTypes.Menu))
 		{
 			Console.Error.WriteLine("{0} called with no menu", new StackFrame(1, true).GetMethod()?.Name ?? "<unknown>");
 			return false;
@@ -403,7 +403,7 @@ public class Menu
 	/* As long as there's a menu active, this function will return true. */
 	public static bool HandleKey(KeyEvent k)
 	{
-		if (!Status.DialogType.HasFlag(DialogTypes.Menu))
+		if (!Status.DialogType.HasAllFlags(DialogTypes.Menu))
 			return false;
 
 		var menu = (Status.DialogType == DialogTypes.SubMenu) ? s_currentMenu[1] : s_currentMenu[0];

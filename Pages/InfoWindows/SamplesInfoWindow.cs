@@ -51,10 +51,10 @@ public class SamplesInfoWindow : InfoWindow
 				int fg;
 
 				if (c == SelectedChannel)
-					fg = channel.Flags.HasFlag(ChannelFlags.Mute) ? 6 : 3;
+					fg = channel.Flags.HasAllFlags(ChannelFlags.Mute) ? 6 : 3;
 				else
 				{
-					if (channel.Flags.HasFlag(ChannelFlags.Mute))
+					if (channel.Flags.HasAllFlags(ChannelFlags.Mute))
 						continue;
 
 					fg = isActive ? 1 : 0;
@@ -76,16 +76,16 @@ public class SamplesInfoWindow : InfoWindow
 
 			if (c == SelectedChannel)
 			{
-				fg = voice.Flags.HasFlag(ChannelFlags.Mute) ? (byte)6 : (byte)3;
+				fg = voice.Flags.HasAllFlags(ChannelFlags.Mute) ? (byte)6 : (byte)3;
 				VGAMem.DrawText(c.ToString("d2"), new Point(2, pos), (fg, 2));
 			}
-			else if (!voice.Flags.HasFlag(ChannelFlags.Mute))
+			else if (!voice.Flags.HasAllFlags(ChannelFlags.Mute))
 			{
 				fg = isActive ? (byte)1 : (byte)0;
 				VGAMem.DrawText(c.ToString("d2"), new Point(2, pos), (fg, 2));
 			}
 
-			if (!((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length > 0)) && !voice.Flags.HasFlag(ChannelFlags.AdLib))
+			if (!((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length > 0)) && !voice.Flags.HasAllFlags(ChannelFlags.AdLib))
 				continue;
 
 			/* first box: vu meter */
@@ -96,7 +96,7 @@ public class SamplesInfoWindow : InfoWindow
 			else
 				vu = voice.VUMeter >> 2;
 
-			if (voice.Flags.HasFlag(ChannelFlags.Mute))
+			if (voice.Flags.HasAllFlags(ChannelFlags.Mute))
 			{
 				fg = 1; fg2 = 2;
 			}
@@ -192,7 +192,7 @@ public class SamplesInfoWindow : InfoWindow
 			{
 				if (voice.Sample != null)
 				{
-					if (voice.Flags.HasFlag(ChannelFlags.Surround))
+					if (voice.Flags.HasAllFlags(ChannelFlags.Surround))
 						VGAMem.DrawText("Surround", new Point(64, pos), (2, 0));
 					else if (voice.FinalPanning >> 2 == 0)
 						VGAMem.DrawText("Left", new Point(64, pos), (2, 0));

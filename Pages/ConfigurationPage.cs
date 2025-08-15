@@ -1,11 +1,7 @@
 namespace ChasmTracker.Pages;
 
-using System;
-using System.Collections.Specialized;
-using ChasmTracker.Audio;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
-using ChasmTracker.Input;
 using ChasmTracker.MIDI;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
@@ -189,11 +185,11 @@ public class ConfigurationPage : Page
 		menuToggleOutputChannels.State = AudioSettings.Channels - 1;
 
 		menuToggleVisualizationStyle.State = (int)Status.VisualizationStyle;
-		toggleClassicMode.State = Status.Flags.HasFlag(StatusFlags.ClassicMode);
+		toggleClassicMode.State = Status.Flags.HasAllFlags(StatusFlags.ClassicMode);
 		menuToggleAccidentalsMode.State = (SongNote.AccidentalsMode == AccidentalsMode.Flats) ? 1 : 0;
 		menuToggleTimeDisplay.State = (int)Status.TimeDisplay;
 
-		menuToggleMIDIMode.State = Status.Flags.HasFlag(StatusFlags.MIDILikeTracker) ? 1 : 0;
+		menuToggleMIDIMode.State = Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker) ? 1 : 0;
 
 		toggleButtonFullScreenYes.SetState(Video.IsFullScreen);
 		toggleButtonFullScreenNo.SetState(!Video.IsFullScreen);
