@@ -30,6 +30,8 @@ public abstract class TrackViewWindowBase : InfoWindow
 	protected int GetBoxWidth() => GetNumChannels() * FullChannelWidth - (Separator ? 1 : 0);
 	protected virtual int GetRightEdge() => GetBoxWidth() + 4;
 
+	static Pattern EmptyPattern = Pattern.CreateEmpty();
+
 	protected void DrawTrackView(int @base, int fullHeight)
 	{
 		/* way too many variables */
@@ -60,14 +62,14 @@ public abstract class TrackViewWindowBase : InfoWindow
 		switch (AudioPlayback.Mode)
 		{
 			case AudioPlaybackMode.PatternLoop:
-				prevPattern = nextPattern = curPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.CurrentPattern) ?? Pattern.Empty;
+				prevPattern = nextPattern = curPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.CurrentPattern) ?? EmptyPattern;
 				prevPatternRows = nextPatternRows = curPatternRows = curPattern.Rows.Count;
 				break;
 			default:
 				forceStopped = true;
 				goto case AudioPlaybackMode.Playing;
 			case AudioPlaybackMode.Playing:
-				if (forceStopped || (Song.CurrentSong.OrderList[currentOrder] >= 200))
+				if (forceStopped || (currentOrder >= Song.CurrentSong.OrderList.Count) || (Song.CurrentSong.OrderList[currentOrder] >= 200))
 				{
 					/* this does, in fact, happen. just pretend that
 					* it's stopped :P */
@@ -77,12 +79,12 @@ public abstract class TrackViewWindowBase : InfoWindow
 					return;
 				}
 
-				curPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.OrderList[currentOrder]) ?? Pattern.Empty;
+				curPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.OrderList[currentOrder]) ?? EmptyPattern;
 				curPatternRows = curPattern.Rows.Count;
 
 				if (currentOrder > 0 && Song.CurrentSong.OrderList[currentOrder - 1] < 200)
 				{
-					prevPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.OrderList[currentOrder - 1]) ?? Pattern.Empty;
+					prevPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.OrderList[currentOrder - 1]) ?? EmptyPattern;
 					prevPatternRows = prevPattern.Rows.Count;
 				}
 				else
@@ -90,7 +92,7 @@ public abstract class TrackViewWindowBase : InfoWindow
 
 				if (currentOrder + 1 < Song.CurrentSong.OrderList.Count && Song.CurrentSong.OrderList[currentOrder + 1] < 200)
 				{
-					nextPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.OrderList[currentOrder + 1]) ?? Pattern.Empty;
+					nextPattern = Song.CurrentSong.GetPattern(Song.CurrentSong.OrderList[currentOrder + 1]) ?? Pattern.CreateEmpty();
 					nextPatternRows = nextPattern.Rows.Count;
 				}
 				else

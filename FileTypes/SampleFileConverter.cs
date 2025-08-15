@@ -80,7 +80,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 			return 0;
 		}
 
-		var extraFlags = flags & (SampleFormat.BitMask | SampleFormat.ChannelMask | SampleFormat.EndiannessMask | SampleFormat.EncodingMask);
+		var extraFlags = flags & ~(SampleFormat.BitMask | SampleFormat.ChannelMask | SampleFormat.EndiannessMask | SampleFormat.EncodingMask);
 
 		if (extraFlags != default)
 		{
@@ -131,11 +131,9 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 
 				sample.Length = Math.Min(sample.Length, memSize);
 
-				var buffer = new byte[sample.Length];
+				var buffer = MemoryMarshal.Cast<sbyte, byte>(sample.Data8);
 
 				fp.ReadExactly(buffer);
-
-				MemoryMarshal.Cast<byte, sbyte>(buffer).CopyTo(sample.Data8);
 
 				for (int j = 0; j < sample.Length; j++)
 					sample.Data8[j] = unchecked((sbyte)(sample.Data8[j] * 2).Clamp(-128, 127));
@@ -164,7 +162,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 					sample.Length = memSize;
 
 				// read
-				var buffer = new byte[sample.Length];
+				var buffer = MemoryMarshal.Cast<sbyte, byte>(sample.Data8);
 
 				fp.ReadExactly(buffer);
 
@@ -178,8 +176,6 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 					if (delta)
 						iAdd = buffer[j];
 				}
-
-				MemoryMarshal.Cast<byte, sbyte>(buffer).CopyTo(sample.Data8);
 
 				sampleBytes = sample.Length;
 
@@ -199,7 +195,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				if (len > memSize)
 					len = memSize >> 1;
 
-				var buffer = new byte[len];
+				var buffer = MemoryMarshal.Cast<sbyte, byte>(sample.Data8);
 
 				fp.ReadExactly(buffer);
 
@@ -237,7 +233,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				if (len > memSize)
 					len = memSize >> 1;
 
-				var buffer = new byte[len];
+				var buffer = MemoryMarshal.Cast<sbyte, byte>(sample.Data8);
 
 				fp.ReadExactly(buffer);
 
@@ -277,17 +273,14 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				if (len * 2 > memSize)
 					break;
 
-				var data8 = sample.Data8;
 				var data16 = sample.Data16;
 
 				// read
-				var rawData = new byte[len * 2];
+				var rawData = MemoryMarshal.Cast<short, byte>(data16);
 
 				fp.ReadExactly(rawData);
 
 				// process
-				MemoryMarshal.Cast<byte, sbyte>(rawData).CopyTo(data8);
-
 				if ((flags & SampleFormat.EndiannessMask) == SampleFormat.BigEndian)
 				{
 					for (int i = 0; i < data16.Length; i++)
@@ -332,20 +325,20 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				var data8 = sample.Data8;
 				var data16 = sample.Data16;
 
+				bool bswap = (flags & SampleFormat.EndiannessMask) == SampleFormat.BigEndian;
+				bool alreadyInterleaved = (flags & SampleFormat.ChannelMask) == SampleFormat.StereoInterleaved;
+
 				// read
-				var rawData = new byte[len * 2];
+				var rawData = alreadyInterleaved
+					? MemoryMarshal.Cast<short, byte>(data16)
+					: new byte[len * 2];
 
 				fp.ReadExactly(rawData);
 
 				// process
-				bool bswap = (flags & SampleFormat.EndiannessMask) == SampleFormat.BigEndian;
-				bool alreadyInterleaved = (flags & SampleFormat.ChannelMask) == SampleFormat.StereoInterleaved;
-
 				var rawDataBytes = MemoryMarshal.Cast<byte, sbyte>(rawData);
 
-				if (alreadyInterleaved)
-					rawDataBytes.CopyTo(data8);
-				else
+				if (!alreadyInterleaved)
 				{
 					for (int i = 0; i < sample.Length; i++)
 						for (int c = 0; c < 2; c++)

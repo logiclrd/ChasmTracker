@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -18,16 +20,41 @@ public static class StreamExtensions
 			s_buffer = new byte[size * 2];
 	}
 
+	static object s_sync = new object();
+	static MethodInfo s_writeStructureMethodDefinition = typeof(StreamExtensions).GetMethod("WriteStructure")!;
+	static Dictionary<Type, Delegate> s_writeStructureMethods = new Dictionary<Type, Delegate>();
+	static MethodInfo s_readStructureMethodDefinition = typeof(StreamExtensions).GetMethod("ReadStructure")!;
+	static Dictionary<Type, Delegate> s_readStructureMethods = new Dictionary<Type, Delegate>();
+
 	public static void WriteStructure<T>(this Stream stream, T data)
 		where T : notnull
 	{
 		stream.Write(StructureSerializer.MarshalToBytes(data, ref s_buffer));
 	}
 
+	[ThreadStatic]
+	static Dictionary<Type, int>? s_typeSize;
+
+	static readonly MethodInfo s_sizeOfMethodDefinition = typeof(Marshal).GetMethod(nameof(Marshal.SizeOf), Array.Empty<Type>())!;
+
 	public static T ReadStructure<T>(this Stream stream)
 		where T : notnull
 	{
-		int structureSize = Marshal.SizeOf<T>();
+		s_typeSize ??= new Dictionary<Type, int>();
+
+		var type = typeof(T);
+
+		if (!s_typeSize.TryGetValue(type, out int structureSize))
+		{
+			if (type.IsEnum)
+				type = type.GetEnumUnderlyingType();
+
+			var sizeOf = s_sizeOfMethodDefinition.MakeGenericMethod(type);
+
+			var sizeOfDelegate = sizeOf.CreateDelegate<Func<int>>();
+
+			structureSize = sizeOfDelegate();
+		}
 
 		EnsureBuffer(structureSize);
 

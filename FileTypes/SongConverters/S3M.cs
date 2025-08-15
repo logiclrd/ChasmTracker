@@ -24,12 +24,16 @@ public class S3M : SongFileConverter
 
 	public override bool FillExtendedData(Stream stream, FileReference file)
 	{
+		long startOffset = stream.Position;
+
 		try
 		{
-			stream.Position = 44;
+			stream.Position = startOffset + 44;
 
 			if (stream.ReadString(4) != "SCRM")
 				return false;
+
+			stream.Position = startOffset;
 
 			string title = stream.ReadString(27);
 
@@ -43,6 +47,14 @@ public class S3M : SongFileConverter
 		catch
 		{
 			return false;
+		}
+		finally
+		{
+			try
+			{
+				stream.Position = startOffset;
+			}
+			catch {}
 		}
 	}
 
@@ -92,17 +104,19 @@ public class S3M : SongFileConverter
 
 	public override Song LoadSong(Stream stream, LoadFlags lflags)
 	{
+		long startOffset = stream.Position;
+
 		var misc = LoaderFlags.Unsigned | LoaderFlags.ChanPan; // temporary flags, these are both generally true
 
 		/* check the tag */
-		stream.Position = 44;
+		stream.Position = startOffset + 44;
 		if (stream.ReadString(4) != "SCRM")
 			throw new NotSupportedException();
 
 		var song = new Song();
 
 		/* read the title */
-		stream.Position = 0;
+		stream.Position = startOffset;
 
 		song.Title = stream.ReadString(28);
 
@@ -268,7 +282,7 @@ public class S3M : SongFileConverter
 		}
 
 		//mphack - fix the pannings
-		for (int n = 0; n < 64; n++)
+		for (int n = 0; n < Constants.MaxChannels; n++)
 			song.Channels[n].Panning *= 4;
 
 		/* samples */
@@ -279,7 +293,7 @@ public class S3M : SongFileConverter
 		{
 			var sample = song.EnsureSample(n + 1);
 
-			stream.Position = paraSamples[n] << 4;
+			stream.Position = startOffset + paraSamples[n] << 4;
 
 			var type = (S3IType)stream.ReadByte();
 
@@ -289,7 +303,8 @@ public class S3M : SongFileConverter
 
 			stream.ReadExactly(dataPointerBytes.Slice(0, 3)); // data pointer for pcm, irrelevant otherwise
 
-			int dataPointer = BitConverter.ToInt32(dataPointerBytes);
+			// wat
+			int dataPointer = dataPointerBytes[1] | (dataPointerBytes[2] << 8) | (dataPointerBytes[0] << 16);
 
 			switch (type)
 			{
@@ -373,7 +388,7 @@ public class S3M : SongFileConverter
 				if ((sample.Length == 0) || sample.Flags.HasFlag(SampleFlags.AdLib))
 					continue;
 
-				stream.Position = paraSampleData[n] << 4;
+				stream.Position = startOffset + paraSampleData[n] << 4;
 
 				SampleFileConverter.ReadSample(sample, sampleFormats[n], stream);
 			}
@@ -390,11 +405,11 @@ public class S3M : SongFileConverter
 				if (paraPatterns[n] == 0)
 					continue;
 
-				stream.Position = paraPatterns[n] << 4;
+				stream.Position = startOffset + paraPatterns[n] << 4;
 
 				long end = stream.Position + stream.ReadStructure<ushort>() + 2;
 
-				song.Patterns[n] = new Pattern(length: 64);
+				var pattern = song.GetPattern(n, create: true, rowsInNewPattern: 64)!;
 
 				int row = 0;
 
@@ -419,7 +434,7 @@ public class S3M : SongFileConverter
 
 					int chn = (int)(mask & S3MNoteMask.ChannelNumberMask);
 
-					ref var note = ref song.Patterns[n].Rows[row][chn + 1];
+					ref var note = ref pattern.Rows[row][chn + 1];
 
 					if (mask.HasFlag(S3MNoteMask.NoteAndInstrument))
 					{
@@ -1061,6 +1076,8 @@ public class S3M : SongFileConverter
 
 	public override SaveResult SaveSong(Song song, Stream stream)
 	{
+		long startOffset = stream.Position;
+
 		var warn = Warnings.None;
 
 		if (song.Flags.HasFlag(SongFlags.InstrumentMode))
@@ -1224,7 +1241,7 @@ public class S3M : SongFileConverter
 			}
 
 			stream.WriteAlign(16);
-			paraSampleData[n] = stream.Position;
+			paraSampleData[n] = stream.Position - startOffset;
 
 			SampleFileConverter.WriteSample(stream, smp, SampleFormat.LittleEndian | SampleFormat.PCMUnsigned
 				| (smp.Flags.HasFlag(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8)
@@ -1238,7 +1255,7 @@ public class S3M : SongFileConverter
 		// channel types
 		warn |= FixUpChanTypes(song.Channels, chanTypes);
 
-		stream.Position = 0x40;
+		stream.Position = startOffset + 0x40;
 		stream.WriteStructure(chanTypes);
 
 		// pattern pointers
@@ -1268,7 +1285,7 @@ public class S3M : SongFileConverter
 		}
 
 		/* sample headers */
-		stream.Position = sampleHeaderPos;
+		stream.Position = startOffset + sampleHeaderPos;
 
 		var s3i = new S3I();
 

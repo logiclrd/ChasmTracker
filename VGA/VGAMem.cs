@@ -552,6 +552,8 @@ public static class VGAMem
 		for (n = offset, o = 0; (n < text.Length) && (o < len); n++, o++)
 			DrawCharacter(text[n], position.Advance(o), colours);
 
+		DrawFillCharacters(position.Advance(n), position.Advance(len - 1), colours);
+
 		return o;
 	}
 
@@ -569,6 +571,8 @@ public static class VGAMem
 			DrawCharacter(text[o], position.Advance(i), colours);
 		}
 
+		DrawFillCharacters(position.Advance(o), position.Advance(len - 1), colours);
+
 		return o;
 	}
 
@@ -584,6 +588,8 @@ public static class VGAMem
 		for (n = offset, o = 0; (n < text.Length) && (o < len); n++, o++)
 			DrawCharacterBIOS(text[n], position.Advance(o), colours);
 
+		DrawFillCharacters(position.Advance(o), position.Advance(len - 1), colours);
+
 		return o;
 	}
 
@@ -591,7 +597,9 @@ public static class VGAMem
 	{
 		int o = 0;
 
-		for (int i = 0; i < len; i++)
+		int i;
+
+		for (i = 0; i < len; i++)
 		{
 			o = offset + i;
 
@@ -600,6 +608,8 @@ public static class VGAMem
 
 			DrawCharacterBIOS(text[o], position.Advance(i), colours);
 		}
+
+		DrawFillCharacters(position.Advance(i), position.Advance(len - 1), colours);
 
 		return o;
 	}
@@ -619,6 +629,8 @@ public static class VGAMem
 		}
 		catch
 		{
+			DrawFillCharacters(position, position.Advance(len - 1), colours);
+
 			return DrawTextBIOS(textBytes, position, colours);
 		}
 
@@ -626,6 +638,8 @@ public static class VGAMem
 
 		for (n = offset, o = 0; (n < composed.Length) && (o < len); n++, o++)
 			DrawCharacterUnicode(composed[n], position.Advance(o), colours);
+
+		DrawFillCharacters(position.Advance(o), position.Advance(len - 1), colours);
 
 		return o;
 	}

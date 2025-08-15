@@ -459,13 +459,13 @@ public abstract class MODBase : SongFileConverter
 			// 8 channel data that is formatted as one 4 channel pattern appended to another 4 channel pattern
 			for (int pat = 0; pat <= nPat; pat++)
 			{
-				song.Patterns[pat] = new Pattern();
+				var pattern = song.GetPattern(pat, create: true)!;
 
 				for (int n = 0; n < 64; n++)
 				{
 					for (int chan = 1; chan <= 4; chan++)
 					{
-						ref var note = ref song.Patterns[pat].Rows[n][chan];
+						ref var note = ref pattern.Rows[n][chan];
 
 						stream.ReadExactly(noteBuffer);
 
@@ -477,7 +477,7 @@ public abstract class MODBase : SongFileConverter
 				{
 					for (int chan = 1; chan <= 4; chan++)
 					{
-						ref var note = ref song.Patterns[pat].Rows[n][chan + 4];
+						ref var note = ref pattern.Rows[n][chan + 4];
 
 						stream.ReadExactly(noteBuffer);
 
@@ -490,13 +490,13 @@ public abstract class MODBase : SongFileConverter
 		{
 			for (int pat = 0; pat <= nPat; pat++)
 			{
-				song.Patterns[pat] = new Pattern();
+				var pattern = song.Patterns[pat] = new Pattern();
 
 				for (int n = 0; n < 64; n++)
 				{
 					for (int chan = 1; chan <= nChannels; chan++)
 					{
-						ref var note = ref song.Patterns[pat].Rows[n][chan];
+						ref var note = ref pattern.Rows[n][chan];
 
 						stream.ReadExactly(noteBuffer);
 

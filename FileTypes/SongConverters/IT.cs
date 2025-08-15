@@ -645,9 +645,9 @@ public class IT : SongFileConverter
 
 				stream.Position += 4;
 
-				song.Patterns[n] = new Pattern(rows);
+				var pattern = song.GetPattern(n, create: true, rowsInNewPattern: rows)!;
 
-				LoadPattern(song.Patterns[n], stream, rows, hdr.CreatedWithTrackerVersion);
+				LoadPattern(pattern, stream, rows, hdr.CreatedWithTrackerVersion);
 
 				int got = (int)(stream.Position - paraPat[n] - 8);
 

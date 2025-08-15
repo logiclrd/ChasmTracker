@@ -39,6 +39,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		otherEditorView.OtherHandleKey += otherEditorView_HandleKey;
 		otherEditorView.OtherRedraw += otherEditorView_Redraw;
 
+		AddWidget(otherEditorView);
+
 		MemoryUsage.RegisterMemoryPressure("Clipboard", ClipboardMemoryUsage);
 		MemoryUsage.RegisterMemoryPressure("History", HistoryMemoryUsage);
 
@@ -123,6 +125,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		return true;
 	}
 
+	Pattern EmptyPattern = Pattern.CreateEmpty();
 	SongNote EmptyNote = SongNote.Empty;
 
 	void otherEditorView_Redraw()
@@ -142,7 +145,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		/* how many rows are there? */
 		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
 
-		pattern ??= Pattern.Empty;
+		pattern ??= EmptyPattern;
 
 		int totalRows = pattern.Rows.Count;
 
@@ -2368,7 +2371,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 		for (int row = 0; row < size.Height && row < pattern.Rows.Count; row++)
 			for (int chan = 0; chan < size.Width; chan++)
-				s[row, chan] = pattern[row + position.Y][chan + position.X];
+				s[row, chan] = pattern[row + position.Y][chan + position.X + 1];
 	}
 
 	void SnapCopy(PatternSnap s, Point position, Size size)

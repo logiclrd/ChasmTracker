@@ -984,13 +984,9 @@ public static class SongRenderer
 			csf.CurrentPattern = csf.OrderList[csf.ProcessOrder];
 		}
 
-		if (csf.GetPatternLength(csf.CurrentPattern) == 0)
-		{
-			/* okay, this is wrong. allocate the pattern _NOW_ */
-			csf.Patterns[csf.CurrentPattern] = new Pattern(64);
-		}
+		var pattern = csf.GetPattern(csf.CurrentPattern, create: true)!;
 
-		if (csf.ProcessRow >= csf.GetPatternLength(csf.CurrentPattern))
+		if (csf.ProcessRow >= pattern.Rows.Count)
 		{
 			// Cxx to row beyond end of pattern: use 0 instead
 			csf.ProcessRow = 0;
@@ -1048,7 +1044,7 @@ public static class SongRenderer
 			}
 
 			// Reset channel values
-			var pattern = csf.Patterns[csf.CurrentPattern];
+			var pattern = csf.GetPattern(csf.CurrentPattern, create: true)!;
 
 			for (int nChan=0; nChan < Constants.MaxChannels; nChan++)
 			{

@@ -262,7 +262,8 @@ public class FAR : SongFileConverter
 			if (rows == 0)
 				continue;
 
-			song.Patterns[pat] = new Pattern(rows);
+			var pattern = song.GetPattern(pat, create: true, rowsInNewPattern: rows)!;
+
 			breakPos = (breakPos > 0) && (breakPos < rows - 2) ? breakPos + 1 : -1;
 
 			byte[] data = new byte[4];
@@ -271,14 +272,14 @@ public class FAR : SongFileConverter
 			{
 				for (int chn = 0; chn < 16; chn++)
 				{
-					ref var note = ref song.Patterns[pat].Rows[row][chn];
+					ref var note = ref pattern.Rows[row][chn];
 
 					stream.ReadExactly(data);
 					ImportNote(data, ref note);
 				}
 
 				if (row == breakPos)
-					song.Patterns[pat].Rows[row][0].Effect = Effects.PatternBreak;
+					pattern.Rows[row][0].Effect = Effects.PatternBreak;
 			}
 		}
 

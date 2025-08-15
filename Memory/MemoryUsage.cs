@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 namespace ChasmTracker.Memory;
 
+using System.Linq;
 using ChasmTracker.Pages;
 using ChasmTracker.Songs;
 
@@ -49,7 +50,7 @@ public static class MemoryUsage
 
 		int q = 0;
 
-		foreach (var pattern in Song.CurrentSong.Patterns)
+		foreach (var pattern in Song.CurrentSong.Patterns.OfType<Pattern>())
 		{
 			if (pattern.IsEmpty) continue;
 

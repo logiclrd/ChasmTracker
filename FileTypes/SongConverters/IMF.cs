@@ -391,7 +391,7 @@ public class IMF : SongFileConverter
 		int length = fp.ReadStructure<short>();
 		int numRows = fp.ReadStructure<short>();
 
-		song.Patterns[pat] = new Pattern(numRows);
+		var pattern = song.GetPattern(pat, create: true, rowsInNewPattern: numRows)!;
 
 		int row = 0;
 
@@ -423,7 +423,7 @@ public class IMF : SongFileConverter
 			}
 			else
 			{
-				rowData = song.Patterns[pat].Rows[row];
+				rowData = pattern.Rows[row];
 			}
 
 			ref var note = ref rowData[channel];

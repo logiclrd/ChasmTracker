@@ -432,11 +432,13 @@ public class ULT : SongFileConverter
 
 			for (int pat = 0; pat < numPatterns; pat++)
 			{
+				var pattern = song.Patterns[pat]!; // precreated, guaranteed not null
+
 				int row = 0;
 
 				while (row < 64)
 				{
-					ref var note = ref song.Patterns[pat].Rows[row][chn + 1];
+					ref var note = ref pattern.Rows[row][chn + 1];
 
 					int repeat = ReadEvent(stream, ref evNote, ref lostEffects);
 
@@ -449,7 +451,7 @@ public class ULT : SongFileConverter
 
 					while (repeat-- > 0)
 					{
-						song.Patterns[pat].Rows[row][chn + 1] = evNote;
+						pattern.Rows[row][chn + 1] = evNote;
 						row++;
 					}
 				}

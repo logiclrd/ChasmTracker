@@ -47,7 +47,11 @@ public class Pattern
 
 	public PatternRow this[int row] => Rows[row];
 
-	public static readonly Pattern Empty = new Pattern();
+	// If we make one and store it here statically, there's no guarantee that a
+	// caller won't be naughty and cause it to become non-empty. Up to callers
+	// to keep track, but by always creating a new one here, callers can't
+	// screw each other up.
+	public static Pattern CreateEmpty() => new Pattern();
 
 	public Pattern(IEnumerable<SongNote> data, int numChannels)
 		: this()

@@ -211,7 +211,7 @@ public class MTM : SongFileConverter
 
 		for (int pat = 0; pat <= nPat; pat++)
 		{
-			var pattern = new Pattern(Math.Max(rows, 32));
+			var pattern = song.GetPattern(pat, create: true, rowsInNewPattern: Math.Max(rows, 32))!;
 
 			for (int chan = 1; chan <= 32; chan++)
 			{
@@ -223,7 +223,7 @@ public class MTM : SongFileConverter
 					throw new FormatException();
 
 				for (int n = 0; n < rows; n++)
-					song.Patterns[pat].Rows[n][chan] = trackDefinitions[trk][n];
+					pattern.Rows[n][chan] = trackDefinitions[trk][n];
 			}
 
 			if (rows < 32)
@@ -232,7 +232,7 @@ public class MTM : SongFileConverter
 				* (XXX don't do this if there's already one in another column) */
 				for (int channel = 1; channel <= Constants.MaxChannels; channel++)
 				{
-					ref var note = ref song.Patterns[pat].Rows[rows - 1][channel];
+					ref var note = ref pattern.Rows[rows - 1][channel];
 
 					if ((note.EffectByte == 0) && (note.Parameter == 0))
 					{
