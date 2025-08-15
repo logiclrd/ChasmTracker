@@ -42,7 +42,7 @@ public class Song
 
 	public int[] MixBuffer = new int[Constants.MixBufferSize * 2];
 
-	public readonly List<Pattern> Patterns = new List<Pattern>();
+	public readonly List<Pattern?> Patterns = new List<Pattern?>();
 	public readonly List<SongSample?> Samples = new List<SongSample?>();
 	public readonly List<SongInstrument?> Instruments = new List<SongInstrument?>();
 	public readonly List<int> OrderList = new List<int>();
@@ -266,8 +266,12 @@ public class Song
 	public int GetPatternCount()
 	{
 		for (int n = Patterns.Count; n >= 0; n--)
-			if (!Patterns[n].IsEmpty)
+		{
+			var pattern = Patterns[n];
+
+			if ((pattern != null) && !pattern.IsEmpty)
 				return n + 1;
+		}
 
 		return 0;
 	}
@@ -504,7 +508,7 @@ public class Song
 
 		int pat = OrderList.Last();
 
-		if ((pat >= Patterns.Count) || (Patterns[pat] == null) || (Patterns[pat].Rows.Count == 0))
+		if ((pat >= Patterns.Count) || !(Patterns[pat] is Pattern pattern) || (pattern.Rows.Count == 0))
 			return;
 
 		// how many times it was used (if >1, copy it)
@@ -516,11 +520,11 @@ public class Song
 			while ((newPat < Patterns.Count) && (Patterns[newPat] != null))
 				newPat++;
 
+			while (newPat >= Patterns.Count)
+				Patterns.Add(null);
+
 			//Log.Append(2, "Copying pattern {0} to {1} for restart position", pat, newPat);
-			if (newPat < Patterns.Count)
-				Patterns[newPat] = Patterns[pat].Clone();
-			else
-				Patterns.Add(Patterns[pat].Clone());
+			Patterns[newPat] = pattern.Clone();
 
 			OrderList[OrderList.Count - 1] = pat = newPat;
 		}
@@ -529,7 +533,7 @@ public class Song
 			//Log.Append(2, "Modifying pattern {0} to add restart position", pat);
 		}
 
-		int maxRow = Patterns[pat].Rows.Count - 1;
+		int maxRow = pattern.Rows.Count - 1;
 
 		for (int row = 0; row <= maxRow; row++)
 		{
@@ -540,7 +544,7 @@ public class Song
 
 			for (int n = 0; n < Constants.MaxChannels; n++)
 			{
-				ref var note = ref Patterns[pat][row][n + 1];
+				ref var note = ref pattern[row][n + 1];
 
 				switch (note.Effect)
 				{
@@ -564,7 +568,7 @@ public class Song
 			// then stuff in a jump back to the restart position.
 			if (!hasJump && (emptyChannel >= 0) && (hasBreak || row == maxRow))
 			{
-				ref var empty = ref Patterns[pat][row][emptyChannel];
+				ref var empty = ref pattern[row][emptyChannel];
 
 				empty.Effect = Effects.PositionJump; ;
 				empty.Parameter = (byte)restartOrder;
@@ -1242,7 +1246,7 @@ public class Song
 		byte ba = (byte)a;
 		byte bb = (byte)b;
 
-		foreach (var pat in Patterns)
+		foreach (var pat in Patterns.OfType<Pattern>())
 			foreach (var row in pat.Rows)
 				for (int n = 1; n <= Constants.MaxChannels; n++)
 				{
@@ -1322,7 +1326,7 @@ public class Song
 		else
 		{
 			// for each pattern, for each note, replace 'smp' with 'with'
-			foreach (var pattern in Patterns)
+			foreach (var pattern in Patterns.OfType<Pattern>())
 				foreach (var row in pattern.Rows)
 					for (int j = 1; j <= Constants.MaxChannels; j++)
 					{
@@ -1374,7 +1378,7 @@ public class Song
 	{
 		int maxSampleNumber = Samples.Count - 1;
 
-		foreach (var pattern in Patterns)
+		foreach (var pattern in Patterns.OfType<Pattern>())
 			foreach (var row in pattern.Rows)
 				for (int n = 1; n <= Constants.MaxChannels; n++)
 				{
@@ -1539,7 +1543,7 @@ public class Song
 		byte withByte = (byte)with;
 
 		// for each pattern, for each note, replace 'ins' with 'with'
-		foreach (var pattern in Patterns)
+		foreach (var pattern in Patterns.OfType<Pattern>())
 			foreach (var row in pattern.Rows)
 				for (int j = 1; j <= Constants.MaxChannels; j++)
 				{
@@ -1637,8 +1641,8 @@ public class Song
 
 	public Pattern? GetPattern(int n, bool create = true, int rowsInNewPattern = -1)
 	{
-		if (n >= Patterns.Count)
-			return null;
+		while (n >= Patterns.Count)
+			Patterns.Add(null);
 
 		if (create && (Patterns[n] == null))
 		{
@@ -1736,6 +1740,8 @@ public class Song
 		}
 	}
 
+	static Pattern EmptyPattern = Pattern.CreateEmpty();
+
 	public TimeSpan GetLength()
 	{
 		TimeSpan elapsed = TimeSpan.Zero;
@@ -1793,7 +1799,7 @@ public class Song
 				pSize = pData.Rows.Count;
 			else
 			{
-				pData = Pattern.Empty;
+				pData = EmptyPattern;
 				pSize = 64;
 			}
 

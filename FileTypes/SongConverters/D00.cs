@@ -159,7 +159,7 @@ public class D00 : SongFileConverter
 		while (pattern >= song.Patterns.Count)
 			song.Patterns.Add(new Pattern(D00PatternRows));
 
-		return ref song.Patterns[pattern].Rows[row][channel];
+		return ref song.Patterns[pattern]!.Rows[row][channel];
 	}
 
 	static void FixRow(ref int pattern, ref int row)
@@ -488,14 +488,14 @@ public class D00 : SongFileConverter
 
 			if (maxPattern + 1 < Constants.MaxPatterns)
 				for (int c = maxPattern + 1; c < Constants.MaxPatterns; c++)
-					song.Patterns[c] = Pattern.Empty;
+					song.Patterns[c] = Pattern.CreateEmpty();
 
-			if (song.Patterns[maxPattern].Rows.Count != maxRow)
+			if (song.Patterns[maxPattern]!.Rows.Count != maxRow)
 			{
 				/* insert an effect to jump back to the start */
 				for (int c = 0; c < Constants.MaxChannels; c++)
 				{
-					ref var note = ref song.Patterns[maxPattern].Rows[maxRow][c + 1];
+					ref var note = ref song.Patterns[maxPattern]!.Rows[maxRow][c + 1];
 
 					if (note.Effect != Effects.None)
 						continue;

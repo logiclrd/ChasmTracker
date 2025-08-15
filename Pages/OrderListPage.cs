@@ -107,7 +107,7 @@ public abstract class OrderListPage : Page
 	static void Cheater()
 	{
 		if ((s_currentOrder < Song.CurrentSong.OrderList.Count)
-			&& (Song.CurrentSong.OrderList[s_currentOrder] != SpecialOrders.Skip)
+		 && (Song.CurrentSong.OrderList[s_currentOrder] != SpecialOrders.Skip)
 		 && (Song.CurrentSong.OrderList[s_currentOrder] != SpecialOrders.Last))
 			return;
 
@@ -118,7 +118,9 @@ public abstract class OrderListPage : Page
 
 		for (int i = 0; i < 199; i++)
 		{
-			if ((i >= Song.CurrentSong.Patterns.Count) || Song.CurrentSong.Patterns[i].IsEmpty)
+			if ((i >= Song.CurrentSong.Patterns.Count)
+			 || (Song.CurrentSong.Patterns[i] == null)
+			 || Song.CurrentSong.Patterns[i]!.IsEmpty)
 			{
 				if (first == -1) first = i;
 				if (best == -1) best = i;
@@ -134,7 +136,7 @@ public abstract class OrderListPage : Page
 
 		Status.FlashText($"Pattern {cp} copied to pattern {best}, order {s_currentOrder}");
 
-		Song.CurrentSong.Patterns[best] = Song.CurrentSong.Patterns[cp].Clone();
+		Song.CurrentSong.Patterns[best] = Song.CurrentSong.Patterns[cp]?.Clone() ?? Pattern.CreateEmpty();
 		Song.CurrentSong.SetOrder(s_currentOrder, best);
 
 		s_currentOrder++;
@@ -322,7 +324,10 @@ public abstract class OrderListPage : Page
 
 		for (int p = 0; p < np; p++)
 		{
-			if (used.Contains(p) || (p >= Song.CurrentSong.Patterns.Count) || Song.CurrentSong.Patterns[p].IsEmpty)
+			if (used.Contains(p)
+			 || (p >= Song.CurrentSong.Patterns.Count)
+			 || (Song.CurrentSong.Patterns[p] == null)
+			 || Song.CurrentSong.Patterns[p]!.IsEmpty)
 				continue;
 
 			if (n > 255)

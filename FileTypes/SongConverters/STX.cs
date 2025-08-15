@@ -223,7 +223,7 @@ public class STX : STM
 				if (subversion == 0)
 					stream.Position += 2;
 
-				var pattern = song.Patterns[n] = new Pattern(64);
+				var pattern = song.GetPattern(n, create: true, rowsInNewPattern: 64)!;
 
 				int row = 0;
 

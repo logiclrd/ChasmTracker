@@ -49,7 +49,7 @@ public class DSM : SongFileConverter
 
 	class DSMProcessPatternData
 	{
-		public Pattern Pattern = Pattern.Empty;
+		public Pattern Pattern = Pattern.CreateEmpty();
 		public int NumChannels;
 		public int ChannelDoesNotMatch;
 	}

@@ -334,7 +334,7 @@ public class PSM16 : PSM
 				int numRows = stream.ReadByte();
 				int numChans = stream.ReadByte();
 
-				var pattern = song.GetPattern(i, create: true, rowsInNewPattern: numRows);
+				var pattern = song.GetPattern(i, create: true, rowsInNewPattern: numRows)!;
 
 				while (stream.Position <= start + size && row < numRows)
 				{
@@ -351,7 +351,7 @@ public class PSM16 : PSM
 
 					chan = Math.Min((int)(command & PSM16PatternCommand.ChannelMask), numChans);
 
-					ref var n = ref song.Patterns[i].Rows[row][chan];
+					ref var n = ref pattern.Rows[row][chan];
 
 					if (command.HasFlag(PSM16PatternCommand.NoteAndInstrument))
 					{

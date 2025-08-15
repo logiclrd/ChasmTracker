@@ -369,11 +369,11 @@ public class PSM : SongFileConverter
 
 			int rows = fp.ReadStructure<short>();
 
-			var pattern = song.GetPattern(index, create: true, rowsInNewPattern: rows);
+			var pattern = song.GetPattern(index, create: true, rowsInNewPattern: rows)!;
 
 			for (int i = 0; i < rows; i++)
 			{
-				var row = song.Patterns[index].Rows[i];
+				var row = pattern.Rows[i];
 
 				int rowSize = fp.ReadStructure<short>();
 

@@ -243,9 +243,9 @@ public class S3I : SampleFileConverter
 		{
 			var hdr = new S3IHeaderPCM();
 
-			hdr.MemSeg[0] = (byte)((sdata >> 20) & 0xff);
-			hdr.MemSeg[1] = (byte)((sdata >> 4) & 0xff);
-			hdr.MemSeg[2] = (byte)((sdata >> 12) & 0xff);
+			hdr.MemSeg[0] = (byte)((sdata >> 20) & 0xff); // wat
+			hdr.MemSeg[1] = (byte)((sdata >> 4) & 0xff);  //
+			hdr.MemSeg[2] = (byte)((sdata >> 12) & 0xff); //
 			hdr.Length = smp.Length;
 			hdr.LoopStart = smp.LoopStart;
 			hdr.LoopEnd = smp.LoopEnd;
