@@ -103,11 +103,11 @@ public class TechnicalInfoWindow : InfoWindow
 				{
 					ref var v = ref Song.CurrentSong.Voices[nv];
 
-					if (v.MasterChannel == c && (((v.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (v.Length != 0)) || v.Flags.HasAllFlags(ChannelFlags.AdLib)))
+					if (v.MasterChannel == c && ((!v.CurrentSampleData.IsEmpty && (v.Length != 0)) || v.Flags.HasAllFlags(ChannelFlags.AdLib)))
 						tot++;
 				}
 
-				if (((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length != 0)) || voice.Flags.HasAllFlags(ChannelFlags.AdLib))
+				if ((!voice.CurrentSampleData.IsEmpty && (voice.Length != 0)) || voice.Flags.HasAllFlags(ChannelFlags.AdLib))
 					tot++;
 
 				VGAMem.DrawText(tot.ToString("d3"), new Point(63, pos), (2, 0));
@@ -115,7 +115,7 @@ public class TechnicalInfoWindow : InfoWindow
 
 			int smp;
 
-			if (((voice.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (voice.Length != 0)) || voice.Flags.HasAllFlags(ChannelFlags.AdLib) && (voice.Sample != null))
+			if ((!voice.CurrentSampleData.IsEmpty && (voice.Length != 0)) || voice.Flags.HasAllFlags(ChannelFlags.AdLib) && (voice.Sample != null))
 			{
 				// again with the hacks...
 				smp = Song.CurrentSong.Samples.IndexOf(voice.Sample);

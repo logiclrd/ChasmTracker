@@ -1087,6 +1087,7 @@ public class Song
 
 		Array.Clear(Voices);
 		Array.Clear(VoiceMix);
+
 		Samples.Clear();
 		Instruments.Clear();
 		OrderList.Clear();
@@ -2289,7 +2290,7 @@ public class Song
 			{
 				var sample = Samples[n];
 				if (sample == null)
-					data = null;
+					data = default;
 				else
 					data = sample.Data;
 			}
@@ -2327,7 +2328,7 @@ public class Song
 					applyDNA = SongNote.IsNote(note) && (p.Note == note) && (instrument == p.Instrument);
 					break;
 				case DuplicateCheckTypes.Sample:
-					applyDNA = (data.Span == p.CurrentSampleData.Span) && (instrument == p.Instrument);
+					applyDNA = (data.RawData == p.CurrentSampleData.RawData) && (instrument == p.Instrument);
 					break;
 				case DuplicateCheckTypes.Instrument:
 					applyDNA = (instrument == p.Instrument);
@@ -3273,7 +3274,7 @@ public class Song
 			chan.Volume = pSmp.Volume;
 
 		// inst_changed is used for IT carry-on env option
-		if (pEnv != chan.Instrument || (chan.CurrentSampleData.Span == Memory<byte>.Empty.Span))
+		if (pEnv != chan.Instrument || chan.CurrentSampleData.IsEmpty)
 		{
 			instrumentChanged = true;
 			chan.Instrument = pEnv;
@@ -3373,7 +3374,7 @@ public class Song
 
 		bool wasKeyOff = chan.Flags.HasAllFlags(ChannelFlags.KeyOff);
 
-		if (pSmp == chan.Sample && (chan.CurrentSampleData.Span != Memory<byte>.Empty.Span) && (chan.Length != 0))
+		if (pSmp == chan.Sample && !chan.CurrentSampleData.IsEmpty && (chan.Length != 0))
 		{
 			if (portamento && instrumentChanged && (pEnv != null))
 				chan.Flags &= ~(ChannelFlags.KeyOff | ChannelFlags.NoteFade);
@@ -5372,7 +5373,7 @@ public class Song
 		{
 			ref var v = ref Voices[i];
 
-			if (v.Sample == smp || v.CurrentSampleData.Span == smp.Data.AsSpan())
+			if (v.Sample == smp || v.CurrentSampleData.RawData == smp.RawData)
 			{
 				v.Note = v.NewNote = 1;
 				v.NewInstrumentNumber = 0;
@@ -5383,7 +5384,7 @@ public class Song
 				v.LoopStart = 0;
 				v.LoopEnd = 0;
 				v.ROfs = v.LOfs = 0;
-				v.CurrentSampleData = null;
+				v.CurrentSampleData = SampleWindow.Empty;
 				v.Sample = null;
 				v.Instrument = null;
 				v.LeftVolume = v.RightVolume = 0;
@@ -5405,7 +5406,7 @@ public class Song
 			{
 				ref var channel = ref Voices[VoiceMix[n]];
 
-				if ((channel.Sample != null) && (channel.CurrentSampleData.Span != Memory<byte>.Empty.Span))
+				if ((channel.Sample != null) && !channel.CurrentSampleData.IsEmpty)
 				{
 					int s = GetSampleNumber(channel.Sample);
 
@@ -5454,7 +5455,7 @@ public class Song
 			{
 				ref var channel = ref Voices[VoiceMix[n]];
 
-				if ((channel.Sample != null) && (channel.CurrentSampleData.Span != Memory<byte>.Empty.Span))
+				if ((channel.Sample != null) && !channel.CurrentSampleData.IsEmpty)
 				{
 					int s = Samples.IndexOf(channel.Sample);
 					if (s != sampleNumberChanged) continue;

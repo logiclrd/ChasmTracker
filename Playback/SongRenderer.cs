@@ -1328,7 +1328,7 @@ public static class SongRenderer
 			chan.RightVolumeNew = chan.LeftVolumeNew = 0;
 
 			if ((chan.Length == 0) || (chan.Increment == 0))
-				chan.CurrentSampleData = null;
+				chan.CurrentSampleData = SampleWindow.Empty;
 
 			// Process the VU meter. This is filled in with real
 			// data in the mixer loops.
@@ -1351,7 +1351,7 @@ public static class SongRenderer
 				}
 			}
 
-			if (chan.CurrentSampleData.Span != Memory<byte>.Empty.Span)
+			if (!chan.CurrentSampleData.IsEmpty)
 			{
 				if (!UpdateSample(csf, ref chan, cn, master_vol))
 					break;

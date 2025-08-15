@@ -779,7 +779,7 @@ public static class Mixer
 		public void Mix(ref SongVoice chan, Span<int> pVol)
 		{
 			int position = chan.PositionFrac;
-			Span<TSample> p = MemoryMarshal.Cast<byte, TSample>(chan.CurrentSampleData.Span.Slice(chan.Position));
+			Span<TSample> p = MemoryMarshal.Cast<byte, TSample>(chan.CurrentSampleData.Slice(chan.Position));
 			if (chan.Flags.HasAllFlags(ChannelFlags.Stereo)) p = p.Slice(chan.Position);
 			int max = chan.VUMeter;
 
@@ -1291,7 +1291,7 @@ public static class Mixer
 		{
 			ref SongVoice channel = ref csf.Voices[csf.VoiceMix[nChan]];
 
-			if (((channel.CurrentSampleData.Span == Memory<byte>.Empty.Span) || (channel.Sample == null) /* HAX */)
+			if ((channel.CurrentSampleData.IsEmpty || (channel.Sample == null) /* HAX */)
 				&& (channel.LOfs == 0)
 				&& (channel.ROfs == 0))
 				continue;
@@ -1353,21 +1353,24 @@ public static class Mixer
 			// - Loop wraparound works pretty well in general, but not at the start of bidi samples.
 			// - The loop lookahead stuff might still fail for samples with backward loops.
 
-			var sampleDataPtr = channelSample.Data;
-			var lookaheadPtr = ArraySegment<byte>.Empty;
+			var rawSampleData = channelSample.RawData;
+			var lookaheadPtr = SampleWindow.Empty;
 
 			int lookaheadStart = (channel.LoopEnd < Constants.MaxInterpolationLookaheadBufferSize) ? channel.LoopStart : Math.Max(channel.LoopStart, channel.LoopEnd - Constants.MaxInterpolationLookaheadBufferSize);
 
-			// This shouldn't be necessary with interpolation disabled but with that conditional
-			// it causes weird precision loss within the sample, hence why I've removed it. This
-			// shouldn't be that heavy anyway :p
-			if (channel.Flags.HasFlag(ChannelFlags.Loop))
+			if (rawSampleData != null)
 			{
-				int lookaheadOffset = 3 * Constants.MaxInterpolationLookaheadBufferSize + channelSample.Length - channel.LoopEnd;
-				if (channel.Flags.HasFlag(ChannelFlags.SustainLoop))
-					lookaheadOffset += 4 * Constants.MaxInterpolationLookaheadBufferSize;
+				// This shouldn't be necessary with interpolation disabled but with that conditional
+				// it causes weird precision loss within the sample, hence why I've removed it. This
+				// shouldn't be that heavy anyway :p
+				if (channel.Flags.HasAllFlags(ChannelFlags.Loop))
+				{
+					int lookaheadOffset = 3 * Constants.MaxInterpolationLookaheadBufferSize + channelSample.Length - channel.LoopEnd;
+					if (channel.Flags.HasAllFlags(ChannelFlags.SustainLoop))
+						lookaheadOffset += 4 * Constants.MaxInterpolationLookaheadBufferSize;
 
-				lookaheadPtr = sampleDataPtr.Slice(lookaheadOffset * (channelSample.Flags.HasFlag(ChannelFlags.Stereo) ? 2 : 1) * (channelSample.Flags.HasFlag(ChannelFlags._16bit) ? 2 : 1));
+					lookaheadPtr = channelSample.Data.Shift(lookaheadOffset - SongSample.AllocatePrepend);
+				}
 			}
 
 			////////////////////////////////////////////////////
@@ -1397,7 +1400,7 @@ public static class Mixer
 				if (sampleCount <= 0)
 				{
 					// Stopping the channel
-					channel.CurrentSampleData = null;
+					channel.CurrentSampleData = SampleWindow.Empty;
 					channel.Length = 0;
 					channel.Position = 0;
 					channel.PositionFrac = 0;
@@ -1433,15 +1436,15 @@ public static class Mixer
 						: s_mixKernels[flags];
 
 					// Loop wrap-around magic
-					if (lookaheadPtr != ArraySegment<byte>.Empty)
+					if (!lookaheadPtr.IsEmpty)
 					{
 						int oldcount = sampleCount;
 						int pos_dest = ((channel.Position << 16) + (channel.Increment * (numSamples - 1)) + channel.PositionFrac) >> 16;
-						bool at_loop_start = (channel.Position >= channel.LoopStart) && (channel.Position < channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize);
-						if (!at_loop_start)
+						bool atLoopStart = (channel.Position >= channel.LoopStart) && (channel.Position < channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize);
+						if (!atLoopStart)
 							channel.Flags &= ~ChannelFlags.LoopWrapped;
 
-						channel.CurrentSampleData = sampleDataPtr;
+						channel.CurrentSampleData = channelSample.Data;
 
 						if (channel.Position >= lookaheadStart)
 						{
@@ -1459,10 +1462,10 @@ public static class Mixer
 						{
 							// Interpolate properly after looping
 							sampleCount = SamplesToBufferLength(channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize - channel.Position, ref channel);
-							channel.CurrentSampleData = lookaheadPtr.Slice((channel.LoopEnd - channel.LoopStart) * (channelSample.Flags.HasFlag(ChannelFlags.Stereo) ? 2 : 1) * (channelSample.Flags.HasFlag(ChannelFlags._16bit) ? 2 : 1));
-						} else if (channel.Increment >= 0 && pos_dest >= (int)lookaheadStart && sampleCount > 1) {
-							sampleCount = SamplesToBufferLength(lookaheadStart - channel.Position, ref channel);
+							channel.CurrentSampleData = lookaheadPtr.Shift((channel.LoopEnd - channel.LoopStart) * (channelSample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1));
 						}
+						else if (channel.Increment >= 0 && pos_dest >= (int)lookaheadStart && sampleCount > 1)
+							sampleCount = SamplesToBufferLength(lookaheadStart - channel.Position, ref channel);
 
 						sampleCount = sampleCount.Clamp(1, oldcount);
 					}
@@ -1499,7 +1502,7 @@ public static class Mixer
 						 && (channel.FadeOutVolume == 0))
 						{
 							channel.Length = 0;
-							channel.CurrentSampleData = null;
+							channel.CurrentSampleData = SampleWindow.Empty;
 						}
 					}
 					else

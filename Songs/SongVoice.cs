@@ -1,7 +1,6 @@
-using System;
-using System.Threading.Channels;
-
 namespace ChasmTracker.Songs;
+
+using ChasmTracker.Utility;
 
 // (TODO write decent descriptions of what the various volume
 // variables are used for - are all of them *really* necessary?)
@@ -12,7 +11,7 @@ public struct SongVoice
 	public SongVoice() { }
 
 	// First 32-bytes: Most used mixing information: don't change it
-	public Memory<byte> CurrentSampleData;
+	public SampleWindow CurrentSampleData = SampleWindow.Empty;
 	public int Position; // sample position, fixed-point -- integer part
 	public int PositionFrac; // fractional part
 	public int Increment; // 16.16 fixed point, how much to add to position per sample-frame of output

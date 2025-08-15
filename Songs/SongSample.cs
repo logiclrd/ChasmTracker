@@ -12,8 +12,8 @@ public class SongSample
 	public int LoopEnd;
 	public int SustainStart;
 	public int SustainEnd;
-	public Span<sbyte> Data8 => (Data.Count > 0) ? MemoryMarshal.Cast<byte, sbyte>(Data.AsSpan()) : Span<sbyte>.Empty;
-	public Span<short> Data16 => (Data.Count > 0) ? MemoryMarshal.Cast<byte, short>(Data.AsSpan()) : Span<short>.Empty;
+	public Span<sbyte> Data8 => (Data.Length > 0) ? MemoryMarshal.Cast<byte, sbyte>(Data.AsSpan()) : Span<sbyte>.Empty;
+	public Span<short> Data16 => (Data.Length > 0) ? MemoryMarshal.Cast<byte, short>(Data.AsSpan()) : Span<short>.Empty;
 	public int C5Speed = 8363;
 	public int Panning;
 	public int Volume = 64 * 4;
@@ -36,23 +36,19 @@ public class SongSample
 
 	public bool HasData => RawData != null;
 
-	public ArraySegment<byte> Data;
+	public SampleWindow Data = SampleWindow.Empty;
 
 	public const int AllocatePrepend = Constants.MaxSamplingPointSize * Constants.MaxInterpolationLookaheadBufferSize;
 	public const int AllocateAppend = (1 + 4 + 4) * Constants.MaxInterpolationLookaheadBufferSize * 4;
 
 	public void AllocateData()
 	{
-		RawData = null;
-
-		Data = ArraySegment<byte>.Empty;
-
 		bool _16bit = Flags.HasAllFlags(SampleFlags._16Bit);
 
 		int bps = _16bit ? 2 : 1;
 
 		RawData = new byte[(Length + AllocatePrepend + AllocateAppend) * bps];
-		Data = new ArraySegment<byte>(RawData, AllocatePrepend * bps, Length * bps);
+		Data = new SampleWindow(RawData, bps);
 	}
 
 	public void TakeSubset(int firstSample, int sampleCount)
@@ -118,7 +114,7 @@ public class SongSample
 		for (int i = 0; i < samples; i++)
 		{
 			for (int c = 0; c < channels; c++)
-				RawData[targetOffset + destOffset + c] = RawData[Data.Offset + position * channels + c];
+				RawData[targetOffset + destOffset + c] = RawData[AllocatePrepend + position * channels + c];
 
 			destOffset += writeIncrement * channels;
 
@@ -162,8 +158,8 @@ public class SongSample
 		int channels = Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1;
 		int copySamples = channels * Constants.MaxInterpolationLookaheadBufferSize;
 
-		int smpStartOffset = Data.Offset;
-		int afterSmpStartOffset = Data.Offset + Data.Count;
+		int smpStartOffset = AllocatePrepend;
+		int afterSmpStartOffset = AllocatePrepend + Data.Length;
 		int loopLookaheadStartOffset = afterSmpStartOffset + copySamples;
 		int sustainLookaheadStartOffset = loopLookaheadStartOffset + 4 * copySamples;
 
@@ -206,7 +202,7 @@ public class SongSample
 			return;
 
 		var RawData16 = MemoryMarshal.Cast<byte, short>(RawData);
-		var Data16 = RawData16.Slice(Data.Offset / 2, Data.Count / 2);
+		var Data16 = RawData16.Slice(AllocatePrepend, Data.Length / 2);
 
 		int samples = 2 * Constants.MaxInterpolationLookaheadBufferSize + (forwardDirection ? 1 : 0);
 		int destOffset = channels * (2 * Constants.MaxInterpolationLookaheadBufferSize - 1);
@@ -259,12 +255,12 @@ public class SongSample
 			return;
 
 		var RawData16 = MemoryMarshal.Cast<byte, short>(RawData);
-		var Data16 = RawData16.Slice(Data.Offset / 2, Data.Count / 2);
+		var Data16 = RawData16.Slice(AllocatePrepend, Data.Length / 2);
 
 		int channels = Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1;
 		int copySamples = channels * Constants.MaxInterpolationLookaheadBufferSize;
 
-		int smpStartOffset = Data.Offset / 2;
+		int smpStartOffset = AllocatePrepend;
 		int afterSmpStartOffset = smpStartOffset + Data16.Length;
 		int loopLookaheadStartOffset = afterSmpStartOffset + copySamples;
 		int sustainLookaheadStartOffset = loopLookaheadStartOffset + 4 * copySamples;
@@ -366,7 +362,7 @@ public class SongSample
 		if (RawData != null)
 		{
 			ret.RawData = (byte[])RawData.Clone();
-			ret.Data = new ArraySegment<byte>(ret.RawData, Data.Offset, Data.Count);
+			ret.Data = new SampleWindow(ret.RawData, Data.BytesPerSample);
 		}
 
 		return ret;
