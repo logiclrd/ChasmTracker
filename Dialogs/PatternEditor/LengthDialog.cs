@@ -1,3 +1,5 @@
+using System;
+
 namespace ChasmTracker.Dialogs.PatternEditor;
 
 using ChasmTracker.Dialogs;
@@ -63,6 +65,8 @@ public class LengthDialog : Dialog
 		VGAMem.DrawText("End Pattern", new Point(22, 28), (0, 2));
 	}
 
+	public event Action<int>? CurrentPatternLengthChanged;
+
 	void Close()
 	{
 		int nl = thumbBarPatternLength.Value;
@@ -79,9 +83,7 @@ public class LengthDialog : Dialog
 			if (patternIndex == _currentPattern)
 			{
 				Status.Flags |= StatusFlags.NeedUpdate;
-				// TODO: move these to the place that shows the dialog, triggered by an event
-				//current_row = MIN(current_row, nl - 1);
-				//pattern_editor_reposition();
+				CurrentPatternLengthChanged?.Invoke(nl);
 			}
 		}
 	}

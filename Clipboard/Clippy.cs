@@ -129,9 +129,9 @@ public class Clippy
 		var @out = new StringBuilder();
 
 		/* normalize line breaks
-		*
-		* TODO: this needs to be done internally as well; every paste
-		* handler ought to expect Unix LF format. */
+		 *
+		 * TODO: this needs to be done internally as well; every paste
+		 * handler ought to expect Unix LF format. */
 
 		for (int i = 0; i < _currentSelection.Length; i++)
 		{

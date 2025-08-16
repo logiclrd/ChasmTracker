@@ -521,17 +521,13 @@ public class Program
 		AudioBackend.Current?.Quit();
 		Clippy.Quit();
 		EventHub.Quit();
-		// TODO: Timer.Quit();
-
-		// TODO: OS.SysExit();
+		Timer.Quit();
 
 		Environment.Exit(x);
 	}
 
 	static int Main(string[] args)
 	{
-		// TODO: OS.SysInit();
-
 		FFT.Initialize();
 
 		Version.Initialize();
@@ -552,6 +548,8 @@ public class Program
 			Hooks.Startup();
 			s_shutdownProcess |= ShutdownFlags.RunHook;
 		}
+
+		Timer.Initialize();
 
 		Song.Initialize();
 
@@ -635,6 +633,8 @@ public class Program
 		var ret = Video.Startup();
 
 		Assert.IsTrue(ret, "Video.Startup()", "Failed to initialize video!");
+
+		// TODO: native menu??
 
 		if (s_args.WantFullScreenSpecified)
 			Video.Fullscreen(s_args.WantFullScreen);

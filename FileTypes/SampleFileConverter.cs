@@ -23,7 +23,10 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 	static Type[] s_converterTypes =
 		typeof(SampleFileConverter).Assembly.GetTypes()
 		.Where(t => typeof(SampleFileConverter).IsAssignableFrom(t) && !t.IsAbstract)
-		.ToArray(); // TODO: priority
+		.Select(t => (Type: t, Instance: (SampleFileConverter)Activator.CreateInstance(t)!))
+		.OrderBy(ti => ti.Instance.SortOrder)
+		.Select(ti => ti.Type)
+		.ToArray();
 
 	public static SongSample? TryLoadSampleWithAllConverters(string path)
 	{
@@ -818,8 +821,8 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				switch (flags)
 				{
 					/* TODO: for signed PCM stereo interleaved and mono, we can
-					* simply write the entire buffer to disk, which will definitely
-					* be faster than what we're doing right now :) */
+					 * simply write the entire buffer to disk, which will definitely
+					 * be faster than what we're doing right now :) */
 					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.LittleEndian | SampleFormat.PCMSigned:
 					case SampleFormat._8 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMSigned:
 					{

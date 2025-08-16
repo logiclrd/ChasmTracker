@@ -4409,7 +4409,7 @@ public class Song
 		// hm
 		lock (AudioPlayback.LockScope())
 		{
-			var c = CurrentSong.Voices[chanInternal];
+			ref var c = ref CurrentSong.Voices[chanInternal];
 
 			bool insMode = CurrentSong.IsInstrumentMode;
 

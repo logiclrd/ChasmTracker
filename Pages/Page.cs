@@ -30,7 +30,7 @@ public abstract class Page : WidgetContext
 
 	public static Widget? SelectedActiveWidget => ActiveWidgetContext?.SelectedWidget;
 
-	public static MiniPopState MiniPopActive;
+	public static MiniPopState MiniPopActive = MiniPopState.Inactive;
 
 	protected Page(PageNumbers pageNumber, string title, HelpTexts helpText)
 	{
@@ -682,8 +682,14 @@ public abstract class Page : WidgetContext
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
-	public static MiniPopSlideDialog ShowMiniPop(int currentValue, string name, int min, int max, Point mid)
+	public static MiniPopSlideDialog? ShowMiniPop(int currentValue, string name, int min, int max, Point mid)
 	{
+		if (MiniPopActive >= MiniPopState.Active)
+		{
+			MiniPopActive = MiniPopState.ActiveUsed;
+			return null;
+		}
+
 		var miniPopDialog = Dialog.Show(new MiniPopSlideDialog(currentValue, name, min, max, mid));
 
 		miniPopDialog.MiniPopUsed +=
@@ -1096,11 +1102,14 @@ public abstract class Page : WidgetContext
 			{
 				var minipop = ShowMiniPop(Keyboard.CurrentOctave, "Octave", 0, 8, new Point(50, 5));
 
-				minipop.SetValue +=
-					newValue =>
-					{
-						Keyboard.CurrentOctave = newValue;
-					};
+				if (minipop != null)
+				{
+					minipop.SetValue +=
+						newValue =>
+						{
+							Keyboard.CurrentOctave = newValue;
+						};
+				}
 
 				return true;
 			}
@@ -1108,18 +1117,21 @@ public abstract class Page : WidgetContext
 			{
 				var minipop = ShowMiniPop(Song.CurrentSong.CurrentSpeed, "Speed", 1, 255, new Point(51, 4));
 
-				minipop.SetValue +=
-					newValue =>
-					{
-						Song.CurrentSong.SetCurrentSpeed(newValue);
-					};
+				if (minipop != null)
+				{
+					minipop.SetValue +=
+						newValue =>
+						{
+							Song.CurrentSong.SetCurrentSpeed(newValue);
+						};
 
-				minipop.SetValueNoPlay +=
-					newValue =>
-					{
-						if (Song.CurrentSong is Song currentSong)
-							currentSong.InitialSpeed = newValue;
-					};
+					minipop.SetValueNoPlay +=
+						newValue =>
+						{
+							if (Song.CurrentSong is Song currentSong)
+								currentSong.InitialSpeed = newValue;
+						};
+				}
 
 				return true;
 			}
@@ -1127,18 +1139,21 @@ public abstract class Page : WidgetContext
 			{
 				var minipop = ShowMiniPop(Song.CurrentSong.CurrentTempo, "Tempo", 32, 255, new Point(55, 4));
 
-				minipop.SetValue +=
-					newValue =>
-					{
-						Song.CurrentSong.SetCurrentTempo(newValue);
-					};
+				if (minipop != null)
+				{
+					minipop.SetValue +=
+						newValue =>
+						{
+							Song.CurrentSong.SetCurrentTempo(newValue);
+						};
 
-				minipop.SetValueNoPlay +=
-					newValue =>
-					{
-						if (Song.CurrentSong is Song currentSong)
-							currentSong.InitialTempo = newValue;
-					};
+					minipop.SetValueNoPlay +=
+						newValue =>
+						{
+							if (Song.CurrentSong is Song currentSong)
+								currentSong.InitialTempo = newValue;
+						};
+				}
 
 				return true;
 			}
@@ -1158,21 +1173,27 @@ public abstract class Page : WidgetContext
 				{
 					var minipop = ShowMiniPop(AllPages.InstrumentList.CurrentInstrument, "Instrument", (Status.CurrentPage is InstrumentListPage) ? 1 : 0, 99 /* FIXME */, new Point(58, 3));
 
-					minipop.SetValue +=
-						newValue =>
-						{
-							AllPages.InstrumentList.CurrentInstrument = newValue;
-						};
+					if (minipop != null)
+					{
+						minipop.SetValue +=
+							newValue =>
+							{
+								AllPages.InstrumentList.CurrentInstrument = newValue;
+							};
+					}
 				}
 				else
 				{
 					var minipop = ShowMiniPop(AllPages.SampleList.CurrentSample, "Sample", (Status.CurrentPage is SampleListPage) ? 1 : 0, 99 /* FIXME */, new Point(58, 3));
 
-					minipop.SetValue +=
-						newValue =>
-						{
-							AllPages.SampleList.CurrentSample = newValue;
-						};
+					if (minipop != null)
+					{
+						minipop.SetValue +=
+							newValue =>
+							{
+								AllPages.SampleList.CurrentSample = newValue;
+							};
+					}
 				}
 			}
 			else if (k.MousePosition.X >= 12 && k.MousePosition.X <= 18)
@@ -1181,11 +1202,14 @@ public abstract class Page : WidgetContext
 				{
 					var minipop = ShowMiniPop(AllPages.PatternEditor.CurrentRow, "Row", 0, Song.CurrentSong?.GetPattern(AllPages.PatternEditor.CurrentPattern)?.Rows?.Count ?? 64, new Point(14, 7));
 
-					minipop.SetValue +=
-						newValue =>
-						{
-							AllPages.PatternEditor.CurrentRow = newValue;
-						};
+					if (minipop != null)
+					{
+						minipop.SetValue +=
+							newValue =>
+							{
+								AllPages.PatternEditor.CurrentRow = newValue;
+							};
+					}
 
 					return true;
 				}
@@ -1193,11 +1217,14 @@ public abstract class Page : WidgetContext
 				{
 					var minipop = ShowMiniPop(AllPages.PatternEditor.CurrentPattern, "Pattern", 0, Song.CurrentSong?.Patterns.Count ?? 9, new Point(14, 6));
 
-					minipop.SetValue +=
-						newValue =>
-						{
-							AllPages.PatternEditor.CurrentPattern = newValue;
-						};
+					if (minipop != null)
+					{
+						minipop.SetValue +=
+							newValue =>
+							{
+								AllPages.PatternEditor.CurrentPattern = newValue;
+							};
+					}
 
 					return true;
 				}
@@ -1205,11 +1232,14 @@ public abstract class Page : WidgetContext
 				{
 					var minipop = ShowMiniPop(AllPages.OrderList.CurrentOrder, "Order", 0, Song.CurrentSong?.Patterns.Count ?? 0, new Point(14, 5));
 
-					minipop.SetValue +=
-						newValue =>
-						{
-							AllPages.OrderList.CurrentOrder = newValue;
-						};
+					if (minipop != null)
+					{
+						minipop.SetValue +=
+							newValue =>
+							{
+								AllPages.OrderList.CurrentOrder = newValue;
+							};
+					}
 
 					return true;
 				}
@@ -1397,9 +1427,19 @@ public abstract class Page : WidgetContext
 						FinishMiniPop();
 						if (k.State == KeyState.Press && Status.DialogType == DialogTypes.None)
 						{
-							Dialog.Show(new LengthDialog(
+							var dialog = Dialog.Show(new LengthDialog(
 								Song.CurrentSong.GetPatternLength(AllPages.PatternEditor.CurrentPattern),
 								AllPages.PatternEditor.CurrentPattern));
+
+							dialog.CurrentPatternLengthChanged +=
+								(newLength) =>
+								{
+									AllPages.PatternEditor.CurrentRow = Math.Min(
+										AllPages.PatternEditor.CurrentRow,
+										newLength);
+
+									AllPages.PatternEditor.Reposition();
+								};
 						}
 						return true;
 					}

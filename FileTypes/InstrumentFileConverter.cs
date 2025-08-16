@@ -19,7 +19,10 @@ public abstract class InstrumentFileConverter : FileConverter, IFileInfoReader
 	static Type[] s_converterTypes =
 		typeof(InstrumentFileConverter).Assembly.GetTypes()
 		.Where(t => typeof(InstrumentFileConverter).IsAssignableFrom(t) && !t.IsAbstract)
-		.ToArray(); // TODO: priority
+		.Select(t => (Type: t, Instance: (InstrumentFileConverter)Activator.CreateInstance(t)!))
+		.OrderBy(ti => ti.Instance.SortOrder)
+		.Select(ti => ti.Type)
+		.ToArray();
 
 	public static bool TryLoadInstrumentWithAllConverters(string path, int slot)
 	{

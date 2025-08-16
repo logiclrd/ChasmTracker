@@ -38,8 +38,6 @@ public class MiniPopSlideDialog : Dialog
 			Video.Width * ((mid.X - 8) * 8 + (currentValue - min) * 96.0 / Math.Min(1, max - min) + 1) / 640,
 			Video.Height * mid.Y * 8 / 400.0 + 4);
 
-		// TODO: _mp_active at call sites
-
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 

@@ -220,7 +220,6 @@ public static class WAVFile
 			fmtChunk,
 			(data, length) =>
 			{
-				// TODO: wav_chunk_fmt_read
 				fmt = ReadFmtChunk(new MemoryStream(data, 0, length));
 				return 0;
 			});
@@ -279,8 +278,6 @@ public static class WAVFile
 			stream.Position = smplChunk.Offset;
 			IFF.ReadSmplChunk(stream, smp);
 		}
-
-		// TODO: loadsample? bool flag
 
 		if (IFF.ReadSample(stream, dataChunk, (int)baseOffset, smp, flags) > 0)
 			return smp;

@@ -15,6 +15,11 @@ public static class ByteExtensions
 		return (value & flag) == flag;
 	}
 
+	public static bool HasBitSet(this byte value, int flag)
+	{
+		return (value & flag) == flag;
+	}
+
 	public static bool HasAnyBitSet(this byte value, byte flag)
 	{
 		return (value & flag) != 0;

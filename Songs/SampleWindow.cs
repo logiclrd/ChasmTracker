@@ -56,7 +56,7 @@ public struct SampleWindow
 	}
 
 	public Span<byte> Slice(int byteIndex)
-		=> Slice(byteIndex, Length + _offset * _bps - byteIndex);
+		=> Slice(byteIndex, _rawData.Length - _offset * _bps - byteIndex);
 
 	public Span<byte> Slice(int byteIndex, int length)
 	{
