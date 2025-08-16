@@ -404,13 +404,13 @@ to change the default font!
 						for (int n = 0; n < 8; n++)
 							for (int bit = 0; bit < 8; bit++)
 								if ((ptr[n] & (1 << bit)) != 0)
-									tmp[bit] = unchecked((byte)(tmp[bit] | 1 << (7 - n)));
+									tmp[bit] = unchecked((byte)(tmp[bit] | (1 << (7 - n))));
 						break;
 					case KeySym.RightBracket:
 						for (int n = 0; n < 8; n++)
 							for (int bit = 0; bit < 8; bit++)
 								if ((ptr[n] & (1 << bit)) != 0)
-									tmp[7 - bit] = unchecked((byte)(tmp[7 - bit] | 1 << n));
+									tmp[7 - bit] = unchecked((byte)(tmp[7 - bit] | (1 << n)));
 						break;
 				}
 

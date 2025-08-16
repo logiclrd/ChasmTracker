@@ -293,7 +293,7 @@ public class S3M : SongFileConverter
 		{
 			var sample = song.EnsureSample(n + 1);
 
-			stream.Position = startOffset + paraSamples[n] << 4;
+			stream.Position = startOffset + (paraSamples[n] << 4);
 
 			var type = (S3IType)stream.ReadByte();
 
@@ -388,7 +388,7 @@ public class S3M : SongFileConverter
 				if ((sample.Length == 0) || sample.Flags.HasAllFlags(SampleFlags.AdLib))
 					continue;
 
-				stream.Position = startOffset + paraSampleData[n] << 4;
+				stream.Position = startOffset + (paraSampleData[n] << 4);
 
 				SampleFileConverter.ReadSample(sample, sampleFormats[n], stream);
 			}
@@ -405,7 +405,7 @@ public class S3M : SongFileConverter
 				if (paraPatterns[n] == 0)
 					continue;
 
-				stream.Position = startOffset + paraPatterns[n] << 4;
+				stream.Position = startOffset + (paraPatterns[n] << 4);
 
 				long end = stream.Position + stream.ReadStructure<ushort>() + 2;
 

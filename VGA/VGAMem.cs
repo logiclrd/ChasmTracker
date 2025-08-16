@@ -123,7 +123,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Data[yl + ch.C << 3];
+					dg = Font.Data[yl + (ch.C << 3)];
 					break;
 				case FontTypes.BIOS:
 					/* VGA BIOS character */
@@ -131,17 +131,17 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Alt[yl + ch.C << 3];
+					dg = Font.Alt[yl + (ch.C << 3)];
 					break;
 				case FontTypes.HalfWidth:
 				{
 					/* halfwidth (used for patterns) */
-					byte dg1 = Font.HalfData[yl + ch.C << 2];
-					byte dg2 = Font.HalfData[yl + ch.C2 << 2];
+					byte dg1 = Font.HalfData[yl + (ch.C << 2)];
+					byte dg2 = Font.HalfData[yl + (ch.C2 << 2)];
 
 					dg = unchecked((byte)(((ry & 1) == 0)
-						? ((dg1 & 0xF0) | dg2 >> 4)
-						: (dg1 << 4 | (dg2 & 0xF))));
+						? ((dg1 & 0xF0) | (dg2 >> 4))
+						: ((dg1 << 4) | (dg2 & 0xF))));
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -169,15 +169,15 @@ public static class VGAMem
 					/* These are ordered by how often they will probably appear
 					 * for an average user of Chasm (i.e., English speakers). */
 					if (c >= 0x20 && c <= 0x7F) /* ASCII */
-						dg = Font.Data[yl + c << 3];
+						dg = Font.Data[yl + (c << 3)];
 					else if (c >= 0xA0 && c <= 0xFF) /* extended latin */
-						dg = DefaultFonts.ExtendedLatin[yl + (c - 0xA0) << 3];
+						dg = DefaultFonts.ExtendedLatin[yl + ((c - 0xA0) << 3)];
 					else if (c >= 0x390 && c <= 0x3C9) /* greek */
-						dg = DefaultFonts.Greek[yl + (c - 0x390) << 3];
+						dg = DefaultFonts.Greek[yl + ((c - 0x390) << 3)];
 					else if (c >= 0x3040 && c <= 0x309F) /* japanese hiragana */
-						dg = DefaultFonts.Hiragana[yl + (c - 0x3040) << 3];
+						dg = DefaultFonts.Hiragana[yl + ((c - 0x3040) << 3)];
 					else /* will display a ? if no cp437 equivalent found */
-						dg = Font.Data[yl + ((char)c).ToCP437() << 3];
+						dg = Font.Data[yl + (((char)c).ToCP437() << 3)];
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -227,7 +227,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Data[yl + ch.C << 3];
+					dg = Font.Data[yl + (ch.C << 3)];
 					break;
 				case FontTypes.BIOS:
 					/* VGA BIOS character */
@@ -235,17 +235,17 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Alt[yl + ch.C << 3];
+					dg = Font.Alt[yl + (ch.C << 3)];
 					break;
 				case FontTypes.HalfWidth:
 				{
 					/* halfwidth (used for patterns) */
-					byte dg1 = Font.HalfData[yl + ch.C << 2];
-					byte dg2 = Font.HalfData[yl + ch.C2 << 2];
+					byte dg1 = Font.HalfData[yl + (ch.C << 2)];
+					byte dg2 = Font.HalfData[yl + (ch.C2 << 2)];
 
 					dg = unchecked((byte)(((ry & 1) == 0)
-						? ((dg1 & 0xF0) | dg2 >> 4)
-						: (dg1 << 4 | (dg2 & 0xF))));
+						? ((dg1 & 0xF0) | (dg2 >> 4))
+						: ((dg1 << 4) | (dg2 & 0xF))));
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -273,15 +273,15 @@ public static class VGAMem
 					/* These are ordered by how often they will probably appear
 					 * for an average user of Chasm (i.e., English speakers). */
 					if (c >= 0x20 && c <= 0x7F) /* ASCII */
-						dg = Font.Data[yl + c << 3];
+						dg = Font.Data[yl + (c << 3)];
 					else if (c >= 0xA0 && c <= 0xFF) /* extended latin */
-						dg = DefaultFonts.ExtendedLatin[yl + (c - 0xA0) << 3];
+						dg = DefaultFonts.ExtendedLatin[yl + ((c - 0xA0) << 3)];
 					else if (c >= 0x390 && c <= 0x3C9) /* greek */
-						dg = DefaultFonts.Greek[yl + (c - 0x390) << 3];
+						dg = DefaultFonts.Greek[yl + ((c - 0x390) << 3)];
 					else if (c >= 0x3040 && c <= 0x309F) /* japanese hiragana */
-						dg = DefaultFonts.Hiragana[yl + (c - 0x3040) << 3];
+						dg = DefaultFonts.Hiragana[yl + ((c - 0x3040) << 3)];
 					else /* will display a ? if no cp437 equivalent found */
-						dg = Font.Data[yl + ((char)c).ToCP437() << 3];
+						dg = Font.Data[yl + (((char)c).ToCP437() << 3)];
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -348,8 +348,8 @@ public static class VGAMem
 					byte dg2 = Font.HalfData[yl + (ch.C2 << 2)];
 
 					dg = unchecked((byte)(((ry & 1) == 0)
-						? ((dg1 & 0xF0) | dg2 >> 4)
-						: (dg1 << 4 | (dg2 & 0xF))));
+						? ((dg1 & 0xF0) | (dg2 >> 4))
+						: ((dg1 << 4) | (dg2 & 0xF))));
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;

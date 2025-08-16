@@ -436,7 +436,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				}
 
 				// TODO: ability to turn this off? just divide by 65536 and be done with it?
-				int divisor = max >> 16 + 1;
+				int divisor = (max >> 16) + 1;
 
 				var dest = sample.Data16;
 
@@ -509,7 +509,7 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				}
 
 				// TODO: ability to turn this off? just divide by 65536 and be done with it?
-				int divisor = max >> 16 + 1;
+				int divisor = (max >> 16) + 1;
 
 				var dest = sample.Data16;
 

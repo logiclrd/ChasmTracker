@@ -699,10 +699,10 @@ public static class Mixer
 		public void Do(ref SongVoice channel, ref int volL, ref int volR)
 		{
 			int t = unchecked((int)(
-				((long)volL * channel.FilterA0)
+				(((long)volL * channel.FilterA0)
 					+ ((long)FilterClip(fy0) * channel.FilterB0)
 					+ ((long)FilterClip(fy1) * channel.FilterB1)
-					+ (1 << (Constants.FilterPrecision - 1))
+					+ (1 << (Constants.FilterPrecision - 1)))
 				>> Constants.FilterPrecision));
 
 			fy1 = fy0; fy0 = t; volL = t;
@@ -736,19 +736,19 @@ public static class Mixer
 			int t;
 
 			t = unchecked((int)(
-				((long)volL * channel.FilterA0)
+				(((long)volL * channel.FilterA0)
 					+ ((long)FilterClip(fy00) * channel.FilterB0)
 					+ ((long)FilterClip(fy01) * channel.FilterB1)
-					+ (1 << (Constants.FilterPrecision - 1))
+					+ (1 << (Constants.FilterPrecision - 1)))
 				>> Constants.FilterPrecision));
 
 			fy01 = fy00; fy00 = t; volL = t;
 
 			t = unchecked((int)(
-				((long)volR * channel.FilterA0)
+				(((long)volR * channel.FilterA0)
 					+ ((long)FilterClip(fy10) * channel.FilterB0)
 					+ ((long)FilterClip(fy11) * channel.FilterB1)
-					+ (1 << (Constants.FilterPrecision - 1))
+					+ (1 << (Constants.FilterPrecision - 1)))
 				>> Constants.FilterPrecision));
 
 			fy11 = fy10; fy10 = t; volR = t;
