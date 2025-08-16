@@ -4731,6 +4731,8 @@ public class Song
 
 					if (!sampleMap.ContainsKey(x))
 					{
+						bool placed = false;
+
 						if (x > 0 && x < xl.Samples.Count)
 						{
 							for (int k = 1; k < Samples.Count; k++)
@@ -4745,7 +4747,20 @@ public class Song
 									smp.Name = smp.Name.Replace('\0', ' ');
 
 									CopySample(k, smp);
+
+									placed = true;
 								}
+							}
+
+							if (!placed && (Samples.Count < Constants.MaxSamples))
+							{
+								int k = Samples.Count;
+
+								var smp = EnsureSample(k);
+
+								sampleMap[x] = k;
+
+								CopySample(k, smp);
 							}
 						}
 					}
