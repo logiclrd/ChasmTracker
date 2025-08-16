@@ -32,7 +32,7 @@ public class ByteSwap
 
 		(hi, lo) = (Swap(lo), Swap(hi));
 
-		return unchecked((uint)hi << 16 | lo);
+		return unchecked(((uint)hi << 16) | lo);
 	}
 
 	public static int Swap(int value)
@@ -58,7 +58,7 @@ public class ByteSwap
 
 		(hi, lo) = (Swap(lo), Swap(hi));
 
-		return unchecked((ulong)hi << 32 | lo);
+		return unchecked(((ulong)hi << 32) | lo);
 	}
 
 	public static long Swap(long value)

@@ -50,28 +50,28 @@ public class Font
 
 		HalfData[173 * 4 + 0] = (byte)(
 			(Normal[184 * 8 + 0] & 0xf0) |
-			(Normal[184 * 8 + 1] & 0xf0) >> 4);
+			((Normal[184 * 8 + 1] & 0xf0) >> 4));
 		HalfData[173 * 4 + 1] = (byte)(
 			(Normal[184 * 8 + 2] & 0xf0) |
-			(Normal[184 * 8 + 3] & 0xf0) >> 4);
+			((Normal[184 * 8 + 3] & 0xf0) >> 4));
 		HalfData[173 * 4 + 2] = (byte)(
 			(Normal[184 * 8 + 4] & 0xf0) |
-			(Normal[184 * 8 + 5] & 0xf0) >> 4);
+			((Normal[184 * 8 + 5] & 0xf0) >> 4));
 		HalfData[173 * 4 + 3] = (byte)(
 			(Normal[184 * 8 + 6] & 0xf0) |
-			(Normal[184 * 8 + 7] & 0xf0) >> 4);
+			((Normal[184 * 8 + 7] & 0xf0) >> 4));
 
 		HalfData[184 * 4 + 0] = (byte)(
-			(Normal[184 * 8 + 0] & 0xf) << 4 |
+			((Normal[184 * 8 + 0] & 0xf) << 4) |
 			(Normal[184 * 8 + 1] & 0xf));
 		HalfData[184 * 4 + 1] = (byte)(
-			(Normal[184 * 8 + 2] & 0xf) << 4 |
+			((Normal[184 * 8 + 2] & 0xf) << 4) |
 			(Normal[184 * 8 + 3] & 0xf));
 		HalfData[184 * 4 + 2] = (byte)(
-			(Normal[184 * 8 + 4] & 0xf) << 4 |
+			((Normal[184 * 8 + 4] & 0xf) << 4) |
 			(Normal[184 * 8 + 5] & 0xf));
 		HalfData[184 * 4 + 3] = (byte)(
-			(Normal[184 * 8 + 6] & 0xf) << 4 |
+			((Normal[184 * 8 + 6] & 0xf) << 4) |
 			(Normal[184 * 8 + 7] & 0xf));
 	}
 

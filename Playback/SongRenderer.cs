@@ -595,6 +595,26 @@ public static class SongRenderer
 			chan.LeftVolumeNew  = 0xFFFF;
 
 		// Check IDO
+		chan.Flags &= ~(ChannelFlags.NoIDO | ChannelFlags.HQSource);
+
+		switch (AudioSettings.InterpolationMode)
+		{
+			case SourceMode.Nearest:
+				chan.Flags |= ChannelFlags.NoIDO;
+				break;
+			case SourceMode.Linear:
+				if (chan.Increment >= 0xFF00)
+				{
+					chan.Flags |= ChannelFlags.NoIDO;
+					break;
+				}
+				goto default;
+			default:
+				if (chan.Increment == 0x10000)
+					chan.Flags |= ChannelFlags.NoIDO;
+				break;
+		}
+
 		if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoResampling))
 		{
 			chan.Flags &= ~ChannelFlags.HQSource;
@@ -654,8 +674,8 @@ public static class SongRenderer
 
 			chan.RightRamp = rightDelta / rampLength;
 			chan.LeftRamp = leftDelta / rampLength;
-			chan.RightVolume = chan.RightVolumeNew - (chan.RightRamp * rampLength) >> Constants.VolumeRampPrecision;
-			chan.LeftVolume = chan.LeftVolumeNew - (chan.LeftRamp * rampLength) >> Constants.VolumeRampPrecision;
+			chan.RightVolume = chan.RightVolumeNew - ((chan.RightRamp * rampLength) >> Constants.VolumeRampPrecision);
+			chan.LeftVolume = chan.LeftVolumeNew - ((chan.LeftRamp * rampLength) >> Constants.VolumeRampPrecision);
 
 			if ((chan.RightRamp | chan.LeftRamp) != 0)
 				chan.RampLength = rampLength;
