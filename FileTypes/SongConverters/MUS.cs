@@ -106,7 +106,7 @@ public class MUS : SongFileConverter
 
 		var song = new Song();
 
-		for (int n = 16; n < 64; n++)
+		for (int n = 16; n < song.Channels.Length; n++)
 			song.Channels[n].Flags |= ChannelFlags.Mute;
 
 		for (int i = 0; i < chanState.Length; i++)

@@ -813,7 +813,7 @@ public abstract class OrderListPage : Page
 				return false;
 		}
 
-		n = n.Clamp(1, 64);
+		n = n.Clamp(1, Constants.MaxChannels);
 		if (ActiveWidgetContext?.SelectedWidgetIndex! != n)
 			ChangeFocusTo(n);
 

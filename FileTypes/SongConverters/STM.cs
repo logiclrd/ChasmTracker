@@ -375,9 +375,9 @@ public class STM : SongFileConverter
 			}
 		}
 
-		for (int n = 1; n <= 4; n++)
+		for (int n = 0; n < 4; n++)
 			song.Channels[n].Panning = (int)((n.HasBitSet(1) ? 64 : 0) * 4); //mphack
-		for (int n = 5; n <= 64; n++)
+		for (int n = 4; n < song.Channels.Length; n++)
 			song.Channels[n].Flags |= ChannelFlags.Mute;
 
 		song.PanSeparation = 64;

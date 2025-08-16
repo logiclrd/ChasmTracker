@@ -706,7 +706,7 @@ public static class SongRenderer
 
 	// XXX Rename this
 	//Ranges:
-	// chan_num = 0..63
+	// chan_num = 0..(Constants.MaxChannels - 1)
 	// freq = frequency in Hertz
 	// vol = 0..16384
 	// chan.InstrumentVolume = 0..64  (corresponds to the sample global volume and instrument global volume)

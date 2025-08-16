@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+
+namespace ChasmTracker.FileTypes.SongConverters;
+
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
-using libFLAC;
-using Mono.Unix.Native;
-
-namespace ChasmTracker.FileTypes.SongConverters;
 
 public class MTM : SongFileConverter
 {

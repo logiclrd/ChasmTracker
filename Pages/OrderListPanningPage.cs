@@ -38,7 +38,7 @@ public class OrderListPanningPage : OrderListPage
 	{
 		Status.Flags |= StatusFlags.SongNeedsSave;
 
-		for (int n = 0; n < 64; n++)
+		for (int n = 0; n < Constants.MaxChannels; n++)
 		{
 			ref var chn = ref Song.CurrentSong.Channels[n];
 
@@ -58,7 +58,7 @@ public class OrderListPanningPage : OrderListPage
 	 * page (alt-f10 in the pattern editor, space on the info page...) */
 	public void RecheckMutedChannels()
 	{
-		for (int n = 0; n < 64; n++)
+		for (int n = 0; n < Constants.MaxChannels; n++)
 			panBarChannelPanning[n].IsMuted = Song.CurrentSong.Channels[n].Flags.HasAllFlags(ChannelFlags.Mute);
 
 		if (Status.CurrentPage is OrderListPanningPage)
@@ -67,7 +67,7 @@ public class OrderListPanningPage : OrderListPage
 
 	public override void NotifySongChanged()
 	{
-		for (int n = 0; n < 64; n++)
+		for (int n = 0; n < Constants.MaxChannels; n++)
 		{
 			ref var chn = ref Song.CurrentSong.Channels[n];
 

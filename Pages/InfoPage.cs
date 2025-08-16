@@ -203,7 +203,7 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 				if (k.State == KeyState.Release)
 					return true;
 				Song.CurrentSong.ToggleChannelMute(_selectedChannel - 1);
-				if (_selectedChannel < 64)
+				if (_selectedChannel < Constants.MaxChannels)
 					_selectedChannel.Value++;
 				AllPages.OrderListPanning.RecheckMutedChannels();
 				break;
@@ -252,7 +252,7 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 					_windows[_selectedWindow + 1].Height--;
 					break;
 				}
-				if (_selectedChannel < 64)
+				if (_selectedChannel < Constants.MaxChannels)
 					_selectedChannel.Value++;
 				break;
 			case KeySym.Right:
@@ -260,7 +260,7 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 					return false;
 				if (k.State == KeyState.Release)
 					return true;
-				if (_selectedChannel < 64)
+				if (_selectedChannel < Constants.MaxChannels)
 					_selectedChannel.Value++;
 				break;
 			case KeySym.Home:

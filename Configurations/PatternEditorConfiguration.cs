@@ -25,6 +25,6 @@ public class PatternEditorConfiguration : ConfigurationSection
 	public CopySearchMode MaskCopySearchMode = CopySearchMode.Off;
 	public bool InvertHomeEnd = false;
 	public bool CrayolaMode = false;
-	public string TrackViewScheme = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-	public string ChannelMulti = "----------------------------------------------------------------";
+	public string TrackViewScheme = new string('a', Constants.MaxChannels);
+	public string ChannelMulti = new string('-', Constants.MaxChannels);
 }

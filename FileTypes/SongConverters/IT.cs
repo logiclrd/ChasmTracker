@@ -24,6 +24,14 @@ public class IT : SongFileConverter
 	public override int SortOrder => 5;
 	public override int SaveOrder => 1;
 
+	const int ITChannels = 64;
+
+	public IT()
+	{
+		if (ITChannels != Constants.MaxChannels)
+			throw new Exception("The code currently assumes ITChannels == Constants.MaxChannels. If they need to differ, then many assumptions will need to be rewritten. IT files always have 64 channels.");
+	}
+
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	struct ITFile
 	{
@@ -50,9 +58,9 @@ public class IT : SongFileConverter
 		public short MsgLength;
 		public int MsgOffset;
 		public uint Reserved;
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = ITChannels)]
 		public byte[] ChannelPan;
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 64)]
+		[MarshalAs(UnmanagedType.ByValArray, SizeConst = ITChannels)]
 		public byte[] ChannelVolume;
 	}
 
@@ -192,12 +200,10 @@ public class IT : SongFileConverter
 		note.VolumeParameter = v;
 	}
 
-	const int MaxChannels = 64;
-
 	static void LoadPattern(Pattern pattern, Stream fp, int rows, int createdWithTrackerVersion)
 	{
-		SongNote[] lastNote = new SongNote[MaxChannels];
-		NoteFields[] lastMask = new NoteFields[64];
+		SongNote[] lastNote = new SongNote[ITChannels];
+		NoteFields[] lastMask = new NoteFields[ITChannels];
 
 		int row = 0;
 
@@ -219,7 +225,7 @@ public class IT : SongFileConverter
 				continue;
 			}
 
-			int chan = (chanVar - 1) & 63;
+			int chan = (chanVar - 1) % ITChannels;
 
 			NoteFields maskVar;
 
@@ -441,7 +447,7 @@ public class IT : SongFileConverter
 		song.InitialTempo = Math.Max(hdr.Tempo, (byte)31);
 		song.PanSeparation = hdr.StereoSeparation;
 
-		for (int n = 0; n < MaxChannels; n++)
+		for (int n = 0; n < Constants.MaxChannels; n++)
 		{
 			var channel = song.Channels[n];
 
@@ -884,9 +890,9 @@ public class IT : SongFileConverter
 	// NOBODY expects the Spanish Inquisition!
 	static void SavePattern(Stream fp, Pattern pat)
 	{
-		SongNote[] lastNote = new SongNote[64];
-		byte[] initMask = new byte[64];
-		byte[] lastMask = new byte[64];
+		SongNote[] lastNote = new SongNote[ITChannels];
+		byte[] initMask = new byte[ITChannels];
+		byte[] lastMask = new byte[ITChannels];
 		int pos = 0;
 		byte[] data = new byte[65536];
 
@@ -895,7 +901,7 @@ public class IT : SongFileConverter
 
 		for (int row = 0; row < pat.Rows.Count; row++)
 		{
-			for (int chan = 0; chan < 64; chan++)
+			for (int chan = 0; chan < ITChannels; chan++)
 			{
 				ref var noteptr = ref pat[row][chan + 1];
 
@@ -1140,10 +1146,10 @@ public class IT : SongFileConverter
 			hdr.MsgLength = (short)msgBytes.Length;
 		}
 
-		hdr.ChannelPan = new byte[MaxChannels];
-		hdr.ChannelVolume = new byte[MaxChannels];
+		hdr.ChannelPan = new byte[ITChannels];
+		hdr.ChannelVolume = new byte[ITChannels];
 
-		for (int n = 0; n < MaxChannels; n++)
+		for (int n = 0; n < ITChannels; n++)
 		{
 			hdr.ChannelPan[n] = (byte)(song.Channels[n].Flags.HasAllFlags(ChannelFlags.Surround)
 					 ? 100 : (song.Channels[n].Panning / 4));

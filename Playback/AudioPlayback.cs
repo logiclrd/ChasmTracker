@@ -437,12 +437,12 @@ public static class AudioPlayback
 		if (wraparound)
 		{
 			if (s_currentPlayChannel < 1)
-				s_currentPlayChannel = 64;
-			else if (s_currentPlayChannel > 64)
+				s_currentPlayChannel = Constants.MaxChannels;
+			else if (s_currentPlayChannel > Constants.MaxChannels)
 				s_currentPlayChannel = 1;
 		}
 		else
-			s_currentPlayChannel = s_currentPlayChannel.Clamp(1, 64);
+			s_currentPlayChannel = s_currentPlayChannel.Clamp(1, Constants.MaxChannels);
 
 		Status.FlashText("Using channel " + s_currentPlayChannel + " for playback");
 	}
@@ -484,7 +484,7 @@ public static class AudioPlayback
 		if ((pattern == null) || (row >= pattern.Rows.Count))
 			return;
 
-		for (int i = 1; i <= 64; i++)
+		for (int i = 1; i <= Constants.MaxChannels; i++)
 		{
 			ref var curNote = ref pattern[row][i];
 			ref var cx = ref Song.CurrentSong.Voices[i - 1];

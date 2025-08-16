@@ -207,7 +207,7 @@ public class FAR : SongFileConverter
 				song.Channels[n].Flags |= ChannelFlags.Mute;
 		}
 
-		for (int n = 16; n < 64; n++)
+		for (int n = 16; n < song.Channels.Length; n++)
 			song.Channels[n].Flags |= ChannelFlags.Mute;
 
 		song.InitialSpeed = fhdr.DefaultSpeed;

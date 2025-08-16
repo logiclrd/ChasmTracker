@@ -559,9 +559,9 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			new TrackView1(),                  /* 36/64 channels */
 		};
 
-	int[] _trackViewScheme = new int[64];
+	int[] _trackViewScheme = new int[Constants.MaxChannels];
 	bool _channelMultiEnabled = false;
-	bool[] _channelMulti = new bool[64];
+	bool[] _channelMulti = new bool[Constants.MaxChannels];
 	int _visibleChannels;
 	int _visibleWidth;
 
@@ -579,7 +579,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			/* we're in a multichan-enabled channel, so look for the next one */
 			do
 			{
-				i = (i + 1) & 63; /* no? next channel, and loop back to zero if we hit 64 */
+				i = (i + 1) % Constants.MaxChannels; /* no? next channel, and loop back to zero if we hit 64 */
 				if (_channelMulti[i]) /* is this a multi-channel? */
 					break; /* it is! */
 			} while (i != curChannel);
@@ -602,7 +602,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		{
 			do
 			{
-				i = (i - 1) & 63; /* loop backwards this time */
+				i = (i + Constants.MaxChannels - 1) % Constants.MaxChannels; /* loop backwards this time */
 				if (_channelMulti[i])
 					break;
 			} while (i != curChannel);
@@ -866,8 +866,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			numRows = _clipboard.Rows;
 
 		int chanWidth = _clipboard.Channels;
-		if (chanWidth + _currentChannel > 64)
-			chanWidth = 64 - _currentChannel + 1;
+		if (chanWidth + _currentChannel > Constants.MaxChannels)
+			chanWidth = Constants.MaxChannels - _currentChannel + 1;
 
 		/* note that IT doesn't do this for "fields" either... */
 		HistoryAddGrouped(
@@ -940,8 +940,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			numRows = _clipboard.Rows;
 
 		int chanWidth = _clipboard.Channels;
-		if (chanWidth + _currentChannel > 64)
-			chanWidth = 64 - _currentChannel + 1;
+		if (chanWidth + _currentChannel > Constants.MaxChannels)
+			chanWidth = Constants.MaxChannels - _currentChannel + 1;
 
 		for (int row = 0; row < numRows; row++)
 		{
@@ -1174,7 +1174,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			{
 				for (int chan = 0; chan < chanWidth; chan++)
 				{
-					if (chan + position.X >= 64) /* defensive */
+					if (chan + position.X >= Constants.MaxChannels) /* defensive */
 						break;
 
 					pattern[position.Y][chan + position.X].SetNoteNote(
@@ -2229,8 +2229,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 		if (firstChannel < 1)
 			firstChannel = 1;
-		if (channelWidth + firstChannel - 1 > 64)
-			channelWidth = 64 - firstChannel + 1;
+		if (channelWidth + firstChannel - 1 > Constants.MaxChannels)
+			channelWidth = Constants.MaxChannels - firstChannel + 1;
 
 		if (numRows + whatRow > pattern.Rows.Count)
 			numRows = pattern.Rows.Count - whatRow;
@@ -2272,8 +2272,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 		if (firstChannel < 1)
 			firstChannel = 1;
-		if (channelWidth + firstChannel - 1 > 64)
-			channelWidth = 64 - firstChannel + 1;
+		if (channelWidth + firstChannel - 1 > Constants.MaxChannels)
+			channelWidth = Constants.MaxChannels - firstChannel + 1;
 
 		if (numRows + whatRow > pattern.Rows.Count)
 			numRows = pattern.Rows.Count - whatRow;
@@ -2413,7 +2413,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 	void Save(string descr)
 	{
 		if (Song.CurrentSong.GetPattern(_currentPattern) is Pattern pattern)
-			HistoryAdd(descr, new Point(0, 0), new Size(64, pattern.Rows.Count));
+			HistoryAdd(descr, new Point(0, 0), new Size(Constants.MaxChannels, pattern.Rows.Count));
 	}
 
 	void HistoryAdd(string descr, Point position, Size size)
@@ -2536,8 +2536,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 		int chanWidth = _clipboard.Channels;
 
-		if (_currentChannel + chanWidth > 64)
-			chanWidth = 64 - _currentChannel + 1;
+		if (_currentChannel + chanWidth > Constants.MaxChannels)
+			chanWidth = Constants.MaxChannels - _currentChannel + 1;
 
 		if (!suppress)
 		{
@@ -2570,8 +2570,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			numRows = _clipboard.Rows;
 
 		int chanWidth = _clipboard.Channels;
-		if (chanWidth + _currentChannel > 64)
-			chanWidth = 64 - _currentChannel + 1;
+		if (chanWidth + _currentChannel > Constants.MaxChannels)
+			chanWidth = Constants.MaxChannels - _currentChannel + 1;
 
 		PatternInsertRows(_currentRow, _clipboard.Rows, _currentChannel, chanWidth);
 		ClipboardPasteOverwrite(true, false);
@@ -2640,7 +2640,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			}
 			else
 			{
-				if (_currentChannel < 64)
+				if (_currentChannel < Constants.MaxChannels)
 				{
 					_currentChannel++;
 				}
@@ -2765,7 +2765,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		_visibleWidth = 0;
 		_visibleChannels = 0;
 
-		for (int n = 0; n < 64; n++)
+		for (int n = 0; n < Constants.MaxChannels; n++)
 		{
 			/* shouldn't happen, but might (e.g. if someone was messing with the config file) */
 			if (_trackViewScheme[n] >= TrackViews.Length)
@@ -2791,9 +2791,9 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			_visibleWidth--;
 		}
 
-		/* don't allow anything past channel 64 */
-		if (_topDisplayChannel > 64 - _visibleChannels + 1)
-			_topDisplayChannel = 64 - _visibleChannels + 1;
+		/* don't allow anything past channel Constants.MaxChannels */
+		if (_topDisplayChannel > Constants.MaxChannels - _visibleChannels + 1)
+			_topDisplayChannel = Constants.MaxChannels - _visibleChannels + 1;
 	}
 
 	void SetViewScheme(int scheme)
@@ -3522,9 +3522,9 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					// advance horizontally, stopping at channel 64
+					// advance horizontally, stopping at channel Constants.MaxChannels
 					// (I have no idea how IT does this, it might wrap)
-					if (_currentChannel < 64)
+					if (_currentChannel < Constants.MaxChannels)
 					{
 						_shiftChordChannels++;
 						_currentChannel++;
@@ -3870,7 +3870,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 					if (_selection.FirstChannel == _selection.LastChannel)
 					{
 						_selection.FirstChannel = 1;
-						_selection.LastChannel = 64;
+						_selection.LastChannel = Constants.MaxChannels;
 					}
 					else
 					{
@@ -4655,7 +4655,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 					_currentChannel++;
-				else if (_linkEffectColumn && _currentPosition == 6 && _currentChannel < 64)
+				else if (_linkEffectColumn && _currentPosition == 6 && _currentChannel < Constants.MaxChannels)
 					_currentPosition = (GetCurrentEffect() != null) ? 7 : 10;
 				else
 					_currentPosition++;
@@ -4739,8 +4739,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				{
 					int n = _clipboard.Channels;
 
-					if (n + _currentChannel > 64)
-						n = 64 - _currentChannel;
+					if (n + _currentChannel > Constants.MaxChannels)
+						n = Constants.MaxChannels - _currentChannel;
 
 					PatternInsertRows(_currentRow, 1, _currentChannel, n);
 				}
@@ -4756,8 +4756,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				{
 					int n = _clipboard.Channels;
 
-					if (n + _currentChannel > 64)
-						n = 64 - _currentChannel;
+					if (n + _currentChannel > Constants.MaxChannels)
+						n = Constants.MaxChannels - _currentChannel;
 
 					PatternDeleteRows(_currentRow, 1, _currentChannel, n);
 				}
@@ -4904,7 +4904,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				{
 					_currentChannel -= _shiftChordChannels;
 					while (_currentChannel < 1)
-						_currentChannel += 64;
+						_currentChannel += Constants.MaxChannels;
 					AdvanceCursor(nextRow: true, multichannel: true);
 					_shiftChordChannels = 0;
 				}

@@ -431,7 +431,7 @@ public class Song
 	// below), but I'm making it public anyway for symmetry.
 	public void RestoreChannelMuteStates()
 	{
-		for (int n = 0; n < 64; n++)
+		for (int n = 0; n < Constants.MaxChannels; n++)
 			SetChannelMute(n, _savedChannelMutedStates[n]);
 	}
 
@@ -1977,11 +1977,11 @@ public class Song
 
 	public int FindLastChannel()
 	{
-		for (int n = 63; n > 0; n--)
+		for (int n = Constants.MaxChannels - 1; n > 0; n--)
 			if (!_savedChannelMutedStates[n])
 				return n;
 
-		return 63;
+		return Constants.MaxChannels - 1;
 	}
 
 	/* this function is a lost little puppy */

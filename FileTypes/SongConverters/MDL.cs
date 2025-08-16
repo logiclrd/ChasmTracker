@@ -543,7 +543,7 @@ public class MDL : SongFileConverter
 					song.Channels[n].Flags |= ChannelFlags.Mute;
 			}
 
-			for (int n = 32; n < 64; n++)
+			for (int n = 32; n < song.Channels.Length; n++)
 			{
 				song.Channels[n].Panning = 128;
 				song.Channels[n].Flags |= ChannelFlags.Mute;

@@ -83,7 +83,7 @@ public class OKT : SongFileConverter
 			song.Channels[cn].Panning = Tables.ProTrackerPanning(t);
 		}
 
-		for (int t = cn; t < 64; t++)
+		for (int t = cn; t < song.Channels.Length; t++)
 			song.Channels[t].Flags |= ChannelFlags.Mute;
 
 		return cn;

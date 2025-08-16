@@ -237,7 +237,7 @@ public class S3M : SongFileConverter
 			song.Channels[n].Volume = 64;
 		}
 
-		for (int n = 32; n < 64; n++)
+		for (int n = 32; n < song.Channels.Length; n++)
 		{
 			song.Channels[n].Panning = 32;
 			song.Channels[n].Volume = 64;

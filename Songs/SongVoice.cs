@@ -4,7 +4,7 @@ using ChasmTracker.Utility;
 
 // (TODO write decent descriptions of what the various volume
 // variables are used for - are all of them *really* necessary?)
-// (TODO also the majority of this is irrelevant outside of the "main" 64 channels;
+// (TODO also the majority of this is irrelevant outside of the "main" Constants.MaxChannels channels;
 // this struct should really only be holding the stuff actually needed for mixing)
 public struct SongVoice
 {
