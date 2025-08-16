@@ -249,7 +249,7 @@ public class SampleFileListPageBase : Page
 		numberEntrySustainLoopStart!.Value = f?.SampleSustainStart ?? 0;
 		numberEntrySustainLoopEnd!.Value = f?.SampleSustainEnd ?? 0;
 
-		thumbBarDefaultVolume!.Value = f?.SampleDefaultVolume ?? 64;
+		thumbBarDefaultVolume!.Value = (f != null) ? (f.SampleDefaultVolume >> 2) : 64;
 		thumbBarGlobalVolume!.Value = f?.SampleGlobalVolume ?? 64;
 		thumbBarVibratoSpeed!.Value = f?.SampleVibratoSpeed ?? 0;
 		thumbBarVibratoDepth!.Value = f?.SampleVibratoDepth ?? 0;
@@ -916,7 +916,16 @@ public class SampleFileListPageBase : Page
 		HandleLoadCopyValue(numberEntryLoopEnd!.Value, ref s.LoopEnd);
 		HandleLoadCopyValue(numberEntrySustainLoopStart!.Value, ref s.SustainStart);
 		HandleLoadCopyValue(numberEntrySustainLoopEnd!.Value, ref s.SustainEnd);
-		HandleLoadCopyValue(thumbBarDefaultVolume!.Value, ref s.Volume);
+
+		// s.Volume is 0..256, Impulse Tracker's UI is 0..64
+		// we only push the value back to the SongSample if
+		// it's not what the existing value would convert to
+		if ((s.Volume >> 2) != thumbBarDefaultVolume.Value)
+		{
+			s.Volume = (thumbBarDefaultVolume.Value << 2);
+			_fakeSlotChanged = true;
+		}
+
 		HandleLoadCopyValue(thumbBarGlobalVolume!.Value, ref s.GlobalVolume);
 		HandleLoadCopyValue(thumbBarVibratoRate!.Value, ref s.VibratoRate);
 		HandleLoadCopyValue(thumbBarVibratoDepth!.Value, ref s.VibratoDepth);
