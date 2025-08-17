@@ -96,9 +96,9 @@ public class SampleFileListPageBase : Page
 			new Point(6, 13),
 			new Size(43, 34));
 
-		otherFileList.OtherHandleKey += FileListHandleKey;
-		otherFileList.OtherHandleText += FileListHandleTextInput;
-		otherFileList.OtherRedraw += FileListDraw;
+		otherFileList.OtherHandleKey += otherFileList_HandleKey;
+		otherFileList.OtherHandleText += otherFileList_HandleText;
+		otherFileList.OtherRedraw += otherFileList_Redraw;
 		otherFileList.OtherAcceptsText = true;
 
 		textEntryFileName = new TextEntryWidget(
@@ -178,6 +178,21 @@ public class SampleFileListPageBase : Page
 		thumbBarVibratoSpeed.Changed += HandleLoadUpdate;
 		thumbBarVibratoDepth.Changed += HandleLoadUpdate;
 		thumbBarVibratoRate.Changed += HandleLoadUpdate;
+
+		AddWidget(otherFileList);
+		AddWidget(textEntryFileName);
+		AddWidget(numberEntrySampleSpeed);
+		AddWidget(menuToggleLoop);
+		AddWidget(numberEntryLoopStart);
+		AddWidget(numberEntryLoopEnd);
+		AddWidget(menuToggleSustainLoop);
+		AddWidget(numberEntrySustainLoopStart);
+		AddWidget(numberEntrySustainLoopEnd);
+		AddWidget(thumbBarDefaultVolume);
+		AddWidget(thumbBarGlobalVolume);
+		AddWidget(thumbBarVibratoSpeed);
+		AddWidget(thumbBarVibratoDepth);
+		AddWidget(thumbBarVibratoRate);
 	}
 
 	static int GetTypeColour(FileTypes type)
@@ -217,11 +232,11 @@ public class SampleFileListPageBase : Page
 		Array.Clear(_currentFileName);
 
 		if ((f != null) && !string.IsNullOrEmpty(f.SampleFileName))
-			f.SampleFileName!.CopyTo(_currentFileName);
+			f.SampleFileName!.CopyTruncatedTo(_currentFileName);
 		else if ((f != null) && !string.IsNullOrEmpty(f.BaseName))
 		{
 			// FIXME
-			f.BaseName.CopyTo(_currentFileName);
+			f.BaseName.CopyTruncatedTo(_currentFileName);
 		}
 
 		textEntryFileName!.FirstCharacter = 0;
@@ -296,7 +311,7 @@ public class SampleFileListPageBase : Page
 
 		DirectoryScanner.SetAsynchronousFileListParameters(
 			_flist,
-			DirectoryScanner.FillExtendedData,
+			DirectoryScanner.TryFillExtendedData,
 			_flist.SelectedIndexRef,
 			FileListReposition);
 
@@ -448,7 +463,7 @@ public class SampleFileListPageBase : Page
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
-	void FileListDraw()
+	void otherFileList_Redraw()
 	{
 		/* there's no need to have if (files) { ... } like in the load-module page,
 			because there will always be at least "/" in the list */
@@ -662,7 +677,7 @@ public class SampleFileListPageBase : Page
 		FileListReposition();
 	}
 
-	bool FileListHandleTextInput(TextInputEvent evt)
+	bool otherFileList_HandleText(TextInputEvent evt)
 	{
 		bool success = false;
 
@@ -683,7 +698,7 @@ public class SampleFileListPageBase : Page
 		return success;
 	}
 
-	bool FileListHandleKey(KeyEvent k)
+	bool otherFileList_HandleKey(KeyEvent k)
 	{
 		int newFile = _flist.SelectedIndex;
 
@@ -782,7 +797,7 @@ public class SampleFileListPageBase : Page
 				goto default;
 			default:
 				if (!string.IsNullOrEmpty(k.Text))
-					FileListHandleTextInput(k.ToTextInputEvent());
+					otherFileList_HandleText(k.ToTextInputEvent());
 
 				if (k.Mouse == default) return false;
 

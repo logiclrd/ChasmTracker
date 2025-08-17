@@ -29,5 +29,8 @@ public abstract class Reference
 		FullPath = fullPath;
 		BaseName = Path.GetFileName(fullPath);
 		SortOrder = sortOrder;
+
+		if (string.IsNullOrEmpty(BaseName))
+			BaseName = FullPath;
 	}
 }

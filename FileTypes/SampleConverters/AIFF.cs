@@ -332,13 +332,12 @@ public class AIFF : SampleFileConverter
 	{
 		try
 		{
-			ReadIFF(stream, file, false);
-			return true;
+			if (ReadIFF(stream, file, false) != null)
+				return true;
 		}
-		catch
-		{
-			return false;
-		}
+		catch { }
+
+		return false;
 	}
 
 	public override SongSample LoadSample(Stream stream)

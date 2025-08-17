@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace ChasmTracker.FileTypes.Converters;
+namespace ChasmTracker.FileTypes.SongConverters;
 
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;

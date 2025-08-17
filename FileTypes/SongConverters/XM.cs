@@ -7,7 +7,6 @@ namespace ChasmTracker.FileTypes.SongConverters;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.FileSystem;
-using ChasmTracker.FileTypes.Converters;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 

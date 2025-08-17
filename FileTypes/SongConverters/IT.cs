@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace ChasmTracker.FileTypes.Converters;
+namespace ChasmTracker.FileTypes.SongConverters;
 
 using ChasmTracker.Configurations;
 using ChasmTracker.FileSystem;

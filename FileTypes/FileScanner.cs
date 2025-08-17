@@ -7,10 +7,10 @@ namespace ChasmTracker.FileTypes;
 
 public class FileScanner
 {
-	static SongFileConverter[] s_converters =
+	static IFileInfoReader[] s_metadataReaders =
 		typeof(FileScanner).Assembly.GetTypes()
-		.Where(t => typeof(SongFileConverter).IsAssignableFrom(t) && !t.IsAbstract)
-		.Select(t => (SongFileConverter)Activator.CreateInstance(t)!)
+		.Where(t => typeof(IFileInfoReader).IsAssignableFrom(t) && !t.IsAbstract)
+		.Select(t => (IFileInfoReader)Activator.CreateInstance(t)!)
 		.ToArray();
 
 	public static FillResult FillExtendedData(FileReference fileReference)
@@ -25,19 +25,23 @@ public class FileScanner
 			fileReference.SampleDefaultVolume = 64;
 			fileReference.SampleGlobalVolume = 64;
 
-			foreach (var converter in s_converters)
+			foreach (var metadataReader in s_metadataReaders)
 			{
 				stream.Position = 0;
 
-				if (converter.FillExtendedData(stream, fileReference))
+				try
 				{
-					if (fileReference.Artist != null)
-						fileReference.Artist = fileReference.Artist.Trim();
+					if (metadataReader.FillExtendedData(stream, fileReference))
+					{
+						if (fileReference.Artist != null)
+							fileReference.Artist = fileReference.Artist.Trim();
 
-					fileReference.Title = fileReference.Title.Trim();
+						fileReference.Title = fileReference.Title.Trim();
 
-					return FillResult.Success;
+						return FillResult.Success;
+					}
 				}
+				catch { }
 			}
 
 			return FillResult.Unsupported;

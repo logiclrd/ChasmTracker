@@ -408,23 +408,20 @@ public class SampleListPage : Page
 		{
 			var sample = Song.CurrentSong.GetSample(n);
 
-			if (sample == null)
-				continue;
-
 			bool isSelected = (n == _currentSample);
 
-			bool hasData = sample.HasData;
+			bool hasData = sample?.HasData ?? false;
 
-			if (sample.IsPlayed)
+			if (sample?.IsPlayed ?? false)
 				VGAMem.DrawCharacter((isPlaying[n] > 1) ? (char)183 : (char)173, new Point(1, 13 + pos), (isPlaying[n] > 0) ? (3, 2) : (1, 2));
 
-			VGAMem.DrawText(n.ToString99(), new Point(2, 13 + pos), (sample.Flags.HasAllFlags(SampleFlags.Mute)) ? (1, 1) : (0, 2));
+			VGAMem.DrawText(n.ToString99(), new Point(2, 13 + pos), (sample?.Flags.HasAllFlags(SampleFlags.Mute) ?? false) ? (1, 1) : (0, 2));
 
 			// wow, this is entirely horrible
-			int pn = (sample.Name.Length >= 25) ? sample.Name[24] : int.MaxValue;
+			int pn = (sample?.Name.Length >= 25) ? sample.Name[24] : int.MaxValue;
 			int nl;
 
-			if ((pn < 200) && (sample.Name[23] == 0xFF))
+			if ((pn < 200) && (sample?.Name[23] == 0xFF))
 			{
 				nl = 23;
 				VGAMem.DrawText(pn.ToString("d3"), new Point(32, 13 + pos), (0, 2));
@@ -440,10 +437,10 @@ public class SampleListPage : Page
 				VGAMem.DrawText("Play", new Point(31, 13 + pos), (hasData ? 6 : 7, isSelected ? 14 : 0));
 			}
 
-			VGAMem.DrawTextLen(sample.Name, nl, new Point(5, 13 + pos), isSelected ? (6, 14) : (6, 0));
+			VGAMem.DrawTextLen(sample?.Name ?? "", nl, new Point(5, 13 + pos), isSelected ? (6, 14) : (6, 0));
 
 			if (ss == n)
-				VGAMem.DrawTextLen(sample.Name.Substring(cl), (cr - cl) + 1, new Point(5 + cl, 13 + pos), (3, 8));
+				VGAMem.DrawTextLen(sample?.Name?.Substring(cl) ?? "", (cr - cl) + 1, new Point(5 + cl, 13 + pos), (3, 8));
 		}
 
 		/* cursor */

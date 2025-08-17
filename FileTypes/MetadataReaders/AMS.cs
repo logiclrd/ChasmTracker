@@ -20,7 +20,7 @@ public class AMS : IFileInfoReader
 
 		stream.ReadExactly(magicBytes);
 
-		if (!(stream.Length > 38 && Encoding.ASCII.GetString(magicBytes) != "AMSHDR\x1a"))
+		if (!(stream.Length > 38 && Encoding.ASCII.GetString(magicBytes) == "AMSHDR\x1a"))
 			return false;
 
 		stream.Position = 7;

@@ -19,7 +19,7 @@ public class DirectoryScanner
 
 	// dmoz_filter_filelist
 	public static void SetAsynchronousFileListParameters(FileList fileList, Func<FileReference, bool> grep, Shared<int> pointer, Action? fn = null)
-{
+	{
 		CurrentFilterOperation = fileList.BeginFilter(grep, pointer);
 		CurrentFilterOperation.ChangeMade +=
 			() =>
@@ -35,6 +35,18 @@ public class DirectoryScanner
 	public static bool FillExtendedData(FileReference reference)
 		=> reference.FillExtendedData();
 
+	// keep files that didn't work
+	public static bool TryFillExtendedData(FileReference reference)
+	{
+		try
+		{
+			reference.FillExtendedData();
+		}
+		catch {}
+
+		return true;
+	}
+
 	// dmoz_worker
 	// this is called by main to actually do some dmoz work. returns 0 if there is no dmoz work to do...
 	public static bool TakeAsynchronousFileListStep()
@@ -45,7 +57,7 @@ public class DirectoryScanner
 		return CurrentFilterOperation.TakeStep();
 	}
 
-	public static void AddPlatformDirs(FileList fileList, DirectoryList? dirList)
+	public static void AddPlatformDirs(FileList fileList, DirectoryList? dirList, string? parentDirectoryPath)
 	{
 		void Add(string fullPath, int sortOrder)
 		{
@@ -55,13 +67,29 @@ public class DirectoryScanner
 				fileList.AddFile(fullPath, sortOrder);
 		}
 
+		void AddWithBaseName(string fullPath, string baseName, int sortOrder)
+		{
+			if (dirList != null)
+				dirList.AddDir(fullPath, baseName, sortOrder);
+			else
+				fileList.AddFile(fullPath, baseName, sortOrder);
+		}
+
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
 			foreach (var driveInfo in DriveInfo.GetDrives())
 				Add(driveInfo.RootDirectory.FullName, -(1024 - 'A' - driveInfo.Name[0]));
+
+			if (parentDirectoryPath != null)
+				AddWithBaseName(parentDirectoryPath, "..", -2048);
 		}
 		else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 		{
+			Add("/", -2049);
+
+			if (parentDirectoryPath != null)
+				AddWithBaseName(parentDirectoryPath, "..", -2048);
+
 			// Query directory services
 			// > dscl . -list /Users
 			//   < amavisd
@@ -71,7 +99,7 @@ public class DirectoryScanner
 			//   < ...
 			//   < actualuser
 			//   < www
-			// > disc . -read /Users/amavisd
+			// > dscl . -read /Users/amavisd
 			//   < _writers_passwd: amavisd
 			//   < AppleMetaNodeLocation: /NetInfo/DefaultLocalNode
 			//   < Change: 0
@@ -133,6 +161,11 @@ public class DirectoryScanner
 		}
 		else
 		{
+			Add("/", -2049);
+
+			if (parentDirectoryPath != null)
+				AddWithBaseName(parentDirectoryPath, "..", -2048);
+
 			// Parse /etc/passwd
 			try
 			{
@@ -163,12 +196,13 @@ public class DirectoryScanner
 			if (File.Exists(directory))
 			{
 				/* oops, it's a file! -- load it as a library */
-				if (loadLibrary != null)
-					loadLibrary(directory, fileList, dirList);
-				else if (Path.GetDirectoryName(directory) is string parentDirectory)
+				if (Path.GetDirectoryName(directory) is string parentDirectory)
 					_ = dirList?.AddDir(parentDirectory, ".", -10) ?? fileList.AddFile(parentDirectory, ".", -10);
 				else
-					AddPlatformDirs(fileList, dirList);
+					AddPlatformDirs(fileList, dirList, Path.GetDirectoryName(Path.GetFullPath(directory)));
+
+				if (loadLibrary != null)
+					loadLibrary(directory, fileList, dirList);
 			}
 			else if (Directory.Exists(directory))
 			{
@@ -187,7 +221,7 @@ public class DirectoryScanner
 						fileList.AddFile(entry.FullName, 1);
 				}
 
-				AddPlatformDirs(fileList, dirList);
+				AddPlatformDirs(fileList, dirList, Path.GetDirectoryName(directory));
 			}
 
 			Sort(fileList, dirList);

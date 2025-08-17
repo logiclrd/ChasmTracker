@@ -274,4 +274,12 @@ public static class StringExtensions
 
 		return buffer;
 	}
+
+	public static void CopyTruncatedTo(this string str, Span<char> target)
+	{
+		int ch = Math.Min(str.Length, target.Length);
+
+		for (int i=0; i < ch; i++)
+			target[i] = str[i];
+	}
 }
