@@ -819,7 +819,7 @@ public static class SongRenderer
 					if (bufLeft == max)
 						break;
 
-					if (!(AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk)))
+					if (!AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 						song.BufferCount = bufLeft;
 				}
 
@@ -835,7 +835,7 @@ public static class SongRenderer
 			if (count > bufLeft)
 				count = bufLeft;
 
-			if (count == 0)
+			if (count <= 0)
 				break;
 
 			sampleCount = count;
@@ -1050,8 +1050,6 @@ public static class SongRenderer
 
 				/* [CurrentRow = ProcessRow] */
 				csf.Row = csf.ProcessRow;
-
-				AudioPlayback.CurrentRow = csf.Row;
 
 				/* [Update Pattern Variables]
 				(this is handled along with update effects) */

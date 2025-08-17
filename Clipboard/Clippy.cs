@@ -40,6 +40,9 @@ public class Clippy
 		{
 			int ofs = data.IndexOf('\0');
 
+			if (ofs < 0)
+				ofs = 0;
+
 			int trunc = Math.Min(ofs, len);
 
 			if (data.Length > trunc)

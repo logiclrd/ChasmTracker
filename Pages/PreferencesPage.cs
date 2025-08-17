@@ -182,7 +182,7 @@ public class PreferencesPage : Page
 
 		for (int j = 0; j < 4; j++)
 		{
-			thumbBarEqualizerBands[j].Frequency.Value = AudioSettings.EQBands[j].Frequency;
+			thumbBarEqualizerBands[j].Frequency.Value = AudioSettings.EQBands[j].FrequencyIndex;
 			thumbBarEqualizerBands[j].Gain.Value = AudioSettings.EQBands[j].Gain;
 		}
 
@@ -203,7 +203,7 @@ public class PreferencesPage : Page
 	{
 		for (int j = 0; j < 4; j++)
 		{
-			AudioSettings.EQBands[j].Frequency = thumbBarEqualizerBands[j].Frequency.Value;
+			AudioSettings.EQBands[j].FrequencyIndex = thumbBarEqualizerBands[j].Frequency.Value;
 			AudioSettings.EQBands[j].Gain = thumbBarEqualizerBands[j].Gain.Value;
 		}
 

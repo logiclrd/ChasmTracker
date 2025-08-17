@@ -17,7 +17,7 @@ using ChasmTracker.Utility;
 public static class AudioPlayback
 {
 	public const int DefaultSampleRate = 48000;
-	public const int DefaultBufferSize = 2048;
+	public const int DefaultBufferSize = 1024;
 	public const int DefaultChannelLimit = 128;
 
 	public const uint SamplesPlayedInit = uint.MaxValue - 1; /* for a click noise on init */
@@ -252,6 +252,10 @@ public static class AudioPlayback
 			return;
 		}
 
+		PlayingRow = Song.CurrentSong.Row;
+		PlayingPattern = Song.CurrentSong.CurrentPattern;
+		PlayingChannels = Math.Min(Song.CurrentSong.NumVoices, Song.CurrentSong.Voices.Length);
+
 		/* send at end */
 		EventHub.PushEvent(new PlaybackEvent());
 	}
@@ -302,8 +306,9 @@ public static class AudioPlayback
 	public static int CurrentPlayChannel => s_currentPlayChannel;
 	public static bool MultichannelMode => s_multichannelMode;
 
-	public static int CurrentRow;
+	public static int PlayingRow;
 	public static int PlayingPattern;
+	public static int PlayingChannels;
 
 	public static int CurrentOrder
 	{
@@ -328,7 +333,6 @@ public static class AudioPlayback
 	public static int AudioBuffersPerSecond;
 	public static int AudioWriteOutCount;
 
-	public static int NumVoices; // how many are currently playing. (POTENTIALLY larger than global max_voices)
 	public static int MixStat; // number of channels being mixed (not really used)
 	public static int BufferCount; // number of samples to mix per tick
 
@@ -353,8 +357,6 @@ public static class AudioPlayback
 	}
 
 	public const int VolumeRampLength = 146; // 1.46ms == 64 samples at 44.1kHz
-
-	public static int PlayingChannels => Math.Min(NumVoices, MaxVoices);
 
 	public static TimeSpan CurrentTime => TimeSpan.FromSeconds(SamplesPlayed / (double)MixFrequency);
 
@@ -908,7 +910,7 @@ public static class AudioPlayback
 			return OpenState.False;
 
 		/* if the buffer size isn't a power of two, the dsp driver will punt since it's not nice enough to fix
-		* it for us. (contrast alsa, which is TOO nice and fixes it even when we don't want it to) */
+		 * it for us. (contrast alsa, which is TOO nice and fixes it even when we don't want it to) */
 		ushort sizePowerOf2 = 2;
 		while (sizePowerOf2 < AudioSettings.BufferSize)
 			sizePowerOf2 <<= 1;
@@ -1222,7 +1224,7 @@ public static class AudioPlayback
 		for (int i = 0; i < 4; i++)
 		{
 			pg[i] = AudioSettings.EQBands[i].Gain;
-			pf[i] = 120 + (i*128 * AudioSettings.EQBands[i].Frequency * (mixFrequency / 128) / 1024);
+			pf[i] = 120 + (i*128 * AudioSettings.EQBands[i].FrequencyIndex * (mixFrequency / 128) / 1024);
 		}
 
 		Equalizer.SetGains(pg, pf, doReset, mixFrequency);

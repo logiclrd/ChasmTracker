@@ -191,7 +191,7 @@ public static class Status
 		pos += VGAMem.DrawText(", Pattern: ", new Point(pos, 9), (0, 2));
 		pos += VGAMem.DrawText(pattern.ToString(), new Point(pos, 9), (3, 2));
 		pos += VGAMem.DrawText(", Row: ", new Point(pos, 9), (0, 2));
-		pos += VGAMem.DrawText(AudioPlayback.CurrentRow.ToString(), new Point(pos, 9), (3, 2));
+		pos += VGAMem.DrawText(AudioPlayback.PlayingRow.ToString(), new Point(pos, 9), (3, 2));
 		VGAMem.DrawCharacter('/', new Point(pos, 9), (0, 2));
 		pos++;
 		pos += VGAMem.DrawText(Song.CurrentSong.GetPatternLength(pattern).ToString(), new Point(pos, 9), (3, 2));
@@ -215,7 +215,7 @@ public static class Status
 		pos += VGAMem.DrawText(", Pattern: ", new Point(pos, 9), (0, 2));
 		pos += VGAMem.DrawText(pattern.ToString(), new Point(pos, 9), (3, 2));
 		pos += VGAMem.DrawText(", Row: ", new Point(pos, 9), (0, 2));
-		pos += VGAMem.DrawText(AudioPlayback.CurrentRow.ToString(), new Point(pos, 9), (3, 2));
+		pos += VGAMem.DrawText(AudioPlayback.PlayingRow.ToString(), new Point(pos, 9), (3, 2));
 		VGAMem.DrawCharacter('/', new Point(pos, 9), (0, 2));
 		pos++;
 		pos += VGAMem.DrawText(Song.CurrentSong.GetPatternLength(pattern).ToString(), new Point(pos, 9), (3, 2));

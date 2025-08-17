@@ -35,7 +35,7 @@ public abstract class TrackViewWindowBase : InfoWindow
 	protected void DrawTrackView(int @base, int fullHeight)
 	{
 		/* way too many variables */
-		int currentRow = AudioPlayback.CurrentRow;
+		int currentRow = AudioPlayback.PlayingRow;
 		int currentOrder = AudioPlayback.CurrentOrder;
 
 		Pattern curPattern;

@@ -1946,8 +1946,7 @@ public class Song
 		// i'm just going by the playing channel's state...
 		// if the actual channel is muted but not the playing one,
 		// tough luck :)
-
-		Channels[channel].IsMuted = !Voices[channel].IsMuted;
+		SetChannelMute(channel, !Voices[channel].IsMuted);
 	}
 
 	bool IsSoloed(int channel)
@@ -4119,7 +4118,7 @@ public class Song
 				}
 
 				// Invalid Instrument ?
-				if (instrumentNumber >= Instruments.Count)
+				if (instrumentNumber >= (IsInstrumentMode ? Instruments.Count : Samples.Count))
 					instrumentNumber = 0;
 
 				if (SongNote.IsControl(note))

@@ -84,7 +84,7 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 					{
 						AllPages.OrderList.CurrentOrder = order;
 						AllPages.PatternEditor.CurrentPattern = currentlyPlayingPatternNumber;
-						AllPages.PatternEditor.CurrentRow = AudioPlayback.CurrentRow;
+						AllPages.PatternEditor.CurrentRow = AudioPlayback.PlayingRow;
 
 						SetPage(PageNumbers.PatternEditor);
 					}
@@ -127,7 +127,7 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 				{
 					AllPages.OrderList.CurrentOrder = order;
 					AllPages.PatternEditor.CurrentPattern = currentlyPlayingPatternNumber;
-					AllPages.PatternEditor.CurrentRow = AudioPlayback.CurrentRow;
+					AllPages.PatternEditor.CurrentRow = AudioPlayback.PlayingRow;
 
 					SetPage(PageNumbers.PatternEditor);
 				}

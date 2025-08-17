@@ -1,12 +1,10 @@
+namespace ChasmTracker.Pages.InfoWindows;
+
 using System;
-using System.Runtime.CompilerServices;
-using System.Xml.Serialization;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
-
-namespace ChasmTracker.Pages.InfoWindows;
 
 public class SamplesInfoWindow : InfoWindow
 {

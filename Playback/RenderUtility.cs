@@ -67,7 +67,6 @@ public static class RenderUtility
 		return samples;
 	}
 
-
 	// Clip and convert to 16 bit. mins and maxs returned in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]. mins[0] left, mins[1] right.
 	public static int Clip32To16(Span<byte> ptr, Span<int> buffer, int samples, int[] mins, int[] maxs)
 	{

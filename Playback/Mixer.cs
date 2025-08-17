@@ -593,7 +593,8 @@ public static class Mixer
 
 	abstract class Store
 	{
-		public int Max;
+		[ThreadStatic]
+		static int s_max;
 
 		// Fast average of two unsigned 32-bit integers.
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -609,10 +610,22 @@ public static class Mixer
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+		public void SetVUMeter(int max)
+		{
+			s_max = max;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+		public int GetVUMeter()
+		{
+			return s_max;
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 		protected void StoreVUMeter(int volLX, int volLY)
 		{
 			int volAvg = avg_u32(volLX, volLY);
-			if (Max < volAvg) Max = volAvg;
+			if (s_max < volAvg) s_max = volAvg;
 		}
 
 		public abstract void Do(int volL, int volR, ref int leftRampVolume, ref int rightRampVolume, ref SongVoice chan, Span<int> pVol);
@@ -704,7 +717,7 @@ public static class Mixer
 					+ (1 << (Constants.FilterPrecision - 1)))
 				>> Constants.FilterPrecision));
 
-			fy1 = fy0; fy0 = t; volL = t;
+			fy1 = fy0; fy0 = t; volL = volR = t;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -780,7 +793,7 @@ public static class Mixer
 			int position = chan.PositionFrac;
 			Span<TSample> p = MemoryMarshal.Cast<byte, TSample>(chan.CurrentSampleData.Slice(chan.Position));
 			if (chan.Flags.HasAllFlags(ChannelFlags.Stereo)) p = p.Slice(chan.Position);
-			int max = chan.VUMeter;
+			Store.SetVUMeter(chan.VUMeter);
 
 			int leftRampVolume = chan.LeftRampVolume;
 			int rightRampVolume = chan.RightRampVolume;
@@ -795,8 +808,6 @@ public static class Mixer
 				Filter.Do(ref chan, ref l, ref r);
 				Store.Do(l, r, ref leftRampVolume, ref rightRampVolume, ref chan, pVol);
 
-				max = Math.Max(max, (Math.Abs(l) + Math.Abs(r)) >> 1);
-
 				pVol = pVol.Slice(2);
 				position += chan.Increment;
 			} while (pVol.Length > 1);
@@ -808,7 +819,7 @@ public static class Mixer
 			chan.LeftRampVolume  = leftRampVolume;
 			chan.LeftVolume      = (leftRampVolume >> Constants.VolumeRampPrecision);
 
-			chan.VUMeter = max;
+			chan.VUMeter = Store.GetVUMeter();
 			chan.Position     += position >> 16;
 			chan.PositionFrac = position & 0xFFFF;
 		}
@@ -865,7 +876,7 @@ public static class Mixer
 
 		Type TGetVolume = TGetVolumeDefinition.MakeGenericType(TSample, TBits, TShift);
 
-		Type TFilter = (resampling == ResamplingType.None)
+		Type TFilter = (!filter || (resampling == ResamplingType.None))
 			? typeof(FilterNone)
 			: (channels == 1) ? typeof(FilterMono) : typeof(FilterStereo);
 

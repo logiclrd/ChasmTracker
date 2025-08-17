@@ -4916,7 +4916,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 	public override void PlaybackUpdate()
 	{
-		_playingRow = AudioPlayback.CurrentRow;
+		_playingRow = AudioPlayback.PlayingRow;
 		_playingPattern = AudioPlayback.PlayingPattern;
 
 		if (AudioPlayback.IsPlaying && (_playingRow != _prevRow || _playingPattern != _prevPattern))

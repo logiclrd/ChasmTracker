@@ -866,7 +866,7 @@ public static class VGAMem
 		DrawCharacter(VUMeterEndText[leftover, 1], position.Advance(3 * val + 1), (peak, 0));
 		DrawCharacter(VUMeterEndText[leftover, 2], position.Advance(3 * val + 2), (peak, 0));
 
-		while (val-- >= 0)
+		while (val-- > 0)
 		{
 			DrawCharacter(176, position.Advance(3 * val + 0), (color, 0));
 			DrawCharacter(179, position.Advance(3 * val + 1), (color, 0));

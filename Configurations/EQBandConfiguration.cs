@@ -25,14 +25,16 @@ public class EQBandConfiguration : ConfigurationSection
 	}
 
 	[ConfigurationKey("freq")]
-	public int Frequency;
+	public int FrequencyIndex;
 	public int Gain;
+
+	public int Frequency => 120 + (((_bandIndex * 128) * FrequencyIndex) * (AudioPlayback.MixFrequency / 128) / 1024);
 
 	public override void PrepareToSave()
 	{
 		var eqBand = GetEQBand();
 
-		Frequency = eqBand.Frequency;
+		FrequencyIndex = eqBand.FrequencyIndex;
 		Gain = eqBand.Gain;
 	}
 }

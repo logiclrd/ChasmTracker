@@ -101,7 +101,7 @@ public static class AudioSettings
 
 		var band = (EQBands[config.Index] ??= new EQBand());
 
-		band.Frequency = config.Frequency;
+		band.FrequencyIndex = config.Frequency;
 		band.Gain = config.Gain;
 	}
 
@@ -112,7 +112,7 @@ public static class AudioSettings
 
 		var band = EQBands[config.Index];
 
-		config.Frequency = band.Frequency;
+		config.FrequencyIndex = band.FrequencyIndex;
 		config.Gain = band.Gain;
 	}
 }

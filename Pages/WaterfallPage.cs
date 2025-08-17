@@ -321,7 +321,7 @@ public class WaterfallPage : Page
 					{
 						AllPages.OrderList.CurrentOrder = order;
 						AllPages.PatternEditor.CurrentPattern = n;
-						AllPages.PatternEditor.CurrentRow = AudioPlayback.CurrentRow;
+						AllPages.PatternEditor.CurrentRow = AudioPlayback.PlayingRow;
 
 						SetPage(PageNumbers.PatternEditor);
 					}
