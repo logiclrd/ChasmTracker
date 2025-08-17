@@ -14,6 +14,8 @@ using ChasmTracker.Widgets;
 
 public abstract class OrderListPage : Page
 {
+	public static OrderListPage CurrentSubpage = AllPages.OrderListPanning;
+
 	protected static OtherWidget otherOrderList;
 
 	protected static Shared<int> s_commonSelectedWidgetIndex = new Shared<int>();
@@ -24,6 +26,8 @@ public abstract class OrderListPage : Page
 		: base(number, title, helpText)
 	{
 		AddSharedWidgets(s_commonWidgets);
+
+		SelectedWidgetIndex = s_commonSelectedWidgetIndex;
 	}
 
 	static OrderListPage()
@@ -36,6 +40,13 @@ public abstract class OrderListPage : Page
 		otherOrderList.OtherAcceptsText = true;
 
 		s_commonWidgets.Add(otherOrderList);
+	}
+
+	public override void SetPage()
+	{
+		base.SetPage();
+
+		CurrentSubpage = this;
 	}
 
 	public override void SynchronizeWith(Page other)

@@ -67,6 +67,10 @@ public static class AllPages
 
 	static AllPages()
 	{
+		// Just in case static initializers run in the wrong order
+		InstrumentListPage.CurrentSubpage = InstrumentListGeneral;
+		OrderListPage.CurrentSubpage = OrderListPanning;
+
 		s_pages = typeof(AllPages).GetFields(BindingFlags.Public | BindingFlags.Static)
 			.Where(field => typeof(Page).IsAssignableFrom(field.FieldType))
 			.Where(field => field.GetCustomAttribute<NonCanonicalAttribute>() == null)

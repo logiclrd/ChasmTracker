@@ -24,6 +24,7 @@ public enum PageNumbers
 	ModuleSave,
 	ModuleExport,
 
+	OrderList,
 	OrderListPanning,
 	OrderListVolumes,
 

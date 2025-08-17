@@ -42,7 +42,7 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 		otherNoteTranslationTable.OtherRedraw += otherNoteTranslationTable_Redraw;
 
 		/* special case stuff */
-		toggleButtonSubpageGeneral.SetState(true);
+		toggleButtonSubpageGeneral.InitializeState(true);
 
 		/* 6-9 = nna toggles */
 		toggleButtonNewNoteActionNoteCut = new ToggleButtonWidget(new Point(46, 19), 29, "Note Cut", 2, NNAGroup);
@@ -594,5 +594,4 @@ public class InstrumentListGeneralSubpage : InstrumentListPage
 	{
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}
-
 }

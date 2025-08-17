@@ -79,6 +79,8 @@ public class OrderListPanningPage : OrderListPage
 
 	public override void SetPage()
 	{
+		base.SetPage();
+
 		RecheckMutedChannels();
 	}
 }

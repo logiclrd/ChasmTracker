@@ -23,12 +23,16 @@ using ChasmTracker.Widgets;
 /* This is getting almost as disturbing as the pattern editor. */
 public abstract class InstrumentListPage : Page
 {
+	public static InstrumentListPage CurrentSubpage = AllPages.InstrumentListGeneral;
+
 	// Widgets shared across all 4 subpages. They literally use the same actual widget.
 	protected static OtherWidget otherInstrumentList;
 	protected static ToggleButtonWidget toggleButtonSubpageGeneral;
 	protected static ToggleButtonWidget toggleButtonSubpageVolume;
 	protected static ToggleButtonWidget toggleButtonSubpagePanning;
 	protected static ToggleButtonWidget toggleButtonSubpagePitch;
+
+	static Shared<int> s_commonSelectedWidgetIndex = new Shared<int>();
 
 	static List<Widget> s_commonWidgets = new List<Widget>();
 
@@ -39,14 +43,10 @@ public abstract class InstrumentListPage : Page
 
 	static readonly string[] PitchEnvelopeStates = { "Off", "On Pitch", "On Filter" };
 
-	static int s_topInstrument = -1;
+	static int s_topInstrument = 1;
 	static int s_altSwap_lastVisibleInstrumentNumber = 99; // for alt-down instrument-swapping
 
 	protected static int s_instrumentCursorPos = 25; /* "play" mode */
-
-	/* shared by all the numentries on a page
-	 * (0 = volume, 1 = panning, 2 = pitch) */
-	static Shared<int> s_numEntryCursorPos = new Shared<int>();
 
 	protected static bool s_envelopeEditMode = false;
 	protected static bool s_envelopeMouseEdit = false;
@@ -100,10 +100,14 @@ public abstract class InstrumentListPage : Page
 			_savedEnv[i] = new Envelope(32);
 
 		AddSharedWidgets(s_commonWidgets);
+
+		SelectedWidgetIndex = s_commonSelectedWidgetIndex;
 	}
 
 	public override void SetPage()
 	{
+		CurrentSubpage = this;
+
 		InstrumentListReposition();
 	}
 
@@ -122,7 +126,7 @@ public abstract class InstrumentListPage : Page
 		}
 	}
 
-	static int s_currentInstrument;
+	static int s_currentInstrument = 1;
 
 	public int CurrentInstrument
 	{
@@ -415,32 +419,34 @@ public abstract class InstrumentListPage : Page
 			var ins = Song.CurrentSong.GetInstrument(n);
 
 			bool isCurrent = (n == s_currentInstrument);
-			int isPlaying = instrumentPlayingState[n];
+			int isPlaying = (n < instrumentPlayingState.Length) ? instrumentPlayingState[n] : 0;
 
 			if (ins.IsPlayed)
 				VGAMem.DrawCharacter(isPlaying > 1 ? (char)183 : (char)173, new Point(1, 13 + pos), (isPlaying > 0) ? (3, 2) : (1, 2));
 
 			VGAMem.DrawText(n.ToString99(), new Point(2, 13 + pos), (0, 2));
 
-			if (ins.Name == null)
-				continue;
-
 			if (s_instrumentCursorPos < 25)
 			{
 				/* it's in edit mode */
 				if (isCurrent)
 				{
-					VGAMem.DrawTextLen(ins.Name, 25, new Point(5, 13 + pos), (6, 14));
+					VGAMem.DrawTextLen(ins.Name ?? "", 25, new Point(5, 13 + pos), (6, 14));
 
 					if (isSelected)
 					{
-						VGAMem.DrawCharacter(ins.Name[s_instrumentCursorPos],
+						char ch = '\0';
+
+						if ((ins.Name != null) && (s_instrumentCursorPos < ins.Name.Length))
+							ch = ins.Name[s_instrumentCursorPos];
+
+						VGAMem.DrawCharacter(ch,
 								new Point(5 + s_instrumentCursorPos, 13 + pos), (0, 3));
 					}
 				}
 				else
 				{
-					VGAMem.DrawTextLen(ins.Name, 25, new Point(5, 13 + pos), (6, 0));
+					VGAMem.DrawTextLen(ins.Name ?? "", 25, new Point(5, 13 + pos), (6, 0));
 				}
 			}
 			else
@@ -448,13 +454,12 @@ public abstract class InstrumentListPage : Page
 				int fg = (isCurrent && isSelected) ? 0 : 6;
 				int bg = isCurrent ? (isSelected ? 3 : 14) : 0;
 
-				VGAMem.DrawTextLen(ins.Name, 25, new Point(5, 13 + pos),
-								(fg, bg));
+				VGAMem.DrawTextLen(ins.Name ?? "", 25, new Point(5, 13 + pos), (fg, bg));
 			}
 
-			if (ss == n)
+			if ((ss == n) && (ins.Name != null) && (ins.Name.Length >= cl))
 			{
-				VGAMem.DrawTextLen(ins.Name + cl, (cr - cl) + 1,
+				VGAMem.DrawTextLen(ins.Name.Substring(cl), (cr - cl) + 1,
 						new Point(5 + cl, 13 + pos),
 						isCurrent ? (3, 8) : (11, 8));
 			}

@@ -1542,11 +1542,14 @@ public class Song
 
 	public SongInstrument GetInstrument(int n)
 	{
-		if (n >= Constants.MaxInstruments)
+		if ((n < 0) || (n >= Constants.MaxInstruments))
 			throw new ArgumentOutOfRangeException();
 
 		// Make a new instrument if it doesn't exist.
-		if ((Instruments[n] == null))
+		while (n >= Instruments.Count)
+			Instruments.Add(null);
+
+		if (Instruments[n] == null)
 			Instruments[n] = new SongInstrument(this);
 
 		return Instruments[n]!;

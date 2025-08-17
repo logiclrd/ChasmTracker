@@ -46,6 +46,11 @@ public abstract class Page : WidgetContext
 
 	public static void SetPage(PageNumbers newPageNumber)
 	{
+		if (newPageNumber == PageNumbers.InstrumentList)
+			newPageNumber = InstrumentListPage.CurrentSubpage.PageNumber;
+		if (newPageNumber == PageNumbers.OrderList)
+			newPageNumber = OrderListPage.CurrentSubpage.PageNumber;
+
 		if (Status.CurrentPageNumber != newPageNumber)
 		{
 			Status.PreviousPageNumber = Status.CurrentPageNumber;
@@ -1713,15 +1718,17 @@ public abstract class Page : WidgetContext
 				if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
 					FinishMiniPop();
-					if (Status.CurrentPageNumber == PageNumbers.OrderListPanning)
+
+					if (k.State == KeyState.Press)
 					{
-						if (k.State == KeyState.Press)
-							SetPage(PageNumbers.OrderListVolumes);
-					}
-					else
-					{
-						if (k.State == KeyState.Press)
-							SetPage(PageNumbers.OrderListPanning);
+						if (Status.CurrentPage is OrderListPage)
+						{
+							SetPage((Status.CurrentPage is OrderListPanningPage)
+								? PageNumbers.OrderListVolumes
+								: PageNumbers.OrderListPanning);
+						}
+						else
+							SetPage(PageNumbers.OrderList);
 					}
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control))

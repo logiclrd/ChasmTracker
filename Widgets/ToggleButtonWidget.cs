@@ -27,20 +27,30 @@ public class ToggleButtonWidget : Widget
 		}
 	}
 
+	public void InitializeState(bool state)
+	{
+		_state = state;
+	}
+
 	public void SetState(bool state)
 	{
-		if (state)
+		if (state != _state)
 		{
-			if (Group != null)
-				foreach (var toggleButton in Group.Widgets.OfType<ToggleButtonWidget>())
-					toggleButton._state = false;
+			if (state)
+			{
+				if (Group != null)
+					foreach (var toggleButton in Group.Widgets.OfType<ToggleButtonWidget>())
+						toggleButton._state = false;
 
-			_state = true;
+				_state = true;
+			}
+			else
+				_state = false;
+
+			OnChanged();
+
+			Status.Flags |= StatusFlags.NeedUpdate;
 		}
-		else
-			_state = false;
-
-		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	public ToggleButtonWidget(Point position, string text, int padding, int groupNumber)

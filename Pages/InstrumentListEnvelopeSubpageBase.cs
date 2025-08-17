@@ -158,6 +158,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 	protected void EnvelopeDraw(Envelope? env, bool middle, int currentNode,
 				bool envOn, bool loopOn, bool sustainOn, int envPos)
 	{
+		// TODO: show envelopes that aren't there yet to kickstart editing on new instruments
 		if (env == null)
 			return;
 

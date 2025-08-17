@@ -66,7 +66,7 @@ public class BitSetWidget : Widget
 			string label = set ? BitsOn[n] : BitsOff[n];
 
 			char label_c1 = label[0];
-			char label_c2 = (label.Length >= 1) ? label[1] : '\0';
+			char label_c2 = (label.Length >= 2) ? label[1] : '\0';
 
 			bool isFocused = isSelected && (n == CursorPosition);
 

@@ -1,6 +1,7 @@
+using System;
+
 namespace ChasmTracker.Pages;
 
-using System;
 using ChasmTracker.Input;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;

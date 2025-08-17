@@ -258,7 +258,7 @@ public class Menu
 				SetSubmenu(InstrumentMenu);
 				break;
 			case 5: /* view orders/panning */
-				Page.SetPage(PageNumbers.OrderListPanning);
+				Page.SetPage(PageNumbers.OrderList);
 				break;
 			case 6: /* view variables */
 				Page.SetPage(PageNumbers.SongVariables);

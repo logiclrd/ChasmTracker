@@ -406,7 +406,7 @@ public class Program
 							case "load": Page.SetPage(PageNumbers.ModuleLoad); break;
 							case "help": Page.SetPage(PageNumbers.Help); break;
 							case "pattern": Page.SetPage(PageNumbers.PatternEditor); break;
-							case "orders": Page.SetPage(PageNumbers.OrderListPanning); break;
+							case "orders": Page.SetPage(PageNumbers.OrderList); break;
 							case "variables": Page.SetPage(PageNumbers.SongVariables); break;
 							case "message_edit": Page.SetPage(PageNumbers.Message); break;
 							case "info": Page.SetPage(PageNumbers.Info); break;

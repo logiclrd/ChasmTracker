@@ -9,12 +9,9 @@ using ChasmTracker.FileSystem;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
-using ChasmTracker.Widgets;
 
 public class FontEditorPage : Page
 {
-	OtherWidget otherSink;
-
 	FontEditorListMode _fontListMode;
 	FontEditorItem _selectedItem;
 	byte _currentCharacter;
@@ -31,10 +28,6 @@ public class FontEditorPage : Page
 		: base(PageNumbers.FontEditor, "", HelpTexts.Global)
 	{
 		_fontList = new FileList(); // TODO
-
-		otherSink = new OtherWidget();
-
-		AddWidget(otherSink);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -59,7 +52,7 @@ public class FontEditorPage : Page
 	static int InnerY(Point pt) => pt.Y + 4;
 
 	static int InnerX(Rect bounds) => InnerX(bounds.TopLeft);
-	static int InnerY(Rect bounds) => InnerX(bounds.TopLeft);
+	static int InnerY(Rect bounds) => InnerY(bounds.TopLeft);
 
 	static Point Inner(Point p) => p.Advance(3, 4);
 	static Point Inner(Rect bounds) => Inner(bounds.TopLeft);
