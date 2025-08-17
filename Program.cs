@@ -153,7 +153,12 @@ public class Program
 						{
 							Keyboard.CacheKeyRepeat(kk);
 
-							Status.LastKeySym = lastKey;
+							if (!kk.IsModifierKey)
+							{
+								Status.LastKeySym = kk.Sym;
+								Status.LastKeyMod = kk.Modifiers;
+							}
+
 							lastKey = kk.Sym;
 						}
 

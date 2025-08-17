@@ -24,6 +24,21 @@ public static class Status
 	public static TrackerTimeDisplay TimeDisplay = TrackerTimeDisplay.PlayElapsed;
 	public static TrackerVisualizationStyle VisualizationStyle = TrackerVisualizationStyle.VUMeter;
 	public static KeySym LastKeySym;
+	public static KeyMod LastKeyMod;
+
+	public static bool LastKeyIs(KeySym sym, KeyMod mod)
+	{
+		bool matchMod, matchSym;
+
+		if (mod == 0)
+			matchMod = (LastKeyMod == 0);
+		else
+			matchMod = LastKeyMod.HasAnyFlag(mod);
+
+		matchSym  = (LastKeySym == sym);
+
+		return matchMod && matchSym;
+	}
 
 	public static MessageBoxTypes MessageBoxType
 	{

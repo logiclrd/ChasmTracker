@@ -3842,7 +3842,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				if (k.State == KeyState.Release)
 					return true;
 
-				if (Status.LastKeySym == KeySym.d)
+				if (Status.LastKeyIs(KeySym.d, KeyMod.Alt))
 				{
 					if (maxRowNumber - (_currentRow - 1) > _blockDoubleSize)
 						_blockDoubleSize <<= 1;
@@ -3864,7 +3864,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			case KeySym.l:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Status.LastKeySym == KeySym.l)
+				if (Status.LastKeyIs(KeySym.l, KeyMod.Alt))
 				{
 					/* 3x alt-l re-selects the current channel */
 					if (_selection.FirstChannel == _selection.LastChannel)
@@ -3921,7 +3921,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				if (k.State == KeyState.Release)
 					return true;
 
-				if (Status.LastKeySym == KeySym.o)
+				if (Status.LastKeyIs(KeySym.o, KeyMod.Alt))
 					_patternCopyInBehaviour = PatternCopyInBehaviour.OverwriteGrow;
 				else
 					_patternCopyInBehaviour = PatternCopyInBehaviour.Overwrite;
@@ -3937,7 +3937,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			case KeySym.m:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Status.LastKeySym == KeySym.m)
+				if (Status.LastKeyIs(KeySym.m, KeyMod.Alt))
 					_patternCopyInBehaviour = PatternCopyInBehaviour.MixFields;
 				else
 					_patternCopyInBehaviour = PatternCopyInBehaviour.MixNotes;
@@ -3962,7 +3962,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 				else
 					_channelMultiEnabled = _channelMulti.Any(v => v);
 
-				if (Status.LastKeySym == KeySym.n)
+				if (Status.LastKeyIs(KeySym.n, KeyMod.Alt))
 				{
 					var dialog = Dialog.Show(new MultiChannelDialog(_channelMulti));
 
@@ -4011,7 +4011,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			case KeySym.k:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Status.LastKeySym == KeySym.k)
+				if (Status.LastKeyIs(KeySym.k, KeyMod.Alt))
 					SelectionWipeVolume(true);
 				else
 					SelectionSlideVolume();
@@ -4019,7 +4019,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 			case KeySym.x:
 				if (k.State == KeyState.Release)
 					return true;
-				if (Status.LastKeySym == KeySym.x)
+				if (Status.LastKeyIs(KeySym.x, KeyMod.Alt))
 					SelectionWipeEffect();
 				else
 					SelectionSlideEffect();

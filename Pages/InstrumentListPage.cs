@@ -551,7 +551,7 @@ public abstract class InstrumentListPage : Page
 					{
 						// restrict position to the "old" value of _last_vis_inst()
 						// (this is entirely for aesthetic reasons)
-						if (Status.LastKeySym != KeySym.Down && !k.IsRepeat)
+						if (Status.LastKeyIs(KeySym.Down, KeyMod.Alt) && !k.IsRepeat)
 							s_altSwap_lastVisibleInstrumentNumber = LastVisibleInstrumentNumber();
 						if (s_currentInstrument < s_altSwap_lastVisibleInstrumentNumber)
 						{

@@ -273,7 +273,7 @@ public class SampleListPage : Page
 					{
 						// restrict position to the "old" value of LastVisibleSampleNumber()
 						// (this is entirely for aesthetic reasons)
-						if (Status.LastKeySym != KeySym.Down && !k.IsRepeat)
+						if (!Status.LastKeyIs(KeySym.Down, KeyMod.Alt) && !k.IsRepeat)
 							_altSwapLastVisible = LastVisibleSampleNumber();
 						if (_currentSample < _altSwapLastVisible)
 						{

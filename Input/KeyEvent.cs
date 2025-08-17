@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.SymbolStore;
 using ChasmTracker.Events;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -173,17 +174,40 @@ public struct KeyEvent
 
 	/* --------------------------------------------------------------------- */
 
-		/* return values:
-		*      < 0 = invalid note
-		*        0 = clear field ('.' in qwerty)
-		*    1-120 = note
-		* NOTE_CUT = cut ("^^^")
-		* NOTE_OFF = off ("===")
-		* NOTE_FADE = fade ("~~~")
-		*         i haven't really decided on how to display this.
-		*         and for you people who might say 'hey, IT doesn't do that':
-		*         yes it does. read the documentation. it's not in the editor,
-		*         but it's in the player. */
+	public bool IsModifierKey
+	{
+		get
+		{
+			switch (Sym)
+			{
+				case KeySym.LeftControl:
+				case KeySym.LeftShift:
+				case KeySym.LeftAlt:
+				case KeySym.LeftGUI:
+				case KeySym.RightAlt:
+				case KeySym.RightGUI:
+				case KeySym.RightControl:
+				case KeySym.RightShift:
+					return true;
+				default:
+					return false;
+			}
+		}
+	}
+
+	/* --------------------------------------------------------------------- */
+
+	/* return values:
+	 *      < 0 = invalid note
+	 *        0 = clear field ('.' in qwerty)
+	 *    1-120 = note
+	 * NOTE_CUT = cut ("^^^")
+	 * NOTE_OFF = off ("===")
+	 * NOTE_FADE = fade ("~~~")
+	 *         i haven't really decided on how to display this.
+	 *         and for you people who might say 'hey, IT doesn't do that':
+	 *         yes it does. read the documentation. it's not in the editor,
+	 *         but it's in the player. */
 	public int NoteValue
 	{
 		get
