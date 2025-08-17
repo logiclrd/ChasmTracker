@@ -1162,16 +1162,23 @@ to change the default font!
 
 	void DrawImpulseTrackerFontMap()
 	{
+		byte highlightChar = 0xFF;
+
 		if (_impulseTrackerFontMapPosition < 0
 		 || ImpulseTrackerFontMapCharacters[_impulseTrackerFontMapPosition] != _currentCharacter)
 			_impulseTrackerFontMapPosition = Array.IndexOf(ImpulseTrackerFontMapCharacters, _currentCharacter);
+
+		if (((_impulseTrackerFontMapPosition >= 0) && (_impulseTrackerFontMapPosition < ImpulseTrackerFontMapCharacters.Length))
+		 && (_selectedItem != FontEditorItem.ImpulseTrackerFontMap))
+			highlightChar = _currentCharacter;
 
 		for (int n = 0; n < 240; n++)
 		{
 			int fg = 1;
 			int bg = 0;
 
-			if (n == _impulseTrackerFontMapPosition)
+			if ((n == _impulseTrackerFontMapPosition)
+			 || (ImpulseTrackerFontMapCharacters[n] == highlightChar))
 			{
 				if (_selectedItem == FontEditorItem.ImpulseTrackerFontMap)
 				{
