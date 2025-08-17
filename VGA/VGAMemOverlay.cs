@@ -23,7 +23,7 @@ public class VGAMemOverlay
 	{
 		TopLeft = topLeft;
 		BottomRight = bottomRight;
-		Size = bottomRight - topLeft;
+		Size = (bottomRight - topLeft + (1, 1)) * 8;
 
 		_q = topLeft.X * 8 + topLeft.Y * 8 * Constants.NativeScreenWidth;
 		_skip = 640 - Size.Width;

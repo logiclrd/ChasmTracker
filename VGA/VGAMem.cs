@@ -833,7 +833,7 @@ public static class VGAMem
 			DrawThumbBarInternal(width, position, 0, isSelected ? (byte)3 : (byte)2);
 		else
 			DrawThumbBarInternal(width, position,
-				value * (width / 1) * 8 / maximum,
+				value * (width - 1) * 8 / maximum,
 				isSelected ? (byte)3 : (byte)2);
 	}
 
@@ -894,7 +894,7 @@ public static class VGAMem
 
 		int length = data.Length / inputChans;
 
-		int step = (int)(((long)length << 32) / r.Size.Width);
+		long step = ((long)length << 32) / r.Size.Width;
 
 		for (int cc = 0; cc < outputChans; cc++)
 		{
@@ -953,7 +953,7 @@ public static class VGAMem
 
 		int length = data.Length / inputChans;
 
-		int step = (int)(((long)length << 32) / r.Size.Width);
+		long step = ((long)length << 32) / r.Size.Width;
 
 		for (int cc = 0; cc < outputChans; cc++)
 		{
@@ -988,8 +988,8 @@ public static class VGAMem
 
 				/* XXX is doing this with integers faster than say, floating point?
 				 * I mean, it sure is a bit more ~accurate~ at least, and it'll work the same everywhere. */
-				min = (short)((min * (long)nh) >> 8);
-				max = (short)((max * (long)nh) >> 8);
+				min = (short)((min * (long)nh) >> 16);
+				max = (short)((max * (long)nh) >> 16);
 
 				r.DrawLine(new Point(x, np - 1 - max), new Point(x, np - 1 - min), SampleDataColour);
 
@@ -1046,8 +1046,8 @@ public static class VGAMem
 
 				/* XXX is doing this with integers faster than say, floating point?
 				 * I mean, it sure is a bit more ~accurate~ at least, and it'll work the same everywhere. */
-				min = (int)((min * (long)nh) >> 8);
-				max = (int)((max * (long)nh) >> 8);
+				min = (int)((min * (long)nh) >> 32);
+				max = (int)((max * (long)nh) >> 32);
 
 				r.DrawLine(new Point(x, np - 1 - max), new Point(x, np - 1 - min), SampleDataColour);
 

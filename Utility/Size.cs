@@ -21,6 +21,10 @@ public struct Size
 		Height = height;
 	}
 
+	public static Size operator *(int coefficient, Size size)
+		=> new Size(size.Width * coefficient, size.Height * coefficient);
+	public static Size operator *(Size size, int coefficient)
+		=> new Size(size.Width * coefficient, size.Height * coefficient);
 	public static Size operator /(Size size, int divisor)
 		=> new Size(size.Width / divisor, size.Height / divisor);
 

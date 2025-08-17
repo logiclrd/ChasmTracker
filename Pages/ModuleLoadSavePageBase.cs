@@ -337,7 +337,6 @@ public abstract class ModuleLoadSavePageBase : Page
 
 		Configuration.Directories.ModulesDirectory = ptr;
 
-		// TODO charset_strncpy ?
 		_dirnameEntry.Clear().Append(ptr);
 
 		/* probably not all of this is needed everywhere */

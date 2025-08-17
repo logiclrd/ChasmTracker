@@ -9,22 +9,17 @@ using ChasmTracker.VGA;
 
 public class NumberEntryWidget : Widget
 {
-	int _value;
-
+	public int Value;
 	public int Minimum;
 	public int Maximum;
 	public Shared<int> CursorPosition;
 	public bool Reverse;
 
-	public int Value
+	public void ChangeValue(int value)
 	{
-		get => _value;
-		set
-		{
-			_value = value.Clamp(Minimum, Maximum);
-			OnChanged();
-			Status.Flags |= StatusFlags.NeedUpdate;
-		}
+		Value = value.Clamp(Minimum, Maximum);
+		OnChanged();
+		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	public NumberEntryWidget(Point position, int width, int min, int max, Shared<int> cursorPosition)
@@ -60,7 +55,7 @@ public class NumberEntryWidget : Widget
 		for (int i = CursorPosition + 1; i < Size.Width; i++)
 			cursorPositionDigitValue *= 10;
 
-		int newValue = _value;
+		int newValue = Value;
 
 		bool success = false;
 
@@ -186,7 +181,7 @@ public class NumberEntryWidget : Widget
 				if (Reverse)
 				{
 					/* woot! */
-					Value /= 10;
+					ChangeValue(Value / 10);
 
 					OnChanged();
 					Status.Flags |= StatusFlags.NeedUpdate;
@@ -196,10 +191,10 @@ public class NumberEntryWidget : Widget
 
 				break;
 			case KeySym.Plus:
-				Value++;
+				ChangeValue(Value + 1);
 				return true;
 			case KeySym.Minus:
-				Value--;
+				ChangeValue(Value - 1);
 				return true;
 		}
 

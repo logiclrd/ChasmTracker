@@ -224,7 +224,7 @@ public abstract class TrackViewWindowBase : InfoWindow
 
 		VGAMem.DrawBox(new Point(4, @base), new Point(right, @base + fullHeight - 1), BoxTypes.Thick | BoxTypes.Inner | BoxTypes.Inset);
 
-		for (int chan = FirstChannel, column = 5; column + FullChannelWidth < right && chan <= Song.CurrentSong.Channels.Length; chan++, column += FullChannelWidth)
+		for (int chan = FirstChannel, column = 5; column + FullChannelWidth <= right && chan <= Song.CurrentSong.Channels.Length; chan++, column += FullChannelWidth)
 		{
 			var channel = Song.CurrentSong.Channels[chan - 1];
 

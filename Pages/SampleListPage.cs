@@ -118,10 +118,10 @@ public class SampleListPage : Page
 		numberEntrySustainLoopEnd.Changed += UpdateSampleLoopPoints;
 
 		/* 15 -> 18 = vibrato waveforms */
-		toggleButtonVibratoSine = new ToggleButtonWidget(new Point(57, 36), "\xB9\xBA", 3, VibratoWaveformsGroup);
-		toggleButtonVibratoRampDown = new ToggleButtonWidget(new Point(67, 36), "\xBD\xBE", 3, VibratoWaveformsGroup);
-		toggleButtonVibratoSquare = new ToggleButtonWidget(new Point(57, 39), "\xBB\xBC", 3, VibratoWaveformsGroup);
-		toggleButtonVibratoRandom = new ToggleButtonWidget(new Point(67, 39), "Random", 1, VibratoWaveformsGroup);
+		toggleButtonVibratoSine = new ToggleButtonWidget(new Point(57, 36), 6, "\xB9\xBA", 3, VibratoWaveformsGroup);
+		toggleButtonVibratoRampDown = new ToggleButtonWidget(new Point(67, 36), 6, "\xBD\xBE", 3, VibratoWaveformsGroup);
+		toggleButtonVibratoSquare = new ToggleButtonWidget(new Point(57, 39), 6, "\xBB\xBC", 3, VibratoWaveformsGroup);
+		toggleButtonVibratoRandom = new ToggleButtonWidget(new Point(67, 39), 6, "Random", 1, VibratoWaveformsGroup);
 
 		toggleButtonVibratoSine.Changed += UpdateValuesInSong;
 		toggleButtonVibratoRampDown.Changed += UpdateValuesInSong;
@@ -541,7 +541,7 @@ public class SampleListPage : Page
 
 		/* global volume */
 		thumbBarGlobalVolume.Value = sample.GlobalVolume;
-		thumbBarGlobalVolume.TextAtMinimum = sample.Flags.HasAllFlags(SampleFlags.Mute) ? "  Muted  " : "";
+		thumbBarGlobalVolume.TextAtMinimum = sample.Flags.HasAllFlags(SampleFlags.Mute) ? "  Muted  " : null;
 
 		/* default pan (another modplug hack) */
 		toggleEnableDefaultPan.State = sample.Flags.HasAllFlags(SampleFlags.Panning);
