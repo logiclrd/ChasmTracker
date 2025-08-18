@@ -7,6 +7,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<SourceRevisionId>build$([System.DateTime]::UtcNow.ToString("o"))</SourceRevisionId>
 		<GitVersion>false</GitVersion>
+		<DefineConstants>ENABLE_HOOKS</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>

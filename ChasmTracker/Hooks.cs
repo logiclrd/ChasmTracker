@@ -29,7 +29,7 @@ public class Hooks
 #endif
 	}
 
-	void RunHook(string name)
+	static void RunHook(string name)
 	{
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
