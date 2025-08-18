@@ -41,6 +41,7 @@ public class CrossfadeSampleDialog : Dialog
 		toggleButtonSustain.Changed += LoopChanged;
 
 		// Default to sustain loop if there is a sustain loop but no regular loop, or the regular loop is not valid
+		// (Note that a loop that starts at 0 is not valid, because crossfading requires data before the loop.)
 		if (_sample.Flags.HasAllFlags(SampleFlags.SustainLoop) && !(_sample.Flags.HasAllFlags(SampleFlags.Loop) && (_sample.LoopStart > 0) && (_sample.LoopEnd > 0)))
 			toggleButtonSustain.SetState(true);
 		else
