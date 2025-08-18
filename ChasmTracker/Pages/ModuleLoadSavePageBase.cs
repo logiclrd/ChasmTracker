@@ -578,7 +578,7 @@ public abstract class ModuleLoadSavePageBase : Page
 				break;
 		}
 
-		if (k.Mouse != MouseState.None && !(k.MousePosition.X >= 3 && k.MousePosition.X <= 51 && k.MousePosition.Y >= 13 && k.MousePosition.Y <= 43))
+		if (k.Mouse != MouseState.None && !otherFileList!.ContainsPoint(k.MousePosition))
 			return false;
 
 		switch (k.Mouse)

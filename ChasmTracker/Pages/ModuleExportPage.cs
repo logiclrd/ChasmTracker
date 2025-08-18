@@ -3,7 +3,6 @@ namespace ChasmTracker.Pages;
 using System.Linq;
 using ChasmTracker.Dialogs;
 using ChasmTracker.FileTypes;
-using ChasmTracker.FileTypes.Exporters;
 using ChasmTracker.Songs;
 
 public class ModuleExportPage : ModuleSavePage

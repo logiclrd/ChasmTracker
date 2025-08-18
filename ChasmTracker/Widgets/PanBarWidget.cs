@@ -50,7 +50,7 @@ public class PanBarWidget : Widget
 
 	public override bool? PreHandleKey(KeyEvent k)
 	{
-		if (k.Mouse == MouseState.DoubleClick)
+		if ((k.Mouse == MouseState.DoubleClick) && k.OnTarget)
 		{
 			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				return false;

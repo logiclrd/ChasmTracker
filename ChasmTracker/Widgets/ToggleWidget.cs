@@ -23,7 +23,7 @@ public class ToggleWidget : Widget
 
 	public override bool? PreHandleKey(KeyEvent k)
 	{
-		if (k.Mouse == MouseState.Click)
+		if ((k.Mouse == MouseState.Click) && k.OnTarget)
 		{
 			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				return false;

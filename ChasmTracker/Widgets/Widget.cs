@@ -35,7 +35,7 @@ public abstract class Widget
 		Size = size;
 	}
 
-	public bool ContainsPoint(Point pt)
+	public virtual bool ContainsPoint(Point pt)
 	{
 		return new Rect(Position, Size + (1, 1)).Contains(pt);
 	}
@@ -140,6 +140,11 @@ public abstract class Widget
 			}
 		}
 
+		if (k.Mouse == MouseState.None)
+			k.OnTarget = false;
+		else
+			k.OnTarget = widget.ContainsPoint(k.MousePosition);
+
 		if (((k.Mouse == MouseState.Click) || (k.Mouse == MouseState.DoubleClick))
 		 && Status.Flags.HasFlag(StatusFlags.DiskWriterActive))
 			return false;
@@ -166,17 +171,6 @@ public abstract class Widget
 		if (k.Mouse == MouseState.Click
 			|| (k.Mouse == MouseState.None && (activateWithReturn || activateWithSpace)))
 		{
-			int pad = 0;
-
-			if (widget is ButtonWidget buttonWidget)
-				pad = buttonWidget.Padding;
-			else if (widget is ToggleButtonWidget toggleButtonWidget)
-				pad = toggleButtonWidget.Padding;
-
-			bool onw = (k.MousePosition.X < widget.Position.X
-						|| k.MousePosition.X >= widget.Position.X + widget.Size.Width + pad
-						|| k.MousePosition.Y != widget.Position.Y) ? false : true;
-
 			bool n = (k.State == KeyState.Press) ? true : false;
 
 			if (widget.IsDepressed != n)
@@ -184,7 +178,7 @@ public abstract class Widget
 			else if (k.State == KeyState.Release)
 				return true; // swallor
 
-			widget.IsDepressed = n;
+			widget.IsDepressed = n && k.OnTarget;
 
 			if (!(widget is TextEntryWidget) && !(widget is NumberEntryWidget))
 			{
@@ -193,7 +187,7 @@ public abstract class Widget
 			}
 			else
 			{
-				if (!onw)
+				if (!k.OnTarget)
 					return true;
 			}
 		}
@@ -215,15 +209,21 @@ public abstract class Widget
 		// OnActivated
 		if ((k.Mouse == MouseState.Click) || ((k.Mouse == MouseState.None) && (k.Sym == KeySym.Return)))
 		{
+			if (!k.OnTarget && (k.State != KeyState.Drag))
+				return false;
+
 			if (k.Mouse != MouseState.None)
 			{
-				bool activate = true;
+				if (k.State == KeyState.Release)
+				{
+					bool activate = true;
 
-				if ((widget is MenuToggleWidget) || (widget is ButtonWidget) || (widget is ToggleButtonWidget))
-					activate = k.OnTarget;
+					if ((widget is MenuToggleWidget) || (widget is ButtonWidget) || (widget is ToggleButtonWidget))
+						activate = k.OnTarget;
 
-				if (activate)
-					widget.OnActivated();
+					if (activate)
+						widget.OnActivated();
+				}
 			}
 			else
 			{

@@ -28,6 +28,11 @@ public class ButtonWidget : Widget
 		Clicked += clickedAction;
 	}
 
+	public override bool ContainsPoint(Point pt)
+	{
+		return new Rect(Position, Size + (2, 1)).Contains(pt);
+	}
+
 	protected override void DrawWidget(bool isSelected, int tfg, int tbg)
 	{
 		VGAMem.DrawBox(
@@ -42,8 +47,13 @@ public class ButtonWidget : Widget
 	{
 		/* maybe buttons should ignore the changed callback, and use activate instead...
 		(but still call the changed callback for togglebuttons if they *actually* changed) */
-		OnChanged();
-		Status.Flags |= StatusFlags.NeedUpdate;
-		return true;
+		if (k.OnTarget && (k.State == KeyState.Release))
+		{
+			OnChanged();
+			Status.Flags |= StatusFlags.NeedUpdate;
+			return true;
+		}
+
+		return false;
 	}
 }
