@@ -1111,7 +1111,7 @@ public static class SongRenderer
 			if (csf.CurrentSpeed == 0)
 				csf.CurrentSpeed = csf.InitialSpeed != 0 ? csf.InitialSpeed : 6;
 			if (csf.CurrentTempo == 0)
-				csf.CurrentTempo = csf.InitialTempo != 0 ? csf.InitialSpeed : 125;
+				csf.CurrentTempo = csf.InitialTempo != 0 ? csf.InitialTempo : 125;
 
 			csf.Flags &= ~SongFlags.FirstTick;
 
