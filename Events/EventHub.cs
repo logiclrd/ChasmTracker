@@ -21,20 +21,23 @@ public static class EventHub
 	static Queue<Event> s_queue = new Queue<Event>();
 	static object s_queueMutex = new object();
 
-	public static bool HaveEvent()
+	public static bool HaveEvent
 	{
-		lock (s_queueMutex)
+		get
 		{
-			if (s_queue.Count > 0)
-				return true;
+			lock (s_queueMutex)
+			{
+				if (s_queue.Count > 0)
+					return true;
 
-			// try pumping the events.
-			PumpEvents();
+				// try pumping the events.
+				PumpEvents();
 
-			if (s_queue.Count > 0)
-				return true;
+				if (s_queue.Count > 0)
+					return true;
 
-			return false;
+				return false;
+			}
 		}
 	}
 

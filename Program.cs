@@ -495,7 +495,7 @@ public class Program
 			{
 				var q = DiskWriter.Sync();
 
-				while (q == SyncResult.More && !EventHub.HaveEvent())
+				while (q == SyncResult.More && !EventHub.HaveEvent)
 				{
 					Video.CheckUpdate();
 					q = DiskWriter.Sync();
@@ -524,11 +524,11 @@ public class Program
 			 * that would mean guarding it all behind mutexes. :( */
 			var deadline = DateTime.UtcNow.AddMilliseconds(10);
 
-			while ((DateTime.UtcNow < deadline) && DirectoryScanner.TakeAsynchronousFileListStep() && !EventHub.HaveEvent())
+			while ((DateTime.UtcNow < deadline) && DirectoryScanner.TakeAsynchronousFileListStep() && !EventHub.HaveEvent)
 				;
 
 			/* sleep for a little bit to not hog CPU time */
-			if (!EventHub.HaveEvent())
+			if (!EventHub.HaveEvent)
 				Thread.Sleep(5);
 		}
 	}
