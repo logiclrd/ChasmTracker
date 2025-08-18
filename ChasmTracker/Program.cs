@@ -902,7 +902,7 @@ public class Program
 				MessageBoxTypes.OKCancel,
 				Status.Flags.HasAllFlags(StatusFlags.ClassicMode)
 				? "Exit Impulse Tracker?"
-				: "Exit Schism Tracker?",
+				: "Exit Chasm Tracker?",
 				() => Page.SaveCheck(() => Program.Exit(0)));
 		}
 	}

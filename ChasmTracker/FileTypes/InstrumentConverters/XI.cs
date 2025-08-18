@@ -357,7 +357,7 @@ public class XI : InstrumentFileConverter
 			xi.Name = xi.Name.Substring(0, 0x16);
 
 		xi.Magic = 0x1A;
-		xi.Tracker = "Schism Tracker";
+		xi.Tracker = "Chasm Tracker";
 		xi.Version = 0x0102;
 
 		/* envelope type */
