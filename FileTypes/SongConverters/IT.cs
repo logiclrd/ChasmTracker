@@ -550,7 +550,7 @@ public class IT : SongFileConverter
 				stream.ReadExactly(shortBuffer);
 				var fatTime = BitConverter.ToUInt16(shortBuffer);
 
-				if (fatDate != 0)
+				if (fatDate != 0) // fatTime is legitimately 0 at midnight
 				{
 					historyEntry.Time = DateTimeConversions.FATDateToDateTime(fatDate, fatTime);
 					historyEntry.TimeValid = true;
