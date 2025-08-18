@@ -1,14 +1,12 @@
 using System;
-
-namespace ChasmTracker.MIDI.Drivers;
-
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
+
+namespace ChasmTracker.MIDI.Drivers;
+
 using ChasmTracker.MIDI;
 using ChasmTracker.Utility;
-using Mono.Unix;
 
 public class IPMIDIPort : MIDIPort, IDisposable
 {
