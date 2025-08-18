@@ -257,7 +257,7 @@ public class Dialog : WidgetContext
 		Position.Y = 25;
 
 		var buttonOK = new ButtonWidget(new Point(31, 30), 6, "OK", 3);
-		var buttonCancel = new ButtonWidget(new Point(42, 30), 6, "Cancel", 3);
+		var buttonCancel = new ButtonWidget(new Point(42, 30), 6, "Cancel", 1);
 
 		buttonOK.Clicked += DialogButtonYes;
 		buttonCancel.Clicked += DialogButtonCancel;
