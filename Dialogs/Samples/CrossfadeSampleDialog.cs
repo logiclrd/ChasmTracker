@@ -93,5 +93,6 @@ public class CrossfadeSampleDialog : Dialog
 		int max = Math.Min(loopEnd - loopStart, loopStart);
 
 		numberEntrySamplesToFade!.Maximum = max;
+		numberEntrySamplesToFade.Value = max;
 	}
 }
