@@ -37,6 +37,13 @@ public class Hooks
 				Configuration.Directories.DotSchism,
 				name + ".bat");
 
+			if (!File.Exists(batchFile))
+			{
+				batchFile = Path.Combine(
+					Configuration.Directories.DotSchism,
+					name + ".cmd");
+			}
+
 			if (File.Exists(batchFile))
 				Process.Start("cmd.exe", "/c \"" + batchFile + "\"");
 		}
