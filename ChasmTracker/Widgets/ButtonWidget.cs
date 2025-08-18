@@ -45,13 +45,18 @@ public class ButtonWidget : Widget
 
 	public override bool? HandleActivate(KeyEvent k)
 	{
-		/* maybe buttons should ignore the changed callback, and use activate instead...
-		(but still call the changed callback for togglebuttons if they *actually* changed) */
-		if (k.OnTarget && (k.State == KeyState.Release))
+		if (k.State == KeyState.Drag)
+			IsDepressed = k.OnTarget;
+		else
 		{
-			OnChanged();
-			Status.Flags |= StatusFlags.NeedUpdate;
-			return true;
+			/* maybe buttons should ignore the changed callback, and use activate instead...
+			(but still call the changed callback for togglebuttons if they *actually* changed) */
+			if (k.OnTarget && (k.State == KeyState.Release))
+			{
+				OnChanged();
+				Status.Flags |= StatusFlags.NeedUpdate;
+				return true;
+			}
 		}
 
 		return false;

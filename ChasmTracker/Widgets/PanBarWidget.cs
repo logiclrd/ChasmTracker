@@ -68,7 +68,7 @@ public class PanBarWidget : Widget
 				return false;
 
 			/* swallow it */
-			if (!k.OnTarget)
+			if (!k.OnTarget && (k.State != KeyState.Drag))
 				return false;
 
 			int fMin = Minimum;

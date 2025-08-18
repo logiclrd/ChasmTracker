@@ -37,7 +37,7 @@ public abstract class Widget
 
 	public virtual bool ContainsPoint(Point pt)
 	{
-		return new Rect(Position, Size + (1, 1)).Contains(pt);
+		return new Rect(Position, Size + (0, 1)).Contains(pt);
 	}
 
 	event Action? _changed;
@@ -171,65 +171,56 @@ public abstract class Widget
 		if (k.Mouse == MouseState.Click
 			|| (k.Mouse == MouseState.None && (activateWithReturn || activateWithSpace)))
 		{
-			bool n = (k.State == KeyState.Press) ? true : false;
-
-			if (widget.IsDepressed != n)
-				Status.Flags |= StatusFlags.NeedUpdate;
-			else if (k.State == KeyState.Release)
-				return true; // swallor
-
-			widget.IsDepressed = n && k.OnTarget;
-
-			if (!(widget is TextEntryWidget) && !(widget is NumberEntryWidget))
-			{
-				if (k.State == KeyState.Press)
-					return true;
-			}
-			else
-			{
-				if (!k.OnTarget)
-					return true;
-			}
-		}
-		else if (k.Mouse == MouseState.None)
-		{
-			bool n = (k.State == KeyState.Press);
-
-			if (widget.IsDepressed != n)
-				Status.Flags |= StatusFlags.NeedUpdate;
-			else if (k.State == KeyState.Release)
-				return true; // swallor
-
-			widget.IsDepressed = n;
-
-			if (k.State == KeyState.Press)
-				return true;
-		}
-
-		// OnActivated
-		if ((k.Mouse == MouseState.Click) || ((k.Mouse == MouseState.None) && (k.Sym == KeySym.Return)))
-		{
-			if (!k.OnTarget && (k.State != KeyState.Drag))
-				return false;
-
 			if (k.Mouse != MouseState.None)
 			{
-				if (k.State == KeyState.Release)
+				bool n = (k.State == KeyState.Press) && k.OnTarget;
+
+				if (widget.IsDepressed != n)
+					Status.Flags |= StatusFlags.NeedUpdate;
+				else if (k.State == KeyState.Release)
+					return true; // swallor
+
+				widget.IsDepressed = n;
+
+				if (!(widget is TextEntryWidget) && !(widget is NumberEntryWidget))
 				{
-					bool activate = true;
-
-					if ((widget is MenuToggleWidget) || (widget is ButtonWidget) || (widget is ToggleButtonWidget))
-						activate = k.OnTarget;
-
-					if (activate)
-						widget.OnActivated();
+					if (k.State == KeyState.Press)
+						return true;
+				}
+				else
+				{
+					if (!k.OnTarget)
+						return true;
 				}
 			}
 			else
 			{
-				if (!(widget is OtherWidget))
+				bool n = (k.State == KeyState.Press);
+
+				if (widget.IsDepressed != n)
+					Status.Flags |= StatusFlags.NeedUpdate;
+				else if (k.State == KeyState.Release)
+					return true; // swallor
+
+				widget.IsDepressed = n;
+
+				if (k.State == KeyState.Press)
+					return true;
+			}
+
+			// OnActivated
+			if (k.Mouse != MouseState.None)
+			{
+				bool activate = true;
+
+				if ((widget is MenuToggleWidget) || (widget is ButtonWidget) || (widget is ToggleButtonWidget))
+					activate = k.OnTarget;
+
+				if (activate)
 					widget.OnActivated();
 			}
+			else if (!(widget is OtherWidget))
+				widget.OnActivated();
 
 			if (widget.HandleActivate(k) is bool activateResult)
 				return activateResult;

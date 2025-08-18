@@ -42,7 +42,7 @@ public class ModuleSavePage : ModuleLoadSavePageBase
 
 		SelectedWidgetIndex.Value = 2;
 
-		otherFileList = new OtherWidget(new Point(3, 13), new Size(45, 30));
+		otherFileList = new OtherWidget(new Point(3, 13), new Size(46, 30));
 		otherFileList.OtherAcceptsText = true;
 		otherFileList.OtherHandleKey += FileListHandleKey;
 		otherFileList.OtherHandleText += FileListHandleTextInput;

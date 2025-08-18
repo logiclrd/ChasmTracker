@@ -19,13 +19,13 @@ public class ModuleLoadPage : ModuleLoadSavePageBase
 		DirectoryListReposition();
 		FileListReposition();
 
-		otherFileList = new OtherWidget(new Point(3, 13), new Size(45, 30));
+		otherFileList = new OtherWidget(new Point(3, 13), new Size(46, 30));
 		otherFileList.OtherAcceptsText = true;
 		otherFileList.OtherHandleKey += FileListHandleKey;
 		otherFileList.OtherHandleText += FileListHandleTextInput;
 		otherFileList.OtherRedraw += FileListDraw;
 
-		otherDirectoryList = new OtherWidget(new Point(50, 13), new Size(27, 22));
+		otherDirectoryList = new OtherWidget(new Point(51, 13), new Size(26, 22));
 		otherDirectoryList.OtherAcceptsText = true;
 		otherDirectoryList.OtherHandleKey += DirectoryListHandleKey;
 		otherDirectoryList.OtherHandleText += DirectoryListHandleTextInput;

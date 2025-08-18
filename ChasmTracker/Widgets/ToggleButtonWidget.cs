@@ -69,6 +69,11 @@ public class ToggleButtonWidget : Widget
 		GroupNumber = groupNumber;
 	}
 
+	public override bool ContainsPoint(Point pt)
+	{
+		return new Rect(Position, Size + (2, 1)).Contains(pt);
+	}
+
 	public static void BuildGroups(IEnumerable<Widget> widgets)
 	{
 		var toggleButtonGroups = widgets
@@ -101,23 +106,15 @@ public class ToggleButtonWidget : Widget
 
 	public override bool? HandleActivate(KeyEvent k)
 	{
-		if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
-			return false;
-
-		if (GroupNumber != 0)
+		if (k.State == KeyState.Drag)
+			IsDepressed = k.OnTarget;
+		else
 		{
-			/* this also runs the changed callback and redraws the button(s) */
-			SetState(true);
-			return true;
+			if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
+				return false;
+
+			SetState(!_state || (Group != null));
 		}
-
-		/* else... */
-		_state = !_state;
-		/* maybe buttons should ignore the changed callback, and use activate instead...
-		(but still call the changed callback for togglebuttons if they *actually* changed) */
-		OnChanged();
-
-		Status.Flags |= StatusFlags.NeedUpdate;
 
 		return true;
 	}

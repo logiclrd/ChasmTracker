@@ -42,7 +42,7 @@ public class MenuToggleWidget : Widget
 			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				return false;
 
-			if (k.State == KeyState.Release)
+			if (k.State != KeyState.Press)
 				return true;
 
 			State = (State + 1)

@@ -105,4 +105,13 @@ public class WidgetContext
 
 		return false;
 	}
+
+	public Widget? FindWidgetXY(Point pt)
+	{
+		for (int i = 0; i < Widgets.Count; i++)
+			if (Widgets[i].ContainsPoint(pt))
+				return Widgets[i];
+
+		return null;
+	}
 }

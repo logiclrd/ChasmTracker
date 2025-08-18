@@ -293,7 +293,16 @@ public class Program
 								}
 							}
 
-							kk.OnTarget = Page.ActiveWidgetContext?.ChangeFocusToXY(kk.MousePosition) ?? false;
+							switch (kk.State)
+							{
+								case KeyState.Press:
+									kk.OnTarget = Page.ActiveWidgetContext?.ChangeFocusToXY(kk.MousePosition) ?? false;
+									break;
+
+								case KeyState.Drag:
+									kk.OnTarget = (Page.ActiveWidgetContext?.FindWidgetXY(kk.MousePosition) == Page.ActiveWidgetContext?.SelectedWidget);
+									break;
+							}
 
 							if (isMouseReleaseEvent && downTrip)
 							{
