@@ -1048,7 +1048,10 @@ public class XM : SongFileConverter
 				stream.Position = midi.Offset;
 
 				if (IT.ReadMIDIConfig(stream) is MIDIConfiguration validMIDIConfiguration)
+				{
 					song.MIDIConfig = validMIDIConfiguration;
+					song.Flags |= SongFlags.EmbedMIDIConfig;
+				}
 			}
 		}
 
