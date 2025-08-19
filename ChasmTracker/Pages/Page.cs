@@ -719,7 +719,24 @@ public abstract class Page : WidgetContext
 	public static void SaveCheck(Action ok, Action? cancel = null)
 	{
 		if (Status.Flags.HasAllFlags(StatusFlags.SongNeedsSave))
-			MessageBox.Show(MessageBoxTypes.OKCancel, "Current module not saved. Proceed?", ok, cancel);
+		{
+			var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Current module not saved. Proceed?", ok, cancel);
+
+			dialog.OverrideHandleKey +=
+				(k) =>
+				{
+					/* HACK: ignore F5,F6, to work around a bug where pressing
+					 * F5 causes an unusable environment */
+					switch (k.Sym)
+					{
+						case KeySym.F5:
+						case KeySym.F6:
+							return true;
+					}
+
+					return false;
+				};
+		}
 		else
 			ok();
 	}
