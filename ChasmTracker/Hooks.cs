@@ -29,23 +29,29 @@ public class Hooks
 #endif
 	}
 
+	/* in order of preference */
+	static readonly string[] Win32BatchFileExtensions =
+		[
+			".bat", /* prioritize .bat for legacy */
+			".cmd", /* because steel is heavier than feathers */
+		];
+
 	static void RunHook(string name)
 	{
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
-			string batchFile = Path.Combine(
-				Configuration.Directories.DotSchism,
-				name + ".bat");
-
-			if (!File.Exists(batchFile))
+			foreach (var extension in Win32BatchFileExtensions)
 			{
-				batchFile = Path.Combine(
+				string batchFile = Path.Combine(
 					Configuration.Directories.DotSchism,
-					name + ".cmd");
-			}
+					name + extension);
 
-			if (File.Exists(batchFile))
-				Process.Start("cmd.exe", "/c \"" + batchFile + "\"");
+				if (File.Exists(batchFile))
+				{
+					Process.Start("cmd.exe", "/c \"" + batchFile + "\"");
+					break;
+				}
+			}
 		}
 		else
 		{
