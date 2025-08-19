@@ -5066,6 +5066,8 @@ public class Song
 		{
 			case SaveResult.Success:
 				Status.Flags &= ~StatusFlags.SongNeedsSave;
+				/* kill any quirks */
+				CurrentSong.Quirks.SetAll(true);
 				if (!FileName.Equals(mangle, StringComparison.InvariantCultureIgnoreCase))
 					SetFileName(mangle);
 				Log.Append(5, " Done");
