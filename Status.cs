@@ -24,6 +24,7 @@ public static class Status
 	public static TrackerTimeDisplay TimeDisplay = TrackerTimeDisplay.PlayElapsed;
 	public static TrackerVisualizationStyle VisualizationStyle = TrackerVisualizationStyle.VUMeter;
 	public static KeySym LastKeySym;
+	public static KeySym LastOriginalKeySym;
 	public static KeyMod LastKeyMod;
 
 	public static bool LastKeyIs(KeySym sym, KeyMod mod)

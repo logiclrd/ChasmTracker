@@ -36,7 +36,6 @@ public class Program
 	{
 		Point lastPosition = default; /* character */
 		DateTime lastMouseDown, lastAudioPoll;
-		KeySym lastKey = KeySym.None;
 		DateTime startDown;
 		bool downTrip;
 		NumLockHandling fixNumLockKey;
@@ -53,6 +52,7 @@ public class Program
 		lastAudioPoll = DateTime.UtcNow;
 		startDown = DateTime.MinValue;
 		Status.LastKeySym = KeySym.None;
+		Status.LastOriginalKeySym = KeySym.None;
 
 		Status.KeyMod = EventHub.CurrentKeyMod;
 
@@ -112,14 +112,20 @@ public class Program
 							}
 						}
 
-						// grab the keymod
-						Status.KeyMod = keyboardEvent.Modifiers;
-						// fix it
-						OS.GetModKey(ref Status.KeyMod);
-
 						kk.Sym = keyboardEvent.Sym;
 						kk.ScanCode = keyboardEvent.ScanCode;
 
+						kk.Mouse = MouseState.None;
+
+						// normalize the text for processing
+						kk.Text = keyboardEvent.Text;
+
+						// grab the keymod
+						kk.Modifiers = keyboardEvent.Modifiers;
+						// fix it
+						OS.GetModKey(ref kk.Modifiers);
+
+						// numlock hacks, mostly here because of macs
 						switch (fixNumLockKey)
 						{
 							case NumLockHandling.Guess:
@@ -133,20 +139,21 @@ public class Program
 								break;
 						}
 
-						kk.Modifiers = Status.KeyMod;
-						kk.Mouse = MouseState.None;
+						// copy the keymod into the status global
+						Status.KeyMod = kk.Modifiers;
 
-						kk.Text = keyboardEvent.Text;
-
+						// apply translations for different keyboard layouts,
+						// e.g. shift-8 -> asterisk on standard U.S.
 						kk.TranslateKey();
 
+						// airball
 						Page.MainHandleKey(kk);
 
 						if (keyboardEvent.IsReleaseEvent)
 						{
 							/* only empty the key repeat if
 								* the last keydown is the same sym */
-							if (lastKey == kk.Sym)
+							if ((Status.LastOriginalKeySym == kk.OriginalSym) || kk.IsModifierKey)
 								Keyboard.EmptyKeyRepeat();
 						}
 						else
@@ -156,10 +163,9 @@ public class Program
 							if (!kk.IsModifierKey)
 							{
 								Status.LastKeySym = kk.Sym;
+								Status.LastOriginalKeySym = kk.OriginalSym;
 								Status.LastKeyMod = kk.Modifiers;
 							}
-
-							lastKey = kk.Sym;
 						}
 
 						break;
