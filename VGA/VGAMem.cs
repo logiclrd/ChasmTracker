@@ -180,8 +180,10 @@ public static class VGAMem
 						dg = (c8.HasBitSet(0x80) ? DefaultFonts.Lower : DefaultFonts.UpperAlt)[yl + ((c8 & 0x7F) << 3)];
 					else if ((c8 = c.ToITF()) >= 0)
 						dg = Font.ITF[yl + (c8 << 3)];
+					else if ((c8 = c.ToCP866()) >= 0)
+						dg = DefaultFonts.CP866[yl + (c8 << 8)];
 					else /* will display a ? if no cp437 equivalent found */
-						dg = Font.ITF[yl + ('?' << 3)];
+						dg = DefaultFonts.uFFFD[yl];
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;

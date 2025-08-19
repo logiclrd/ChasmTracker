@@ -305,4 +305,143 @@ public static class CharExtensions
 		/* nothing */
 		return -1;
 	}
+
+	/* for cyrillic (russian etc.) language rendering */
+	public static int ToCP866(this char c)
+	{
+		if (c < 0x80) return c;
+
+		switch (c)
+		{
+			case '\u0410': return 0x80; // CYRILLIC CAPITAL LETTER A
+			case '\u0411': return 0x81; // CYRILLIC CAPITAL LETTER BE
+			case '\u0412': return 0x82; // CYRILLIC CAPITAL LETTER VE
+			case '\u0413': return 0x83; // CYRILLIC CAPITAL LETTER GHE
+			case '\u0414': return 0x84; // CYRILLIC CAPITAL LETTER DE
+			case '\u0415': return 0x85; // CYRILLIC CAPITAL LETTER IE
+			case '\u0416': return 0x86; // CYRILLIC CAPITAL LETTER ZHE
+			case '\u0417': return 0x87; // CYRILLIC CAPITAL LETTER ZE
+			case '\u0418': return 0x88; // CYRILLIC CAPITAL LETTER I
+			case '\u0419': return 0x89; // CYRILLIC CAPITAL LETTER SHORT I
+			case '\u041A': return 0x8A; // CYRILLIC CAPITAL LETTER KA
+			case '\u041B': return 0x8B; // CYRILLIC CAPITAL LETTER EL
+			case '\u041C': return 0x8C; // CYRILLIC CAPITAL LETTER EM
+			case '\u041D': return 0x8D; // CYRILLIC CAPITAL LETTER EN
+			case '\u041E': return 0x8E; // CYRILLIC CAPITAL LETTER O
+			case '\u041F': return 0x8F; // CYRILLIC CAPITAL LETTER PE
+			case '\u0420': return 0x90; // CYRILLIC CAPITAL LETTER ER
+			case '\u0421': return 0x91; // CYRILLIC CAPITAL LETTER ES
+			case '\u0422': return 0x92; // CYRILLIC CAPITAL LETTER TE
+			case '\u0423': return 0x93; // CYRILLIC CAPITAL LETTER U
+			case '\u0424': return 0x94; // CYRILLIC CAPITAL LETTER EF
+			case '\u0425': return 0x95; // CYRILLIC CAPITAL LETTER HA
+			case '\u0426': return 0x96; // CYRILLIC CAPITAL LETTER TSE
+			case '\u0427': return 0x97; // CYRILLIC CAPITAL LETTER CHE
+			case '\u0428': return 0x98; // CYRILLIC CAPITAL LETTER SHA
+			case '\u0429': return 0x99; // CYRILLIC CAPITAL LETTER SHCHA
+			case '\u042A': return 0x9A; // CYRILLIC CAPITAL LETTER HARD SIGN
+			case '\u042B': return 0x9B; // CYRILLIC CAPITAL LETTER YERU
+			case '\u042C': return 0x9C; // CYRILLIC CAPITAL LETTER SOFT SIGN
+			case '\u042D': return 0x9D; // CYRILLIC CAPITAL LETTER E
+			case '\u042E': return 0x9E; // CYRILLIC CAPITAL LETTER YU
+			case '\u042F': return 0x9F; // CYRILLIC CAPITAL LETTER YA
+			case '\u0430': return 0xA0; // CYRILLIC SMALL LETTER A
+			case '\u0431': return 0xA1; // CYRILLIC SMALL LETTER BE
+			case '\u0432': return 0xA2; // CYRILLIC SMALL LETTER VE
+			case '\u0433': return 0xA3; // CYRILLIC SMALL LETTER GHE
+			case '\u0434': return 0xA4; // CYRILLIC SMALL LETTER DE
+			case '\u0435': return 0xA5; // CYRILLIC SMALL LETTER IE
+			case '\u0436': return 0xA6; // CYRILLIC SMALL LETTER ZHE
+			case '\u0437': return 0xA7; // CYRILLIC SMALL LETTER ZE
+			case '\u0438': return 0xA8; // CYRILLIC SMALL LETTER I
+			case '\u0439': return 0xA9; // CYRILLIC SMALL LETTER SHORT I
+			case '\u043A': return 0xAA; // CYRILLIC SMALL LETTER KA
+			case '\u043B': return 0xAB; // CYRILLIC SMALL LETTER EL
+			case '\u043C': return 0xAC; // CYRILLIC SMALL LETTER EM
+			case '\u043D': return 0xAD; // CYRILLIC SMALL LETTER EN
+			case '\u043E': return 0xAE; // CYRILLIC SMALL LETTER O
+			case '\u043F': return 0xAF; // CYRILLIC SMALL LETTER PE
+			case '\u2591': return 0xB0; // LIGHT SHADE
+			case '\u2592': return 0xB1; // MEDIUM SHADE
+			case '\u2593': return 0xB2; // DARK SHADE
+			case '\u2502': return 0xB3; // BOX DRAWINGS LIGHT VERTICAL
+			case '\u2524': return 0xB4; // BOX DRAWINGS LIGHT VERTICAL AND LEFT
+			case '\u2561': return 0xB5; // BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE
+			case '\u2562': return 0xB6; // BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE
+			case '\u2556': return 0xB7; // BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE
+			case '\u2555': return 0xB8; // BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE
+			case '\u2563': return 0xB9; // BOX DRAWINGS DOUBLE VERTICAL AND LEFT
+			case '\u2551': return 0xBA; // BOX DRAWINGS DOUBLE VERTICAL
+			case '\u2557': return 0xBB; // BOX DRAWINGS DOUBLE DOWN AND LEFT
+			case '\u255D': return 0xBC; // BOX DRAWINGS DOUBLE UP AND LEFT
+			case '\u255C': return 0xBD; // BOX DRAWINGS UP DOUBLE AND LEFT SINGLE
+			case '\u255B': return 0xBE; // BOX DRAWINGS UP SINGLE AND LEFT DOUBLE
+			case '\u2510': return 0xBF; // BOX DRAWINGS LIGHT DOWN AND LEFT
+			case '\u2514': return 0xC0; // BOX DRAWINGS LIGHT UP AND RIGHT
+			case '\u2534': return 0xC1; // BOX DRAWINGS LIGHT UP AND HORIZONTAL
+			case '\u252C': return 0xC2; // BOX DRAWINGS LIGHT DOWN AND HORIZONTAL
+			case '\u251C': return 0xC3; // BOX DRAWINGS LIGHT VERTICAL AND RIGHT
+			case '\u2500': return 0xC4; // BOX DRAWINGS LIGHT HORIZONTAL
+			case '\u253C': return 0xC5; // BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL
+			case '\u255E': return 0xC6; // BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE
+			case '\u255F': return 0xC7; // BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE
+			case '\u255A': return 0xC8; // BOX DRAWINGS DOUBLE UP AND RIGHT
+			case '\u2554': return 0xC9; // BOX DRAWINGS DOUBLE DOWN AND RIGHT
+			case '\u2569': return 0xCA; // BOX DRAWINGS DOUBLE UP AND HORIZONTAL
+			case '\u2566': return 0xCB; // BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL
+			case '\u2560': return 0xCC; // BOX DRAWINGS DOUBLE VERTICAL AND RIGHT
+			case '\u2550': return 0xCD; // BOX DRAWINGS DOUBLE HORIZONTAL
+			case '\u256C': return 0xCE; // BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL
+			case '\u2567': return 0xCF; // BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE
+			case '\u2568': return 0xD0; // BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE
+			case '\u2564': return 0xD1; // BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE
+			case '\u2565': return 0xD2; // BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE
+			case '\u2559': return 0xD3; // BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE
+			case '\u2558': return 0xD4; // BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE
+			case '\u2552': return 0xD5; // BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE
+			case '\u2553': return 0xD6; // BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE
+			case '\u256B': return 0xD7; // BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE
+			case '\u256A': return 0xD8; // BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE
+			case '\u2518': return 0xD9; // BOX DRAWINGS LIGHT UP AND LEFT
+			case '\u250C': return 0xDA; // BOX DRAWINGS LIGHT DOWN AND RIGHT
+			case '\u2588': return 0xDB; // FULL BLOCK
+			case '\u2584': return 0xDC; // LOWER HALF BLOCK
+			case '\u258C': return 0xDD; // LEFT HALF BLOCK
+			case '\u2590': return 0xDE; // RIGHT HALF BLOCK
+			case '\u2580': return 0xDF; // UPPER HALF BLOCK
+			case '\u0440': return 0xE0; // CYRILLIC SMALL LETTER ER
+			case '\u0441': return 0xE1; // CYRILLIC SMALL LETTER ES
+			case '\u0442': return 0xE2; // CYRILLIC SMALL LETTER TE
+			case '\u0443': return 0xE3; // CYRILLIC SMALL LETTER U
+			case '\u0444': return 0xE4; // CYRILLIC SMALL LETTER EF
+			case '\u0445': return 0xE5; // CYRILLIC SMALL LETTER HA
+			case '\u0446': return 0xE6; // CYRILLIC SMALL LETTER TSE
+			case '\u0447': return 0xE7; // CYRILLIC SMALL LETTER CHE
+			case '\u0448': return 0xE8; // CYRILLIC SMALL LETTER SHA
+			case '\u0449': return 0xE9; // CYRILLIC SMALL LETTER SHCHA
+			case '\u044A': return 0xEA; // CYRILLIC SMALL LETTER HARD SIGN
+			case '\u044B': return 0xEB; // CYRILLIC SMALL LETTER YERU
+			case '\u044C': return 0xEC; // CYRILLIC SMALL LETTER SOFT SIGN
+			case '\u044D': return 0xED; // CYRILLIC SMALL LETTER E
+			case '\u044E': return 0xEE; // CYRILLIC SMALL LETTER YU
+			case '\u044F': return 0xEF; // CYRILLIC SMALL LETTER YA
+			case '\u0401': return 0xF0; // CYRILLIC CAPITAL LETTER IO
+			case '\u0451': return 0xF1; // CYRILLIC SMALL LETTER IO
+			case '\u0404': return 0xF2; // CYRILLIC CAPITAL LETTER UKRAINIAN IE
+			case '\u0454': return 0xF3; // CYRILLIC SMALL LETTER UKRAINIAN IE
+			case '\u0407': return 0xF4; // CYRILLIC CAPITAL LETTER YI
+			case '\u0457': return 0xF5; // CYRILLIC SMALL LETTER YI
+			case '\u040E': return 0xF6; // CYRILLIC CAPITAL LETTER SHORT U
+			case '\u045E': return 0xF7; // CYRILLIC SMALL LETTER SHORT U
+			case '\u00B0': return 0xF8; // DEGREE SIGN
+			case '\u2219': return 0xF9; // BULLET OPERATOR
+			case '\u00B7': return 0xFA; // MIDDLE DOT
+			case '\u221A': return 0xFB; // SQUARE ROOT
+			case '\u2116': return 0xFC; // NUMERO SIGN
+			case '\u00A4': return 0xFD; // CURRENCY SIGN
+			case '\u25A0': return 0xFE; // BLACK SQUARE
+		}
+
+		return -1;
+	}
 }
