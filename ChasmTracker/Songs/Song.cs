@@ -7,7 +7,6 @@ using System.Text;
 
 namespace ChasmTracker.Songs;
 
-using System.Security.Cryptography;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
@@ -3337,7 +3336,8 @@ public class Song
 			C-5 .. G02 <- maps to sample 2
 			... 01 ... <- plays sample 1 with the volume and panning attributes of sample 2
 		*/
-		if ((pEnv != null) && !instrumentChanged && (pSmp != oldSample) && (chan.Sample != null) && !SongNote.IsNote(chan.RowNote))
+		if (Quirks[SchismQuirks.MultiSampleInstrumentNumber]
+		 && (pEnv != null) && !instrumentChanged && (pSmp != oldSample) && (chan.Sample != null) && !SongNote.IsNote(chan.RowNote))
 			return;
 
 		if ((pEnv == null) && (pSmp != oldSample) && portamento)
@@ -4125,7 +4125,11 @@ public class Song
 				}
 
 				if ((instrumentNumber != 0) && note == SpecialNotes.None)
-				{
+				{ //Case: instrument with no note data
+
+					//IT compatibility: Instrument with no note.
+					bool triggerAfterSampleEnd = Quirks[SchismQuirks.MultiSampleInstrumentNumber] && chan.CurrentSampleData.IsEmpty;
+
 					if (IsInstrumentMode)
 					{
 						if (chan.Sample != null)
@@ -4143,12 +4147,12 @@ public class Song
 
 					if (IsInstrumentMode)
 					{
-						if (instrumentNumber < Instruments.Count && (chan.Instrument != Instruments[instrumentNumber] || chan.CurrentSampleData.IsEmpty))
+						if (instrumentNumber < Instruments.Count && (chan.Instrument != Instruments[instrumentNumber] || triggerAfterSampleEnd))
 							note = chan.NewNote;
 					}
 					else
 					{
-						if (instrumentNumber < Samples.Count && (chan.Sample != Samples[instrumentNumber] || chan.CurrentSampleData.IsEmpty))
+						if (instrumentNumber < Samples.Count && (chan.Sample != Samples[instrumentNumber] || triggerAfterSampleEnd))
 							note = chan.NewNote;
 					}
 				}
@@ -4242,11 +4246,20 @@ public class Song
 					}
 
 					if (SongNote.IsNote(note))
-					{
 						chan.NewInstrumentNumber = 0;
 
-						if (pSmp != chan.Sample)
-							chan.Position = chan.PositionFrac = 0;
+					if (Quirks[SchismQuirks.PortamentoSwapResetsPosition])
+					{
+						if (SongNote.IsNote(note) && (pSmp != chan.Sample))
+						{
+							chan.Position = 0;
+							chan.PositionFrac = 0;
+						}
+					}
+					else if (pSmp != chan.Sample)
+					{
+						// Special IT case: portamento+note causes sample change -> ignore portamento
+						chan.Position = chan.PositionFrac = 0;
 					}
 				}
 
