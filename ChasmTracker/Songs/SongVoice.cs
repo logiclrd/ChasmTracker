@@ -62,6 +62,7 @@ public struct SongVoice
 	// FIXME: Here instrumentVolume means the value calculated from sample global volume and instrument global volume.
 	//  And we miss a value for "running envelope volume" for the pageInfo
 	public int InstrumentVolume;
+	public int LastInstrumentVolume;
 	public int AutoVibratoDepth;
 	public int AutoVibratoPosition;
 	public int VibratoPosition;
@@ -118,8 +119,6 @@ public struct SongVoice
 	public Effects RowEffect;
 	public int RowParam;
 	public int ActiveMacro, LastInstrumentNumber;
-
-	public bool DidMacro; // stupid hack to get Zxx kinda working
 
 	public bool IsMuted
 	{

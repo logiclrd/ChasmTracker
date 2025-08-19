@@ -1043,6 +1043,8 @@ public static class SongRenderer
 			// Reset channel values
 			var pattern = csf.GetPattern(csf.CurrentPattern, create: true)!;
 
+			csf.LastGlobalVolume = csf.CurrentGlobalVolume;
+
 			for (int nChan=0; nChan < Constants.MaxChannels; nChan++)
 			{
 				ref var chan = ref csf.Voices[nChan];
@@ -1072,6 +1074,8 @@ public static class SongRenderer
 				chan.RightVolume = chan.RightVolumeNew;
 				chan.Flags &= ~(ChannelFlags.Portamento | ChannelFlags.Vibrato | ChannelFlags.Tremolo);
 				chan.NCommand = 0;
+
+				chan.LastInstrumentVolume = chan.InstrumentVolume;
 			}
 
 			csf.ProcessEffects(true);
@@ -1259,7 +1263,6 @@ public static class SongRenderer
 				if (chan.NCommand == Effects.Arpeggio)
 					frequency = Arpeggio(csf, ref chan, frequency);
 
-				// MIDI macros (this is done here in OpenMPT, just take heed from them)
 				ProcessMIDIMacro(csf, cn);
 
 				// Pitch/Filter Envelope
@@ -1304,6 +1307,8 @@ public static class SongRenderer
 
 				chan.Increment = Math.Max(1, nInc);
 			}
+			else
+				ProcessMIDIMacro(csf, cn);
 
 			chan.FinalPanning = chan.FinalPanning.Clamp(0, 256);
 

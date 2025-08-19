@@ -68,6 +68,7 @@ public class Song
 	public int CurrentPattern;
 	public int ProcessOrder;
 	public int CurrentGlobalVolume;
+	public int LastGlobalVolume; // aaaagh!
 	public int MixingVolume;
 	public int FrequencyFactor; // not used -- for tweaking the song speed LP-style (interesting!)
 	public int TempoFactor; // ditto
@@ -3880,14 +3881,6 @@ public class Song
 				break;
 			case Effects.NoteSlideDown:
 				EffectNoteSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param, -1);
-				break;
-
-			case Effects.MIDI: // Zxx
-				/* note: we ignore this and process it later if there's a playing note. */
-				if (Flags.HasAnyFlag(SongFlags.FirstTick)
-				 && !((chan.Length != 0) && (chan.Frequency != 0)))
-					EffectMidiZxx(ref chan, nChan);
-
 				break;
 		}
 	}

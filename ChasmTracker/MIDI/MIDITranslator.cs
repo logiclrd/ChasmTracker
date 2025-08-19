@@ -347,11 +347,29 @@ public class MIDITranslator
 				case 'u':
 				{
 					/* Volume */
-					int vol = (int)((chan.CalcVolume * csf.CurrentGlobalVolume)
-						* (long)(chan.GlobalVolume * chan.InstrumentVolume)
+
+					/* FIXME: This is still wrong.
+					 *
+					 * Notable suspects:
+					 *  flt-macro.it; second note doesn't play right
+					 *     (filter value is half than it should be)
+					 *  GlobalVolume-Macro.it; row 9's filter value should
+					 *     be much less than it actually is
+					 *
+					 * I have no idea about whats up with either of them.
+					 * I'm just saving that for another day though  ;) */
+					int vol = (int)((chan.CalcVolume * csf.LastGlobalVolume)
+						* (long)(chan.GlobalVolume * chan.LastInstrumentVolume)
 						/ (1 << 26));
+
+					/*
+					Console.WriteLine("{0} = ({1} * {2}) * ({3} * {4}) / 1l << 26", vol,
+						chan.CalcVolume, csf.LastGlobalVolume,
+						chan.GlobalVolume, chan.LastInstrumentVolume);
+					*/
+
 					data = (byte)vol.Clamp(0x01, 0x7F);
-					//printf("%u\n", data);
+					//Console.WriteLine(data);
 					break;
 				}
 				case 'x':
