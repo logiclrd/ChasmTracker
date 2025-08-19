@@ -142,6 +142,7 @@ public class XI : InstrumentFileConverter
 		file.Description = "Fasttracker II Instrument";
 		file.Title = xi.Name;
 		file.Type = FileTypes.InstrumentXI;
+		file.SampleCount = xi.SampleHeader.NumSamples;
 
 		return true;
 	}
