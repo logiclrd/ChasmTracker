@@ -5194,7 +5194,10 @@ public class Song
 	public void CopySample(int n, SongSample src)
 	{
 		lock (AudioPlayback.LockScope())
+		{
+			StopSample(Samples[n]);
 			Samples[n] = src.Clone();
+		}
 	}
 
 	public void DestroySample(int nsmp)

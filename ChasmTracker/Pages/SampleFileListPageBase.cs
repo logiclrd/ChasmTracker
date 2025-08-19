@@ -573,6 +573,9 @@ public class SampleFileListPageBase : Page
 			dialog.SelectionMade +=
 				selection =>
 				{
+					/* stop any playing samples; we can crash if we don't do this */
+					Song.CurrentSong.StopSample(smp);
+
 					switch (selection)
 					{
 						case StereoConversionSelection.Left:

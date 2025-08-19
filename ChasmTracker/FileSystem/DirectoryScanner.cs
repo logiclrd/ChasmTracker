@@ -380,7 +380,11 @@ public class DirectoryScanner
 	// TODO: stat the file?
 	public static bool ReadInstrumentLibrary(string path, FileList flist, DirectoryList? dlist)
 	{
-		// FIXME why does this do this ? seems to be a no-op
+		// why does this do this ? seems to be a no-op
+		//
+		// it's because we have a stupid "fake sample slot" that we
+		// use for the sample/instrument preview "preload", which
+		// just happens to now be hardcoded at slot 0.
 		if (Song.CurrentSong.Samples.FirstOrDefault() is SongSample sample)
 			Song.CurrentSong.StopSample(sample);
 
