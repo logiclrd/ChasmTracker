@@ -2433,21 +2433,16 @@ public class Song
 	{
 		ref var chan = ref Voices[nchan];
 
+		if (SongNote.IsNote(chan.RowNote) && (chan.RowVolumeEffect == VolumeEffects.TonePortamento))
+			return;
+
 		// stop the current note:
 		chan.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
 		//if (chan->ptr_instrument) chan->volume = 0;
+		chan.Frequency = 0;
 		chan.Increment = 0;
 		chan.FadeOutVolume = 0;
 		//chan->length = 0;
-		if (clearNote)
-		{
-			// keep instrument numbers from picking up old notes
-			// (SCx doesn't do this)
-			// Apparently this isn't necessary at all anymore?
-			// Note cuts seem to work perfectly fine without it.
-			// SCx plays fine too.  -paper
-			//chan.Frequency = 0;
-		}
 
 		if (chan.Flags.HasFlag(ChannelFlags.AdLib))
 		{
