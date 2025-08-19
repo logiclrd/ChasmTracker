@@ -513,17 +513,18 @@ public class Program
 				}
 			}
 
-			/* completely arbitrary; I think this is a good amount of files
-			 * to let dmoz work through before trying to reload the page.
+			/* This takes a LOT of time if we just base it on files.
+			 * So here I've just based it on how LONG we've spent.
 			 *
-			 * Ideally dmoz would do this by itself, but it's stuck here for now. */
-			for (int i = 0; i < 512 && DirectoryScanner.TakeAsynchronousFileListStep(); i++)
-				;
+			 * I'm just setting it to a maximum of 10ms, which I think
+			 * is an okay amount of time to spend on it.
+			 *
+			 * Ideally we would do this stuff in a different thread, so
+			 * that the main thread doesn't get hogged by it at all, but
+			 * that would mean guarding it all behind mutexes. :( */
+			var deadline = DateTime.UtcNow.AddMilliseconds(10);
 
-			/* let dmoz build directory lists, etc
-			 *
-			 * as long as there's no user-event going on... */
-			while (!Status.Flags.HasAllFlags(StatusFlags.NeedUpdate) && DirectoryScanner.TakeAsynchronousFileListStep() && !EventHub.HaveEvent())
+			while ((DateTime.UtcNow < deadline) && DirectoryScanner.TakeAsynchronousFileListStep() && !EventHub.HaveEvent())
 				;
 
 			/* sleep for a little bit to not hog CPU time */
