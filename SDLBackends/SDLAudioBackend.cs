@@ -36,16 +36,10 @@ public class SDLAudioBackend : AudioBackend
 
 	public override bool InitializeDriver(string? driverName)
 	{
-		string? originalDriver = Environment.GetEnvironmentVariable("SDL_AUDIO_DRIVER");
+		bool ret;
 
-		if (driverName != null)
-			Environment.SetEnvironmentVariable("SDL_AUDIO_DRIVER", driverName);
-
-		bool ret = SDL.InitSubSystem(SDL.InitFlags.Audio);
-
-		/* clean up our dirty work, or empty the var */
-		if (driverName != null)
-			Environment.SetEnvironmentVariable("SDL_AUDIO_DRIVER", originalDriver);
+		using (new EnvironmentVariableScope("SDL_AUDIO_DRIVER", driverName))
+			 ret = SDL.InitSubSystem(SDL.InitFlags.Audio);
 
 		// force poll for audio devices
 		GetAudioDeviceInformation();
