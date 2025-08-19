@@ -170,7 +170,7 @@ public class MIDITranslator
 		int needNote = -1;
 		int needVelocity = -1;
 
-		if (m_note > 120)
+		if (m_note > SpecialNotes.Last)
 		{
 			if (csf.MIDINoteTracker[chan] != 0)
 			{
@@ -198,6 +198,7 @@ public class MIDITranslator
 					0, csf.MIDINoteTracker[chan], 0, csf.MIDIInsTracker[chan]);
 			}
 
+			/* this is all stupid */
 			csf.MIDINoteTracker[chan] = m_note;
 
 			if (m.VolumeEffect != VolumeEffects.Volume)

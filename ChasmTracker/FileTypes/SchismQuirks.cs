@@ -6,7 +6,13 @@ using ChasmTracker.FileTypes;
  * there are likely many more than this, but let's start by not
  * reinventing the wheel
  *
- * the default playback behavior is that all of these are on. */
+ * the default playback behavior is that all of these are on.
+ *
+ * TODO look into scdev archives and see if there are any more gory
+ * quirks that could be reimplemented... I know the filter code has
+ * changed multiple times throughout the years (eventually landing on
+ * the actual IT algorithm)... so that could probably be a start, once
+ * all of these are done. */
 public enum SchismQuirks
 {
 	[FixedInVersion(2015,  1, 29), FixedInCommit("https://github.com/schismtracker/schismtracker/commit/", "671b30311082a0e7df041fca25f989b5d2478f69")]

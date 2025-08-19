@@ -360,7 +360,7 @@ public static class SongRenderer
 		nVol = vol;
 	}
 
-	static void ProcessEnvelopes(ref SongVoice chan, ref int nVol)
+	static void ProcessEnvelopes(Song csf, ref SongVoice chan, ref int nVol)
 	{
 		// Volume Envelope
 		ProcessVolumeEnvelope(ref chan, ref nVol);
@@ -370,6 +370,19 @@ public static class SongRenderer
 
 		// FadeOut volume
 		ProcessInstrumentFade(ref chan, ref nVol);
+
+		if (!csf.Quirks[SchismQuirks.PitchPanSeparation])
+		{
+			// Pitch/Pan separation
+			var pEnv = chan.Instrument;
+
+			if ((pEnv != null) && (pEnv.PitchPanSeparation != 0) && (chan.FinalPanning != 0) && (chan.Note != 0))
+			{
+				// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
+				// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
+				chan.FinalPanning += (chan.Note - pEnv.PitchPanCenter - 1) * pEnv.PitchPanSeparation / 2;
+			}
+		}
 	}
 
 	static void ProcessMIDIMacro(Song csf, int voiceNumber)
@@ -835,7 +848,6 @@ public static class SongRenderer
 			if (AudioPlayback.MixChannels >= 2)
 			{
 				Equalizer.EqualizeStereo(song.MixBuffer);
-				// FIXME: disable this when we're writing WAVs
 				if (!AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 					Equalizer.NormalizeStereo(song.MixBuffer);
 			}
@@ -1228,7 +1240,7 @@ public static class SongRenderer
 				{
 					/* OpenMPT test cases s77.it and EnvLoops.it */
 					IncrementEnvelopePositions(ref chan);
-					ProcessEnvelopes(ref chan, ref vol);
+					ProcessEnvelopes(csf, ref chan, ref vol);
 				}
 				else
 				{

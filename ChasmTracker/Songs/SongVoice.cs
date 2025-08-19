@@ -161,14 +161,30 @@ public struct SongVoice
 		FadeOutVolume = 65536;
 	}
 
-	public void SetInstrumentPanning(int panning)
+	public void SetInstrumentPanningEx(Song csf, int panning)
 	{
-		ChannelPanning = (short)(Panning + 1);
+		if (csf.Quirks[SchismQuirks.DoNotOverrideChannelPan])
+		{
+			ChannelPanning = (short)(Panning + 1);
 
-		if (Flags.HasAllFlags(ChannelFlags.Surround))
-			ChannelPanning |= -0x8000;
+			if (Flags.HasAllFlags(ChannelFlags.Surround))
+				ChannelPanning |= -0x8000;
+		}
+		else
+		{
+			/* I think this is correct? */
+			ChannelPanning = 0;
+		}
 
 		Panning = panning;
 		Flags &= ~ChannelFlags.Surround;
+	}
+
+	public void SetInstrumentPanning(Song csf, SongInstrument? pEnv, SongSample? pIns)
+	{
+		if ((pEnv != null) && pEnv.Flags.HasAllFlags(InstrumentFlags.SetPanning))
+			SetInstrumentPanningEx(csf, pEnv.Panning);
+		else if ((pIns != null) && pIns.Flags.HasAllFlags(SampleFlags.Panning))
+			SetInstrumentPanningEx(csf, pIns.Panning);
 	}
 }

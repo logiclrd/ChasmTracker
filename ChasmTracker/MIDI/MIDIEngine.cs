@@ -346,10 +346,7 @@ public class MIDIEngine : IMIDISink
 	{
 		// bytes per millisecond, rounded up
 		s_midiBytesPerMillisecond = sampleSize * samplesPerSecond;
-		s_midiBytesPerMillisecond += 1000 - (s_midiBytesPerMillisecond % 1000);
-		s_midiBytesPerMillisecond /= 1000;
-
-		// nothing else to do now
+		s_midiBytesPerMillisecond = (s_midiBytesPerMillisecond + 999) / 1000;
 	}
 
 	/*----------------------------------------------------------------------------------*/

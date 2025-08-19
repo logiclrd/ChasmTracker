@@ -2300,7 +2300,7 @@ public class Song
 				else
 					data = sample.Data;
 			}
-			else /* OpenMPT test case emptyslot.it */
+			else if (Quirks[SchismQuirks.EmptyNoteMapSlot]) /* OpenMPT test case emptyslot.it */
 				return;
 		}
 
@@ -2969,7 +2969,7 @@ public class Song
 		else if (--chan.CountdownRetrigger <= 0)
 		{
 			// in Impulse Tracker, retrig only works if a sample is currently playing in the channel
-			if (chan.Position == 0)
+			if ((chan.Position == 0) && Quirks[SchismQuirks.ShortSampleRetrigger])
 				return;
 
 			chan.CountdownRetrigger = param & 0xf;
@@ -3266,7 +3266,8 @@ public class Song
 		if ((pEnv != null) && SongNote.IsNote(note))
 		{
 			/* OpenMPT test case emptyslot.it */
-			if (pEnv.SampleMap[note - SpecialNotes.First] == 0)
+			if ((pEnv.SampleMap[note - SpecialNotes.First] == 0)
+			 && Quirks[SchismQuirks.EmptyNoteMapSlot])
 			{
 				chan.Instrument = pEnv;
 				return;
@@ -3284,7 +3285,7 @@ public class Song
 			if (SongNote.IsControl(note))
 				return;
 
-			if (pEnv == null)
+			if (Quirks[SchismQuirks.EmptyNoteMapSlot] && (pEnv == null))
 			{
 				/* OpenMPT test case emptyslot.it */
 				chan.Instrument = null;
@@ -3319,6 +3320,9 @@ public class Song
 			}
 			else
 				chan.InstrumentVolume = pSmp.GlobalVolume;
+
+			if (!Quirks[SchismQuirks.PanningReset])
+				chan.SetInstrumentPanning(this, pEnv, pSmp);
 		}
 
 		/* samples should not change on instrument number in compatible Gxx mode.
@@ -3502,7 +3506,7 @@ public class Song
 
 		if ((pEnv != null) && SongNote.IsNote(note))
 		{
-			if (pEnv.SampleMap[note - 1] == 0)
+			if (Quirks[SchismQuirks.EmptyNoteMapSlot] && (pEnv.SampleMap[note - 1] == 0))
 				return;
 
 			if (!(haveInstrument && porta && (pIns != null)))
@@ -3596,21 +3600,21 @@ public class Song
 		else
 			porta = false;
 
-		if ((pEnv != null) && pEnv.Flags.HasAllFlags(InstrumentFlags.SetPanning))
-			chan.SetInstrumentPanning(pEnv!.Panning);
-		else if (pIns.Flags.HasAllFlags(SampleFlags.Panning))
-			chan.SetInstrumentPanning(pIns.Panning);
+		chan.SetInstrumentPanning(this, pEnv, pIns);
 
 		// Pitch/Pan separation
-		if ((pEnv != null) && (pEnv.PitchPanSeparation != 0))
+		if (Quirks[SchismQuirks.PitchPanSeparation])
 		{
-			if (chan.ChannelPanning == 0)
-				chan.ChannelPanning = (short)(chan.Panning + 1);
+			if ((pEnv != null) && (pEnv.PitchPanSeparation != 0))
+			{
+				if (chan.ChannelPanning == 0)
+					chan.ChannelPanning = (short)(chan.Panning + 1);
 
-			// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
-			// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
-			int delta = (int)(chan.Note - pEnv.PitchPanCenter - SpecialNotes.First) * pEnv.PitchPanSeparation / 2;
-			chan.Panning = (chan.Panning + delta).Clamp(0, 256);
+				// PPS value is 1/512, i.e. PPS=1 will adjust by 8/512 = 1/64 for each 8 semitones
+				// with PPS = 32 / PPC = C-5, E-6 will pan hard right (and D#6 will not)
+				int delta = (int)(chan.Note - pEnv.PitchPanCenter - SpecialNotes.First) * pEnv.PitchPanSeparation / 2;
+				chan.Panning = (chan.Panning + delta).Clamp(0, 256);
+			}
 		}
 
 		if ((pEnv != null) && porta)
