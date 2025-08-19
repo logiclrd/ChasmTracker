@@ -12,6 +12,7 @@ public static class WAVFile
 	public static int WriteHeader(Stream fp, int bits, int channels, int rate, int length, out long dataSizeOffset)
 	{
 		int bps = ((bits + 7) / 8) * channels;
+		int bpf = bps * channels;
 
 		var writer = new BinaryWriter(fp, Encoding.ASCII, leaveOpen: true);
 
@@ -29,8 +30,8 @@ public static class WAVFile
 		writer.Write((short)1); // linear pcm
 		writer.Write((short)channels); // number of channels
 		writer.Write(rate); // sample rate
-		writer.Write(bps * rate); // "byte rate" (why?! I have no idea)
-		writer.Write((short)bps); // (oh, come on! the format already stores everything needed to calculate this!)
+		writer.Write(bpf * rate); // "byte rate" (why?! I have no idea)
+		writer.Write((short)bpf); // (oh, come on! the format already stores everything needed to calculate this!)
 		writer.Write((short)bits); // bits per sample
 
 		writer.WritePlain("data");
@@ -39,11 +40,11 @@ public static class WAVFile
 
 		dataSizeOffset = fp.Position;
 
-		writer.Write(bps * length);
+		writer.Write(bpf * length);
 
 		writer.Flush();
 
-		return bps;
+		return bpf;
 	}
 
 	static void WriteINFOChunk(BinaryWriter writer, string chunk, string text)

@@ -17,12 +17,14 @@ public class WAV : SampleExporter
 	long _dataSizeOffset; // seek position for writing data size (in bytes)
 	long _numBytes; // how many bytes have been written
 	int _bps; // bytes per sample
+	int _bpf; // bytes per frame
 
 	public override bool ExportHead(Stream fp, int bits, int channels, int rate)
 	{
 		_fileStartOffset = fp.Position;
 
-		_bps = WAVFile.WriteHeader(fp, bits, channels, rate, 0, out _dataSizeOffset);
+		_bpf = WAVFile.WriteHeader(fp, bits, channels, rate, 0, out _dataSizeOffset);
+		_bps = _bpf / channels;
 
 		_numBytes = 0;
 
@@ -31,15 +33,19 @@ public class WAV : SampleExporter
 
 	public override bool ExportBody(Stream fp, Span<byte> data)
 	{
-		if ((data.Length % _bps) != 0)
+		if ((_bpf == 0) || (_bps == 0))
+			throw new Exception("Write data is not set, call ExportHead before ExportBody");
+
+		try
 		{
-			Log.Append(4, "WAV export: received uneven length");
+			SampleFileConverter.WritePCM(fp, data, _bpf, _bps, false, "AIFF");
+		}
+		catch
+		{
 			return false;
 		}
 
 		_numBytes += data.Length;
-
-		fp.Write(data);
 
 		return true;
 	}

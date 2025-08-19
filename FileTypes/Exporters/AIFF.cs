@@ -30,28 +30,19 @@ public class AIFF : SampleExporter
 
 	public override bool ExportBody(Stream fp, Span<byte> data)
 	{
-		if ((data.Length % _awd!.BytesPerSample) != 0)
+		if (_awd == null)
+			throw new Exception("Write data is not set, call ExportHead before ExportBody");
+
+		try
 		{
-			Log.Append(4, "AIFF export: received uneven length");
+			SampleFileConverter.WritePCM(fp, data, _awd.BytesPerFrame, _awd.BytesPerSample, _awd.BigEndian, "AIFF");
+		}
+		catch
+		{
 			return false;
 		}
 
 		_awd.NumBytes += data.Length;
-
-		if (_awd.BigEndian)
-		{
-			byte[] word = new byte[2];
-
-			for (int i = 0; i < data.Length; i += 2)
-			{
-				word[0] = data[i + 1];
-				word[1] = data[i];
-
-				fp.Write(word);
-			}
-		}
-		else
-			fp.Write(data);
 
 		return true;
 	}

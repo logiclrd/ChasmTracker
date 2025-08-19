@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -764,6 +765,73 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 		sample.AdjustLoop();
 
 		return sampleBytes;
+	}
+
+	[ThreadStatic]
+	static byte[]? s_buffer;
+
+	[MemberNotNull(nameof(s_buffer))]
+	static void EnsureBuffer(int size)
+	{
+		if ((s_buffer == null) || (s_buffer.Length < size))
+			s_buffer = new byte[size * 2];
+	}
+
+	public static void WritePCM(Stream fp, Span<byte> data, int bytesPerFrame, int bytesPerSample, bool swap, string name)
+	{
+		if ((data.Length % bytesPerFrame) != 0)
+		{
+			Log.Append(4, "{0} export: received uneven length", name);
+			throw new Exception("Data length " + data.Length + " is not a multiple of bytesPerFrame " + bytesPerFrame);
+		}
+
+		if (swap && (bytesPerSample > 1))
+		{
+			switch (bytesPerSample)
+			{
+				case 4:
+				{
+					var data32 = MemoryMarshal.Cast<byte, uint>(data);
+
+					for (int i=0; i < data32.Length; i++)
+						fp.WriteStructure(ByteSwap.Swap(data32[i]));
+
+					break;
+				}
+				case 3:
+				{
+					EnsureBuffer(3);
+
+					var buffer = s_buffer.Slice(0, 3);
+
+					for (int i=0; i + 2 < data.Length; i += 3)
+					{
+						var sample = data.Slice(i, 3);
+
+						buffer[2] = sample[2];
+						buffer[1] = sample[1];
+						buffer[0] = sample[0];
+
+						fp.Write(buffer);
+					}
+
+					break;
+				}
+				case 2:
+				{
+					var data16 = MemoryMarshal.Cast<byte, ushort>(data);
+
+					for (int i=0; i < data16.Length; i++)
+						fp.WriteStructure(ByteSwap.Swap(data16[i]));
+
+					break;
+				}
+				default:
+					throw new Exception("Invalid bytesPerSample value " + bytesPerSample);
+			}
+		}
+		else
+			fp.Write(data);
 	}
 
 	public static int WriteSample(Stream fp, SongSample sample, SampleFormat flags, uint maxLengthMask)

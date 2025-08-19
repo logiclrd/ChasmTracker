@@ -358,10 +358,10 @@ public class AIFF : SampleFileConverter
 		flags |= smp.Flags.HasAllFlags(SampleFlags._16Bit) ? SampleFormat._16 : SampleFormat._8;
 		flags |= smp.Flags.HasAllFlags(SampleFlags.Stereo) ? SampleFormat.StereoInterleaved : SampleFormat.Mono;
 
-		int bps = AIFFFile.WriteAIFFHeader(stream, smp.Flags.HasAllFlags(SampleFlags._16Bit) ? 16 : 8, smp.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1,
+		int bpf = AIFFFile.WriteAIFFHeader(stream, smp.Flags.HasAllFlags(SampleFlags._16Bit) ? 16 : 8, smp.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1,
 			smp.C5Speed, smp.Name, smp.Length, null);
 
-		if (WriteSample(stream, smp, flags, uint.MaxValue) != smp.Length * bps)
+		if (WriteSample(stream, smp, flags, uint.MaxValue) != smp.Length * bpf)
 		{
 			Log.Append(4, "AIFF: unexpected data size written");
 			return SaveResult.InternalError;

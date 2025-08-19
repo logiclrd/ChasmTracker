@@ -8,4 +8,5 @@ public class AIFFWriteData
 	public long NumBytes; // how many bytes have been written
 	public int BytesPerSample; // bytes per sample
 	public bool BigEndian; // should be byteswapped?
+	public int BytesPerFrame; // bytes per frame
 }

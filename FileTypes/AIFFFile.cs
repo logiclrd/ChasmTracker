@@ -65,7 +65,7 @@ public static class AIFFFile
 		writer.Write(Float80.ToIEEE80Bytes(rate));
 
 		/* NOW do this (sample size in AIFF is indicated per channel, not per frame) */
-		bps *= channels; /* == number of bytes per (stereo) sample */
+		int bpf = bps * channels; /* == number of bytes per (stereo) sample */
 
 		/* Sound Data Chunk
 			The Sound Data Chunk contains the actual sample frames.
@@ -82,6 +82,8 @@ public static class AIFFFile
 		{
 			writer.Flush();
 			awd.SSNDSizeOffset = fp.Position;
+			awd.BytesPerSample = bps;
+			awd.BytesPerFrame = bpf;
 		}
 
 		writer.Write(ByteSwap.Swap(length * bps + 8));
