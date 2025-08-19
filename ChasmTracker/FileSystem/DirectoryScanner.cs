@@ -315,7 +315,7 @@ public class DirectoryScanner
 			infoFile.FillExtendedData();
 
 			if (infoFile.Type.HasAnyFlag(FileTypes.ModuleMask))
-				s_library = Song.Load(path);
+				s_library = Song.LoadUnchecked(path);
 			else if (infoFile.Type.HasAnyFlag(FileTypes.InstrumentMask))
 			{
 				s_library = new Song();

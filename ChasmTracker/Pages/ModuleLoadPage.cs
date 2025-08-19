@@ -1,4 +1,6 @@
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace ChasmTracker.Pages;
 
@@ -49,13 +51,24 @@ public class ModuleLoadPage : ModuleLoadSavePageBase
 		if (!File.Exists(ptr))
 			return;
 
-		if (Song.Load(ptr) is Song loaded)
-			Song.CurrentSong = loaded;
-		else
-		{
-			Log.Append(4, "Failed to load: " + Path.GetFileName(ptr));
-			SetPage(PageNumbers.Log);
-		}
+		var loadTask = Song.LoadCheckedAsync(ptr);
+
+		loadTask.ContinueWith(
+			_ =>
+			{
+				var result = loadTask.IsCompletedSuccessfully ? loadTask.Result : null;
+
+				if (result != null)
+					Song.CurrentSong = result;
+				else
+				{
+					if ((loadTask.Exception != null)
+					 && loadTask.Exception.InnerExceptions.Any(e => !(e is TaskCanceledException)))
+					{
+						Log.Append(4, "Failed to load: " + Path.GetFileName(ptr));
+					}
+				}
+			});
 	}
 
 	public override void DrawConst()

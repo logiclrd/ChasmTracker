@@ -376,7 +376,7 @@ public class Program
 								Page.SetPage(PageNumbers.SampleList);
 								break;
 							default:
-								Song.Load(fileDropEvent.FilePath);
+								Song.LoadCheckedAsync(fileDropEvent.FilePath);
 								break;
 						}
 
@@ -404,7 +404,7 @@ public class Program
 						break;
 
 					case NativeOpenEvent openEvent: /* open song */
-						Song.Load(openEvent.FilePath);
+						Song.LoadCheckedAsync(openEvent.FilePath);
 						break;
 
 					case NativeScriptEvent scriptEvent:
@@ -828,7 +828,7 @@ public class Program
 		{
 			Page.SetPage(PageNumbers.Log);
 
-			var song = Song.Load(s_args.InitialSong);
+			var song = Song.LoadUnchecked(s_args.InitialSong);
 
 			if (song != null)
 			{

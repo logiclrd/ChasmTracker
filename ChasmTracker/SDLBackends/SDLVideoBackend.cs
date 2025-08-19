@@ -583,36 +583,33 @@ public class SDLVideoBackend : VideoBackend
 	{
 		SDL.SetWindowTitle(_window, Constants.WindowTitle);
 
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+		/* apple/macs use a bundle; this overrides their nice pretty icon */
+		var stream = typeof(Program).Assembly.GetManifestResourceStream("ChasmTracker.Icon128.png");
+
+		if (stream != null)
 		{
-			/* apple/macs use a bundle; this overrides their nice pretty icon */
-			var stream = typeof(Program).Assembly.GetManifestResourceStream("Icon128.png");
+			var image = VGA.Image.LoadFrom(stream);
 
-			if (stream != null)
+			var pixelData = GCHandle.Alloc(image.PixelData, GCHandleType.Pinned);
+
+			try
 			{
-				var image = VGA.Image.LoadFrom(stream);
+				var icon = SDL.CreateSurfaceFrom(
+					image.Size.Width,
+					image.Size.Height,
+					SDL.GetPixelFormatForMasks(32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000),
+					pixelData.AddrOfPinnedObject(),
+					image.Size.Width * sizeof(int));
 
-				var pixelData = GCHandle.Alloc(image.PixelData, GCHandleType.Pinned);
-
-				try
+				if (icon != IntPtr.Zero)
 				{
-					var icon = SDL.CreateSurfaceFrom(
-						image.Size.Width,
-						image.Size.Height,
-						SDL.GetPixelFormatForMasks(32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000),
-						pixelData.AddrOfPinnedObject(),
-						image.Size.Width * sizeof(int));
-
-					if (icon != IntPtr.Zero)
-					{
-						SDL.SetWindowIcon(_window, icon);
-						SDL.DestroySurface(icon);
-					}
+					SDL.SetWindowIcon(_window, icon);
+					SDL.DestroySurface(icon);
 				}
-				finally
-				{
-					pixelData.Free();
-				}
+			}
+			finally
+			{
+				pixelData.Free();
 			}
 		}
 	}

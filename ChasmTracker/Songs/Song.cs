@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ChasmTracker.Songs;
 
@@ -4875,22 +4876,28 @@ public class Song
 		return LoadSample(FakeSlot, file.FullPath) ? FakeSlot : KeyJazz.NoInstrument;
 	}
 
-	public static Song? Load(string fileName)
+	public static Task<Song?> LoadCheckedAsync(string fileName)
 	{
-		Song? ret = null;
+		var completionSource = new TaskCompletionSource<Song?>();
 
 		Page.SaveCheck(
 			() =>
 			{
-				ret = LoadUnchecked(fileName);
+				var ret = LoadUnchecked(fileName);
+
+				completionSource.SetResult(ret);
 
 				if (ret != null)
 					Page.SetPage(AudioPlayback.Mode == AudioPlaybackMode.Playing ? PageNumbers.Info : PageNumbers.Log);
 				else
 					Page.SetPage(PageNumbers.Log);
+			},
+			() =>
+			{
+				completionSource.SetException(new TaskCanceledException());
 			});
 
-		return ret;
+		return completionSource.Task;
 	}
 
 	public static Song? CreateLoad(string fileName)
