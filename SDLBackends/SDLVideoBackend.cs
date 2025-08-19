@@ -132,10 +132,6 @@ public class SDLVideoBackend : VideoBackend
 		Fullscreen(Configuration.Video.FullScreen);
 		SetHardware(Configuration.Video.Hardware);
 
-		/* Aspect ratio correction if it's wanted */
-		if (Configuration.Video.WantFixed)
-			SDL.SetRenderLogicalPresentation(_renderer, Configuration.Video.WantFixedSize.Width, Configuration.Video.WantFixedSize.Height, SDL.RendererLogicalPresentation.Letterbox);
-
 		if (HaveMenu && !_fullscreen)
 		{
 			SDL.SetWindowSize(_window, _size.Width, _size.Height);
@@ -176,13 +172,13 @@ public class SDLVideoBackend : VideoBackend
 
 	public override void Report()
 	{
-		string name = SDL.GetRendererName(_renderer) ?? "<null>";
-
 		Log.Append(5, " Using driver '{0}'", SDL.GetCurrentVideoDriver() ?? "<null>");
 
 		switch (_type)
 		{
 			case VideoType.Renderer:
+				string name = SDL.GetRendererName(_renderer) ?? "<null>";
+
 				Log.Append(5, " {0} renderer '{0}'",
 					(name == SoftwareRendererName) ? "Software" : "Hardware-accelerated",
 					name);
@@ -568,7 +564,20 @@ public class SDLVideoBackend : VideoBackend
 	const string SoftwareRendererName = "software";
 
 	public override bool IsHardware
-		=> SDL.GetRendererName(_renderer) != SoftwareRendererName;
+	{
+		get
+		{
+			switch (_type)
+			{
+				case VideoType.Uninitialized:
+				case VideoType.Surface:
+				default:
+					return false;
+				case VideoType.Renderer:
+					return SDL.GetRendererName(_renderer) != SoftwareRendererName;
+			}
+		}
+	}
 
 	void SetIcon()
 	{
@@ -1007,15 +1016,18 @@ public class SDLVideoBackend : VideoBackend
 
 	public override void SetUp(VideoInterpolationMode interpolation)
 	{
-		switch (interpolation)
+		if (_type == VideoType.Renderer)
 		{
-			case VideoInterpolationMode.NearestNeighbour:
-				SDL.SetTextureScaleMode(_texture, SDL.ScaleMode.Nearest);
-				break;
-			case VideoInterpolationMode.Linear:
-			case VideoInterpolationMode.Best:
-				SDL.SetTextureScaleMode(_texture, SDL.ScaleMode.Linear);
-				break;
+			switch (interpolation)
+			{
+				case VideoInterpolationMode.NearestNeighbour:
+					SDL.SetTextureScaleMode(_texture, SDL.ScaleMode.Nearest);
+					break;
+				case VideoInterpolationMode.Linear:
+				case VideoInterpolationMode.Best:
+					SDL.SetTextureScaleMode(_texture, SDL.ScaleMode.Linear);
+					break;
+			}
 		}
 	}
 
@@ -1128,6 +1140,7 @@ public class SDLVideoBackend : VideoBackend
 
 	public override void ToggleScreenSaver(bool enabled)
 	{
+		/* this API reeks */
 		if (enabled)
 			SDL.EnableScreenSaver();
 		else
@@ -1158,14 +1171,14 @@ public class SDLVideoBackend : VideoBackend
 
 	public override Point GetLogicalCoordinates(Point p)
 	{
-		if (!Configuration.Video.WantFixed)
-			return p;
-		else
+		if (Configuration.Video.WantFixed && (_type == VideoType.Renderer))
 		{
-			SDL.RenderCoordinatesFromWindow(_renderer, p.X, p.Y, out var xx, out var yy);
+			SDL.RenderCoordinatesFromWindow(_renderer, p.X, p.Y, out var xf, out var yf);
 
-			return new Point((int)xx, (int)yy);
+			return new Point((int)xf, (int)yf);
 		}
+		else
+			return p;
 	}
 
 	public override bool IsInputGrabbed
