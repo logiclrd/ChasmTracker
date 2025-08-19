@@ -65,6 +65,8 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 
 			if (k.Mouse == MouseState.DoubleClick)
 			{
+				/* TODO: should this only be handled if HandleClick
+				 * actually returns true ? */
 				if (p == _selectedChannel)
 				{
 					AllPages.PatternEditor.CurrentChannel = _selectedChannel;
@@ -86,6 +88,8 @@ public class InfoPage : Page, IConfigurable<InfoPageConfiguration>
 
 						SetPage(PageNumbers.PatternEditor);
 					}
+
+					return true;
 				}
 			}
 
