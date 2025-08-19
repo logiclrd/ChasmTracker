@@ -385,7 +385,10 @@ public static class SongRenderer
 		* just another demotivator for actually implementing it correctly *sigh* */
 
 		if (chan.DidMacro)
+		{
+			chan.DidMacro = false;
 			return;
+		}
 
 		if (chan.RowEffect == Effects.MIDI && (csf.Flags.HasAllFlags(SongFlags.FirstTick)))
 		{
