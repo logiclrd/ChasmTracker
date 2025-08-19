@@ -268,7 +268,7 @@ public class Song
 	// Total number of non-empty patterns in song, according to csf_pattern_is_empty
 	public int GetPatternCount()
 	{
-		for (int n = Patterns.Count; n >= 0; n--)
+		for (int n = Patterns.Count - 1; n >= 0; n--)
 		{
 			var pattern = Patterns[n];
 
@@ -1616,13 +1616,13 @@ public class Song
 			return GetPattern(patternNumber);
 		}
 
-		int tot = GetPatternLength(patternNumber);
-		while (offset + rowNumber > tot)
+		int patternLength = GetPatternLength(patternNumber);
+		while (offset + rowNumber >= patternLength)
 		{
-			offset -= tot;
+			offset -= patternLength;
 			patternNumber++;
-			tot = GetPatternLength(patternNumber);
-			if (tot == 0)
+			patternLength = GetPatternLength(patternNumber);
+			if (patternLength == 0)
 				return null;
 		}
 
@@ -1631,20 +1631,20 @@ public class Song
 		return GetPattern(patternNumber);
 	}
 
-	public Pattern? GetPattern(int n, bool create = true, int rowsInNewPattern = -1)
+	public Pattern? GetPattern(int patternNumber, bool create = true, int rowsInNewPattern = -1)
 	{
-		while (n >= Patterns.Count)
+		while (patternNumber >= Patterns.Count)
 			Patterns.Add(null);
 
-		if (create && (Patterns[n] == null))
+		if (create && (Patterns[patternNumber] == null))
 		{
 			if (rowsInNewPattern > 0)
-				Patterns[n] = new Pattern(rowsInNewPattern);
+				Patterns[patternNumber] = new Pattern(rowsInNewPattern);
 			else
-				Patterns[n] = new Pattern();
+				Patterns[patternNumber] = new Pattern();
 		}
 
-		return Patterns[n];
+		return Patterns[patternNumber];
 	}
 
 	public Pattern SetPattern(int n, Pattern pattern)
