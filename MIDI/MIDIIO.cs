@@ -3,7 +3,7 @@ using System;
 namespace ChasmTracker.MIDI;
 
 [Flags]
-public enum MIDIIO
+public enum MIDIIO : byte
 {
 	None = 0,
 
