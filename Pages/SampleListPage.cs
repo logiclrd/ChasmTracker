@@ -12,7 +12,6 @@ using ChasmTracker.Dialogs.Samples;
 using ChasmTracker.Events;
 using ChasmTracker.FileSystem;
 using ChasmTracker.FileTypes;
-using ChasmTracker.FileTypes.Converters;
 using ChasmTracker.FileTypes.SampleConverters;
 using ChasmTracker.FM;
 using ChasmTracker.Input;
@@ -110,7 +109,7 @@ public class SampleListPage : Page
 		numberEntrySustainLoopEnd = new NumberEntryWidget(new Point(64, 20), 7, 0, 9999999, _sampleNumEntryCursorPos);
 
 		textEntryFileName.Changed += UpdateFilename;
-		numberEntryC5Speed.Changed += UpdateSampleLoopFlags;
+		numberEntryC5Speed.Changed += UpdateSampleSpeed;
 		menuToggleLoopEnable.Changed += UpdateSampleLoopFlags;
 		numberEntryLoopStart.Changed += UpdateSampleLoopPoints;
 		numberEntryLoopEnd.Changed += UpdateSampleLoopPoints;
@@ -1781,30 +1780,33 @@ public class SampleListPage : Page
 
 	void UpdateValuesInSong()
 	{
-		var sample = Song.CurrentSong.EnsureSample(_currentSample);
+		lock (AudioPlayback.LockScope())
+		{
+			var sample = Song.CurrentSong.EnsureSample(_currentSample);
 
-		/* a few more modplug hacks here... */
-		sample.Volume = thumbBarDefaultVolume.Value * 4;
-		sample.GlobalVolume = thumbBarGlobalVolume.Value;
+			/* a few more modplug hacks here... */
+			sample.Volume = thumbBarDefaultVolume.Value * 4;
+			sample.GlobalVolume = thumbBarGlobalVolume.Value;
 
-		if (toggleEnableDefaultPan.State)
-			sample.Flags |= SampleFlags.Panning;
-		else
-			sample.Flags &= ~SampleFlags.Panning;
+			if (toggleEnableDefaultPan.State)
+				sample.Flags |= SampleFlags.Panning;
+			else
+				sample.Flags &= ~SampleFlags.Panning;
 
-		sample.VibratoSpeed = thumbBarVibratoSpeed.Value;
-		sample.VibratoDepth = thumbBarVibratoDepth.Value;
+			sample.VibratoSpeed = thumbBarVibratoSpeed.Value;
+			sample.VibratoDepth = thumbBarVibratoDepth.Value;
 
-		if (toggleButtonVibratoSine.State)
-			sample.VibratoType = VibratoType.Sine;
-		else if (toggleButtonVibratoRampDown.State)
-			sample.VibratoType = VibratoType.RampDown;
-		else if (toggleButtonVibratoSquare.State)
-			sample.VibratoType = VibratoType.Square;
-		else
-			sample.VibratoType = VibratoType.Random;
+			if (toggleButtonVibratoSine.State)
+				sample.VibratoType = VibratoType.Sine;
+			else if (toggleButtonVibratoRampDown.State)
+				sample.VibratoType = VibratoType.RampDown;
+			else if (toggleButtonVibratoSquare.State)
+				sample.VibratoType = VibratoType.Square;
+			else
+				sample.VibratoType = VibratoType.Random;
 
-		sample.VibratoRate = thumbBarVibratoRate.Value;
+			sample.VibratoRate = thumbBarVibratoRate.Value;
+		}
 
 		Status.Flags |= StatusFlags.SongNeedsSave;
 	}
