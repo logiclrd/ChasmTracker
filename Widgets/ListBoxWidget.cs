@@ -2,8 +2,6 @@ using System;
 
 namespace ChasmTracker.Widgets;
 
-using System.Runtime.CompilerServices;
-using ChasmTracker.Events;
 using ChasmTracker.Input;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
@@ -104,7 +102,7 @@ public class ListBoxWidget : Widget
 		{
 			case MouseState.DoubleClick:
 			case MouseState.Click:
-				if (k.State == KeyState.Press)
+				if (k.State != KeyState.Press)
 					return false;
 
 				var bounds = new Rect(Position, Size);
