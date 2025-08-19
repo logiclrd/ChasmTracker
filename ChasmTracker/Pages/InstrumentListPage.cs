@@ -239,6 +239,9 @@ public abstract class InstrumentListPage : Page
 	/* the actual list */
 	static int LastVisibleInstrumentNumber()
 	{
+		if (Song.CurrentSong.Instruments.Count == 0)
+			return 0;
+
 		int n = 99;
 		int j = 0;
 

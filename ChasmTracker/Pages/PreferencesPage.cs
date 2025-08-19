@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace ChasmTracker.Pages;
 
@@ -16,7 +17,7 @@ public class PreferencesPage : Page
 
 	const string SavedAtExit = "Audio configuration will be saved at exit";
 
-	static readonly SourceMode[] InterpolationModes = Enum.GetValues<SourceMode>();
+	static readonly SourceMode[] InterpolationModes = Enum.GetValues<SourceMode>().OrderBy(x => x).ToArray();
 
 	const int InterpolationGroup = 1;
 	const int RampGroup = 2;
@@ -56,7 +57,7 @@ public class PreferencesPage : Page
 		{
 			string buf = $"{AudioSettings.Bits} Bit, {InterpolationModes[i].GetDescription()}";
 
-			toggleButtonInterpolationModes[i] = new ToggleButtonWidget(new Point(20 + (i * 3), 26), buf, 2, InterpolationGroup);
+			toggleButtonInterpolationModes[i] = new ToggleButtonWidget(new Point(6, 20 + (i * 3)), 26, buf, 2, InterpolationGroup);
 			toggleButtonInterpolationModes[i].Changed += ChangeMixer;
 		}
 
@@ -70,7 +71,7 @@ public class PreferencesPage : Page
 				n = InterpolationModes.Length + 1;
 
 			var thumbBarBandFrequency = new ThumbBarWidget(new Point(26, 23 + InterpolationModes.Length * 3 + j), 21, 0, 127);
-			var thumbBarBandGain = new ThumbBarWidget(new Point(53, 23 + InterpolationModes.Length + j), 21, 0, 127);
+			var thumbBarBandGain = new ThumbBarWidget(new Point(53, 23 + InterpolationModes.Length * 3 + j), 21, 0, 127);
 
 			thumbBarBandFrequency.Changed += ChangeEQ;
 			thumbBarBandGain.Changed += ChangeEQ;
@@ -84,8 +85,8 @@ public class PreferencesPage : Page
 		thumbBarEqualizerBands[2].Frequency.Value = 96;
 		thumbBarEqualizerBands[3].Frequency.Value = 127;
 
-		toggleButtonRampVolumeEnabled = new ToggleButtonWidget(new Point(33, 29 + InterpolationModes.Length * 3), "Enabled", 2, RampGroup);
-		toggleButtonRampVolumeDisabled = new ToggleButtonWidget(new Point(46, 29 + InterpolationModes.Length * 3), "Disabled", 1, RampGroup);
+		toggleButtonRampVolumeEnabled = new ToggleButtonWidget(new Point(33, 29 + InterpolationModes.Length * 3), 9, "Enabled", 2, RampGroup);
+		toggleButtonRampVolumeDisabled = new ToggleButtonWidget(new Point(46, 29 + InterpolationModes.Length * 3), 9, "Disabled", 1, RampGroup);
 
 		toggleButtonRampVolumeEnabled.Changed += ChangeMixer;
 		toggleButtonRampVolumeDisabled.Changed += ChangeMixer;

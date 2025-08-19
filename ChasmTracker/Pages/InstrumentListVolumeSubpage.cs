@@ -14,6 +14,8 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 	ThumbBarWidget thumbBarFadeOut;
 	ThumbBarWidget thumbBarVolumeSwing;
 
+	static Envelope s_defaultVolumeEnvelope = new Envelope(64);
+
 	int _currentEnvelopeNode;
 
 	public InstrumentListVolumeSubpage()
@@ -45,7 +47,7 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 
 		DrawEnvelopeLabel("Volume", isSelected);
 
-		EnvelopeDraw(ins.VolumeEnvelope, false, _currentEnvelopeNode,
+		EnvelopeDraw(ins.VolumeEnvelope, s_defaultVolumeEnvelope, false, _currentEnvelopeNode,
 			ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope),
 			ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeLoop),
 			ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelopeSustain),
@@ -56,7 +58,7 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 	{
 		var ins = Song.CurrentSong.GetInstrument(CurrentInstrument);
 
-		if (EnvelopeHandleMouse(k, ins.VolumeEnvelope, ref _currentEnvelopeNode))
+		if (EnvelopeHandleMouse(k, ref ins.VolumeEnvelope, s_defaultVolumeEnvelope, ref _currentEnvelopeNode))
 		{
 			ins.Flags |= InstrumentFlags.VolumeEnvelope;
 			return true;
@@ -65,9 +67,9 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 		int r;
 
 		if (s_envelopeEditMode)
-			r = EnvelopeHandleKeyEditMode(k, ins.VolumeEnvelope, ref _currentEnvelopeNode);
+			r = EnvelopeHandleKeyEditMode(k, ref ins.VolumeEnvelope, s_defaultVolumeEnvelope, middle: false, ref _currentEnvelopeNode);
 		else
-			r = EnvelopeHandleKeyViewMode(k, ins.VolumeEnvelope, ref _currentEnvelopeNode, InstrumentFlags.VolumeEnvelope);
+			r = EnvelopeHandleKeyViewMode(k, ref ins.VolumeEnvelope, s_defaultVolumeEnvelope, ref _currentEnvelopeNode, InstrumentFlags.VolumeEnvelope);
 
 		if (r.HasBitSet(2))
 		{
@@ -194,7 +196,7 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 
 		if (s_envelopeMouseEdit)
 		{
-			if (EnvelopeHandleMouse(k, ins.VolumeEnvelope, ref _currentEnvelopeNode))
+			if (EnvelopeHandleMouse(k, ref ins.VolumeEnvelope, s_defaultVolumeEnvelope, ref _currentEnvelopeNode))
 			{
 				ins.Flags |= InstrumentFlags.VolumeEnvelope;
 				return true;
@@ -202,7 +204,7 @@ public class InstrumentListVolumeSubpage : InstrumentListEnvelopeSubpageBase
 		}
 
 		if ((k.Sym == KeySym.l || k.Sym == KeySym.b) && k.Modifiers.HasAnyFlag(KeyMod.Alt))
-			return 0 != EnvelopeHandleKeyViewMode(k, ins.VolumeEnvelope, ref _currentEnvelopeNode, InstrumentFlags.VolumeEnvelope);
+			return 0 != EnvelopeHandleKeyViewMode(k, ref ins.VolumeEnvelope, s_defaultVolumeEnvelope, ref _currentEnvelopeNode, InstrumentFlags.VolumeEnvelope);
 
 		return base.PreHandleKey(k);
 	}

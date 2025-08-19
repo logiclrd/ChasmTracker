@@ -5,7 +5,7 @@ namespace ChasmTracker.Widgets;
 
 using ChasmTracker.Utility;
 
-public struct WidgetNext
+public class WidgetNext
 {
 	public Widget? Up;
 	public Widget? Down;
@@ -20,12 +20,12 @@ public struct WidgetNext
 		{
 			var @this = widgets[i];
 
-			ref var next = ref widgets[i].Next;
+			var next = @this.Next;
 
 			if ((next.BackTab == null) && (i > 0))
-				next.BackTab = widgets.FindPreviousWithLoop(i - 1, w => w.IsTabStop);
+				next.BackTab = widgets.FindPreviousWithLoop(i, w => w.IsTabStop);
 			if ((next.Tab == null) && (i + 1 < widgets.Count))
-				next.Tab = widgets.FindNextWithLoop(i + 1, w => w.IsTabStop);
+				next.Tab = widgets.FindNextWithLoop(i, w => w.IsTabStop);
 
 			Widget? Search(int dx, int dy, int expandX, int expandY)
 				=> WidgetNext.Search(widgets, @this, dx, dy, expandX, expandY);
@@ -92,6 +92,18 @@ public struct WidgetNext
 
 		Point scanStart = origin;
 		Point scanEnd = origin.Advance(1, 1);
+
+		if (dx != 0)
+		{
+			scanStart.Y -= @this.Size.Height / 3;
+			scanEnd.Y += @this.Size.Height / 3;
+		}
+
+		if (dy != 0)
+		{
+			scanStart.X -= @this.Size.Width / 3;
+			scanEnd.X += @this.Size.Width / 3;
+		}
 
 		bool ScanIsOnScreen()
 		{

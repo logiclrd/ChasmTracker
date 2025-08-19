@@ -16,6 +16,8 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 	ThumbBarWidget thumbBarPitchPanSeparation;
 	ThumbBarWidget thumbBarPanningSwing;
 
+	static Envelope s_defaultPanningEnvelope = new Envelope(32);
+
 	int _currentEnvelopeNode;
 
 	public InstrumentListPanningSubpage()
@@ -50,7 +52,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 
 		DrawEnvelopeLabel("Panning", isSelected);
 
-		EnvelopeDraw(ins.PanningEnvelope, false, _currentEnvelopeNode,
+		EnvelopeDraw(ins.PanningEnvelope, s_defaultPanningEnvelope, true, _currentEnvelopeNode,
 			ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelope),
 			ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeLoop),
 			ins.Flags.HasAllFlags(InstrumentFlags.PanningEnvelopeSustain),
@@ -61,7 +63,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 	{
 		var ins = Song.CurrentSong.GetInstrument(CurrentInstrument);
 
-		if (EnvelopeHandleMouse(k, ins.PanningEnvelope, ref _currentEnvelopeNode))
+		if (EnvelopeHandleMouse(k, ref ins.PanningEnvelope, s_defaultPanningEnvelope, ref _currentEnvelopeNode))
 		{
 			ins.Flags |= InstrumentFlags.PanningEnvelope;
 			return true;
@@ -70,9 +72,9 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 		int r;
 
 		if (s_envelopeEditMode)
-			r = EnvelopeHandleKeyEditMode(k, ins.PanningEnvelope, ref _currentEnvelopeNode);
+			r = EnvelopeHandleKeyEditMode(k, ref ins.PanningEnvelope, s_defaultPanningEnvelope, middle: true, ref _currentEnvelopeNode);
 		else
-			r = EnvelopeHandleKeyViewMode(k, ins.PanningEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PanningEnvelope);
+			r = EnvelopeHandleKeyViewMode(k, ref ins.PanningEnvelope, s_defaultPanningEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PanningEnvelope);
 
 		if (r.HasBitSet(2))
 		{
@@ -269,7 +271,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 
 		if (s_envelopeMouseEdit)
 		{
-			if (EnvelopeHandleMouse(k, ins.PanningEnvelope, ref _currentEnvelopeNode))
+			if (EnvelopeHandleMouse(k, ref ins.PanningEnvelope, s_defaultPanningEnvelope, ref _currentEnvelopeNode))
 			{
 				ins.Flags |= InstrumentFlags.PanningEnvelope;
 				return true;
@@ -277,7 +279,7 @@ public class InstrumentListPanningSubpage : InstrumentListEnvelopeSubpageBase
 		}
 
 		if ((k.Sym == KeySym.l || k.Sym == KeySym.b) && k.Modifiers.HasAnyFlag(KeyMod.Alt))
-			return 0 != EnvelopeHandleKeyViewMode(k, ins.PanningEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PanningEnvelope);
+			return 0 != EnvelopeHandleKeyViewMode(k, ref ins.PanningEnvelope, s_defaultPanningEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PanningEnvelope);
 
 		return base.PreHandleKey(k);
 	}

@@ -2,16 +2,21 @@ using System;
 
 namespace ChasmTracker.VGA;
 
+using System.ComponentModel;
 using ChasmTracker.Utility;
+using Id3.Frames;
+using X11;
 
 /* ---------------------------------------------------------------------------
  * drawing overlays; can draw practically anything given the length
  * and height are a multiple of 8 (i.e. the size of a single character) */
 public class VGAMemOverlay
 {
-	public Point TopLeft; /* in character cells... */
-	public Point BottomRight;
-	public Size Size; /* in pixels */
+	public Point TopLeft;     /* in character cells... */
+	public Point BottomRight; /**/
+
+	public Point Position; /* in pixels */
+	public Size Size;      /**/
 
 	public Span<byte> Q => VGAMem.Overlay.Slice(_q);
 	public int Skip => _skip;
@@ -23,6 +28,8 @@ public class VGAMemOverlay
 	{
 		TopLeft = topLeft;
 		BottomRight = bottomRight;
+
+		Position = topLeft * 8;
 		Size = (bottomRight - topLeft + (1, 1)) * 8;
 
 		_q = topLeft.X * 8 + topLeft.Y * 8 * Constants.NativeScreenWidth;
@@ -31,8 +38,8 @@ public class VGAMemOverlay
 
 	public byte this[int x, int y]
 	{
-		get => VGAMem.Overlay[_q + x + y * Constants.NativeScreenWidth];
-		set => VGAMem.Overlay[_q + x + y * Constants.NativeScreenWidth] = value;
+		get => Contains(x, y) ? VGAMem.Overlay[_q + x + y * Constants.NativeScreenWidth] : (byte)0;
+		set { if (Contains(x, y)) VGAMem.Overlay[_q + x + y * Constants.NativeScreenWidth] = value; }
 	}
 
 	public byte this[Point pt]
@@ -40,6 +47,11 @@ public class VGAMemOverlay
 		get => this[pt.X, pt.Y];
 		set => this[pt.X, pt.Y] = value;
 	}
+
+	public bool Contains(int x, int y)
+		=> x.IsInRange(0, Size.Width) && y.IsInRange(0, Size.Height);
+	public bool Contains(Point pt)
+		=> (pt >= Point.Zero) && (pt < Size);
 
 	public void Clear(byte colour)
 	{

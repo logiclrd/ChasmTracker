@@ -155,12 +155,10 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 	//			envpos[0] = channel->vol_env_position;
 	//			envpos[1] = channel->pan_env_position;
 	//			envpos[2] = channel->pitch_env_position;
-	protected void EnvelopeDraw(Envelope? env, bool middle, int currentNode,
+	protected void EnvelopeDraw(Envelope? env, Envelope defaultEnv, bool middle, int currentNode,
 				bool envOn, bool loopOn, bool sustainOn, int envPos)
 	{
-		// TODO: show envelopes that aren't there yet to kickstart editing on new instruments
-		if (env == null)
-			return;
+		env ??= defaultEnv;
 
 		Point lastPt = new Point(0, 0);
 		int maxTicks = 50;
@@ -377,10 +375,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 	{
 		// FIXME | move env flags into the envelope itself, where they should be in the first place.
 		// FIXME | then this nonsense can go away.
-		var env = ins.VolumeEnvelope;
-
-		if (env == null)
-			env = ins.VolumeEnvelope = new Envelope();
+		var env = ins.VolumeEnvelope = new Envelope();
 
 		int v1 = Math.Max(a, a * a / 16);
 		int v2 = Math.Max(v1 + d * d / 16, v1 + d);
@@ -416,10 +411,9 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 	/* the return value here is actually a bitmask:
 	r & 1 => the key was handled
 	r & 2 => the envelope ()hanged (i.e., it should be enabled) */
-	protected int EnvelopeHandleKeyViewMode(KeyEvent k, Envelope? env, ref int currentNode, InstrumentFlags sec)
+	protected int EnvelopeHandleKeyViewMode(KeyEvent k, ref Envelope? env, Envelope defaultEnv, ref int currentNode, InstrumentFlags sec)
 	{
-		if (env == null)
-			return 0;
+		env ??= defaultEnv.Clone();
 
 		int newNode = currentNode;
 
@@ -498,10 +492,12 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 				if (!k.Modifiers.HasAnyFlag(KeyMod.Alt)) return 0;
 				if (env.LoopEnd < env.Nodes.Count - 1)
 				{
+					var envPtr = env; // can't use ref parameter in anonymous method
+
 					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Cut envelope?");
 
 					dialog.SelectedWidgetIndex.Value = 1;
-					dialog.ActionYes += () => DoPostLoopCut(env);
+					dialog.ActionYes += () => DoPostLoopCut(envPtr);
 
 					return 1;
 				}
@@ -513,10 +509,12 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 				if (!(k.Modifiers.HasAnyFlag(KeyMod.Alt))) return 0;
 				if (env.LoopStart > 0)
 				{
+					var envPtr = env; // can't use ref parameter in anonymous method
+
 					var dialog = MessageBox.Show(MessageBoxTypes.OKCancel, "Cut envelope?");
 
 					dialog.SelectedWidgetIndex.Value = 1;
-					dialog.ActionYes += () => DoPreLoopCut(env);
+					dialog.ActionYes += () => DoPreLoopCut(envPtr);
 
 					return 1;
 				}
@@ -587,10 +585,9 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 	}
 
 	/* mouse handling routines for envelope */
-	protected bool EnvelopeHandleMouse(KeyEvent k, Envelope? env, ref int currentNode)
+	protected bool EnvelopeHandleMouse(KeyEvent k, ref Envelope? env, Envelope defaultEnv, ref int currentNode)
 	{
-		if (env == null)
-			return false;
+		env ??= defaultEnv.Clone();
 
 		int maxTicks = 50;
 
@@ -756,13 +753,12 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 			that the envelope should be enabled.
 		- therefore, the envelope will always be enabled when this function is called, so there is
 			no reason to indicate a change in the envelope here. */
-	protected int EnvelopeHandleKeyEditMode(KeyEvent k, Envelope? env, ref int currentNode)
+	protected int EnvelopeHandleKeyEditMode(KeyEvent k, ref Envelope? env, Envelope defaultEnv, bool middle, ref int currentNode)
 	{
-		if (env == null)
-			return 0;
+		env ??= defaultEnv.Clone();
 
 		int newNode = currentNode, newTick = env.Nodes[currentNode].Tick;
-		byte newValue = env.Nodes[currentNode].Value;
+		sbyte newValue = (sbyte)env.Nodes[currentNode].Value;
 
 		/* TODO: when does adding/removing a node alter loop points? */
 
@@ -902,7 +898,7 @@ public abstract class InstrumentListEnvelopeSubpageBase : InstrumentListPage
 
 		if (newValue != env.Nodes[newNode].Value)
 		{
-			env.Nodes[currentNode].Value = newValue;
+			env.Nodes[currentNode].Value = (byte)newValue;
 
 			Status.Flags |= StatusFlags.SongNeedsSave;
 			Status.Flags |= StatusFlags.NeedUpdate;

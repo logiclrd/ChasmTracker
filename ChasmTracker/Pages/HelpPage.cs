@@ -36,8 +36,16 @@ public class HelpPage : Page
 					{
 						var lines = new List<string>();
 
-						while (!reader.EndOfStream)
-							lines.Add(reader.ReadLine()!);
+						while (true)
+						{
+							string? line = reader.ReadLine();
+
+							if (line == null)
+								break;
+
+							if (line.Length > 0)
+								lines.Add(line);
+						}
 
 						HelpTextData[index] = lines.ToArray();
 					}
@@ -144,7 +152,7 @@ public class HelpPage : Page
 						VGAMem.DrawTextLen(line, 1, line.Length, new Point(2, pos), (lineType == LineTypes.Disabled) ? (7, 0) : (6, 0));
 					break;
 				case LineTypes.Graphic:
-					for (int x = 1; x <= line.Length; x++)
+					for (int x = 1; x < line.Length; x++)
 					{
 						var ch = line[x];
 						if (ch >= '1' && ch <= '9')

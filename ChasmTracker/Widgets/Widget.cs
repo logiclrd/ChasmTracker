@@ -20,7 +20,7 @@ public abstract class Widget
 	public int ClipStart, ClipEnd;
 
 	/* these fields specify what widget gets selected next */
-	public WidgetNext Next;
+	public WidgetNext Next = new WidgetNext();
 	public bool IsTabStop = true;
 
 	public Widget(Point position, int width)

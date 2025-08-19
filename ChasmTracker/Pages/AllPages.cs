@@ -83,6 +83,8 @@ public static class AllPages
 		foreach (var page in s_pages)
 		{
 			ToggleButtonWidget.BuildGroups(page.Widgets);
+
+			page.TakeOwnershipOfSharedWidgets();
 			WidgetNext.Initialize(page.Widgets);
 		}
 	}

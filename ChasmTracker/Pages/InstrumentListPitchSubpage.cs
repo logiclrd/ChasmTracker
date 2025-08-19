@@ -17,6 +17,8 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 	ThumbBarWidget thumbBarMIDIBankLow;
 	ThumbBarWidget thumbBarMIDIBankHigh;
 
+	static Envelope s_defaultPitchEnvelope = new Envelope(32);
+
 	int _currentEnvelopeNode;
 
 	public InstrumentListPitchSubpage()
@@ -77,7 +79,7 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 
 		DrawEnvelopeLabel("Pitch", isSelected);
 
-		EnvelopeDraw(ins.PitchEnvelope, false, _currentEnvelopeNode,
+		EnvelopeDraw(ins.PitchEnvelope, s_defaultPitchEnvelope, true, _currentEnvelopeNode,
 			ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelope),
 			ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeLoop),
 			ins.Flags.HasAllFlags(InstrumentFlags.PitchEnvelopeSustain),
@@ -88,7 +90,7 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 	{
 		var ins = Song.CurrentSong.GetInstrument(CurrentInstrument);
 
-		if (EnvelopeHandleMouse(k, ins.PitchEnvelope, ref _currentEnvelopeNode))
+		if (EnvelopeHandleMouse(k, ref ins.PitchEnvelope, s_defaultPitchEnvelope, ref _currentEnvelopeNode))
 		{
 			ins.Flags |= InstrumentFlags.PitchEnvelope;
 			return true;
@@ -97,9 +99,9 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 		int r;
 
 		if (s_envelopeEditMode)
-			r = EnvelopeHandleKeyEditMode(k, ins.PitchEnvelope, ref _currentEnvelopeNode);
+			r = EnvelopeHandleKeyEditMode(k, ref ins.PitchEnvelope, s_defaultPitchEnvelope, middle: true, ref _currentEnvelopeNode);
 		else
-			r = EnvelopeHandleKeyViewMode(k, ins.PitchEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PitchEnvelope);
+			r = EnvelopeHandleKeyViewMode(k, ref ins.PitchEnvelope, s_defaultPitchEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PitchEnvelope);
 
 		if (r.HasBitSet(2))
 		{
@@ -258,7 +260,7 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 
 		if (s_envelopeMouseEdit)
 		{
-			if (EnvelopeHandleMouse(k, ins.PitchEnvelope, ref _currentEnvelopeNode))
+			if (EnvelopeHandleMouse(k, ref ins.PitchEnvelope, s_defaultPitchEnvelope, ref _currentEnvelopeNode))
 			{
 				ins.Flags |= InstrumentFlags.PitchEnvelope;
 				return true;
@@ -266,7 +268,7 @@ public class InstrumentListPitchSubpage : InstrumentListEnvelopeSubpageBase
 		}
 
 		if ((k.Sym == KeySym.l || k.Sym == KeySym.b) && k.Modifiers.HasAnyFlag(KeyMod.Alt))
-			return 0 != EnvelopeHandleKeyViewMode(k, ins.PitchEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PitchEnvelope);
+			return 0 != EnvelopeHandleKeyViewMode(k, ref ins.PitchEnvelope, s_defaultPitchEnvelope, ref _currentEnvelopeNode, InstrumentFlags.PitchEnvelope);
 
 		return base.PreHandleKey(k);
 	}

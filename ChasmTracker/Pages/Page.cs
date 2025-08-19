@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace ChasmTracker.Pages;
 
@@ -24,7 +23,8 @@ public abstract class Page : WidgetContext
 {
 	public readonly PageNumbers PageNumber;
 	public readonly string Title;
-	public readonly HelpTexts HelpText;
+	/* HelpTexts.Global if no page-specific help */
+	public readonly HelpTexts HelpIndex;
 
 	public static WidgetContext? ActiveWidgetContext;
 
@@ -36,7 +36,7 @@ public abstract class Page : WidgetContext
 	{
 		PageNumber = pageNumber;
 		Title = title;
-		HelpText = helpText;
+		HelpIndex = helpText;
 
 		if (this is IConfigurable configurable)
 			Configuration.RegisterConfigurable(configurable);
@@ -57,6 +57,11 @@ public abstract class Page : WidgetContext
 			Status.CurrentPage.UnsetPage();
 		}
 
+		if (Status.DialogType.HasAllFlags(DialogTypes.Menu))
+			Menu.Hide();
+		else if (Status.DialogType != DialogTypes.None)
+			return;
+
 		var newPage = AllPages.ByPageNumber(newPageNumber);
 
 		newPage.SynchronizeWith(Status.CurrentPage);
@@ -66,6 +71,10 @@ public abstract class Page : WidgetContext
 		ActiveWidgetContext.TakeOwnershipOfSharedWidgets();
 
 		Status.CurrentPageNumber = newPageNumber;
+
+		if (newPage is not HelpPage)
+			Status.CurrentHelpIndex = newPage.HelpIndex;
+
 		Status.CurrentPage.SetPage();
 
 		Status.Flags |= StatusFlags.NeedUpdate;
@@ -681,9 +690,6 @@ public abstract class Page : WidgetContext
 
 	/* called by the clipboard manager */
 	public virtual bool ClipboardPaste(ClipboardPasteEvent cptr) { return false; }
-
-	/* HelpTexts.Global if no page-specific help */
-	public HelpTexts HelpIndex;
 
 	/* --------------------------------------------------------------------------------------------------------- */
 
@@ -1418,6 +1424,7 @@ public abstract class Page : WidgetContext
 			case KeySym.F1:
 				if (Status.MessageBoxType != MessageBoxTypes.None)
 					return false;
+
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
 				{
 					FinishMiniPop();
@@ -1437,9 +1444,8 @@ public abstract class Page : WidgetContext
 						SetPage(PageNumbers.Help);
 				}
 				else
-				{
 					break;
-				}
+
 				return true;
 			case KeySym.F2:
 				if (k.Modifiers.HasAnyFlag(KeyMod.Control))

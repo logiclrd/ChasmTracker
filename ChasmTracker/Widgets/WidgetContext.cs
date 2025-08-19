@@ -9,6 +9,9 @@ public class WidgetContext
 {
 	List<Widget> _widgets = new List<Widget>();
 
+	// When a shared widget is active on this context, what is its WidgetNext?
+	Dictionary<Widget, WidgetNext> _sharedWidgetNext = new Dictionary<Widget, WidgetNext>();
+
 	public IReadOnlyList<Widget> Widgets => _widgets;
 	public Shared<int> SelectedWidgetIndex = new Shared<int>();
 
@@ -30,6 +33,7 @@ public class WidgetContext
 	{
 		widget.IsShared = true;
 		_widgets.Add(widget);
+		_sharedWidgetNext[widget] = new WidgetNext();
 	}
 
 	public void AddWidgets(IEnumerable<Widget> widgets)
@@ -59,7 +63,10 @@ public class WidgetContext
 	{
 		foreach (var widget in _widgets)
 			if (widget.IsShared)
+			{
 				widget.WidgetContext = this;
+				widget.Next = _sharedWidgetNext[widget];
+			}
 	}
 
 	public bool ChangeFocusTo(int newWidgetIndex)
