@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 namespace ChasmTracker;
@@ -568,8 +569,114 @@ public class Program
 		Environment.Exit(x);
 	}
 
+	/* basic AF crash handler
+	 * platform-specific stuff can be printed out into the logfile in the log
+	 * callback. */
+	static void CrashHandler(object sender, UnhandledExceptionEventArgs e)
+	{
+		var theTime = DateTime.Now;
+
+		string nameTemplate = "chasm_crash_" + theTime.ToString("yyyy-MM-dd_HH-mm-ss");
+
+		bool savedCrashLog = false;
+
+		try
+		{
+			File.WriteAllText(nameTemplate, e.ExceptionObject.ToString());
+			savedCrashLog = true;
+		}
+		catch { }
+
+		/* now that we've sufficiently dumped the stuff, at least try to
+		 * save the current song */
+		try
+		{
+			if (Status.Flags.HasAnyFlag(StatusFlags.SongNeedsSave))
+			{
+				bool tryAgain = true;
+
+				string extension = Path.GetExtension(Song.CurrentSong.FileName);
+
+				string type = "";
+
+				if (!string.IsNullOrEmpty(extension))
+				{
+					/* convert to uppercase */
+					type = extension.ToUpperInvariant().TrimStart('.');
+
+					string name = nameTemplate + extension;
+
+					try
+					{
+						tryAgain = (Song.CurrentSong.SaveSong(name, type) != SaveResult.Success);
+					}
+					catch
+					{
+						tryAgain = true;
+					}
+				}
+
+				if (tryAgain)
+				{
+					/* welp, either we have no extension, or no big hints, so
+					 * at least attempt to save SOMETHING */
+					type = "IT";
+
+					/* Instrument data is probably more important? */
+					if (!Song.CurrentSong.Flags.HasAnyFlag(SongFlags.InstrumentMode))
+					{
+						/* look for any possible adlib samples; if we do have some,
+						 * we have to save as S3M .. */
+						if (Song.CurrentSong.Samples.OfType<SongSample>().Any(smp => smp.Flags.HasAnyFlag(SampleFlags.AdLib)))
+							type = "S3M";
+					}
+
+					string name = nameTemplate + "." + type.ToLower();
+
+					try
+					{
+						tryAgain = (Song.CurrentSong.SaveSong(name, type) != SaveResult.Success);
+					}
+					catch
+					{
+						tryAgain = true;
+					}
+				}
+			}
+		}
+		catch {}
+
+		string dir = Environment.CurrentDirectory;
+		string theBox;
+
+		if (savedCrashLog)
+		{
+			if (Status.Flags.HasAnyFlag(StatusFlags.SongNeedsSave))
+				theBox = "a crash log and a copy of the current song";
+			else
+				theBox = "a crash log";
+		}
+		else
+		{
+			if (Status.Flags.HasAnyFlag(StatusFlags.SongNeedsSave))
+				theBox = "a copy of the current song";
+			else
+				theBox = "absolutely nothing";
+		}
+
+		OS.ShowMessageBox(
+			"Chasm Tracker has crashed!",
+			$"If all went well, there should be {theBox} saved in {dir}.\n" +
+			"\n" +
+			"You should report this to the bug tracker at " +
+			"https://github.com/logiclrd/ChasmTracker/issues",
+			OSMessageBoxTypes.Error);
+	}
+
 	static int Main(string[] args)
 	{
+		AppDomain.CurrentDomain.UnhandledException += CrashHandler;
+
 		FFT.Initialize();
 
 		Version.Initialize();
