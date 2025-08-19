@@ -136,7 +136,7 @@ public class NumberEntryWidget : Widget
 		if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 			return false;
 
-		if (k.Mouse == MouseState.Click && k.OnTarget)
+		if (/*k.State == KeyState.Press && */k.Mouse == MouseState.Click && k.OnTarget)
 		{
 			/* position cursor */
 			int n = k.MousePosition.X - Position.X;

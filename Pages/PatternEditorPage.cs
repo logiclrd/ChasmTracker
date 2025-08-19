@@ -4354,12 +4354,6 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		return false;
 	}
 
-	/* this hack is necessary because schism sends MOUSE_CLICK events
-	 * while the mouseclick is down AND the mouse is dragged.
-	 *
-	 * really this behavior should be changed... */
-	bool[] _muteToggleHack = new bool[Constants.MaxChannels];
-
 	bool? HandleKeyDefault(KeyEvent k)
 	{
 		int n = k.NoteValue;
@@ -4431,10 +4425,6 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 		if (k.Mouse != MouseState.None)
 		{
-			/* mouseup */
-			if (k.State == KeyState.Release)
-				Array.Clear(_muteToggleHack);
-
 			if ((k.Mouse == MouseState.Click || k.Mouse == MouseState.DoubleClick) && k.State == KeyState.Release)
 				ShiftSelectionEnd();
 
@@ -4496,12 +4486,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 					{
 						if (k.State == KeyState.Press)
 						{
-							if (!_muteToggleHack[n - 1])
-							{
-								Song.CurrentSong.ToggleChannelMute(n - 1);
-								Status.Flags |= StatusFlags.NeedUpdate;
-								_muteToggleHack[n - 1] = true;
-							}
+							Song.CurrentSong.ToggleChannelMute(n - 1);
+							Status.Flags |= StatusFlags.NeedUpdate;
 						}
 
 						break;
@@ -4596,7 +4582,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 			_currentPosition = np; _currentChannel = nc; _currentRow = nr;
 
-			if (k.State == KeyState.Press && k.StartPosition.Y > 14)
+			if ((k.State == KeyState.Press || k.State == KeyState.Drag) && k.StartPosition.Y > 14)
 			{
 				if (!_shiftSelection.InProgress)
 					ShiftSelectionBegin();

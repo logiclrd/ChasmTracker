@@ -88,17 +88,9 @@ public class ThumbBarWidget : Widget
 			int n = k.MousePositionFine.X - Position.X * k.CharacterResolution.X;
 			int wx = (Size.Width - 1) * k.CharacterResolution.X;
 
-			if (n < 0)
-				n = 0;
-			else if (n >= wx)
-				n = wx;
-
+			n = n.Clamp(0, wx);
 			n = fMin + n * (fMax - fMin) / wx;
-
-			if (n < fMin)
-				n = fMin;
-			else if (n > fMax)
-				n = fMax;
+			n = n.Clamp(fMin, fMax);
 
 			ChangeValue(n);
 

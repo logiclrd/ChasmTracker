@@ -170,10 +170,33 @@ public class Program
 
 						kk.MousePositionFine = Video.Translate(mouseEvent.Position);
 
-						if (mouseEvent is MouseWheelEvent mouseWheelEvent)
+						switch (mouseEvent)
 						{
-							kk.State = KeyState.Unknown;
-							kk.Mouse = (mouseWheelEvent.WheelDelta.Y > 0) ? MouseState.ScrollUp : MouseState.ScrollDown;
+							case MouseWheelEvent mouseWheelEvent:
+								kk.State = KeyState.Unknown;
+								kk.Mouse = (mouseWheelEvent.WheelDelta.Y > 0) ? MouseState.ScrollUp : MouseState.ScrollDown;
+								break;
+							case MouseMotionEvent:
+								kk.State = KeyState.Drag;
+								break;
+							case MouseButtonEvent mouseButton:
+								switch (mouseButton.EventType)
+								{
+									case MouseButtonEventType.Down:
+										// we also have to update the current button
+										if (mouseButton.Button == MouseButton.Left)
+										{
+											/* macosx cruft: Ctrl-LeftClick = RightClick */
+											button = Status.KeyMod.HasAnyFlag(KeyMod.Control) ? MouseButton.Right
+												: Status.KeyMod.HasAnyFlag(KeyMod.Alt | KeyMod.GUI) ? MouseButton.Middle
+												: MouseButton.Left;
+										}
+										break;
+									case MouseButtonEventType.Up:
+										button = mouseButton.Button;
+										break;
+								}
+								break;
 						}
 
 						bool captureStartPosition = false;
@@ -266,6 +289,7 @@ public class Program
 								break;
 							}
 
+							//if (se is not MouseMotionEvent)
 							Page.MainHandleKey(kk);
 						}
 

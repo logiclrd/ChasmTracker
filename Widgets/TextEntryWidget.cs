@@ -150,7 +150,7 @@ public class TextEntryWidget : Widget
 			return false;
 
 		/* LOL WOW THIS SUCKS */
-		if (k.Mouse == MouseState.Click && k.OnTarget)
+		if (/*k.State == KeyState.Press && */k.Mouse == MouseState.Click && k.OnTarget)
 		{
 			/* position cursor */
 			int n = k.MousePosition.X - Position.X;

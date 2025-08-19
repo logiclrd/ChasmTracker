@@ -77,17 +77,9 @@ public class PanBarWidget : Widget
 			int n = k.MousePositionFine.X - (Position.X + 11) * k.CharacterResolution.X;
 			int wx = (Size.Width - 16) * k.CharacterResolution.X;
 
-			if (n < 0)
-				n = 0;
-			else if (n >= wx)
-				n = wx;
-
+			n = n.Clamp(0, wx);
 			n = fMin + n * (fMax - fMin) / wx;
-
-			if (n < fMin)
-				n = fMin;
-			else if (n > fMax)
-				n = fMax;
+			n = n.Clamp(fMin, fMax);
 
 			IsMuted = false;
 			IsSurround = false;

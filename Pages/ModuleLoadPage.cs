@@ -26,7 +26,7 @@ public class ModuleLoadPage : ModuleLoadSavePageBase
 		otherFileList.OtherHandleText += FileListHandleTextInput;
 		otherFileList.OtherRedraw += FileListDraw;
 
-		otherDirectoryList = new OtherWidget(new Point(50, 13), new Size(27, 21));
+		otherDirectoryList = new OtherWidget(new Point(50, 13), new Size(27, 22));
 		otherDirectoryList.OtherAcceptsText = true;
 		otherDirectoryList.OtherHandleKey += DirectoryListHandleKey;
 		otherDirectoryList.OtherHandleText += DirectoryListHandleTextInput;

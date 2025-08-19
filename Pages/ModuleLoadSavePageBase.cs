@@ -159,8 +159,11 @@ public abstract class ModuleLoadSavePageBase : Page
 
 		if (s_dlist.SelectedIndex < s_topDir)
 			s_topDir = s_dlist.SelectedIndex;
-		else if (s_dlist.SelectedIndex > s_topDir + 21)
-			s_topDir = s_dlist.SelectedIndex - 21;
+		else if (otherDirectoryList != null) // we can be called prior to the completion of initialization
+		{
+			if (s_dlist.SelectedIndex > s_topDir + otherDirectoryList.Size.Height)
+				s_topDir = s_dlist.SelectedIndex - otherDirectoryList.Size.Height;
+		}
 
 		Status.Flags |= StatusFlags.NeedUpdate;
 	}
@@ -709,8 +712,8 @@ public abstract class ModuleLoadSavePageBase : Page
 					case MouseState.ScrollUp:
 					case MouseState.ScrollDown:
 						s_topDir += (k.Mouse == MouseState.ScrollUp) ? -Constants.MouseScrollLines : Constants.MouseScrollLines;
-						if (s_topDir > s_dlist.NumDirectories - 21)
-							s_topDir = s_dlist.NumDirectories - 21;
+						if (s_topDir > s_dlist.NumDirectories - otherDirectoryList!.Size.Height)
+							s_topDir = s_dlist.NumDirectories - otherDirectoryList.Size.Height;
 						if (s_topDir < 0)
 							s_topDir = 0;
 						Status.Flags |= StatusFlags.NeedUpdate;
@@ -732,10 +735,10 @@ public abstract class ModuleLoadSavePageBase : Page
 				newDir++;
 				break;
 			case KeySym.PageUp:
-				newDir -= 21;
+				newDir -= otherDirectoryList!.Size.Height;
 				break;
 			case KeySym.PageDown:
-				newDir += 21;
+				newDir += otherDirectoryList!.Size.Height;
 				break;
 			case KeySym.Home:
 				newDir = 0;
