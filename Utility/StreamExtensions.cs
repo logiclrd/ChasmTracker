@@ -114,4 +114,10 @@ public static class StreamExtensions
 			stream.Write(s_buffer, 0, paddingBytes);
 		}
 	}
+
+	public static Stream Slice(this Stream stream, long offset)
+		=> Slice(stream, offset, stream.Length - offset);
+
+	public static Stream Slice(this Stream stream, long offset, long length)
+		=> new SubStream(stream, offset, length);
 }

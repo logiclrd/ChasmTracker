@@ -592,9 +592,12 @@ public class XM : SongFileConverter
 				break;
 			}
 
+			/* don't read past the instrument header length */
+			var substream = stream.Slice(0, stream.Position + headerLength - 4);
+
 			var ins = song.GetInstrument(ni);
 
-			ins.Name = stream.ReadString(22, nullTerminated: false);
+			ins.Name = substream.ReadString(22, nullTerminated: false);
 
 			if (detected.HasAllFlags(Trackers.Digitrakker) && ins.Name.Contains('\0'))
 			{
@@ -602,7 +605,7 @@ public class XM : SongFileConverter
 				ins.Name = ins.Name.TrimZ();
 			}
 
-			int b = stream.ReadByte();
+			int b = substream.ReadByte();
 			if (iType == -1)
 				iType = b;
 			else if (iType != b && detected.HasAllFlags(Trackers.FT2Generic))
@@ -612,8 +615,8 @@ public class XM : SongFileConverter
 				detected = (detected & ~Trackers.FT2Generic) | Trackers.FT2Clone | Trackers.MaybeModPlug;
 			}
 
-			int numSamples = stream.ReadStructure<ushort>();
-			int sampleHeaderLength = stream.ReadStructure<int>();
+			int numSamples = substream.ReadStructure<ushort>();
+			int sampleHeaderLength = substream.ReadStructure<int>();
 
 			if (detected == Trackers.OldModPlug) {
 				detected = Trackers.Confirmed;
@@ -650,8 +653,7 @@ public class XM : SongFileConverter
 					}
 				}
 
-				// some adjustment hack from xmp.
-				stream.Position += headerLength - 33;
+				substream.Position = substream.Length;
 				continue;
 			}
 
@@ -659,7 +661,19 @@ public class XM : SongFileConverter
 				ins.NoteMap[n] = (byte)(n + 1);
 
 			for (int n = 0; n < 96; n++)
-				ins.SampleMap[n + 12] = (byte)(stream.ReadByte() + absoluteSampleNumber);
+			{
+				/* WEIRD: some XMs are weirdly corrupted. For example, try
+				 * loading "going nuts.xm" without this hack; there seems to be
+				 * a consistent (and completely wrong) offset in the sample map
+				 * for instruments 1 through 10. Some instruments are fine, but
+				 * it seems to grow worse. Maybe this is a bug in BoobieSqueezer? */
+				int x = substream.ReadByte();
+
+				if (x >= 0 && x < numSamples)
+					ins.SampleMap[n + 12] = (byte)(x + absoluteSampleNumber);
+				else if (ins.SampleMap[n + 11] != 0)
+					ins.SampleMap[n + 12] = ins.SampleMap[n + 11];
+			}
 
 			// envelopes. XM stores this in a hilariously bad format
 			ins.VolumeEnvelope = new Envelope();
@@ -677,7 +691,7 @@ public class XM : SongFileConverter
 
 				for (int n = 0; n < 12; n++)
 				{
-					int t = stream.ReadStructure<ushort>();
+					int t = substream.ReadStructure<ushort>();
 
 					if (n > 0 && t < previousTick && !t.HasAnyBitSet(0xFF00))
 					{
@@ -690,39 +704,51 @@ public class XM : SongFileConverter
 							t += 0x100;
 					}
 
-					int v = stream.ReadStructure<ushort>();
+					int v = substream.ReadStructure<ushort>();
 
 					envs[i].Envelope.Nodes.Add((t, Math.Min(v, 64)));
 				}
 			}
 
+			const int EOF = -1;
+
 			for (int i = 0; i < envs.Length; i++)
 			{
-				b = stream.ReadByte();
-				b = b.Clamp(2, 12);
-				envs[i].Envelope.Nodes.RemoveRange(b, envs[i].Envelope.Nodes.Count - b);
+				b = substream.ReadByte();
+
+				if (b != EOF)
+				{
+					b = b.Clamp(2, 12);
+					envs[i].Envelope.Nodes.RemoveRange(b, envs[i].Envelope.Nodes.Count - b);
+				}
 			}
 
 			for (int i = 0; i < envs.Length; i++)
 			{
-				envs[i].Envelope.SustainStart = envs[i].Envelope.SustainEnd = stream.ReadByte();
-				envs[i].Envelope.LoopStart = stream.ReadByte();
-				envs[i].Envelope.LoopEnd = stream.ReadByte();
+				envs[i].Envelope.SustainStart = envs[i].Envelope.SustainEnd = substream.ReadByte().Clamp(0, envs[i].Envelope.Nodes.Count);
+				envs[i].Envelope.LoopStart = substream.ReadByte().Clamp(0, envs[i].Envelope.Nodes.Count);
+				envs[i].Envelope.LoopEnd = substream.ReadByte().Clamp(0, envs[i].Envelope.Nodes.Count);
 			}
 
 			for (int i = 0; i < envs.Length; i++)
 			{
-				var f = (EnvelopeFlags)stream.ReadByte();
-				if (f.HasAllFlags(EnvelopeFlags.Enable)) ins.Flags |= envs[i].EnableFlag;
-				if (f.HasAllFlags(EnvelopeFlags.Sustain)) ins.Flags |= envs[i].SustainLoopFlag;
-				if (f.HasAllFlags(EnvelopeFlags.Loop)) ins.Flags |= envs[i].LoopFlag;
+				b = substream.ReadByte();
+
+				if (b != EOF)
+				{
+					var f = (EnvelopeFlags)b;
+
+					if (f.HasAllFlags(EnvelopeFlags.Enable)) ins.Flags |= envs[i].EnableFlag;
+					if (f.HasAllFlags(EnvelopeFlags.Sustain)) ins.Flags |= envs[i].SustainLoopFlag;
+					if (f.HasAllFlags(EnvelopeFlags.Loop)) ins.Flags |= envs[i].LoopFlag;
+				}
 			}
 
-			var vibratoType = AutoVibratoImport[stream.ReadByte() & 0x7];
-			var vibratoSweep = stream.ReadByte();
-			var vibratoDepth = stream.ReadByte();
+			var vibratoType = AutoVibratoImport[substream.ReadByte() & 0x7];
+			var vibratoSweep = substream.ReadByte();
+			var vibratoDepth = substream.ReadByte();
 			vibratoDepth = Math.Min(vibratoDepth, 32);
-			var vibratoRate = stream.ReadByte();
+			var vibratoRate = substream.ReadByte();
 			vibratoRate = Math.Min(vibratoRate, 64);
 
 			/* translate the sweep value */
@@ -737,7 +763,7 @@ public class XM : SongFileConverter
 					vibratoSweep = 255;
 			}
 
-			ins.FadeOut = stream.ReadStructure<ushort>();
+			ins.FadeOut = substream.ReadStructure<ushort>();
 
 			if (ins.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 			{
@@ -797,15 +823,15 @@ public class XM : SongFileConverter
 			the instrument header size 263 bytes), but ft2 is really writing the midi settings
 			there, at least in the first 7 bytes. (as far as i can tell, the rest of the bytes
 			are always zero) */
-			int midiEnabled = stream.ReadByte(); // instrument midi enable = 0/1
-			var midiTransmitChannel = stream.ReadByte(); // midi transmit channel = 0-15
+			int midiEnabled = substream.ReadByte(); // instrument midi enable = 0/1
+			var midiTransmitChannel = substream.ReadByte(); // midi transmit channel = 0-15
 			ins.MIDIChannelMask = (midiEnabled == 1) ? 1 << Math.Min(midiTransmitChannel, 15) : 0;
-			ins.MIDIProgram = Math.Min(stream.ReadStructure<ushort>(), (ushort)127); // midi program = 0-127
-			int w = stream.ReadStructure<ushort>(); // bender range (halftones) = 0-36
-			if (stream.ReadByte() == 1)
+			ins.MIDIProgram = Math.Min(substream.ReadStructure<ushort>(), (ushort)127); // midi program = 0-127
+			int w = substream.ReadStructure<ushort>(); // bender range (halftones) = 0-36
+			if (substream.ReadByte() == 1)
 				ins.GlobalVolume = 0; // mute computer = 0/1
 
-			stream.Position += (headerLength - 248);
+			substream.Position = substream.Length;
 
 			for (int ns = 0; ns < numSamples; ns++)
 			{
@@ -818,17 +844,19 @@ public class XM : SongFileConverter
 
 				var smp = song.EnsureSample(absoluteSampleNumber + ns);
 
-				smp.Length = stream.ReadStructure<int>();
-				smp.LoopStart = stream.ReadStructure<int>();
-				smp.LoopEnd = stream.ReadStructure<int>() + smp.LoopStart;
-				smp.Volume = stream.ReadByte();
+				substream = stream.Slice(0, stream.Position + sampleHeaderLength);
+
+				smp.Length = substream.ReadStructure<int>();
+				smp.LoopStart = substream.ReadStructure<int>();
+				smp.LoopEnd = substream.ReadStructure<int>() + smp.LoopStart;
+				smp.Volume = substream.ReadByte();
 				smp.Volume = Math.Min(64, smp.Volume);
 				smp.Volume *= 4; //mphack
 				smp.GlobalVolume = 64;
 				smp.Flags = SampleFlags.Panning;
-				int fineTune = stream.ReadByte();
+				int fineTune = substream.ReadByte();
 
-				var flags = (XMSampleType)stream.ReadByte(); // flags
+				var flags = (XMSampleType)substream.ReadByte(); // flags
 				if (smp.LoopStart >= smp.LoopEnd)
 					flags &= XMSampleType.LoopMask; // that loop sucks, turn it off
 
@@ -855,13 +883,13 @@ public class XM : SongFileConverter
 					// NOTE length and loop start/end are adjusted later
 				}
 
-				smp.Panning = stream.ReadByte(); //mphack, should be adjusted to 0-64
+				smp.Panning = substream.ReadByte(); //mphack, should be adjusted to 0-64
 
-				int relativeNote = stream.ReadByte();
+				int relativeNote = substream.ReadByte();
 
 				smp.C5Speed = SongNote.TransposeToFrequency(relativeNote, fineTune);
 
-				byte reserved = (byte)stream.ReadByte();
+				byte reserved = (byte)substream.ReadByte();
 
 				reservedBytes |= reserved;
 
@@ -870,7 +898,7 @@ public class XM : SongFileConverter
 
 				byte[] nameBytes = new byte[22];
 
-				stream.ReadExactly(nameBytes);
+				substream.ReadExactly(nameBytes);
 
 				smp.Name = nameBytes.ToStringZ();
 
@@ -881,6 +909,8 @@ public class XM : SongFileConverter
 				smp.VibratoRate = vibratoSweep;
 				smp.VibratoDepth = vibratoDepth;
 				smp.VibratoSpeed = vibratoRate;
+
+				substream.Position = substream.Length;
 			}
 
 			if (hdr.Version == 0x0104)
