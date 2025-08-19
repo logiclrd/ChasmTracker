@@ -57,6 +57,8 @@ public class AdLibConfigDialog : Dialog
 
 	Shared<int>[] _columnCursorPos = ColumnXPos.Select(_ => new Shared<int>()).ToArray();
 
+	const int WaveSelectBits = 3; // TODO: if choose OPL2, then 2
+
 	static ParameterInfo[] Parameters =
 		[
 			new ParameterInfo(
@@ -123,7 +125,7 @@ public class AdLibConfigDialog : Dialog
 				2,  9, ParameterType.Number, 1, 0, 4),
 			new ParameterInfo(
 				"Wave Select", new Point(46, 10),
-				2, 10, ParameterType.Number, 9, 0, 3),
+				2, 10, ParameterType.Number, 9, 0, WaveSelectBits),
 			new ParameterInfo(
 				"Pitch Vibrato", new Point(44, 11),
 				2, 11, ParameterType.Boolean, 1, 6, 1),
@@ -142,7 +144,7 @@ public class AdLibConfigDialog : Dialog
 				3,  9, ParameterType.Number, 0, 0, 4),
 			new ParameterInfo(
 				"", new Point(), // Modulator Wave Select
-				3, 10, ParameterType.Number, 8, 0, 3),
+				3, 10, ParameterType.Number, 8, 0, WaveSelectBits),
 			new ParameterInfo(
 				"", new Point(), // Modulator Pitch Vibrato
 				3, 11, ParameterType.Boolean, 0, 6, 1),

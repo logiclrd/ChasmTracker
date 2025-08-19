@@ -28,7 +28,7 @@ public abstract class FMDriver
 
 	public static FMDriver Create(int mixFrequency)
 	{
-		var driver = new YMF262FMDriver(); // TODO: choose OPL2?
+		var driver = new YMF262FMDriver(); // TODO: choose OPL2? also see AdLibConfigDialog.WaveSelectBits
 
 		driver.Initialize(RateBase * driver.RateDivisor, (uint)mixFrequency);
 
