@@ -11,6 +11,7 @@ public class FLACEncoder : IDisposable
 	public int Channels;
 	public int Bits;
 	public IntPtr Encoder;
+	public int BytesPerFrame;
 
 	public Stream? InputStream;
 	public Stream? OutputStream;
@@ -32,9 +33,9 @@ public class FLACEncoder : IDisposable
 		}
 	}
 
-	public bool Initialize(Stream outputStream, int bits, int channels, int rate, long estimateNumSamples)
+	public bool Initialize(int bits, int channels, int rate, long estimateNumSamples)
 	{
-		if (!InitializeSaveHead(outputStream, bits, channels, rate, estimateNumSamples))
+		if (!InitializeSaveHead(bits, channels, rate, estimateNumSamples))
 			return false;
 		if (!InitializeSaveTail())
 			return false;
@@ -42,10 +43,11 @@ public class FLACEncoder : IDisposable
 		return true;
 	}
 
-	public bool InitializeSaveHead(Stream outputStream, int bits, int channels, int rate, long estimateNumSamples)
+	public bool InitializeSaveHead(int bits, int channels, int rate, long estimateNumSamples)
 	{
 		Channels = channels;
 		Bits = bits;
+		BytesPerFrame = Bits * Channels / 8;
 
 		Encoder = NativeMethods.FLAC__stream_encoder_new();
 
@@ -175,6 +177,19 @@ public class FLACEncoder : IDisposable
 			case 2:
 				for (int i = 0; i < sampleCount; i++)
 					sampleBuffer[i] = BitConverter.ToInt16(data.Slice(i * 2, 2));
+				break;
+			case 3:
+				for (int i = 0; i < sampleCount; i++)
+				{
+					uint u = unchecked((uint)(
+						(data[i * 3 + 2] << 24) |
+						(data[i * 3 + 1] << 16) |
+						(data[i * 3 + 0] << 8)));
+
+					int s = unchecked((int)u);
+
+					sampleBuffer[i] = s >> 8;
+				}
 				break;
 			case 4:
 				for (int i = 0; i < sampleCount; i++)

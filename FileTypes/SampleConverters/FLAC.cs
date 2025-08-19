@@ -125,7 +125,6 @@ public class FLAC : SampleFileConverter
 			using (var encoder = new FLACEncoder())
 			{
 				bool result = encoder.InitializeSaveHead(
-					stream,
 					sample.Flags.HasAllFlags(SampleFlags._16Bit) ? 16 : 8,
 					sample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1,
 					sample.C5Speed,

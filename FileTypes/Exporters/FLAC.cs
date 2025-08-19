@@ -19,7 +19,7 @@ public class FLAC : SampleExporter
 	{
 		_encoder = new FLACEncoder();
 
-		return _encoder.Initialize(fp, bits, channels, rate, 0);
+		return _encoder.Initialize(bits, channels, rate, 0);
 	}
 
 	public override bool ExportSilence(Stream fp, int bytes)
