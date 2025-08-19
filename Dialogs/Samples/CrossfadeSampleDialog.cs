@@ -47,8 +47,8 @@ public class CrossfadeSampleDialog : Dialog
 		else
 			toggleButtonLoop.SetState(true);
 
-		// Samples To Fade; handled in other function to account for differences between
-		// sample loop and sustain loop
+		/* Samples To Fade; the max and value are initialized separately, since these
+		 * can be (and likely are) different between the regular and sustain loop. */
 		numberEntrySamplesToFade = new NumberEntryWidget(new Point(45, 27), 7, 0, 1, new Shared<int>());
 
 		LoopChanged();
