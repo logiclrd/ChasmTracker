@@ -129,7 +129,13 @@ public abstract class ModuleLoadSavePageBase : Page
 
 	bool ModGrep(FileReference f)
 	{
-		return _glob?.IsMatch(f.BaseName) ?? false;
+		if (_glob == null)
+			return true;
+
+		if (_glob.IsMatch(f.BaseName))
+			return DirectoryScanner.FillExtendedData(f);
+
+		return false;
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -186,12 +192,7 @@ public abstract class ModuleLoadSavePageBase : Page
 
 			var filterOperation = s_flist.BeginFilter(ModGrep, s_flist.SelectedIndexRef);
 
-			filterOperation.RunToCompletion();
-
 			DirectoryScanner.CacheLookup(Configuration.Directories.ModulesDirectory, s_flist, s_dlist);
-
-			// background the title checker
-			DirectoryScanner.SetAsynchronousFileListParameters(s_flist, DirectoryScanner.FillExtendedData, s_flist.SelectedIndexRef, FileListReposition);
 
 			FileListReposition();
 			DirectoryListReposition();

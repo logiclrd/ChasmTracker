@@ -512,6 +512,13 @@ public class Program
 				}
 			}
 
+			/* completely arbitrary; I think this is a good amount of files
+			 * to let dmoz work through before trying to reload the page.
+			 *
+			 * Ideally dmoz would do this by itself, but it's stuck here for now. */
+			for (int i = 0; i < 512 && DirectoryScanner.TakeAsynchronousFileListStep(); i++)
+				;
+
 			/* let dmoz build directory lists, etc
 			 *
 			 * as long as there's no user-event going on... */
