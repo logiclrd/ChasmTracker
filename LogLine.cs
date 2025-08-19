@@ -2,15 +2,13 @@ namespace ChasmTracker;
 
 public class LogLine
 {
-	public int Colour;
+	public byte Colour;
 	public string Text;
-	public bool BIOSFont;
 	public bool Underline;
 
-	public LogLine(int colour, string text, bool biosFont)
+	public LogLine(byte colour, string text)
 	{
 		Colour = colour;
 		Text = text;
-		BIOSFont = biosFont;
 	}
 }

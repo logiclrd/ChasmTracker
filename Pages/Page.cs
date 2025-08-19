@@ -460,7 +460,7 @@ public abstract class Page : WidgetContext
 	{
 		UpdateCurrentInstrument();
 
-		VGAMem.DrawTextLen(Song.CurrentSong.BaseName, 18, new Point(12, 4), (5, 0));
+		VGAMem.DrawTextUnicodeLen(Song.CurrentSong.BaseName, 18, new Point(12, 4), (5, 0));
 		VGAMem.DrawTextLen(Song.CurrentSong.Title, 25, new Point(12, 3), (5, 0));
 
 		if ((Status.Flags & (StatusFlags.ClassicMode | StatusFlags.SongNeedsSave)) == StatusFlags.SongNeedsSave)
@@ -745,7 +745,7 @@ public abstract class Page : WidgetContext
 				{
 					s_digraphN++;
 					if (s_digraphN >= 2)
-						Status.FlashText("Enter digraph:", biosFont: true);
+						Status.FlashText("Enter digraph:");
 				}
 			}
 			else if (k.Sym == KeySym.LeftShift || k.Sym == KeySym.RightShift)
@@ -769,16 +769,16 @@ public abstract class Page : WidgetContext
 				if (s_digraphC == 0)
 				{
 					s_digraphC = c;
-					Status.FlashText("Enter digraph: " + c, biosFont: true);
+					Status.FlashText("Enter digraph: " + c);
 				}
 				else
 				{
 					char digraphInput = Digraphs.Digraph(s_digraphC, c);
 
 					if (digraphInput != '\0')
-						Status.FlashText($"Enter digraph: {s_digraphC}{c} -> {digraphInput}", biosFont: true);
+						Status.FlashText($"Enter digraph: {s_digraphC}{c} -> {digraphInput}");
 					else
-						Status.FlashText($"Enter digraph: {s_digraphC}{c} -> INVALID", biosFont: true);
+						Status.FlashText($"Enter digraph: {s_digraphC}{c} -> INVALID");
 
 					s_digraphN = 0;
 					s_digraphC = '\0';
@@ -803,12 +803,12 @@ public abstract class Page : WidgetContext
 				{
 					if (s_csUnicodeC > 0)
 					{
-						byte unicode = ((char)s_csUnicode).ToCP437();
+						char unicode = (char)s_csUnicode;
 
 						if (unicode >= 32)
 						{
 							Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4} -> {unicode}");
-							MainHandleTextInput(Encoding.Unicode.GetString([unicode, 0]));
+							MainHandleTextInput(unicode.ToString());
 						}
 						else
 							Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4} -> INVALID");
@@ -850,7 +850,7 @@ public abstract class Page : WidgetContext
 						s_digraphN = 0;
 						s_digraphC = '\0';
 
-						Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4}", biosFont: true);
+						Status.FlashText($"Enter Unicode: U+{s_csUnicode:X4}");
 
 						return true;
 					}
@@ -874,7 +874,7 @@ public abstract class Page : WidgetContext
 					if (s_altNumPad < 32)
 						return false;
 
-					char unicode = (char)(s_altNumPad & 255);
+					char unicode = ((byte)s_altNumPad).FromCP437();
 
 					if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
 						Status.FlashText($"Enter DOS/ASCII: {(int)unicode} -> {unicode}");
@@ -917,7 +917,7 @@ public abstract class Page : WidgetContext
 						s_altNumPadC++;
 
 						if (!Status.Flags.HasAllFlags(StatusFlags.ClassicMode))
-							Status.FlashText($"Enter DOS/ASCII: {s_altNumPad}", biosFont: true);
+							Status.FlashText($"Enter DOS/ASCII: {s_altNumPad}");
 
 						return true;
 					}

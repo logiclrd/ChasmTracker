@@ -237,7 +237,7 @@ public class MIDIPage : Page
 				bg = 0;
 			}
 
-			VGAMem.DrawTextLen(p.Name ?? "", 64, new Point(13, 15+i), (5, 0));
+			VGAMem.DrawTextUnicodeLen(p.Name ?? "", 64, new Point(13, 15+i), (5, 0));
 
 			if (Status.Flags.HasAllFlags(StatusFlags.MIDIEventChanged)
 					&& (now - Status.LastMIDITick) < TimeSpan.FromMilliseconds(3000)

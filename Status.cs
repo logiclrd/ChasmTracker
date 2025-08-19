@@ -48,16 +48,14 @@ public static class Status
 
 	public static string? StatusText;
 	public static DateTime StatusTextTimeoutUTC;
-	public static bool StatusTextBIOSFont;
 
 	public static NumLockHandling FixNumLockSetting;
 
 	public static bool ShowDefaultVolumes;
 
-	public static void FlashText(string text, bool biosFont = false)
+	public static void FlashText(string text)
 	{
 		StatusText = text;
-		StatusTextBIOSFont = biosFont;
 		StatusTextTimeoutUTC = DateTime.UtcNow.AddSeconds(1);
 
 		Flags |= StatusFlags.NeedUpdate;
@@ -72,12 +70,7 @@ public static class Status
 			StatusText = null;
 
 		if (StatusText != null)
-		{
-			if (StatusTextBIOSFont)
-				VGAMem.DrawTextBIOSLen(StatusText, 60, new Point(2, 9), (0, 2));
-			else
-				VGAMem.DrawTextLen(StatusText, 60, new Point(2, 9), (0, 2));
-		}
+			VGAMem.DrawTextUnicodeLen(StatusText, 60, new Point(2, 9), (0, 2));
 		else
 		{
 			switch (AudioPlayback.Mode)

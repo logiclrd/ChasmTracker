@@ -14,7 +14,7 @@ public class Font
 	public static byte[] HalfData = Array.Empty<byte>();
 	public static byte[] Alt = Array.Empty<byte>();
 
-	public static byte[] Data = Normal;
+	public static byte[] ITF = Normal;
 
 	/* this needs to be called before any char drawing.
 	 * it's pretty much the same as doing...
@@ -29,7 +29,7 @@ public class Font
 		 || !Load(Configuration.General.Font))
 			Reset();
 
-		Data = Normal;
+		ITF = Normal;
 
 		Alt = new byte[2048];
 

@@ -5262,7 +5262,7 @@ public class Song
 
 		Log.AppendNewLine();
 		Log.Append(2, "Loading {0}", @base);
-		Log.AppendUnderline(@base.Length + 8);
+		Log.AppendUnderline();
 
 		Song? newSong;
 

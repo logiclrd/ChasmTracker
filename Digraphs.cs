@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ChasmTracker.Utility;
 
 namespace ChasmTracker;
 
@@ -19,69 +20,69 @@ public class Digraphs
 			{ ('!', '!'), '|' },
 			{ ('!', ')'), '{' },
 			{ ('\'', '?'), '~' },
-			{ ('C', ','), (char)128 }, // LATIN CAPITAL LETTER C WITH CEDILLA
-			{ ('u', ':'), (char)129 }, // LATIN SMALL LETTER U WITH DIAERESIS
-			{ ('e', '\''), (char)130 }, // LATIN SMALL LETTER E WITH ACUTE
-			{ ('a', '>'), (char)131 }, // LATIN SMALL LETTER A WITH CIRCUMFLEX
-			{ ('a', ':'), (char)132 }, // LATIN SMALL LETTER A WITH DIAERESIS
-			{ ('a', '!'), (char)133 }, // LATIN SMALL LETTER A WITH GRAVE
-			{ ('a', 'a'), (char)134 }, // LATIN SMALL LETTER A WITH RING ABOVE
-			{ ('c', ','), (char)135 }, // LATIN SMALL LETTER C WITH CEDILLA
-			{ ('e', '>'), (char)136 }, // LATIN SMALL LETTER E WITH CIRCUMFLEX
-			{ ('e', ':'), (char)137 }, // LATIN SMALL LETTER E WITH DIAERESIS
-			{ ('e', '!'), (char)138 }, // LATIN SMALL LETTER E WITH GRAVE
-			{ ('i', ':'), (char)139 }, // LATIN SMALL LETTER I WITH DIAERESIS
-			{ ('i', '>'), (char)140 }, // LATIN SMALL LETTER I WITH CIRCUMFLEX
-			{ ('i', '!'), (char)141 }, // LATIN SMALL LETTER I WITH GRAVE
-			{ ('A', ':'), (char)142 }, // LATIN CAPITAL LETTER A WITH DIAERESIS
-			{ ('A', 'A'), (char)143 }, // LATIN CAPITAL LETTER A WITH RING ABOVE
-			{ ('E', '\''), (char)144 }, // LATIN CAPITAL LETTER E WITH ACUTE
-			{ ('a', 'e'), (char)145 }, // LATIN SMALL LETTER AE
-			{ ('A', 'E'), (char)146 }, // LATIN CAPITAL LETTER AE
-			{ ('o', '>'), (char)147 }, // LATIN SMALL LETTER O WITH CIRCUMFLEX
-			{ ('o', ':'), (char)148 }, // LATIN SMALL LETTER O WITH DIAERESIS
-			{ ('o', '!'), (char)149 }, // LATIN SMALL LETTER O WITH GRAVE
-			{ ('u', '>'), (char)150 }, // LATIN SMALL LETTER U WITH CIRCUMFLEX
-			{ ('u', '!'), (char)151 }, // LATIN SMALL LETTER U WITH GRAVE
-			{ ('y', ':'), (char)152 }, // LATIN SMALL LETTER Y WITH DIAERESIS
-			{ ('O', ':'), (char)153 }, // LATIN CAPITAL LETTER O WITH DIAERESIS
-			{ ('U', ':'), (char)154 }, // LATIN CAPITAL LETTER U WITH DIAERESIS
-			{ ('C', 't'), (char)155 }, // CENT SIGN
-			{ ('P', 'd'), (char)156 }, // POUND SIGN
-			{ ('Y', 'e'), (char)157 }, // YEN SIGN
-			{ ('P', 't'), (char)158 },
-			{ ('f', 'f'), (char)159 },
-			{ ('a', '\''), (char)160 }, // LATIN SMALL LETTER A WITH ACUTE
-			{ ('i', '\''), (char)161 }, // LATIN SMALL LETTER I WITH ACUTE
-			{ ('o', '\''), (char)162 }, // LATIN SMALL LETTER O WITH ACUTE
-			{ ('u', '\''), (char)163 }, // LATIN SMALL LETTER U WITH ACUTE
-			{ ('n', '?'), (char)164 }, // LATIN SMALL LETTER N WITH TILDE
-			{ ('N', '?'), (char)165 }, // LATIN CAPITAL LETTER N WITH TILDE
-			{ ('-', 'a'), (char)166 }, // FEMININE ORDINAL INDICATOR
-			{ ('-', 'o'), (char)167 }, // MASCULINE ORDINAL INDICATOR
-			{ ('?', 'I'), (char)168 }, // INVERTED QUESTION MARK
+			{ ('C', ','), ((byte)128).FromCP437() }, // LATIN CAPITAL LETTER C WITH CEDILLA
+			{ ('u', ':'), ((byte)129).FromCP437() }, // LATIN SMALL LETTER U WITH DIAERESIS
+			{ ('e', '\''), ((byte)130).FromCP437() }, // LATIN SMALL LETTER E WITH ACUTE
+			{ ('a', '>'), ((byte)131).FromCP437() }, // LATIN SMALL LETTER A WITH CIRCUMFLEX
+			{ ('a', ':'), ((byte)132).FromCP437() }, // LATIN SMALL LETTER A WITH DIAERESIS
+			{ ('a', '!'), ((byte)133).FromCP437() }, // LATIN SMALL LETTER A WITH GRAVE
+			{ ('a', 'a'), ((byte)134).FromCP437() }, // LATIN SMALL LETTER A WITH RING ABOVE
+			{ ('c', ','), ((byte)135).FromCP437() }, // LATIN SMALL LETTER C WITH CEDILLA
+			{ ('e', '>'), ((byte)136).FromCP437() }, // LATIN SMALL LETTER E WITH CIRCUMFLEX
+			{ ('e', ':'), ((byte)137).FromCP437() }, // LATIN SMALL LETTER E WITH DIAERESIS
+			{ ('e', '!'), ((byte)138).FromCP437() }, // LATIN SMALL LETTER E WITH GRAVE
+			{ ('i', ':'), ((byte)139).FromCP437() }, // LATIN SMALL LETTER I WITH DIAERESIS
+			{ ('i', '>'), ((byte)140).FromCP437() }, // LATIN SMALL LETTER I WITH CIRCUMFLEX
+			{ ('i', '!'), ((byte)141).FromCP437() }, // LATIN SMALL LETTER I WITH GRAVE
+			{ ('A', ':'), ((byte)142).FromCP437() }, // LATIN CAPITAL LETTER A WITH DIAERESIS
+			{ ('A', 'A'), ((byte)143).FromCP437() }, // LATIN CAPITAL LETTER A WITH RING ABOVE
+			{ ('E', '\''), ((byte)144).FromCP437() }, // LATIN CAPITAL LETTER E WITH ACUTE
+			{ ('a', 'e'), ((byte)145).FromCP437() }, // LATIN SMALL LETTER AE
+			{ ('A', 'E'), ((byte)146).FromCP437() }, // LATIN CAPITAL LETTER AE
+			{ ('o', '>'), ((byte)147).FromCP437() }, // LATIN SMALL LETTER O WITH CIRCUMFLEX
+			{ ('o', ':'), ((byte)148).FromCP437() }, // LATIN SMALL LETTER O WITH DIAERESIS
+			{ ('o', '!'), ((byte)149).FromCP437() }, // LATIN SMALL LETTER O WITH GRAVE
+			{ ('u', '>'), ((byte)150).FromCP437() }, // LATIN SMALL LETTER U WITH CIRCUMFLEX
+			{ ('u', '!'), ((byte)151).FromCP437() }, // LATIN SMALL LETTER U WITH GRAVE
+			{ ('y', ':'), ((byte)152).FromCP437() }, // LATIN SMALL LETTER Y WITH DIAERESIS
+			{ ('O', ':'), ((byte)153).FromCP437() }, // LATIN CAPITAL LETTER O WITH DIAERESIS
+			{ ('U', ':'), ((byte)154).FromCP437() }, // LATIN CAPITAL LETTER U WITH DIAERESIS
+			{ ('C', 't'), ((byte)155).FromCP437() }, // CENT SIGN
+			{ ('P', 'd'), ((byte)156).FromCP437() }, // POUND SIGN
+			{ ('Y', 'e'), ((byte)157).FromCP437() }, // YEN SIGN
+			{ ('P', 't'), ((byte)158).FromCP437() },
+			{ ('f', 'f'), ((byte)159).FromCP437() },
+			{ ('a', '\''), ((byte)160).FromCP437() }, // LATIN SMALL LETTER A WITH ACUTE
+			{ ('i', '\''), ((byte)161).FromCP437() }, // LATIN SMALL LETTER I WITH ACUTE
+			{ ('o', '\''), ((byte)162).FromCP437() }, // LATIN SMALL LETTER O WITH ACUTE
+			{ ('u', '\''), ((byte)163).FromCP437() }, // LATIN SMALL LETTER U WITH ACUTE
+			{ ('n', '?'), ((byte)164).FromCP437() }, // LATIN SMALL LETTER N WITH TILDE
+			{ ('N', '?'), ((byte)165).FromCP437() }, // LATIN CAPITAL LETTER N WITH TILDE
+			{ ('-', 'a'), ((byte)166).FromCP437() }, // FEMININE ORDINAL INDICATOR
+			{ ('-', 'o'), ((byte)167).FromCP437() }, // MASCULINE ORDINAL INDICATOR
+			{ ('?', 'I'), ((byte)168).FromCP437() }, // INVERTED QUESTION MARK
 
-			{ ('N', 'O'), (char)170 }, // NOT SIGN
-			{ ('1', '2'), (char)171 }, // VULGAR FRACTION ONE HALF
-			{ ('1', '4'), (char)174 }, // VULGAR FRACTION ONE QUARTER
-			{ ('!', 'I'), (char)175 }, // INVERTED EXCLAMATION MARK
-			{ ('<', '<'), (char)176 }, // LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
-			{ ('>', '>'), (char)177 }, // RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
+			{ ('N', 'O'), ((byte)170).FromCP437() }, // NOT SIGN
+			{ ('1', '2'), ((byte)171).FromCP437() }, // VULGAR FRACTION ONE HALF
+			{ ('1', '4'), ((byte)174).FromCP437() }, // VULGAR FRACTION ONE QUARTER
+			{ ('!', 'I'), ((byte)175).FromCP437() }, // INVERTED EXCLAMATION MARK
+			{ ('<', '<'), ((byte)176).FromCP437() }, // LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+			{ ('>', '>'), ((byte)177).FromCP437() }, // RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
 
-			{ ('s', 's'), (char)225 }, // LATIN SMALL LETTER SHARP S
-			{ ('p', 'i'), (char)227 }, // PI... mmm... pie...
-			{ ('M', 'y'), (char)230 }, // MICRO SIGN
-			{ ('o', '/'), (char)237 }, // LATIN SMALL LETTER O WITH STROKE
-			{ ('O', '/'), (char)237 }, // LATIN SMALL LETTER O WITH STROKE
-			{ ('+', '-'), (char)241 }, // PLUS-MINUS SIGN
-			{ ('-', ':'), (char)246 }, // DIVISION SIGN
-			{ ('D', 'G'), (char)248 }, // DEGREE SIGN
-			{ ('.', 'M'), (char)249 }, // MIDDLE DOT
-			{ ('2', 'S'), (char)253 }, // SUPERSCRIPT TWO
-			{ ('n', 'S'), (char)252 },
+			{ ('s', 's'), ((byte)225).FromCP437() }, // LATIN SMALL LETTER SHARP S
+			{ ('p', 'i'), ((byte)227).FromCP437() }, // PI... mmm... pie...
+			{ ('M', 'y'), ((byte)230).FromCP437() }, // MICRO SIGN
+			{ ('o', '/'), ((byte)237).FromCP437() }, // LATIN SMALL LETTER O WITH STROKE
+			{ ('O', '/'), ((byte)237).FromCP437() }, // LATIN SMALL LETTER O WITH STROKE
+			{ ('+', '-'), ((byte)241).FromCP437() }, // PLUS-MINUS SIGN
+			{ ('-', ':'), ((byte)246).FromCP437() }, // DIVISION SIGN
+			{ ('D', 'G'), ((byte)248).FromCP437() }, // DEGREE SIGN
+			{ ('.', 'M'), ((byte)249).FromCP437() }, // MIDDLE DOT
+			{ ('2', 'S'), ((byte)253).FromCP437() }, // SUPERSCRIPT TWO
+			{ ('n', 'S'), ((byte)252).FromCP437() },
 
-			{ ('P', 'I'), (char)20 },  // PILCROW SIGN
-			{ ('S', 'E'), (char)21 },  // SECTION SIGN
+			{ ('P', 'I'), ((byte)20).FromCP437() },  // PILCROW SIGN
+			{ ('S', 'E'), ((byte)21).FromCP437() },  // SECTION SIGN
 		};
 
 	public static char Digraph(char k1, char k2)

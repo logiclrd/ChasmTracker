@@ -397,7 +397,7 @@ public abstract class ModuleLoadSavePageBase : Page
 					bg = 0;
 				}
 
-				VGAMem.DrawTextLen(file.BaseName, 20, new Point(3, pos), (fg1, bg));
+				VGAMem.DrawTextUnicodeLen(file.BaseName, 20, new Point(3, pos), (fg1, bg));
 
 				VGAMem.DrawCharacter(168, new Point(23, pos), (2, bg));
 				VGAMem.DrawTextLen(file.Title, 25, new Point(24, pos), (fg2, bg));
@@ -663,7 +663,7 @@ public abstract class ModuleLoadSavePageBase : Page
 				bg = 0;
 			}
 
-			VGAMem.DrawTextLen(s_dlist[n].BaseName, width, new Point(51, pos), (fg, bg));
+			VGAMem.DrawTextUnicodeLen(s_dlist[n].BaseName, width, new Point(51, pos), (fg, bg));
 		}
 
 		/* bleh */

@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Text;
 
 namespace ChasmTracker.VGA;
@@ -123,7 +122,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Data[yl + (ch.C << 3)];
+					dg = Font.ITF[yl + (ch.C << 3)];
 					break;
 				case FontTypes.BIOS:
 					/* VGA BIOS character */
@@ -164,20 +163,25 @@ public static class VGAMem
 				case FontTypes.Unicode:
 				{
 					/* Any unicode character. */
-					uint c = ch.CUnicode;
+					char c = (char)ch.CUnicode;
+					int c8;
 
 					/* These are ordered by how often they will probably appear
 					 * for an average user of Chasm (i.e., English speakers). */
 					if (c >= 0x20 && c <= 0x7F) /* ASCII */
-						dg = Font.Data[yl + (c << 3)];
+						dg = Font.ITF[yl + (c << 3)];
 					else if (c >= 0xA0 && c <= 0xFF) /* extended latin */
 						dg = DefaultFonts.ExtendedLatin[yl + ((c - 0xA0) << 3)];
 					else if (c >= 0x390 && c <= 0x3C9) /* greek */
 						dg = DefaultFonts.Greek[yl + ((c - 0x390) << 3)];
 					else if (c >= 0x3040 && c <= 0x309F) /* japanese hiragana */
 						dg = DefaultFonts.Hiragana[yl + ((c - 0x3040) << 3)];
+					else if ((c8 = c.ToCP437()) >= 0)
+						dg = (c8.HasBitSet(0x80) ? DefaultFonts.Lower : DefaultFonts.UpperAlt)[yl + ((c8 & 0x7F) << 3)];
+					else if ((c8 = c.ToITF()) >= 0)
+						dg = Font.ITF[yl + (c8 << 3)];
 					else /* will display a ? if no cp437 equivalent found */
-						dg = Font.Data[yl + (((char)c).ToCP437() << 3)];
+						dg = Font.ITF[yl + ('?' << 3)];
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -227,7 +231,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Data[yl + (ch.C << 3)];
+					dg = Font.ITF[yl + (ch.C << 3)];
 					break;
 				case FontTypes.BIOS:
 					/* VGA BIOS character */
@@ -268,20 +272,25 @@ public static class VGAMem
 				case FontTypes.Unicode:
 				{
 					/* Any unicode character. */
-					uint c = ch.CUnicode;
+					char c = (char)ch.CUnicode;
+					int c8;
 
 					/* These are ordered by how often they will probably appear
 					 * for an average user of Chasm (i.e., English speakers). */
 					if (c >= 0x20 && c <= 0x7F) /* ASCII */
-						dg = Font.Data[yl + (c << 3)];
+						dg = Font.ITF[yl + (c << 3)];
 					else if (c >= 0xA0 && c <= 0xFF) /* extended latin */
 						dg = DefaultFonts.ExtendedLatin[yl + ((c - 0xA0) << 3)];
 					else if (c >= 0x390 && c <= 0x3C9) /* greek */
 						dg = DefaultFonts.Greek[yl + ((c - 0x390) << 3)];
 					else if (c >= 0x3040 && c <= 0x309F) /* japanese hiragana */
 						dg = DefaultFonts.Hiragana[yl + ((c - 0x3040) << 3)];
+					else if ((c8 = c.ToCP437()) >= 0)
+						dg = (c8.HasBitSet(0x80) ? DefaultFonts.Lower : DefaultFonts.UpperAlt)[yl + ((c8 & 0x7F) << 3)];
+					else if ((c8 = c.ToITF()) >= 0)
+						dg = Font.ITF[yl + (c8 << 3)];
 					else /* will display a ? if no cp437 equivalent found */
-						dg = Font.Data[yl + (((char)c).ToCP437() << 3)];
+						dg = Font.ITF[yl + ('?' << 3)];
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -331,7 +340,7 @@ public static class VGAMem
 					bg = ch.Colours.BG;
 					fg2 = fg;
 					bg2 = bg;
-					dg = Font.Data[yl + (ch.C << 3)];
+					dg = Font.ITF[yl + (ch.C << 3)];
 					break;
 				case FontTypes.BIOS:
 					/* VGA BIOS character */
@@ -372,20 +381,25 @@ public static class VGAMem
 				case FontTypes.Unicode:
 				{
 					/* Any unicode character. */
-					uint c = ch.CUnicode;
+					char c = (char)ch.CUnicode;
+					int c8;
 
 					/* These are ordered by how often they will probably appear
 					 * for an average user of Chasm (i.e., English speakers). */
 					if (c >= 0x20 && c <= 0x7F) /* ASCII */
-						dg = Font.Data[yl + (c << 3)];
+						dg = Font.ITF[yl + (c << 3)];
 					else if (c >= 0xA0 && c <= 0xFF) /* extended latin */
 						dg = DefaultFonts.ExtendedLatin[yl + ((c - 0xA0) << 3)];
 					else if (c >= 0x390 && c <= 0x3C9) /* greek */
 						dg = DefaultFonts.Greek[yl + ((c - 0x390) << 3)];
 					else if (c >= 0x3040 && c <= 0x309F) /* japanese hiragana */
 						dg = DefaultFonts.Hiragana[yl + ((c - 0x3040) << 3)];
+					else if ((c8 = c.ToCP437()) >= 0)
+						dg = (c8.HasBitSet(0x80) ? DefaultFonts.Lower : DefaultFonts.UpperAlt)[yl + ((c8 & 0x7F) << 3)];
+					else if ((c8 = c.ToITF()) >= 0)
+						dg = Font.ITF[yl + (c8 << 3)];
 					else /* will display a ? if no cp437 equivalent found */
-						dg = Font.Data[yl + (((char)c).ToCP437() << 3)];
+						dg = Font.ITF[yl + ('?' << 3)];
 
 					fg = ch.Colours.FG;
 					bg = ch.Colours.BG;
@@ -533,6 +547,11 @@ public static class VGAMem
 			return DrawTextBIOS(textBytes, position, colours);
 		}
 
+		return DrawTextUnicode(composed, position, colours);
+	}
+
+	public static int DrawTextUnicode(string composed, Point position, VGAMemColours colours)
+	{
 		for (int n = 0; n < composed.Length; n++)
 			DrawCharacterUnicode(composed[n], position.Advance(n), colours);
 
@@ -649,6 +668,16 @@ public static class VGAMem
 			return DrawTextBIOS(textBytes, position, colours);
 		}
 
+		return DrawTextUnicodeLen(composed, offset, len, position, colours);
+	}
+
+	public static int DrawTextUnicodeLen(string composed, int len, Point position, VGAMemColours colours)
+	{
+		return DrawTextUnicodeLen(composed, 0, len, position, colours);
+	}
+
+	public static int DrawTextUnicodeLen(string composed, int offset, int len, Point position, VGAMemColours colours)
+	{
 		int n, o;
 
 		for (n = offset, o = 0; (n < composed.Length) && (o < len); n++, o++)

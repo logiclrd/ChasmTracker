@@ -87,8 +87,8 @@ public class ListBoxWidget : Widget
 
 			bool toggled = GetToggled?.Invoke(o) ?? false;
 
-			VGAMem.DrawTextLen(toggled ? "*" : " ", 1, Position.Advance(0, i), (fg, bg));
-			VGAMem.DrawTextLen(GetName(o), Size.Width - 1, Position.Advance(1, i), (fg, bg));
+			VGAMem.DrawTextUnicodeLen(toggled ? "*" : " ", 1, Position.Advance(0, i), (fg, bg));
+			VGAMem.DrawTextUnicodeLen(GetName(o), Size.Width - 1, Position.Advance(1, i), (fg, bg));
 		}
 	}
 

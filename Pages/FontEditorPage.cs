@@ -316,7 +316,7 @@ to change the default font!
 	void HandleKeyEditBox(KeyEvent k)
 	{
 		int ci = _currentCharacter << 3;
-		var ptr = Font.Data.Slice(ci, 8);
+		var ptr = Font.ITF.Slice(ci, 8);
 
 		switch (k.Sym)
 		{
@@ -626,7 +626,7 @@ to change the default font!
 		int xRel = k.MousePosition.X - InnerX(EditBoxBounds);
 		int yRel = k.MousePosition.Y - InnerY(EditBoxBounds);
 
-		var ptr = new Span<byte>(Font.Data, ci, 8);
+		var ptr = new Span<byte>(Font.ITF, ci, 8);
 
 		if (xRel > 0 && yRel > 2)
 		{
@@ -868,7 +868,7 @@ to change the default font!
 					return true;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
 				{
-					Array.Copy(Font.Data, ci, _clipboard, 0, 8);
+					Array.Copy(Font.ITF, ci, _clipboard, 0, 8);
 					return true;
 				}
 				break;
@@ -877,7 +877,7 @@ to change the default font!
 					return true;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
 				{
-					Array.Copy(_clipboard, 0, Font.Data, ci, 8);
+					Array.Copy(_clipboard, 0, Font.ITF, ci, 8);
 					Status.Flags |= StatusFlags.NeedUpdate;
 					return true;
 				}
@@ -894,7 +894,7 @@ to change the default font!
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
 				{
 					for (n = 0; n < 8; n++)
-						Font.Data[ci + n] |= _clipboard[n];
+						Font.ITF[ci + n] |= _clipboard[n];
 					Status.Flags |= StatusFlags.NeedUpdate;
 					return true;
 				}
@@ -906,7 +906,7 @@ to change the default font!
 				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
 				{
 					for (int i = 0; i < 8; i++)
-						Font.Data[ci + i] = 0;
+						Font.ITF[ci + i] = 0;
 					Status.Flags |= StatusFlags.NeedUpdate;
 					return true;
 				}
@@ -919,11 +919,11 @@ to change the default font!
 				{
 					for (n = 0; n < 8; n++)
 					{
-						byte r = Font.Data[ci + n];
+						byte r = Font.ITF[ci + n];
 						r = unchecked((byte)(((r >> 1) & 0x55) | ((r << 1) & 0xaa)));
 						r = unchecked((byte)(((r >> 2) & 0x33) | ((r << 2) & 0xcc)));
 						r = unchecked((byte)(((r >> 4) & 0x0f) | ((r << 4) & 0xf0)));
-						Font.Data[ci + n] = r;
+						Font.ITF[ci + n] = r;
 					}
 
 					Status.Flags |= StatusFlags.NeedUpdate;
@@ -938,9 +938,9 @@ to change the default font!
 				{
 					for (n = 0; n < 4; n++)
 					{
-						byte r = Font.Data[ci + n];
-						Font.Data[ci + n] = Font.Data[ci + 7 - n];
-						Font.Data[ci + 7 - n] = r;
+						byte r = Font.ITF[ci + n];
+						Font.ITF[ci + n] = Font.ITF[ci + 7 - n];
+						Font.ITF[ci + 7 - n] = r;
 					}
 					Status.Flags |= StatusFlags.NeedUpdate;
 					return true;
@@ -953,7 +953,7 @@ to change the default font!
 				if (k.Modifiers.HasAnyFlag(KeyMod.Alt))
 				{
 					for (n = 0; n < 8; n++)
-						Font.Data[ci + n] ^= 255;
+						Font.ITF[ci + n] ^= 255;
 					Status.Flags |= StatusFlags.NeedUpdate;
 					return true;
 				}
@@ -1112,7 +1112,7 @@ to change the default font!
 				byte c;
 				int fg;
 
-				if ((Font.Data[ci + j] & (128 >> i)) != 0)
+				if ((Font.ITF[ci + j] & (128 >> i)) != 0)
 				{
 					c = 15;
 					fg = 6;

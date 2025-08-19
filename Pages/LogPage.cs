@@ -97,10 +97,7 @@ public class LogPage : Page
 		{
 			var line = Log.Lines[i];
 
-			if (line.BIOSFont)
-				VGAMem.DrawTextBIOSLen(line.Text, 74, new Point(3, 14 + n), (line.Colour, 0));
-			else
-				VGAMem.DrawTextLen(line.Text, 74, new Point(3, 14 + n), (line.Colour, 0));
+			VGAMem.DrawTextUnicodeLen(line.Text, 74, new Point(3, 14 + n), (line.Colour, 0));
 		}
 	}
 }

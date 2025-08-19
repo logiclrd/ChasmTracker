@@ -401,7 +401,7 @@ public abstract class InstrumentFileListPageBase : Page
 			VGAMem.DrawTextLen(file.Title,
 							25, new Point(6, pos), (fg, bg));
 			VGAMem.DrawCharacter(168, new Point(31, pos), (2, bg));
-			VGAMem.DrawTextLen(file.BaseName, 18, new Point(32, pos), (fg, bg));
+			VGAMem.DrawTextUnicodeLen(file.BaseName, 18, new Point(32, pos), (fg, bg));
 
 			if (!string.IsNullOrEmpty(file.BaseName) && _haveSlashSearch)
 			{
@@ -419,7 +419,7 @@ public abstract class InstrumentFileListPageBase : Page
 				if (highlightLength > 18)
 					highlightLength = 18;
 
-				VGAMem.DrawTextLen(file.BaseName, highlightLength, new Point(32, pos), (3, 1));
+				VGAMem.DrawTextUnicodeLen(file.BaseName, highlightLength, new Point(32, pos), (3, 1));
 			}
 
 			if (file.SampleCount > 1)
