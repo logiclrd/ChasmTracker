@@ -341,6 +341,7 @@ public static class AudioPlayback
 	public static int MixFrequency;
 	public static int MixBitsPerSample;
 	public static int MixChannels;
+	public static SourceMode MixInterpolation;
 	public static int RampingSamples; // default: 64
 	public static int MaxVoices;
 	public static int VULeft;
@@ -416,19 +417,10 @@ public static class AudioPlayback
 
 	public static bool SetResamplingMode(SourceMode mode)
 	{
-		var d = MixFlags & ~(MixFlags.NoResampling | MixFlags.HQResampler | MixFlags.UltraHQSourceMode);
+		if (!Enum.IsDefined(mode))
+			throw new ArgumentException("invalid value", nameof(mode));
 
-		switch (mode)
-		{
-			case SourceMode.Nearest: d |= MixFlags.NoResampling; break;
-			case SourceMode.Linear: break;
-			case SourceMode.Spline: d |= MixFlags.HQResampler; break;
-			case SourceMode.Polyphase: d |= MixFlags.HQResampler | MixFlags.UltraHQSourceMode; break;
-
-			default: return false;
-		}
-
-		MixFlags = d;
+		MixInterpolation = mode;
 
 		return true;
 	}

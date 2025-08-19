@@ -605,7 +605,7 @@ public static class SongRenderer
 		// Check IDO
 		chan.Flags &= ~(ChannelFlags.NoIDO | ChannelFlags.HQSource);
 
-		switch (AudioSettings.InterpolationMode)
+		switch (AudioPlayback.MixInterpolation)
 		{
 			case SourceMode.Nearest:
 				chan.Flags |= ChannelFlags.NoIDO;
@@ -621,26 +621,6 @@ public static class SongRenderer
 				if (chan.Increment == 0x10000)
 					chan.Flags |= ChannelFlags.NoIDO;
 				break;
-		}
-
-		if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoResampling))
-		{
-			chan.Flags &= ~ChannelFlags.HQSource;
-			chan.Flags |= ChannelFlags.NoIDO;
-		} else {
-			chan.Flags &= ~(ChannelFlags.NoIDO | ChannelFlags.HQSource);
-
-			if (chan.Increment == 0x10000)
-				chan.Flags |= ChannelFlags.NoIDO;
-			else
-			{
-				if (!(AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler))
-				 && !(AudioPlayback.MixFlags.HasAllFlags(MixFlags.UltraHQSourceMode)))
-				{
-					if (chan.Increment >= 0xFF00)
-						chan.Flags |= ChannelFlags.NoIDO;
-				}
-			}
 		}
 
 		chan.RightVolumeNew >>= Constants.MixingAttenuation;
@@ -665,19 +645,24 @@ public static class SongRenderer
 			int rightDelta = (chan.RightVolumeNew - chan.RightVolume) << Constants.VolumeRampPrecision;
 			int leftDelta  = (chan.LeftVolumeNew  - chan.LeftVolume) << Constants.VolumeRampPrecision;
 
-			if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler))
+			switch (AudioPlayback.MixInterpolation)
 			{
-				if (((chan.RightVolume | chan.LeftVolume) != 0)
-				 && ((chan.RightVolumeNew | chan.LeftVolumeNew) != 0)
-				 && !chan.Flags.HasAllFlags(ChannelFlags.FastVolumeRamp))
-				{
-					rampLength = csf.BufferCount;
+				case SourceMode.Spline:
+				case SourceMode.Polyphase:
+					/* XXX why only for spline/polyphase */
+					if (((chan.RightVolume | chan.LeftVolume) != 0)
+					 && ((chan.RightVolumeNew | chan.LeftVolumeNew) != 0)
+					 && !chan.Flags.HasAllFlags(ChannelFlags.FastVolumeRamp))
+					{
+						rampLength = csf.BufferCount;
 
-					int l = 1 << (Constants.VolumeRampPrecision - 1);
-					int r = AudioPlayback.RampingSamples;
+						int l = 1 << (Constants.VolumeRampPrecision - 1);
+						int r = AudioPlayback.RampingSamples;
 
-					rampLength = rampLength.Clamp(l, r);
-				}
+						rampLength = rampLength.Clamp(l, r);
+					}
+
+					break;
 			}
 
 			chan.RightRamp = rightDelta / rampLength;

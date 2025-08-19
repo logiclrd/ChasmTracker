@@ -1020,7 +1020,6 @@ public static class Mixer
 	//      [b2]    ramp
 	//      [b3]    filter
 	//      [b5-b4] src type
-	//      [b6]    fast
 	const int MixIndex_16Bit = 0x01;
 	const int MixIndex_Stereo = 0x02;
 	const int MixIndex_Ramp = 0x04;
@@ -1322,16 +1321,15 @@ public static class Mixer
 			if (channel.Flags.HasAllFlags(ChannelFlags.Filter))
 				flags |= MixIndex_Filter;
 
-			if (!channel.Flags.HasAllFlags(ChannelFlags.NoIDO) &&
-				!AudioPlayback.MixFlags.HasAllFlags(MixFlags.NoResampling))
+			if (!channel.Flags.HasAllFlags(ChannelFlags.NoIDO))
 			{
-				// use hq-fir mixer?
-				if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler | MixFlags.UltraHQSourceMode))
-					flags |= MixIndex_FIRSource;
-				else if (AudioPlayback.MixFlags.HasAllFlags(MixFlags.HQResampler))
-					flags |= MixIndex_SplineSource;
-				else
-					flags |= MixIndex_LinearSource;    // use
+				switch (AudioPlayback.MixInterpolation)
+				{
+					case SourceMode.Nearest:   flags |= 0;                     break;
+					case SourceMode.Linear:    flags |= MixIndex_LinearSource; break;
+					case SourceMode.Spline:    flags |= MixIndex_SplineSource; break;
+					case SourceMode.Polyphase: flags |= MixIndex_FIRSource;    break;
+				}
 			}
 
 			int numSamples = count;
