@@ -1448,21 +1448,24 @@ public static class Mixer
 
 						if (channel.Position >= lookaheadStart)
 						{
-							int samples_to_read = (channel.Increment < 0)
-								? (channel.Position - lookaheadStart)
-								: (channel.LoopEnd - channel.Position);
-
-							// this line causes sample 8 in BUTTERFL.XM to play incorrectly
-							//samples_to_read = MAX(samples_to_read, channel.LoopEnd - channel.LoopStart);
-							sampleCount = SamplesToBufferLength(samples_to_read, ref channel);
-
-							channel.CurrentSampleData = lookaheadPtr;
+							if (channel.Increment < 0)
+							{
+								sampleCount = SamplesToBufferLength(channel.Position - lookaheadStart, ref channel);
+								channel.CurrentSampleData = lookaheadPtr;
+							}
+							else if (channel.Position <= channel.LoopEnd)
+							{
+								sampleCount = SamplesToBufferLength(channel.LoopEnd - channel.Position, ref channel);
+								channel.CurrentSampleData = lookaheadPtr;
+							}
+							else
+								sampleCount = SamplesToBufferLength(channel.Length - channel.Position, ref channel);
 						}
 						else if (channel.Flags.HasAllFlags(ChannelFlags.LoopWrapped) && atLoopStart)
 						{
 							// Interpolate properly after looping
 							sampleCount = SamplesToBufferLength(channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize - channel.Position, ref channel);
-							channel.CurrentSampleData = lookaheadPtr.Shift((channel.LoopEnd - channel.LoopStart) * (channelSample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1));
+							channel.CurrentSampleData = lookaheadPtr.Shift((channel.Length - channel.LoopStart) * (channelSample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1) * (channelSample.Flags.HasAllFlags(SampleFlags._16Bit) ? 2 : 1));
 						}
 						else if (channel.Increment >= 0 && pos_dest >= (int)lookaheadStart && sampleCount > 1)
 							sampleCount = SamplesToBufferLength(lookaheadStart - channel.Position, ref channel);
