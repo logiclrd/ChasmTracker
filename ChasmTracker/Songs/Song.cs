@@ -7,6 +7,7 @@ using System.Text;
 
 namespace ChasmTracker.Songs;
 
+using System.Security.Cryptography;
 using ChasmTracker.Configurations;
 using ChasmTracker.Dialogs;
 using ChasmTracker.DiskOutput;
@@ -53,7 +54,7 @@ public class Song
 	public readonly List<SongHistory> History = new List<SongHistory>();
 	public SongHistory EditStart = new SongHistory();
 
-	public BitArray<SchismQuirks> SchismQuirks = new BitArray<SchismQuirks>();
+	public BitArray<SchismQuirks> Quirks = new BitArray<SchismQuirks>();
 
 	public IMIDISink? MIDISink;
 
@@ -1112,7 +1113,7 @@ public class Song
 
 		/* all zeroes should be the default playing configuration,
 		 * anything else increases complexity unfortunately */
-		SchismQuirks.SetAll(true);
+		Quirks.SetAll(true);
 
 		Array.Clear(MIDINoteTracker);
 		Array.Clear(MIDIVolTracker);
@@ -3361,7 +3362,12 @@ public class Song
 				&& chan.Flags.HasAnyFlag(ChannelFlags.NoteFade | ChannelFlags.KeyOff)
 				&& Flags.HasAllFlags(SongFlags.ITOldEffects)
 			))
-				EnvelopeReset(ref chan, instrumentChanged || (chan.FadeOutVolume == 0) || !SongNote.IsNote(chan.RowNote));
+			{
+				EnvelopeReset(ref chan, instrumentChanged
+					|| (Quirks[SchismQuirks.CarryAfterNoteOff]
+						? ((chan.FadeOutVolume == 0) || !SongNote.IsNote(chan.RowNote))
+						: chan.Flags.HasAllFlags(ChannelFlags.KeyOff)));
+			}
 			else if (!pEnv.Flags.HasAllFlags(InstrumentFlags.VolumeEnvelope))
 			{
 				// XXX why is this being done?
