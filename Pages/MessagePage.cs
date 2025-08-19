@@ -397,14 +397,14 @@ public class MessagePage : Page
 				} while (n > 0);
 			}
 		}
-		else if (c < 32 && c != '\r')
+		else if (c < 32 && c != '\r' && c != '\n')
 			return;
 		else
 		{
 			if (!AddChar(c, _cursorPos))
 				return;
 			_cursorPos++;
-			if (c == '\r')
+			if (c == '\r' || c == '\n')
 			{
 				_cursorChar = 0;
 				_cursorLine++;
@@ -805,8 +805,12 @@ public class MessagePage : Page
 				else if (k.Mouse == MouseState.None)
 				{
 					if (!string.IsNullOrEmpty(k.Text))
+						return HandleTextInputEditMode(k.ToTextInputEvent());
+					else if (k.Sym == KeySym.Tab)
 					{
-						HandleTextInputEditMode(k.ToTextInputEvent());
+						if (k.State == KeyState.Press)
+							InsertChar('\t');
+
 						return true;
 					}
 
