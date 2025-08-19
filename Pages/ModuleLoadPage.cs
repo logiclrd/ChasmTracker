@@ -2,7 +2,6 @@ using System.IO;
 
 namespace ChasmTracker.Pages;
 
-using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;

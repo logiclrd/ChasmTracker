@@ -325,7 +325,7 @@ public abstract class InstrumentFileListPageBase : Page
 
 		if (k.Mouse == MouseState.Click)
 		{
-			if (k.State == KeyState.Release)
+			if (k.State != KeyState.Press)
 				return false;
 		}
 		else if (k.Mouse == MouseState.DoubleClick)

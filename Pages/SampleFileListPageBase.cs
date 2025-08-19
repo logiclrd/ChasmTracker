@@ -791,7 +791,7 @@ public class SampleFileListPageBase : Page
 
 		if (k.Mouse == MouseState.Click)
 		{
-			if (k.State == KeyState.Press)
+			if (k.State != KeyState.Press)
 				return false;
 		}
 		else if (k.Mouse == MouseState.DoubleClick)

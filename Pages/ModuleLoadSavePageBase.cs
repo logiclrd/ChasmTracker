@@ -584,7 +584,7 @@ public abstract class ModuleLoadSavePageBase : Page
 		switch (k.Mouse)
 		{
 			case MouseState.Click:
-				if (k.State == KeyState.Press)
+				if (k.State != KeyState.Press)
 					return false;
 				newFile = (k.MousePosition.Y - 13) + s_topFile;
 				break;
@@ -801,16 +801,8 @@ public abstract class ModuleLoadSavePageBase : Page
 				break;
 		}
 
-		if (k.Mouse == MouseState.Click)
-		{
-			if (k.State == KeyState.Press)
-				return false;
-		}
-		else
-		{
-			if (k.State == KeyState.Release)
-				return false;
-		}
+		if (k.State != KeyState.Press)
+			return false;
 
 		newDir = newDir.Clamp(0, s_dlist.NumDirectories - 1);
 		if (newDir != s_dlist.SelectedIndex)
