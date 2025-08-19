@@ -150,8 +150,6 @@ public class AU : SampleFileConverter
 		var smp = new SongSample();
 
 		smp.C5Speed = au.SampleRate;
-		smp.Volume = 64 * 4;
-		smp.GlobalVolume = 64;
 		smp.Length = au.DataSize;
 
 		switch (au.Encoding)

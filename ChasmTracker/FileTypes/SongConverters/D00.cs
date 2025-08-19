@@ -590,8 +590,6 @@ public class D00 : SongFileConverter
 			stream.ReadByte();
 #endif
 
-			smp.Volume = 64 * 4; //mphack
-
 			/* It's probably safe to ignore these */
 #if false
 			Log.Append(1, "timer: {0}", stream.ReadByte());

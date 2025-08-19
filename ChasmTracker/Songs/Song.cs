@@ -1400,8 +1400,6 @@ public class Song
 		var newSample = new SongSample();
 
 		newSample.C5Speed = 8363;
-		newSample.Volume = 64 * 4;
-		newSample.GlobalVolume = 64;
 
 		lock (AudioPlayback.LockScope())
 		{
@@ -1428,8 +1426,6 @@ public class Song
 			var newSample = new SongSample();
 
 			newSample.C5Speed = 8363;
-			newSample.Volume = 64 * 4;
-			newSample.GlobalVolume = 64;
 
 			Samples.RemoveAt(n);
 			Samples.Add(newSample);
@@ -5231,8 +5227,6 @@ public class Song
 				new SongSample()
 				{
 					C5Speed = 8363,
-					Volume = 64 * 4,
-					GlobalVolume = 64,
 				};
 		}
 	}

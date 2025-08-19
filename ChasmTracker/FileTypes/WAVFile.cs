@@ -256,8 +256,6 @@ public static class WAVFile
 		var smp = new SongSample();
 
 		smp.Flags = 0; // flags are set by csf_read_sample
-		smp.Volume = 64 * 4;
-		smp.GlobalVolume = 64;
 		smp.C5Speed = fmt.FreqHz;
 		smp.Length = dataChunk.Size / ((fmt.BitsPerSample / 8) * fmt.Channels);
 

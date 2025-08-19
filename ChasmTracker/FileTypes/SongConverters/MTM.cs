@@ -168,7 +168,6 @@ public class MTM : SongFileConverter
 			sample.C5Speed = SongNote.TransposeToFrequency(0, finetune * 16);
 			sample.Volume = stream.ReadByte();
 			sample.Volume *= 4; //mphack
-			sample.GlobalVolume = 64;
 			if (stream.ReadByte().HasBitSet(1))
 			{
 				sample.Flags |= SampleFlags._16Bit;

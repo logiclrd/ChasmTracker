@@ -319,7 +319,6 @@ public class FAR : SongFileConverter
 				if (smp.LoopEnd > smp.LoopStart && fsmp.Loop.HasAllFlags(FARLoopFlags.Enabled))
 					smp.Flags |= SampleFlags.Loop;
 				smp.C5Speed = 16726;
-				smp.GlobalVolume = 64;
 
 				SampleFileConverter.ReadSample(smp, SampleFormat.LittleEndian | SampleFormat.Mono | SampleFormat.PCMSigned | (fsmp.Type.HasAllFlags(FARSampleType._16bit) ? SampleFormat._16 : SampleFormat._8), stream);
 			}

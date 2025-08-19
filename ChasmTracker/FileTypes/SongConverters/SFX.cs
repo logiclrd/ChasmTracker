@@ -130,7 +130,6 @@ public class SFX : SongFileConverter
 				if (sample.Volume > 64)
 					sample.Volume = 64;
 				sample.Volume *= 4; //mphack
-				sample.GlobalVolume = 64;
 				sample.LoopStart = ByteSwap.Swap(stream.ReadStructure<ushort>());
 				tmp = ByteSwap.Swap(stream.ReadStructure<ushort>()) * 2; /* loop length */
 				if (tmp > 2)

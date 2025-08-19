@@ -33,8 +33,6 @@ public class RAW : SampleFileConverter
 		var smp = new SongSample();
 
 		smp.C5Speed = 8363;
-		smp.Volume = 64 * 4;
-		smp.GlobalVolume = 64;
 		smp.Length = (int)Math.Min(len, 1 << 22); /* max of 4MB */
 
 		ReadSample(smp, SampleFormat.LittleEndian | SampleFormat._8 | SampleFormat.PCMUnsigned | SampleFormat.Mono, stream);

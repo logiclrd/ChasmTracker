@@ -902,8 +902,6 @@ public class MDL : SongFileConverter
 				smp.Flags |= SampleFlags.PingPongLoop;
 
 			packType[sampleInfo.SampleNumber] = (MDLPackType)(sampleInfo.Flags & MDLSampleFlags.PackTypeMask);
-
-			smp.GlobalVolume = 64;
 		}
 	}
 
@@ -948,8 +946,6 @@ public class MDL : SongFileConverter
 				smp.Flags |= SampleFlags.PingPongLoop;
 
 			packType[sampleInfo.SampleNumber] = (MDLPackType)(sampleInfo.Flags & MDLSampleFlags.PackTypeMask);
-
-			smp.GlobalVolume = 64;
 		}
 	}
 

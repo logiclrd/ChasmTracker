@@ -49,9 +49,6 @@ public class FLAC : SampleFileConverter
 		{
 			var sample = decoder.Sample ?? throw new Exception("Internal error");
 
-			sample.Volume = 64 * 4;
-			sample.GlobalVolume = 64;
-
 			/* libFLAC *always* returns signed */
 			SampleFormat flags = SampleFormat.PCMSigned;
 
@@ -88,9 +85,6 @@ public class FLAC : SampleFileConverter
 
 			if (sample == null)
 				return false;
-
-			sample.Volume = 64 * 4;
-			sample.GlobalVolume = 64;
 
 			file.FillFromSample(sample);
 

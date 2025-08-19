@@ -16,8 +16,8 @@ public class SongSample
 	public Span<short> Data16 => (Data.Length > 0) ? MemoryMarshal.Cast<byte, short>(Data.AsSpan()) : Span<short>.Empty;
 	public int C5Speed = 8363;
 	public int Panning;
-	public int Volume = 64 * 4;
-	public int GlobalVolume = 64;
+	public int Volume = 64 * 4;     /* this was repeated multiple times */
+	public int GlobalVolume = 64;   /* in the sample loaders */
 	public SampleFlags Flags;
 	public VibratoType VibratoType;
 	public int VibratoRate;

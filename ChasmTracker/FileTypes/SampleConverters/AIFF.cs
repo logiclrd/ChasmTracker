@@ -177,7 +177,6 @@ public class AIFF : SampleFileConverter
 					chunkVHDR.volume = (chunkVHDR.volume + 512) / 1024;
 
 					smp.Volume = (int)chunkVHDR.volume * 4; //mphack
-					smp.GlobalVolume = 64;
 
 					// this is done kinda weird
 					smp.LoopEnd = (int)ByteSwap.Swap(chunkVHDR.smp_highoct_repeat);
@@ -311,8 +310,6 @@ public class AIFF : SampleFileConverter
 					if (chunkCOMM.sample_rate != null)
 						smp.C5Speed = (int)Float80.FromIEEE80Bytes(chunkCOMM.sample_rate);
 					smp.Length = (int)ByteSwap.Swap(chunkCOMM.num_frames);
-					smp.Volume = 64 * 4;
-					smp.GlobalVolume = 64;
 
 					// the audio data starts 8 bytes into the chunk
 					// (don't care about the block alignment stuff)

@@ -61,7 +61,6 @@ public class S3I : SampleFileConverter
 			smp.Name = fp.ReadString(28);
 
 			smp.Flags = 0;
-			smp.GlobalVolume = 64;
 
 			if (type == S3IType.PCM)
 			{

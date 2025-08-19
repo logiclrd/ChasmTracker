@@ -255,8 +255,6 @@ public class W64 : SampleFileConverter
 			}
 
 			smp.Flags         = 0; // flags are set by csf_read_sample
-			smp.Volume        = 64 * 4;
-			smp.GlobalVolume  = 64;
 			smp.C5Speed       = fmt.FreqHz;
 			smp.Length        = (int)(dataChunk.Size / (fmt.Channels * (fmt.BitsPerSample / 8)));
 
