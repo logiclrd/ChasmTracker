@@ -612,8 +612,7 @@ public static class Mixer
 		protected void StoreVUMeter(int volLX, int volLY)
 		{
 			int volAvg = avg_u32(volLX, volLY);
-			if (volAvg > 0xFF0000) volAvg = 0xFF0000;
-			if (volAvg > Max) Max = volAvg;
+			if (Max < volAvg) Max = volAvg;
 		}
 
 		public abstract void Do(int volL, int volR, ref int leftRampVolume, ref int rightRampVolume, ref SongVoice chan, Span<int> pVol);
@@ -1514,6 +1513,8 @@ public static class Mixer
 			} while (numSamples > 0);
 
 			channel.VUMeter >>= 16;
+			if (channel.VUMeter > 0xFF)
+				channel.VUMeter = 0xFF;
 
 			numChannelsMixed += nAddMix;
 		}
