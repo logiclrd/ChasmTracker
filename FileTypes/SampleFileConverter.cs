@@ -1360,6 +1360,15 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 
 			writer.Flush();
 
+			if (flags.HasAnyFlag(SampleFormat._16))
+				len *= 2;
+			else if (flags.HasAnyFlag(SampleFormat._24))
+				len *= 3;
+			if (flags.HasAnyFlag(SampleFormat._32))
+				len *= 4;
+			if (flags.HasAnyFlag(SampleFormat._64))
+				len *= 8;
+
 			return len;
 		}
 		catch (NotSupportedException e)
