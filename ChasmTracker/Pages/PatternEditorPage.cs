@@ -117,7 +117,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 		_currentChannel = _currentChannel.Clamp(1, Constants.MaxChannels);
 		Reposition();
-		if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
+		if (k.Modifiers.HasAnyFlag(KeyMod.Shift) && (k.Sym != KeySym.Tab))
 			ShiftSelectionUpdate();
 
 		Status.Flags |= StatusFlags.NeedUpdate;
@@ -3774,11 +3774,10 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 	{
 		int maxRowNumber = Song.CurrentSong.GetPatternLength(_currentPattern) - 1;
 
-		/* hack to render this useful :)
-		 * XXX what the hell was this supposed to do? */
-		if (k.Sym == KeySym.KP_9)
+		/* hack to render this useful :) */
+		if (k.OriginalSym == KeySym.KP_9)
 			k.Sym = KeySym.F9;
-		else if (k.Sym == KeySym.KP_0)
+		else if (k.OriginalSym == KeySym.KP_0)
 			k.Sym = KeySym.F10;
 
 		int n = k.NumericValue(false);
@@ -3787,6 +3786,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		{
 			if (k.State == KeyState.Release)
 				return true;
+			/* IT just sets it to 9, why is this here?  --paper */
 			_skipValue = (n == 9) ? 16 : n;
 			Status.FlashText("Cursor step set to " + _skipValue);
 			return true;
@@ -4663,10 +4663,6 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 					_currentChannel--;
 
 				_currentPosition = 0;
-
-				/* hack to keep shift-tab from changing the selection */
-				k.Modifiers &= ~KeyMod.Shift;
-				ShiftSelectionEnd();
 
 				return null;
 			case KeySym.PageUp:
