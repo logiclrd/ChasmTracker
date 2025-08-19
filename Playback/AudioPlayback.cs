@@ -1086,7 +1086,16 @@ public static class AudioPlayback
 			driverName = "dsound";
 
 		if (string.IsNullOrEmpty(driverName))
-			driverName = Environment.GetEnvironmentVariable("SDL_AUDIODRIVER");
+		{
+			string? n = Environment.GetEnvironmentVariable("SDL_AUDIO_DRIVER");
+			if (n != null) driverName = n;
+		}
+
+		if (string.IsNullOrEmpty(driverName))
+		{
+			string? n = Environment.GetEnvironmentVariable("SDL_AUDIODRIVER");
+			if (n != null) driverName = n;
+		}
 
 		// Initialize all backends (for audio driver listing)
 		if (!s_backendsInitialized)

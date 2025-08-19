@@ -135,6 +135,9 @@ public class SDLAudioBackend : AudioBackend
 		if (!_audioDevices.TryGetValue(deviceIndex, out var dev))
 			return;
 
+		Assert.IsTrue(dev.Stream == stream, "dev.Stream == stream", "streams should never differ");
+
+
 		if (additionalAmount > 0)
 		{
 			byte *data = stackalloc byte[additionalAmount];
