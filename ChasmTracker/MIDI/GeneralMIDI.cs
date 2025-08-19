@@ -628,8 +628,8 @@ public static class GeneralMIDI
 			if (bendMode == MIDIBendMode.Down) note += (int)(0x2000 / SemitoneBendDepth);
 			if (bendMode == MIDIBendMode.Up)   note -= (int)(0x2000 / SemitoneBendDepth);
 
-			if (note < 1) note = 1;
-			if (note > 127) note = 127;
+			note = note.Clamp(1, 127);
+
 			KeyOn(csf, c, note, vol);
 		}
 
@@ -646,14 +646,12 @@ public static class GeneralMIDI
 			//bend = (bend / bend_artificial_inaccuracy) * bend_artificial_inaccuracy;
 
 			// Clamp the bending value so that we won't break the protocol
-			if(bend < 0) bend = 0;
-			if(bend > 0x3FFF) bend = 0x3FFF;
+			bend = bend.Clamp(0, 0x3FFF);
 
 			Bend(csf, c, bend);
 		}
 
-		if (vol < 0) vol = 0;
-		else if (vol > 127) vol = 127;
+		vol = vol.Clamp(0, 127);
 
 		//if (!newNote)
 		Touch(csf, c, vol);
@@ -676,7 +674,7 @@ public static class GeneralMIDI
 		csf.MIDILastSongCounter = 0.0;
 	}
 
-
+	/* XXX what the hell is all this? */
 	public static void IncrementSongCounter(Song csf, int count)
 	{
 		/* We assume that one schism tick = one midi tick (24ppq).
