@@ -1016,55 +1016,33 @@ public abstract class Page : WidgetContext
 				Keyboard.CurrentOctave++;
 				break;
 			case KeySym.LeftBracket:
-				if (k.State == KeyState.Release) break;
-				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
-				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-				{
-					Song.CurrentSong.SetCurrentSpeed(Song.CurrentSong.CurrentSpeed - 1);
-					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
-					if (!AudioPlayback.IsPlaying)
-						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
-				}
-				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
-				{
-					Song.CurrentSong.SetCurrentTempo(Song.CurrentSong.CurrentTempo - 1);
-					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
-					if (!AudioPlayback.IsPlaying)
-						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
-				}
-				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				{
-					Song.CurrentSong.SetCurrentGlobalVolume(Song.CurrentSong.CurrentGlobalVolume - 1);
-					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
-					if (!AudioPlayback.IsPlaying)
-						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
-				}
-				return;
 			case KeySym.RightBracket:
+				/* FIXME: this assumes a US keyboard layout */
+				int add = (k.Sym == KeySym.LeftBracket) ? -1 : 1;
+
 				if (k.State == KeyState.Release) break;
 				if (Status.Flags.HasFlag(StatusFlags.DiskWriterActive)) return;
 				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
 				{
-					Song.CurrentSong.SetCurrentSpeed(Song.CurrentSong.CurrentSpeed + 1);
+					Song.CurrentSong.SetCurrentSpeed(Song.CurrentSong.CurrentSpeed + add);
 					Status.FlashText($"Speed set to {Song.CurrentSong.CurrentSpeed} frames per row");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialSpeed = Song.CurrentSong.CurrentSpeed;
 				}
 				else if (k.Modifiers.HasAnyFlag(KeyMod.Control) && !Status.Flags.HasFlag(StatusFlags.ClassicMode))
 				{
-					Song.CurrentSong.SetCurrentTempo(Song.CurrentSong.CurrentTempo + 1);
+					Song.CurrentSong.SetCurrentTempo(Song.CurrentSong.CurrentTempo + add);
 					Status.FlashText($"Tempo set to {Song.CurrentSong.CurrentTempo} beats per minute");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialTempo = Song.CurrentSong.CurrentTempo;
 				}
 				else if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 				{
-					Song.CurrentSong.SetCurrentGlobalVolume(Song.CurrentSong.CurrentGlobalVolume + 1);
+					Song.CurrentSong.SetCurrentGlobalVolume(Song.CurrentSong.CurrentGlobalVolume + add);
 					Status.FlashText($"Global volume set to {Song.CurrentSong.CurrentGlobalVolume}");
 					if (!AudioPlayback.IsPlaying)
 						Song.CurrentSong.InitialGlobalVolume = Song.CurrentSong.CurrentGlobalVolume;
 				}
-
 				return;
 		}
 
