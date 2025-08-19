@@ -4895,18 +4895,19 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 
 			case KeySym.LeftShift:
 			case KeySym.RightShift:
-				if (k.State == KeyState.Press)
+				if (k.State == KeyState.Release)
 				{
 					if (_shiftSelection.InProgress)
 						ShiftSelectionEnd();
-				}
-				else if (_shiftChordChannels != 0)
-				{
-					_currentChannel -= _shiftChordChannels;
-					while (_currentChannel < 1)
-						_currentChannel += Constants.MaxChannels;
-					AdvanceCursor(nextRow: true, multichannel: true);
-					_shiftChordChannels = 0;
+
+					if (_shiftChordChannels != 0)
+					{
+						_currentChannel -= _shiftChordChannels;
+						while (_currentChannel < 1)
+							_currentChannel += Constants.MaxChannels;
+						AdvanceCursor(nextRow: true, multichannel: true);
+						_shiftChordChannels = 0;
+					}
 				}
 				return true;
 
