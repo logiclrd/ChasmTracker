@@ -3644,19 +3644,19 @@ public class Song
 				chan.Flags |= ChannelFlags.FastVolumeRamp;
 				break;
 
-			case Effects.PortamentoUp:
+			case Effects.PortamentoUp: // Fxx
 				EffectPortamentoUp(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPitchSlide);
 				break;
 
-			case Effects.PortamentoDown:
+			case Effects.PortamentoDown: // Exx
 				EffectPortamentoDown(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPitchSlide);
 				break;
 
-			case Effects.VolumeSlide:
+			case Effects.VolumeSlide: // Dxx
 				EffectVolumeSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param);
 				break;
 
-			case Effects.TonePortamento:
+			case Effects.TonePortamento: // Gxx
 				EffectTonePortamento(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, chan.MemPortaNote);
 				break;
 
@@ -3674,7 +3674,7 @@ public class Song
 				EffectVibrato(ref chan, 0);
 				break;
 
-			case Effects.Speed:
+			case Effects.Speed: // Axx
 				if (Flags.HasAllFlags(SongFlags.FirstTick) && (param != 0))
 				{
 					TickCount = param;
@@ -3682,7 +3682,7 @@ public class Song
 				}
 				break;
 
-			case Effects.Tempo:
+			case Effects.Tempo: // Txx
 				if (Flags.HasAllFlags(SongFlags.FirstTick))
 				{
 					if (param != 0)
@@ -3713,7 +3713,7 @@ public class Song
 				}
 				break;
 
-			case Effects.Offset:
+			case Effects.Offset: // Oxx
 				if (!Flags.HasAllFlags(SongFlags.FirstTick))
 					break;
 				if (param != 0)
@@ -3734,7 +3734,7 @@ public class Song
 					chan.MemArpeggio = param;
 				break;
 
-			case Effects.Retrigger:
+			case Effects.Retrigger: // Qxy
 				if (param != 0)
 					chan.MemRetrig = param & 0xFF;
 				EffectRetriggerNote(nchan, chan.MemRetrig);
@@ -3860,6 +3860,32 @@ public class Song
 				break;
 			case Effects.NoteSlideDown:
 				EffectNoteSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param, -1);
+				break;
+
+			case Effects.MIDI: // Zxx
+				if (!Flags.HasAnyFlag(SongFlags.FirstTick))
+					break;
+
+				int vel = (chan.Sample != null)
+					? (int)(((chan.Volume + chan.VolumeSwing) * CurrentGlobalVolume)
+							* (long)(chan.GlobalVolume * chan.InstrumentVolume)
+							/ (1 << 20))
+					: 0;
+
+				MIDITranslator.ProcessMIDIMacro(
+					this,
+					nchan,
+					(chan.RowParam < 0x80)
+						? MIDIConfig.SFx[chan.ActiveMacro]
+						: MIDIConfig.Zxx[chan.RowParam & 0x7F],
+					chan.RowParam,
+					chan.Note,
+					vel,
+					0);
+
+				/* stupid ugly hack */
+				chan.DidMacro = true;
+
 				break;
 		}
 	}

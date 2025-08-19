@@ -384,6 +384,9 @@ public static class SongRenderer
 		* OpenMPT also doesn't entirely support IT's version of this macro, which is
 		* just another demotivator for actually implementing it correctly *sigh* */
 
+		if (chan.DidMacro)
+			return;
+
 		if (chan.RowEffect == Effects.MIDI && (csf.Flags.HasAllFlags(SongFlags.FirstTick)))
 		{
 			int vel = chan.Sample != null
@@ -391,7 +394,9 @@ public static class SongRenderer
 				: 0;
 
 			MIDITranslator.ProcessMIDIMacro(csf, voiceNumber,
-				(chan.RowParam < 0x80) ? csf.MIDIConfig.SFx[chan.ActiveMacro] : csf.MIDIConfig.Zxx[chan.RowParam & 0x7F],
+				(chan.RowParam < 0x80)
+				? csf.MIDIConfig.SFx[chan.ActiveMacro]
+				: csf.MIDIConfig.Zxx[chan.RowParam & 0x7F],
 				chan.RowParam, chan.Note, vel, 0);
 		}
 	}

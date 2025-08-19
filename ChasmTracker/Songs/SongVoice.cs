@@ -119,6 +119,8 @@ public struct SongVoice
 	public int RowParam;
 	public int ActiveMacro, LastInstrumentNumber;
 
+	public bool DidMacro; // stupid hack to get Zxx kinda working
+
 	public bool IsMuted
 	{
 		get => Flags.HasAllFlags(ChannelFlags.Mute);
