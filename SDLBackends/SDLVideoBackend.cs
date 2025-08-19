@@ -116,6 +116,7 @@ public class SDLVideoBackend : VideoBackend
 		VGAMem.Flip();
 
 		SDL.SetHint(SDL.Hints.VideoX11NetWMBypassCompositor, "0");
+		SDL.SetHint(SDL.Hints.WindowsCloseOnAltF4, "0");
 		SDL.SetHint("SDL_WINDOWS_DPI_AWARENESS", "unaware");
 
 		_size = Configuration.Video.Size;
