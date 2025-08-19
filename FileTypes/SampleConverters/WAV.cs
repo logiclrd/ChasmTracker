@@ -32,17 +32,12 @@ public class WAV : SampleFileConverter
 		{
 			var smp = LoadSample(stream);
 
-			file.SampleFlags = smp.Flags;
-			file.SampleSpeed = smp.C5Speed;
-			file.SampleLength = smp.Length;
-			file.SampleLoopStart = smp.LoopStart;
-			file.SampleLoopEnd = smp.LoopEnd;
-			file.SampleSustainStart = smp.SustainStart;
-			file.SampleSustainEnd = smp.SustainEnd;
+			smp.FileName = file.BaseName;
+
+			file.FillFromSample(smp);
 
 			file.Description = "IBM/Microsoft RIFF Audio";
 			file.Type = FileTypes.SamplePlain;
-			file.SampleFileName = file.BaseName;
 
 			return true;
 		}

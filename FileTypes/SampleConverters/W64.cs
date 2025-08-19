@@ -300,17 +300,12 @@ public class W64 : SampleFileConverter
 			if (!Load(stream, smp, loadSampleData: false))
 				return false;
 
-			file.SampleFlags = smp.Flags;
-			file.SampleSpeed = smp.C5Speed;
-			file.SampleLength = smp.Length;
-			file.SampleLoopStart = smp.LoopStart;
-			file.SampleLoopEnd = smp.LoopEnd;
-			file.SampleSustainStart = smp.SustainStart;
-			file.SampleSustainEnd = smp.SustainEnd;
+			smp.FileName = file.BaseName;
+
+			file.FillFromSample(smp);
 
 			file.Description = Description;
 			file.Type = FileTypes.SamplePlain;
-			file.SampleFileName = file.BaseName;
 
 			return true;
 		}

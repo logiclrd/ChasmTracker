@@ -127,14 +127,7 @@ public class S3I : SampleFileConverter
 		{
 			var smp = LoadSample(stream);
 
-			file.SampleLength = smp.Length;
-			file.SampleFlags = smp.Flags;
-			file.SampleDefaultVolume = smp.Volume;
-			file.SampleGlobalVolume = smp.GlobalVolume;
-			file.SampleLoopStart = smp.LoopStart;
-			file.SampleLoopEnd = smp.LoopEnd;
-			file.SampleSpeed = smp.C5Speed;
-			file.SampleFileName = smp.FileName;
+			file.FillFromSample(smp);
 
 			file.Description = "Scream Tracker Sample";
 			file.Title = smp.Name;

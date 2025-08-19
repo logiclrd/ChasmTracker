@@ -170,4 +170,21 @@ public class FileReference : Reference, IComparable<FileReference> // dmoz_file
 
 		return false;
 	}
+
+	public void FillFromSample(SongSample smp)
+	{
+		SampleFlags         = smp.Flags;
+		SampleSpeed         = smp.C5Speed;
+		SampleLength        = smp.Length;
+		SampleLoopStart     = smp.LoopStart;
+		SampleLoopEnd       = smp.LoopEnd;
+		SampleSustainStart  = smp.SustainStart;
+		SampleSustainEnd    = smp.SustainEnd;
+		SampleDefaultVolume = smp.Volume >> 2; //mphack
+		SampleGlobalVolume  = smp.GlobalVolume;
+		SampleVibratoSpeed  = smp.VibratoSpeed;
+		SampleVibratoDepth  = smp.VibratoDepth;
+		SampleVibratoRate   = smp.VibratoRate;
+		SampleFileName      = smp.FileName;
+	}
 }

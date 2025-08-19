@@ -89,16 +89,13 @@ public class FLAC : SampleFileConverter
 			if (sample == null)
 				return false;
 
-			file.SampleFlags = sample.Flags;
-			file.SampleSpeed = sample.C5Speed;
-			file.SampleLength = sample.Length;
-			file.SampleLoopStart = sample.LoopStart;
-			file.SampleLoopEnd = sample.LoopEnd;
-			file.SampleSustainStart = sample.SustainStart;
-			file.SampleSustainEnd = sample.SustainEnd;
+			sample.Volume = 64 * 4;
+			sample.GlobalVolume = 64;
+
+			file.FillFromSample(sample);
 
 			file.Description  = Description;
-			file.Type         = FileSystem.FileTypes.SampleCompressed;
+			file.Type         = FileTypes.SampleCompressed;
 			file.SampleFileName = file.BaseName;
 
 			return true;
