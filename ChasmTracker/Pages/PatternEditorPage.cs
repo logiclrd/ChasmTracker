@@ -152,7 +152,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		{
 			var trackView = TrackViews[_trackViewScheme[chanPos]];
 
-			/* maybe i'm retarded but the pattern editor should be dealing
+			/* maybe i'm stupid but the pattern editor should be dealing
 				with the same concept of "channel" as the rest of the
 				interface. the mixing channels really could be any arbitrary
 				number -- modplug just happens to reserve the first 64 for

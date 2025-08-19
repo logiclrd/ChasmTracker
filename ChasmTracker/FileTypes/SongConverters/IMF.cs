@@ -559,7 +559,7 @@ public class IMF : SongFileConverter
 			min = t + 1;
 		}
 
-		// this would be less retarded if the envelopes all had their own flags...
+		// this would be less stupid if the envelopes all had their own flags...
 		var envFlags = EnvelopeFlags[e];
 
 		if (imfEnv.Flags.HasAllFlags(IMFEnvelopeFlags.Enable))
