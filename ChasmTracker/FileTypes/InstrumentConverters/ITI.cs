@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -124,14 +125,21 @@ public class ITI : InstrumentFileConverter
 	{
 		try
 		{
+			if (stream.Length < 554)
+				return false;
+
 			var iti = stream.ReadStructure<ITInstrumentHeader>();
 
 			if (iti.ID != 0x49504D49) // IMPI
 				return false;
 
+			if (!LoadNoteTranslation(null, null, stream, out int sampleCount))
+				return false;
+
 			file.Description = "Impulse Tracker Instrument";
 			file.Title = iti.Name.ToStringZ();
 			file.Type = FileTypes.InstrumentITI;
+			file.SampleCount = sampleCount;
 
 			return true;
 		}
@@ -173,8 +181,15 @@ public class ITI : InstrumentFileConverter
 
 	const int EOF = -1;
 
-	bool LoadNoteTranslation(InstrumentLoader? ii, SongInstrument instrument, Stream fp)
+	bool LoadNoteTranslation(InstrumentLoader? ii, SongInstrument? instrument, Stream fp)
+		=> LoadNoteTranslation(ii, instrument, fp, out _);
+
+	bool LoadNoteTranslation(InstrumentLoader? ii, SongInstrument? instrument, Stream fp, out int numSamples)
 	{
+		var smpBits = new BitArray(256);
+
+		numSamples = 0;
+
 		for (int n = 0; n < 120; n++)
 		{
 			int note = fp.ReadByte();
@@ -188,8 +203,21 @@ public class ITI : InstrumentFileConverter
 			if (!SongNote.IsNote(note))
 				note = n + SpecialNotes.First;
 
-			instrument.NoteMap[n] = (byte)note;
-			instrument.SampleMap[n] = (byte)(ii?.GetNewSampleNumber(smp) ?? smp);
+			if (instrument != null)
+			{
+				instrument.NoteMap[n] = (byte)note;
+				instrument.SampleMap[n] = (byte)(ii?.GetNewSampleNumber(smp) ?? smp);
+			}
+
+			/* smp == 0 mmeans there's no sample mapped */
+			if (smp == 0)
+				continue;
+
+			if (!smpBits[smp])
+			{
+				numSamples++;
+				smpBits[smp] = true;
+			}
 		}
 
 		return true;
