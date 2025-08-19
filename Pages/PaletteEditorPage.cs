@@ -16,17 +16,19 @@ public class PaletteEditorPage : Page
 	ThumbBarWidget[] thumbBarRed = new ThumbBarWidget[16];
 	ThumbBarWidget[] thumbBarGreen = new ThumbBarWidget[16];
 	ThumbBarWidget[] thumbBarBlue = new ThumbBarWidget[16];
-	OtherWidget? otherPaletteList;
+	ListBoxWidget? listBoxPaletteList;
 	ButtonWidget? buttonCopy;
 	ButtonWidget? buttonPaste;
 
-	int _selectedPalette;
+	int SelectedPalette
+	{
+		get => listBoxPaletteList!.Focus;
+		set => listBoxPaletteList!.Focus = value;
+	}
 
 	public PaletteEditorPage()
 		: base(PageNumbers.PaletteEditor, "Palette Configuration (Ctrl-F12)", HelpTexts.Palettes)
 	{
-		_selectedPalette = VGAMem.CurrentPalette.Index;
-
 		for (int n = 0; n < 16; n++)
 		{
 			thumbBarRed[n] = new ThumbBarWidget(
@@ -46,10 +48,12 @@ public class PaletteEditorPage : Page
 
 		UpdateThumbBars();
 
-		otherPaletteList = new OtherWidget(new Point(56, 26), new Size(20, 15));
+		listBoxPaletteList = new ListBoxWidget(new Point(56, 26), new Size(20, 15));
 
-		otherPaletteList.OtherHandleKey += otherPaletteList_HandleKey;
-		otherPaletteList.OtherRedraw += otherPaletteList_Redraw;
+		listBoxPaletteList.GetSize += listBoxPaletteList_GetSize;
+		listBoxPaletteList.GetToggled += listBoxPaletteList_GetToggled;
+		listBoxPaletteList.GetName += listBoxPaletteList_GetName;
+		listBoxPaletteList.Activated += listBoxPaletteList_Activated;
 
 		buttonCopy = new ButtonWidget(new Point(55, 43), 20, "Copy To Clipboard", 3);
 		buttonCopy.Clicked += buttonCopy_Clicked;
@@ -61,9 +65,9 @@ public class PaletteEditorPage : Page
 		{
 			if (n >= 9 && n < 13)
 			{
-				thumbBarRed[n].Next.Tab = otherPaletteList;
-				thumbBarGreen[n].Next.Tab = otherPaletteList;
-				thumbBarBlue[n].Next.Tab = otherPaletteList;
+				thumbBarRed[n].Next.Tab = listBoxPaletteList;
+				thumbBarGreen[n].Next.Tab = listBoxPaletteList;
+				thumbBarBlue[n].Next.Tab = listBoxPaletteList;
 			}
 			else if (n == 13)
 			{
@@ -93,14 +97,14 @@ public class PaletteEditorPage : Page
 			}
 		}
 
-		otherPaletteList.Next.Tab = thumbBarRed[3];
-		otherPaletteList.Next.BackTab = thumbBarRed[10];
+		listBoxPaletteList.Next.Tab = thumbBarRed[3];
+		listBoxPaletteList.Next.BackTab = thumbBarRed[10];
 
 		for (int i = 2; i < 6; i++)
 		{
-			thumbBarRed[i].Next.BackTab = otherPaletteList;
-			thumbBarGreen[i].Next.BackTab = otherPaletteList;
-			thumbBarBlue[i].Next.BackTab = otherPaletteList;
+			thumbBarRed[i].Next.BackTab = listBoxPaletteList;
+			thumbBarGreen[i].Next.BackTab = listBoxPaletteList;
+			thumbBarBlue[i].Next.BackTab = listBoxPaletteList;
 		}
 
 		thumbBarRed[6].Next.BackTab = buttonCopy;
@@ -120,9 +124,11 @@ public class PaletteEditorPage : Page
 			AddWidget(thumbBarBlue[i]);
 		}
 
-		AddWidget(otherPaletteList);
+		AddWidget(listBoxPaletteList);
 		AddWidget(buttonCopy);
 		AddWidget(buttonPaste);
+
+		SelectedPalette = VGAMem.CurrentPalette.Index;
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -231,7 +237,7 @@ public class PaletteEditorPage : Page
 		VGAMem.CurrentPalette = Palettes.UserDefined;
 		VGAMem.CurrentPalette.Apply();
 
-		_selectedPalette = VGAMem.CurrentPalette.Index;
+		SelectedPalette = VGAMem.CurrentPalette.Index;
 
 		UpdateThumbBars();
 
@@ -286,7 +292,7 @@ public class PaletteEditorPage : Page
 	{
 		int n;
 
-		_selectedPalette = 0;
+		SelectedPalette = 0;
 
 		VGAMem.CurrentPalette = Palettes.UserDefined;
 
@@ -306,226 +312,16 @@ public class PaletteEditorPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	void otherPaletteList_Redraw()
+	int listBoxPaletteList_GetSize() => Palettes.Presets.Length;
+	bool listBoxPaletteList_GetToggled(int n) => n == SelectedPalette;
+	string listBoxPaletteList_GetName(int n) => Palettes.Presets[n].Name;
+
+	void listBoxPaletteList_Activated()
 	{
-		bool focused = (SelectedActiveWidget == otherPaletteList);
-
-		VGAMem.DrawFillCharacters(new Point(55, 26), new Point(76, 40), (VGAMem.DefaultForeground, 0));
-
-		for (int n = 0; n < Palettes.Presets.Length; n++)
-		{
-			int fg = 6;
-			int bg = 0;
-
-			if (focused && n == _selectedPalette)
-			{
-				fg = 0;
-				bg = 3;
-			}
-			else if (n == _selectedPalette)
-				bg = 14;
-
-			if (n == VGAMem.CurrentPalette.Index)
-				VGAMem.DrawTextLen("*", 1, new Point(55, 26 + n), (fg, bg));
-			else
-				VGAMem.DrawTextLen(" ", 1, new Point(55, 26 + n), (fg, bg));
-
-			VGAMem.DrawTextLen(Palettes.Presets[n].Name, 21, new Point(56, 26 + n), (fg, bg));
-		}
-	}
-
-	static readonly int[] FocusOffsets = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7, 8, 9, 9, 10, 10, 11, 12 };
-	static Widget[]? FocusTabTargets = null;
-	static Widget[]? FocusBackTabTargets = null;
-
-	bool otherPaletteList_HandleKey(KeyEvent k)
-	{
-		if (FocusTabTargets == null)
-		{
-			FocusTabTargets =
-				new Widget[]
-				{
-					thumbBarRed[3],
-					thumbBarRed[3],
-					thumbBarGreen[3],
-					thumbBarGreen[3],
-					thumbBarGreen[3],
-					thumbBarBlue[3],
-					thumbBarBlue[3],
-					thumbBarRed[4],
-					thumbBarGreen[4],
-					thumbBarGreen[4],
-					thumbBarBlue[4],
-					thumbBarBlue[4],
-					thumbBarRed[5],
-					thumbBarGreen[5],
-					thumbBarGreen[5],
-					thumbBarBlue[5],
-					thumbBarBlue[5],
-					thumbBarRed[6],
-					thumbBarGreen[6],
-				};
-		}
-
-		if (FocusBackTabTargets == null)
-		{
-			FocusBackTabTargets =
-				new Widget[]
-				{
-					thumbBarRed[10],
-					thumbBarRed[10],
-					thumbBarGreen[10],
-					thumbBarGreen[10],
-					thumbBarGreen[10],
-					thumbBarBlue[10],
-					thumbBarBlue[10],
-					thumbBarRed[11],
-					thumbBarGreen[11],
-					thumbBarGreen[11],
-					thumbBarBlue[11],
-					thumbBarBlue[11],
-					thumbBarRed[12],
-					thumbBarGreen[12],
-					thumbBarGreen[12],
-					thumbBarBlue[12],
-					thumbBarBlue[12],
-					thumbBarRed[13],
-					thumbBarGreen[13],
-				};
-		}
-
-		int newPalette = _selectedPalette;
-
-		bool loadSelectedPalette = false;
-
-		if (k.Mouse == MouseState.DoubleClick)
-		{
-			if (k.State == KeyState.Press)
-				return false;
-			if (k.MousePosition.X < 55 || k.MousePosition.Y < 26 || k.MousePosition.Y > 40 || k.MousePosition.X > 76) return false;
-			newPalette = k.MousePosition.Y - 26;
-			loadSelectedPalette = true;
-		}
-		else if (k.Mouse == MouseState.Click)
-		{
-			if (k.State == KeyState.Press)
-				return false;
-			if (k.MousePosition.X < 55 || k.MousePosition.Y < 26 || k.MousePosition.Y > 40 || k.MousePosition.X > 76) return false;
-			newPalette = k.MousePosition.Y - 26;
-			if (newPalette == _selectedPalette)
-				loadSelectedPalette = true;
-		}
-		else
-		{
-			if (k.State == KeyState.Release)
-				return false;
-			if (k.Mouse == MouseState.ScrollUp)
-				newPalette -= Constants.MouseScrollLines;
-			else if (k.Mouse == MouseState.ScrollDown)
-				newPalette += Constants.MouseScrollLines;
-		}
-
-		switch (k.Sym)
-		{
-			case KeySym.Up:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				if (--newPalette < 0)
-				{
-					ChangeFocusTo(thumbBarBlue[15]);
-					return true;
-				}
-				break;
-			case KeySym.Down:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				// newPalette++;
-				if (++newPalette >= Palettes.Presets.Length)
-				{
-					ChangeFocusTo(buttonCopy!);
-					return true;
-				}
-				break;
-			case KeySym.Home:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newPalette = 0;
-				break;
-			case KeySym.PageUp:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				if (newPalette == 0)
-				{
-					ChangeFocusTo(thumbBarRed[15]);
-					return true;
-				}
-				newPalette -= 16;
-				break;
-			case KeySym.End:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newPalette = Palettes.Presets.Length - 1;
-				break;
-			case KeySym.PageDown:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newPalette += 16;
-				break;
-			case KeySym.Return:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				// if (_selectedPalette == -1) return true;
-				Palettes.Presets[_selectedPalette].Apply();
-				UpdateThumbBars();
-				Status.Flags |= StatusFlags.NeedUpdate;
-				return true;
-			case KeySym.Right:
-			case KeySym.Tab:
-				if (k.Modifiers.HasAnyFlag(KeyMod.Shift))
-				{
-					ChangeFocusTo(FocusBackTabTargets[_selectedPalette + 1]);
-					return true;
-				}
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				ChangeFocusTo(FocusTabTargets[_selectedPalette + 1]);
-				return true;
-			case KeySym.Left:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				ChangeFocusTo(FocusBackTabTargets[_selectedPalette + 1]);
-				return true;
-			case KeySym.c:
-				/* pasting is handled by the page */
-				if (k.Modifiers.HasAnyFlag(KeyMod.Control))
-				{
-					CopyPaletteToClipboard(Palettes.Presets[_selectedPalette]);
-					return true;
-				}
-				return false;
-			default:
-				if (k.Mouse == MouseState.None)
-					return false;
-				break;
-		}
-
-		newPalette = newPalette.Clamp(0, Palettes.Presets.Length - 1);
-
-		if (newPalette != _selectedPalette || loadSelectedPalette)
-		{
-			_selectedPalette = newPalette;
-
-			if (loadSelectedPalette)
-			{
-				VGAMem.CurrentPalette = Palettes.Presets[_selectedPalette];
-				VGAMem.CurrentPalette.Apply();
-				UpdateThumbBars();
-			}
-
-			Status.Flags |= StatusFlags.NeedUpdate;
-		}
-
-		return true;
+		VGAMem.CurrentPalette = Palettes.Presets[SelectedPalette];
+		VGAMem.CurrentPalette.Apply();
+		UpdateThumbBars();
+		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	void buttonCopy_Clicked()

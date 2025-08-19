@@ -2,13 +2,9 @@ using System;
 
 namespace ChasmTracker.Pages;
 
-using System.Linq;
 using ChasmTracker.Audio;
 using ChasmTracker.Configurations;
-using ChasmTracker.Input;
-using ChasmTracker.MIDI.Drivers;
 using ChasmTracker.Playback;
-using ChasmTracker.Songs;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 using ChasmTracker.Widgets;
@@ -24,12 +20,6 @@ public class PreferencesPage : Page
 
 	const int InterpolationGroup = 1;
 	const int RampGroup = 2;
-
-	static int _selectedAudioDevice = 0;
-	static int _topAudioDevice = 0;
-
-	static int _selectedAudioDriver = 0;
-	static int _topAudioDriver = 0;
 
 	static readonly Rect AudioDeviceBounds = new Rect(
 		new Point(37, 16),
@@ -48,8 +38,8 @@ public class PreferencesPage : Page
 	ToggleButtonWidget toggleButtonRampVolumeEnabled;
 	ToggleButtonWidget toggleButtonRampVolumeDisabled;
 	ButtonWidget buttonSaveOutputConfiguration;
-	OtherWidget otherDeviceList;
-	OtherWidget otherDriverList;
+	ListBoxWidget listBoxDeviceList;
+	ListBoxWidget listBoxDriverList;
 
 	public PreferencesPage()
 		: base(PageNumbers.Preferences, "Preferences (Shift-F5)", HelpTexts.Global)
@@ -103,19 +93,23 @@ public class PreferencesPage : Page
 		buttonSaveOutputConfiguration = new ButtonWidget(new Point(2, 44), 27, "Save Output Configuration", 2);
 		buttonSaveOutputConfiguration.Clicked += SaveConfigNow;
 
-		otherDeviceList = new OtherWidget(AudioDeviceBounds);
-		otherDeviceList.OtherHandleKey += AudioDeviceListHandleKeyOnList;
-		otherDeviceList.OtherRedraw += AudioDeviceListDraw;
+		listBoxDeviceList = new ListBoxWidget(AudioDeviceBounds);
+		listBoxDeviceList.GetSize += listBoxDeviceList_GetSize;
+		listBoxDeviceList.GetToggled += listBoxDeviceList_GetToggled;
+		listBoxDeviceList.GetName += listBoxDeviceList_GetName;
+		listBoxDeviceList.Activated += listBoxDeviceList_Activated;
 
-		otherDriverList = new OtherWidget(AudioDriverBounds);
-		otherDriverList.OtherHandleKey += AudioDriverListHandleKeyOnList;
-		otherDriverList.OtherRedraw += AudioDriverListDraw;
+		listBoxDriverList = new ListBoxWidget(AudioDriverBounds);
+		listBoxDriverList.GetSize += listBoxDriverList_GetSize;
+		listBoxDriverList.GetToggled += listBoxDriverList_GetToggled;
+		listBoxDriverList.GetName += listBoxDriverList_GetName;
+		listBoxDriverList.Activated += listBoxDriverList_Activated;
 
 		thumbBarMasterVolumeLeft.Next.Left = thumbBarMasterVolumeLeft.Next.Right =
 			thumbBarMasterVolumeLeft.Next.Tab = thumbBarMasterVolumeLeft.Next.BackTab =
 			thumbBarMasterVolumeRight.Next.Left = thumbBarMasterVolumeRight.Next.Right =
 			thumbBarMasterVolumeRight.Next.Tab = thumbBarMasterVolumeRight.Next.BackTab =
-				otherDeviceList;
+				listBoxDeviceList;
 
 		AddWidget(thumbBarMasterVolumeLeft);
 		AddWidget(thumbBarMasterVolumeRight);
@@ -130,8 +124,8 @@ public class PreferencesPage : Page
 		AddWidget(toggleButtonRampVolumeEnabled);
 		AddWidget(toggleButtonRampVolumeDisabled);
 		AddWidget(buttonSaveOutputConfiguration);
-		AddWidget(otherDeviceList);
-		AddWidget(otherDriverList);
+		AddWidget(listBoxDeviceList);
+		AddWidget(listBoxDriverList);
 	}
 
 	/* --------------------------------------------------------------------- */
@@ -231,337 +225,44 @@ public class PreferencesPage : Page
 
 	/* --------------------------------------------------------------------- */
 
-	void AudioDeviceListDraw()
+	int listBoxDeviceList_GetSize() => AudioBackend.Devices.Length + 1;
+
+	bool listBoxDeviceList_GetToggled(int n)
 	{
-		bool focused = (SelectedActiveWidget == otherDeviceList);
-
-		VGAMem.DrawFillCharacters(AudioDeviceBounds.TopLeft, AudioDeviceBounds.BottomRight.Advance(-1, -1), (VGAMem.DefaultForeground, 0));
-
-		int o = 0;
-
-		void DrawDevice(int id, string name)
-		{
-			int fg, bg;
-
-			if (o + _topAudioDevice == _selectedAudioDevice)
-			{
-				if (focused)
-					(fg, bg) = (0, 3);
-				else
-					(fg, bg) = (6, 14);
-			}
-			else
-				(fg, bg) = (6, 0);
-
-			VGAMem.DrawTextLen((id == AudioPlayback.AudioDeviceID) ? "*" : " ", 1, AudioDeviceBounds.TopLeft.Advance(0, o), (fg, bg));
-			VGAMem.DrawTextLen(name, AudioDeviceBounds.Size.Width - 1, AudioDeviceBounds.TopLeft.Advance(1, o), (fg, bg));
-
-			o++;
-		}
-
-		if (_topAudioDevice < 1)
-			DrawDevice(AudioBackend.DefaultID, "default");
-
-		foreach (var device in AudioBackend.Devices.Skip(_topAudioDevice - 1))
-		{
-			DrawDevice(device.ID, device.Name);
-
-			if (o >= AudioDeviceBounds.Size.Height)
-				break;
-		}
+		if (n == 0)
+			return AudioPlayback.AudioDeviceID == AudioBackend.DefaultID;
+		else
+			return AudioBackend.Devices[n - 1].ID == AudioPlayback.AudioDeviceID;
 	}
 
-	bool AudioDeviceListHandleKeyOnList(KeyEvent k)
+	string listBoxDeviceList_GetName(int n) => (n == 0) ? "default" : AudioBackend.Devices[n - 1].Name;
+
+	void listBoxDeviceList_Activated()
 	{
-		int newDevice = _selectedAudioDevice;
-		bool loadSelectedDevice = false;
+		int focusedIndex = listBoxDeviceList.Focus;
 
+		var id = (focusedIndex == 0)
+			? AudioBackend.DefaultID
+			: AudioBackend.Devices[focusedIndex - 1].ID;
 
-		switch (k.Mouse)
-		{
-			case MouseState.DoubleClick:
-			case MouseState.Click:
-				if (k.State == KeyState.Press)
-					return false;
-				if (!AudioDeviceBounds.Contains(k.MousePosition)) return false;
-				newDevice = _topAudioDevice + (k.MousePosition.Y - AudioDeviceBounds.TopLeft.Y);
-				if (k.Mouse == MouseState.DoubleClick || newDevice == _selectedAudioDevice)
-					loadSelectedDevice = true;
-				break;
-			case MouseState.ScrollUp:
-				newDevice -= Constants.MouseScrollLines;
-				break;
-			case MouseState.ScrollDown:
-				newDevice += Constants.MouseScrollLines;
-				break;
-			default:
-				if (k.State == KeyState.Release)
-					return false;
-				break;
-		}
-
-		switch (k.Sym)
-		{
-			case KeySym.Up:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				if (--newDevice < 0)
-				{
-					ChangeFocusTo(thumbBarMasterVolumeLeft);
-					return true;
-				}
-				break;
-			case KeySym.Down:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				if (++newDevice >= AudioBackend.Devices.Length + 1)
-				{
-					ChangeFocusTo(otherDriverList);
-					return true;
-				}
-				break;
-			case KeySym.Home:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newDevice = 0;
-				break;
-			case KeySym.PageUp:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-
-				if (newDevice == 0)
-					return true;
-
-				newDevice -= 16;
-				break;
-			case KeySym.End:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newDevice = AudioBackend.Devices.Length;
-				break;
-			case KeySym.PageDown:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newDevice += 16;
-				break;
-			case KeySym.Return:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				loadSelectedDevice = true;
-				break;
-			case KeySym.Left:
-			case KeySym.Right:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-
-				if (_selectedAudioDevice < 2)
-					ChangeFocusTo(thumbBarMasterVolumeRight);
-				else
-					ChangeFocusTo(toggleButtonInterpolationModes[0]);
-
-				return true;
-			default:
-				if (k.Mouse == MouseState.None)
-					return false;
-
-				break;
-		}
-
-		newDevice = newDevice.Clamp(0, AudioBackend.Devices.Length);
-
-		if (newDevice != _selectedAudioDevice)
-		{
-			_selectedAudioDevice = newDevice;
-			Status.Flags |= StatusFlags.NeedUpdate;
-
-			/* these HAVE to be done separately (and not as a CLAMP) because they aren't
-			* really guaranteed to be ranges */
-			_topAudioDevice = Math.Min(_topAudioDevice, _selectedAudioDevice);
-			_topAudioDevice = Math.Max(_topAudioDevice, _selectedAudioDevice - AudioDeviceBounds.Size.Height + 1);
-
-			_topAudioDevice = Math.Min(_topAudioDevice, AudioBackend.Devices.Length - AudioDeviceBounds.Size.Height + 1);
-			_topAudioDevice = Math.Max(_topAudioDevice, 0);
-		}
-
-		if (loadSelectedDevice)
-		{
-			var id =
-				(_selectedAudioDevice == 0)
-				? AudioBackend.DefaultID
-				: AudioBackend.Devices[_selectedAudioDevice - 1].ID;
-
-			AudioPlayback.Reinitialize(id);
-		}
-
-		return true;
+		AudioPlayback.Reinitialize(id);
 	}
 
 	/* --------------------------------------------------------------------- */
 
-	void AudioDriverListDraw()
+	int listBoxDriverList_GetSize() => AudioBackend.Drivers.Length;
+	bool listBoxDriverList_GetToggled(int n) => AudioBackend.Drivers[n].Name == AudioPlayback.AudioDriver;
+	string listBoxDriverList_GetName(int n) => AudioBackend.Drivers[n].Name;
+
+	void listBoxDriverList_Activated()
 	{
-		int numDrivers = AudioBackend.Drivers.Length;
+		int focusedIndex = listBoxDriverList.Focus;
 
-		bool focused = (SelectedActiveWidget == otherDriverList);
+		var result = AudioPlayback.Initialize(AudioBackend.Drivers[focusedIndex].Name, null);
 
-		int fg, bg;
+		AudioBackend.FlashReinitializedText(result);
 
-		string currentAudioDriver = AudioPlayback.AudioDriver;
-
-		VGAMem.DrawFillCharacters(AudioDriverBounds, (VGAMem.DefaultForeground, 0));
-
-		int o = 0;
-
-		foreach (var driver in AudioBackend.Drivers.Skip(_topAudioDriver))
-		{
-			if ((o + _topAudioDriver) == _selectedAudioDriver)
-			{
-				if (focused)
-					(fg, bg) = (0, 3);
-				else
-					(fg, bg) = (6, 14);
-			}
-			else
-				(fg, bg) = (6, 0);
-
-			VGAMem.DrawTextLen((currentAudioDriver == driver.Name) ? "*" : " ", 1, AudioDriverBounds.TopLeft.Advance(0, o), (fg, bg));
-			VGAMem.DrawTextLen(driver.Name, AudioDriverBounds.Size.Width - 1, AudioDriverBounds.TopLeft.Advance(1, o), (fg, bg));
-
-			o++;
-		}
-	}
-
-	bool AudioDriverListHandleKeyOnList(KeyEvent k)
-	{
-		int newDriver = _selectedAudioDriver;
-		bool loadSelectedDriver = false;
-
-		switch (k.Mouse)
-		{
-			case MouseState.DoubleClick:
-			case MouseState.Click:
-				if (k.State == KeyState.Press)
-					return false;
-				if (AudioDriverBounds.Contains(k.MousePosition)) return false;
-				newDriver = _topAudioDriver + (k.MousePosition.Y - AudioDriverBounds.TopLeft.Y);
-				if (k.Mouse == MouseState.DoubleClick || newDriver == _selectedAudioDriver)
-					loadSelectedDriver = true;
-				break;
-			case MouseState.ScrollUp:
-				newDriver -= Constants.MouseScrollLines;
-				break;
-			case MouseState.ScrollDown:
-				newDriver += Constants.MouseScrollLines;
-				break;
-			default:
-				if (k.State == KeyState.Release)
-					return false;
-				break;
-		}
-
-		switch (k.Sym)
-		{
-			case KeySym.Up:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-
-				if (--newDriver < 0)
-				{
-					ChangeFocusTo(otherDeviceList);
-					return true;
-				}
-				break;
-			case KeySym.Down:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				if (++newDriver >= AudioBackend.Drivers.Length)
-				{
-					ChangeFocusTo(thumbBarEqualizerBands[0].Gain);
-					return true;
-				}
-				break;
-			case KeySym.Home:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newDriver = 0;
-				break;
-			case KeySym.PageUp:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-
-				if (newDriver == 0)
-					return true;
-
-				newDriver -= 16;
-				break;
-			case KeySym.End:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newDriver = AudioBackend.Drivers.Length;
-				break;
-			case KeySym.PageDown:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				newDriver += 16;
-				break;
-			case KeySym.Return:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-				loadSelectedDriver = true;
-				break;
-			case KeySym.Tab:
-				if (!(k.Modifiers.HasAnyFlag(KeyMod.Shift) || !k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift)))
-					return false;
-
-				if (_selectedAudioDriver - _topAudioDriver < 3)
-					ChangeFocusTo(toggleButtonInterpolationModes[2]);
-				else
-					ChangeFocusTo(toggleButtonInterpolationModes[3]);
-
-				return true;
-			case KeySym.Left:
-			case KeySym.Right:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-
-				if (_selectedAudioDriver - _topAudioDriver < 3)
-					ChangeFocusTo(toggleButtonInterpolationModes[2]);
-				else
-					ChangeFocusTo(toggleButtonInterpolationModes[3]);
-
-				return true;
-			default:
-				if (k.Mouse == MouseState.None)
-					return false;
-				break;
-		}
-
-		newDriver = newDriver.Clamp(0, AudioBackend.Drivers.Length - 1);
-
-		if (newDriver != _selectedAudioDriver)
-		{
-			_selectedAudioDriver = newDriver;
-			Status.Flags |= StatusFlags.NeedUpdate;
-
-			/* these HAVE to be done separately (and not as a CLAMP) because they aren't
-			* really guaranteed to be ranges */
-			_topAudioDriver = Math.Min(_topAudioDriver, _selectedAudioDriver);
-			_topAudioDriver = Math.Max(_topAudioDriver, _selectedAudioDriver - AudioDriverBounds.Size.Height + 1);
-
-			_topAudioDriver = Math.Min(_topAudioDriver, AudioBackend.Drivers.Length - AudioDriverBounds.Size.Height + 1);
-			_topAudioDriver = Math.Max(_topAudioDriver, 0);
-		}
-
-		if (loadSelectedDriver)
-		{
-			var result = AudioPlayback.Initialize(AudioBackend.Drivers[_selectedAudioDriver].Name, null);
-
-			AudioBackend.FlashReinitializedText(result);
-
-			Status.Flags |= StatusFlags.NeedUpdate;
-		}
-
-		return true;
+		Status.Flags |= StatusFlags.NeedUpdate;
 	}
 
 	void SaveConfigNow()
@@ -570,5 +271,4 @@ public class PreferencesPage : Page
 		Configuration.Save();
 		Status.FlashText("Configuration saved");
 	}
-
 }
