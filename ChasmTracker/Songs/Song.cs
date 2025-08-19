@@ -53,6 +53,8 @@ public class Song
 	public readonly List<SongHistory> History = new List<SongHistory>();
 	public SongHistory EditStart = new SongHistory();
 
+	public BitArray<SchismQuirks> SchismQuirks = new BitArray<SchismQuirks>();
+
 	public IMIDISink? MIDISink;
 
 	public int NumVoices;// how many are currently playing. (POTENTIALLY larger than global MaxVoices)
@@ -1107,6 +1109,10 @@ public class Song
 
 		ShutDownOPL();
 		GeneralMIDI.Reset(this, true);
+
+		/* all zeroes should be the default playing configuration,
+		 * anything else increases complexity unfortunately */
+		SchismQuirks.SetAll(true);
 
 		Array.Clear(MIDINoteTracker);
 		Array.Clear(MIDIVolTracker);

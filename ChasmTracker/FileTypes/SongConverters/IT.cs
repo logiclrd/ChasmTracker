@@ -676,6 +676,11 @@ public class IT : SongFileConverter
 		{
 			trackerID = null;
 			song.TrackerID = "Schism Tracker " + Version.DecodeCreatedWithTrackerVersion(hdr.CreatedWithTrackerVersion, hdr.Reserved);
+
+			if (hdr.CreatedWithTrackerVersion == 0x1FFF)
+				song.SchismQuirks.SetMask(hdr.Reserved);
+			else
+				song.SchismQuirks.SetMask(hdr.CreatedWithTrackerVersion & 0x0FFF);
 		}
 		else if ((hdr.CreatedWithTrackerVersion >> 12) == 0 && hist != 0 && (hdr.Reserved != 0))
 		{
