@@ -4354,7 +4354,11 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 		return false;
 	}
 
-	bool[] _muteToggleHack = new bool[Constants.MaxChannels]; /* mrsbrisby: please explain this one, i don't get why it's necessary... */
+	/* this hack is necessary because schism sends MOUSE_CLICK events
+	 * while the mouseclick is down AND the mouse is dragged.
+	 *
+	 * really this behavior should be changed... */
+	bool[] _muteToggleHack = new bool[Constants.MaxChannels];
 
 	bool? HandleKeyDefault(KeyEvent k)
 	{
