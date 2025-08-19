@@ -29,6 +29,8 @@ public class TimeJumpDialog : Dialog
 		buttonOK = new ButtonWidget(new Point(30, 29), 8, "OK", 4);
 		buttonCancel = new ButtonWidget(new Point(42, 29), 8, "Cancel", 2);
 
+		numEntryMinute.HandleUnknownKey += HandleKey;
+
 		numEntryMinute.Reverse = true;
 		numEntrySecond.Reverse = true;
 

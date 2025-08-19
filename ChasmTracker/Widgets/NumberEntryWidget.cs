@@ -15,6 +15,8 @@ public class NumberEntryWidget : Widget
 	public Shared<int> CursorPosition;
 	public bool Reverse;
 
+	public event Func<KeyEvent, bool>? HandleUnknownKey;
+
 	public void ChangeValue(int value)
 	{
 		Value = value.Clamp(Minimum, Maximum);
@@ -166,38 +168,39 @@ public class NumberEntryWidget : Widget
 
 	public override bool HandleKey(KeyEvent k)
 	{
-		if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-			return false;
-
-		switch (k.Sym)
+		if (!k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
 		{
-			case KeySym.Home:
-				MoveCursor(int.MinValue);
-				return true;
-			case KeySym.End:
-				MoveCursor(int.MaxValue);
-				return true;
-			case KeySym.Backspace:
-				if (Reverse)
-				{
-					/* woot! */
-					ChangeValue(Value / 10);
-
-					OnChanged();
-					Status.Flags |= StatusFlags.NeedUpdate;
-
+			switch (k.Sym)
+			{
+				case KeySym.Home:
+					MoveCursor(int.MinValue);
 					return true;
-				}
+				case KeySym.End:
+					MoveCursor(int.MaxValue);
+					return true;
+				case KeySym.Backspace:
+					if (Reverse)
+					{
+						/* woot! */
+						ChangeValue(Value / 10);
 
-				break;
-			case KeySym.Plus:
-				ChangeValue(Value + 1);
-				return true;
-			case KeySym.Minus:
-				ChangeValue(Value - 1);
-				return true;
+						OnChanged();
+						Status.Flags |= StatusFlags.NeedUpdate;
+
+						return true;
+					}
+
+					break;
+				case KeySym.Plus:
+					ChangeValue(Value + 1);
+					return true;
+				case KeySym.Minus:
+					ChangeValue(Value - 1);
+					return true;
+			}
 		}
 
-		return false;
+		/* weird hack? */
+		return HandleUnknownKey?.Invoke(k) ?? false;
 	}
 }
