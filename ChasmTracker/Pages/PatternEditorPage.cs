@@ -3330,6 +3330,7 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 	/* return true => handled key, false => no way */
 	bool Insert(KeyEvent k)
 	{
+		/* wow, this is horrifying */
 		var pattern = Song.CurrentSong.GetPattern(_currentPattern);
 
 		if (pattern == null)
@@ -3773,7 +3774,8 @@ public class PatternEditorPage : Page, IConfigurable<PatternEditorConfiguration>
 	{
 		int maxRowNumber = Song.CurrentSong.GetPatternLength(_currentPattern) - 1;
 
-		/* hack to render this useful :) */
+		/* hack to render this useful :)
+		 * XXX what the hell was this supposed to do? */
 		if (k.Sym == KeySym.KP_9)
 			k.Sym = KeySym.F9;
 		else if (k.Sym == KeySym.KP_0)

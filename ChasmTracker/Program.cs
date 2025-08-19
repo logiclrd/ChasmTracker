@@ -133,10 +133,10 @@ public class Program
 								/* should be handled per OS */
 								break;
 							case NumLockHandling.AlwaysOff:
-								Status.KeyMod &= ~KeyMod.Num;
+								kk.Modifiers &= ~KeyMod.Num;
 								break;
 							case NumLockHandling.AlwaysOn:
-								Status.KeyMod |= KeyMod.Num;
+								kk.Modifiers |= KeyMod.Num;
 								break;
 						}
 

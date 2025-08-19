@@ -1,10 +1,10 @@
 using System;
-using System.Diagnostics.SymbolStore;
+
+namespace ChasmTracker.Input;
+
 using ChasmTracker.Events;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
-
-namespace ChasmTracker.Input;
 
 public struct KeyEvent
 {
@@ -60,20 +60,11 @@ public struct KeyEvent
 			if (Modifiers.HasAnyFlag(KeyMod.ControlAlt))
 				return -1;
 
-			if ((OriginalSym >= KeySym._0) && (OriginalSym <= KeySym._9))
-				return OriginalSym - KeySym._0;
+			if ((Sym >= KeySym._0) && (Sym <= KeySym._9))
+				return Sym - KeySym._0;
 
-			if (Modifiers.HasAllFlags(KeyMod.Num))
-			{
-				if (OriginalSym == KeySym.KP_0)
-					return 0;
-
-				if ((OriginalSym >= KeySym.KP_1) && (OriginalSym <= KeySym.KP_9))
-					return OriginalSym - KeySym.KP_1 + 1;
-			}
-
-			if ((OriginalSym >= KeySym.a) && (OriginalSym <= KeySym.f))
-				return OriginalSym - KeySym.a + 10;
+			if ((Sym >= KeySym.a) && (Sym <= KeySym.f))
+				return Sym - KeySym.a + 10;
 
 			return -1;
 		}
@@ -215,12 +206,6 @@ public struct KeyEvent
 			if (!Modifiers.HasAnyFlag(KeyMod.ControlAlt))
 				return -1;
 
-			if (Sym == KeySym.KP_1 || Sym == KeySym.KP_Period)
-			{
-				if (!Modifiers.HasAllFlags(KeyMod.Num))
-					return -1;
-			}
-
 			int note;
 
 			switch (ScanCode)
@@ -347,14 +332,16 @@ public struct KeyEvent
 
 	public int NumericValue(bool kpOnly)
 	{
-		if (Sym == KeySym.KP_0)
+		if (OriginalSym == KeySym.KP_0)
 			return 0;
 
-		if ((Sym >= KeySym.KP_1) && (Sym <= KeySym.KP_9))
-			return Sym - KeySym.KP_1 + 1;
+		if ((OriginalSym >= KeySym.KP_1) && (OriginalSym <= KeySym.KP_9))
+			return OriginalSym - KeySym.KP_1 + 1;
 
 		if (!kpOnly)
 		{
+			/* why are we checking for keypad here?
+			 * it should already be translated by kbd_key_translate */
 			if ((Sym >= KeySym._0) && (Sym <= KeySym._9))
 				return Sym - KeySym._0;
 		}
