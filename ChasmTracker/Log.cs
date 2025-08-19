@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Configurations;
 using ChasmTracker.Utility;
 using ChasmTracker.VGA;
 
@@ -11,22 +12,24 @@ public class Log
 {
 	const int NumLines = 1000;
 
+	public const int MaxLineLength = 74;
+
 	static List<LogLine> s_lines = new List<LogLine>();
 
 	public static IList<LogLine> Lines => s_lines;
 
-	public static void Append(byte colour, string format, params object[] args)
+	public static void Append(byte colour, string format, params object?[] args)
 		=> Append(new LogLine(colour, string.Format(format, args)));
 
-	public static void AppendWithUnderline(byte colour, string format, params object[] args)
+	public static void AppendWithUnderline(byte colour, string format, params object?[] args)
 		=> Append(new LogLine(colour, string.Format(format, args)) { Underline = true });
 
-	public static void Append(bool biosFont, byte colour, string format, params object[] args)
+	public static void Append(bool biosFont, byte colour, string format, params object?[] args)
 		=> Append(biosFont, colour, false, format, args);
-	public static void AppendWithUnderline(bool biosFont, byte colour, string format, params object[] args)
+	public static void AppendWithUnderline(bool biosFont, byte colour, string format, params object?[] args)
 		=> Append(biosFont, colour, true, format, args);
 
-	public static void Append(bool biosFont, byte colour, bool underline, string format, params object[] args)
+	public static void Append(bool biosFont, byte colour, bool underline, string format, params object?[] args)
 	{
 		string text = string.Format(format, args);
 
@@ -74,6 +77,39 @@ public class Log
 
 	public static void AppendUnderline()
 		=> AppendUnderlineImpl(s_lines.Last().Text.Length);
+
+	public static void AppendTimestamp(byte colour, string text)
+	{
+		var now = DateTime.Now;
+
+		string dateStr = now.ToString(Configuration.General.DateFormat.GetFormatString());
+		string timeStr = now.ToString(Configuration.General.TimeFormat.GetFormatString());
+
+		string timestamp = $" [{dateStr} {timeStr}]";
+
+		if (text.Length + timestamp.Length > MaxLineLength)
+		{
+			/* no space for a timestamp;
+			 * just duplicate the string in this case. */
+			Append(colour, text);
+		}
+		else
+		{
+			Append(colour, text.PadRight(MaxLineLength - timestamp.Length) + timestamp);
+		}
+	}
+
+	public static void AppendTimestamp(byte colour, string format, params object?[] args)
+		=> AppendTimestamp(colour, string.Format(format, args));
+
+	public static void AppendTimestampWithUnderline(byte colour, string text)
+	{
+		AppendTimestamp(colour, text);
+		AppendUnderline();
+	}
+
+	public static void AppendTimestampWithUnderline(byte colour, string format, params object?[] args)
+		=> AppendTimestampWithUnderline(colour, string.Format(format, args));
 
 	public static void AppendException(Exception ex, string prefix = "")
 	{

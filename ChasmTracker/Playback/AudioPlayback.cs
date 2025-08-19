@@ -980,7 +980,7 @@ public static class AudioPlayback
 			if (verbose)
 			{
 				Log.AppendNewLine();
-				Log.AppendWithUnderline(2, "Audio initialised");
+				Log.AppendTimestampWithUnderline(2, "Audio initialised");
 				Log.Append(5, " Using driver '{0}'", s_driverName ?? "<unknown>");
 				Log.Append(5, " {0} Hz, {1} bit, {2}", obtained.Frequency, obtained.Bits,
 					obtained.Channels == 1 ? "mono" : "stereo");

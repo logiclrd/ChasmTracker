@@ -4955,7 +4955,7 @@ public class Song
 
 		Log.AppendNewLine();
 		Log.AppendNewLine();
-		Log.AppendWithUnderline(2, "Exporting to {0}", exporter.Description);
+		Log.AppendTimestampWithUnderline(2, "Exporting to {0}", exporter.Description);
 
 		/* disko does the rest of the log messages itself */
 		var r = DiskWriter.ExportSong(mangle, exporter);
@@ -4986,7 +4986,7 @@ public class Song
 		string mangle = MangleFilename(fileName, null, converter.Extension);
 
 		Log.AppendNewLine();
-		Log.AppendWithUnderline(2, "Saving {0} module", converter.Description);
+		Log.AppendTimestampWithUnderline(2, "Saving {0} module", converter.Description);
 
 		/* TODO: add or replace file extension as appropriate
 
@@ -5281,8 +5281,7 @@ public class Song
 		}
 
 		Log.AppendNewLine();
-		Log.Append(2, "Loading {0}", @base);
-		Log.AppendUnderline();
+		Log.AppendTimestampWithUnderline(2, "Loading {0}", @base);
 
 		Song? newSong;
 

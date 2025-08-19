@@ -61,8 +61,7 @@ public static class Video
 	{
 		Log.AppendNewLine();
 
-		Log.Append(2, "Video initialized");
-		Log.AppendUnderline();
+		Log.AppendTimestampWithUnderline(2, "Video initialized");
 
 		s_backend.Report();
 	}

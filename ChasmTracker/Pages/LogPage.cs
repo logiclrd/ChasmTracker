@@ -97,7 +97,7 @@ public class LogPage : Page
 		{
 			var line = Log.Lines[i];
 
-			VGAMem.DrawTextUnicodeLen(line.Text, 74, new Point(3, 14 + n), (line.Colour, 0));
+			VGAMem.DrawTextUnicodeLen(line.Text, Log.MaxLineLength, new Point(3, 14 + n), (line.Colour, 0));
 		}
 	}
 }
