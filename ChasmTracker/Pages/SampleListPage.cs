@@ -561,16 +561,16 @@ public class SampleListPage : Page
 		switch (sample.VibratoType)
 		{
 			case VibratoType.Sine:
-				toggleButtonVibratoSine.SetState(true);
+				toggleButtonVibratoSine.InitializeState(true);
 				break;
 			case VibratoType.RampDown:
-				toggleButtonVibratoRampDown.SetState(true);
+				toggleButtonVibratoRampDown.InitializeState(true);
 				break;
 			case VibratoType.Square:
-				toggleButtonVibratoSquare.SetState(true);
+				toggleButtonVibratoSquare.InitializeState(true);
 				break;
 			case VibratoType.Random:
-				toggleButtonVibratoRandom.SetState(true);
+				toggleButtonVibratoRandom.InitializeState(true);
 				break;
 		}
 

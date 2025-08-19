@@ -313,6 +313,14 @@ public static class Configuration
 			Save(writer);
 	}
 
+	static void GatherConfigurationThunk<T>(IGatherConfigurationSections<T> gatherer, IList<T> list)
+		where T : ConfigurationSection
+	{
+		gatherer.GatherConfiguration(list);
+	}
+
+	static MethodInfo s_GatherConfigurationThunk_definition = typeof(Configuration).GetMethod("GatherConfigurationThunk", BindingFlags.Static | BindingFlags.NonPublic)!;
+
 	public static void Save(TextWriter writer)
 	{
 		if (s_loading)
@@ -337,9 +345,11 @@ public static class Configuration
 
 			if (listType.IsAssignableFrom(list.GetType()) && (s_listGatherers != null))
 			{
+				var thunk = s_GatherConfigurationThunk_definition.MakeGenericMethod(listSection.ElementType);
+
 				foreach (var gatherer in s_listGatherers)
 					if (gathererType.IsAssignableFrom(gatherer.GetType()))
-						((dynamic)gatherer).GatherConfiguration(list);
+						thunk.Invoke(null, [gatherer, list]);
 			}
 
 			foreach (var section in list.OfType<ConfigurationSection>())

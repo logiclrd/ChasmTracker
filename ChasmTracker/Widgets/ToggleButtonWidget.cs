@@ -30,22 +30,20 @@ public class ToggleButtonWidget : Widget
 	public void InitializeState(bool state)
 	{
 		_state = state;
+
+		if (state)
+		{
+			if (Group != null)
+				foreach (var toggleButton in Group.Widgets.OfType<ToggleButtonWidget>())
+					toggleButton._state = false;
+		}
 	}
 
 	public void SetState(bool state)
 	{
 		if (state != _state)
 		{
-			if (state)
-			{
-				if (Group != null)
-					foreach (var toggleButton in Group.Widgets.OfType<ToggleButtonWidget>())
-						toggleButton._state = false;
-
-				_state = true;
-			}
-			else
-				_state = false;
+			InitializeState(state);
 
 			OnChanged();
 

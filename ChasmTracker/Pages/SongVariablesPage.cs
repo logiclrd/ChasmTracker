@@ -148,19 +148,19 @@ public class SongVariablesPage : Page
 		toggleCompatibleGXX.State = Song.CurrentSong.Flags.HasAllFlags(SongFlags.CompatibleGXX);
 
 		if (Song.CurrentSong.IsInstrumentMode)
-			toggleButtonControlInstruments.SetState(true);
+			toggleButtonControlInstruments.InitializeState(true);
 		else
-			toggleButtonControlSamples.SetState(true);
+			toggleButtonControlSamples.InitializeState(true);
 
 		if (Song.CurrentSong.IsStereo)
-			toggleButtonPlaybackStereo.SetState(true);
+			toggleButtonPlaybackStereo.InitializeState(true);
 		else
-			toggleButtonPlaybackMono.SetState(true);
+			toggleButtonPlaybackMono.InitializeState(true);
 
 		if (Song.CurrentSong.Flags.HasAllFlags(SongFlags.LinearSlides))
-			toggleButtonPitchSlideLinear.SetState(true);
+			toggleButtonPitchSlideLinear.InitializeState(true);
 		else
-			toggleButtonPitchSlideAmiga.SetState(true);
+			toggleButtonPitchSlideAmiga.InitializeState(true);
 
 		// Storlek's AINOR easter egg
 		if (Path.GetFileName(Song.CurrentSong.FileName).Contains("Ainor", System.StringComparison.InvariantCultureIgnoreCase))
