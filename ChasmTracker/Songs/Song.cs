@@ -2525,6 +2525,26 @@ public class Song
 			chan.Flags |= ChannelFlags.NoteFade;
 	}
 
+	public void EffectMidiZxx(ref SongVoice chan, int nChan)
+	{
+		int vel = (chan.Sample != null)
+			? (int)(((chan.Volume + chan.VolumeSwing) * CurrentGlobalVolume)
+					* (long)(chan.GlobalVolume * chan.InstrumentVolume)
+					/ (1 << 20))
+			: 0;
+
+		MIDITranslator.ProcessMIDIMacro(
+			this,
+			nChan,
+			(chan.RowParam < 0x80)
+				? MIDIConfig.SFx[chan.ActiveMacro]
+				: MIDIConfig.Zxx[chan.RowParam & 0x7F],
+			chan.RowParam,
+			chan.Note,
+			vel,
+			0);
+	}
+
 	// negative value for slide = down, positive = up
 	public int EffectDoFrequencySlide(SongFlags flags, int frequency, int slide, bool isTonePortamento)
 	{
@@ -3627,9 +3647,9 @@ public class Song
 	}
 
 	// XXX why is `portamento` here, and what was it used for?
-	void HandleEffect(int nchan, Effects cmd, int param, bool portamento, bool firstTick)
+	void HandleEffect(int nChan, Effects cmd, int param, bool portamento, bool firstTick)
 	{
-		ref var chan = ref Voices[nchan];
+		ref var chan = ref Voices[nChan];
 
 		switch (cmd)
 		{
@@ -3737,7 +3757,7 @@ public class Song
 			case Effects.Retrigger: // Qxy
 				if (param != 0)
 					chan.MemRetrig = param & 0xFF;
-				EffectRetriggerNote(nchan, chan.MemRetrig);
+				EffectRetriggerNote(nChan, chan.MemRetrig);
 				break;
 
 			case Effects.Tremor:
@@ -3796,12 +3816,12 @@ public class Song
 				break;
 
 			case Effects.Special:
-				EffectSpecial(nchan, param);
+				EffectSpecial(nChan, param);
 				break;
 
 			case Effects.KeyOff:
 				if ((CurrentSpeed - TickCount) == param)
-					EffectKeyOff(nchan);
+					EffectKeyOff(nChan);
 				break;
 
 			case Effects.ChannelVolume:
@@ -3863,28 +3883,10 @@ public class Song
 				break;
 
 			case Effects.MIDI: // Zxx
-				if (!Flags.HasAnyFlag(SongFlags.FirstTick))
-					break;
-
-				int vel = (chan.Sample != null)
-					? (int)(((chan.Volume + chan.VolumeSwing) * CurrentGlobalVolume)
-							* (long)(chan.GlobalVolume * chan.InstrumentVolume)
-							/ (1 << 20))
-					: 0;
-
-				MIDITranslator.ProcessMIDIMacro(
-					this,
-					nchan,
-					(chan.RowParam < 0x80)
-						? MIDIConfig.SFx[chan.ActiveMacro]
-						: MIDIConfig.Zxx[chan.RowParam & 0x7F],
-					chan.RowParam,
-					chan.Note,
-					vel,
-					0);
-
-				/* stupid ugly hack */
-				chan.DidMacro = true;
+				/* note: we ignore this and process it later if there's a playing note. */
+				if (Flags.HasAnyFlag(SongFlags.FirstTick)
+				 && !((chan.Length != 0) && (chan.Frequency != 0)))
+					EffectMidiZxx(ref chan, nChan);
 
 				break;
 		}
