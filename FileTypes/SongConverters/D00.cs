@@ -86,13 +86,6 @@ public class D00 : SongFileConverter
 			if (hdr.SoundCard != 0)
 				throw new FormatException();
 
-			hdr.Tpoin = ByteSwap.Swap(hdr.Tpoin);
-			hdr.SequenceParaptr = ByteSwap.Swap(hdr.SequenceParaptr);
-			hdr.InstrumentParaptr = ByteSwap.Swap(hdr.InstrumentParaptr);
-			hdr.InfoParaptr = ByteSwap.Swap(hdr.InfoParaptr);
-			hdr.SpfxParaptr = ByteSwap.Swap(hdr.SpfxParaptr);
-			hdr.EndMark = ByteSwap.Swap(hdr.EndMark);
-
 			// verify the parapointers
 			if (hdr.Tpoin < 119
 				|| hdr.SequenceParaptr < 119
@@ -217,7 +210,7 @@ public class D00 : SongFileConverter
 			stream.ReadExactly(volume);
 
 			for (int i = 0; i < 9; i++)
-				ptrs[i] = ByteSwap.Swap(BitConverter.ToInt16(ptrBytes, i * 2));
+				ptrs[i] = BitConverter.ToInt16(ptrBytes, i * 2);
 
 			for (int c = 0; c < 9; c++)
 			{
@@ -244,7 +237,7 @@ public class D00 : SongFileConverter
 
 				try
 				{
-					speeds[c + 1] = ByteSwap.Swap(stream.ReadStructure<short>());
+					speeds[c + 1] = stream.ReadStructure<short>();
 				}
 				catch
 				{
@@ -266,7 +259,7 @@ public class D00 : SongFileConverter
 						break;
 					}
 
-					ords[nOrds] = ByteSwap.Swap(ord);
+					ords[nOrds] = ord;
 
 					if (ords[nOrds] == 0xFFFF || ords[nOrds] == 0xFFFE)
 						break;
@@ -303,7 +296,7 @@ public class D00 : SongFileConverter
 					/* mental gymnastics to find the pattern paraptr */
 					stream.Position = startPosition + hdr.SequenceParaptr + (ords[n % nOrds] * 2);
 
-					int patternParaptr = ByteSwap.Swap(stream.ReadStructure<ushort>());
+					int patternParaptr = stream.ReadStructure<ushort>();
 
 					stream.Position = startPosition + patternParaptr;
 
@@ -314,7 +307,7 @@ public class D00 : SongFileConverter
 
 						try
 						{
-							@event = ByteSwap.Swap(stream.ReadStructure<ushort>());
+							@event = stream.ReadStructure<ushort>();
 						}
 						catch
 						{
@@ -434,7 +427,7 @@ public class D00 : SongFileConverter
 
 										stream.Position = startPosition + hdr.SpfxParaptr + fxop;
 
-										memInstrument = ByteSwap.Swap(stream.ReadStructure<ushort>());
+										memInstrument = stream.ReadStructure<ushort>();
 										nInst = Math.Max(nInst, memInstrument);
 
 										/* other values:
