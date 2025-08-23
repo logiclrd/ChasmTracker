@@ -21,43 +21,16 @@ public class ToggleWidget : Widget
 		VGAMem.DrawText(State ? "On" : "Off", Position, (tfg, tbg));
 	}
 
-	public override bool? PreHandleKey(KeyEvent k)
+	public override bool? HandleActivate(KeyEvent k)
 	{
-		if ((k.Mouse == MouseState.Click) && k.OnTarget)
-		{
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return false;
-			if (k.State != KeyState.Press)
-				return true;
+		base.HandleActivate(k);
 
-			State = !State;
+		State = !State;
 
-			OnChanged();
+		OnChanged();
 
-			Status.Flags |= StatusFlags.NeedUpdate;
+		Status.Flags |= StatusFlags.NeedUpdate;
 
-			return true;
-		}
-
-		return default;
-	}
-
-	public override bool HandleKey(KeyEvent k)
-	{
-		switch (k.Sym)
-		{
-			case KeySym.Space:
-				if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-					return false;
-
-				State = !State;
-
-				OnChanged();
-				Status.Flags |= StatusFlags.NeedUpdate;
-
-				return true;
-		}
-
-		return false;
+		return true;
 	}
 }

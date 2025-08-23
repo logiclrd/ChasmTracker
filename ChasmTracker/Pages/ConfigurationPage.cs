@@ -191,23 +191,23 @@ public class ConfigurationPage : Page
 
 		menuToggleMIDIMode.State = Status.Flags.HasAllFlags(StatusFlags.MIDILikeTracker) ? 1 : 0;
 
-		toggleButtonFullScreenYes.SetState(Video.IsFullScreen);
-		toggleButtonFullScreenNo.SetState(!Video.IsFullScreen);
+		toggleButtonFullScreenYes.InitializeState(Video.IsFullScreen);
+		toggleButtonFullScreenNo.InitializeState(!Video.IsFullScreen);
 
 		switch (Configuration.Video.Interpolation)
 		{
-			case VideoInterpolationMode.NearestNeighbour: toggleButtonVideoNearest.SetState(true); break;
-			case VideoInterpolationMode.Linear: toggleButtonVideoLinear.SetState(true); break;
-			case VideoInterpolationMode.Best: toggleButtonVideoBest.SetState(true); break;
+			case VideoInterpolationMode.NearestNeighbour: toggleButtonVideoNearest.InitializeState(true); break;
+			case VideoInterpolationMode.Linear: toggleButtonVideoLinear.InitializeState(true); break;
+			case VideoInterpolationMode.Best: toggleButtonVideoBest.InitializeState(true); break;
 		}
 
-		toggleButtonRenderingHardware.SetState(Video.IsHardware);
-		toggleButtonRenderingSoftware.SetState(!Video.IsHardware);
+		toggleButtonRenderingHardware.InitializeState(Video.IsHardware);
+		toggleButtonRenderingSoftware.InitializeState(!Video.IsHardware);
 
 		if (Video.HaveMenu)
 		{
-			toggleButtonMenuBarYes!.SetState(Configuration.Video.WantMenuBar);
-			toggleButtonMenuBarNo!.SetState(!Configuration.Video.WantMenuBar);
+			toggleButtonMenuBarYes!.InitializeState(Configuration.Video.WantMenuBar);
+			toggleButtonMenuBarNo!.InitializeState(!Configuration.Video.WantMenuBar);
 		}
 	}
 

@@ -29,14 +29,14 @@ public class ToggleButtonWidget : Widget
 
 	public void InitializeState(bool state)
 	{
-		_state = state;
-
 		if (state)
 		{
 			if (Group != null)
 				foreach (var toggleButton in Group.Widgets.OfType<ToggleButtonWidget>())
 					toggleButton._state = false;
 		}
+
+		_state = state;
 	}
 
 	public void SetState(bool state)
@@ -102,8 +102,12 @@ public class ToggleButtonWidget : Widget
 		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? (3, 2) : (0, 2));
 	}
 
+	protected override bool ActivateOffTarget => false;
+
 	public override bool? HandleActivate(KeyEvent k)
 	{
+		base.HandleActivate(k);
+
 		if (k.State == KeyState.Drag)
 			IsDepressed = k.OnTarget;
 		else

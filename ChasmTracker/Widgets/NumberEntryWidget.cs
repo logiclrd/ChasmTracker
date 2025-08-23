@@ -130,6 +130,8 @@ public class NumberEntryWidget : Widget
 
 	public override bool? HandleActivate(KeyEvent k)
 	{
+		base.HandleActivate(k);
+
 		if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 			return false;
 

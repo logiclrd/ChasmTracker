@@ -37,8 +37,11 @@ public abstract class Widget
 
 	public virtual bool ContainsPoint(Point pt)
 	{
-		return new Rect(Position, Size + (0, 1)).Contains(pt);
+		return new Rect(Position, Size).Contains(pt);
 	}
+
+	protected virtual KeyState ActivateKeyState => KeyState.Press;
+	protected virtual bool ActivateOffTarget => true;
 
 	event Action? _changed;
 	event Action? _activated;
@@ -79,7 +82,7 @@ public abstract class Widget
 	// Prior to IsDepressed state and OnActivated handling.
 	public virtual bool? PreHandleKey(KeyEvent k) { return default; }
 	// After IsDepressed state and OnActivated handling.
-	public virtual bool? HandleActivate(KeyEvent k) { return default; }
+	public virtual bool? HandleActivate(KeyEvent k) { OnActivated(); return default; }
 	// Override directional keys
 	public virtual bool? HandleArrow(KeyEvent k) { return default; }
 
@@ -168,64 +171,36 @@ public abstract class Widget
 		bool activateWithReturn = (k.Sym == KeySym.Return);
 		bool activateWithSpace = (k.Sym == KeySym.Space) && (widget.Type != WidgetType.TextEntry);
 
+		Console.WriteLine("Mouse {0}, State {1}, Sym {2}, Mod {3}", k.Mouse, k.State, k.Sym, k.Modifiers);
+
 		if (k.Mouse == MouseState.Click
-			|| (k.Mouse == MouseState.None && (activateWithReturn || activateWithSpace)))
+		 || (k.Mouse == MouseState.None && (activateWithReturn || activateWithSpace)))
 		{
-			if (k.Mouse != MouseState.None)
-			{
-				bool n = (k.State == KeyState.Press) && k.OnTarget;
+			bool requireOnTarget = (k.Mouse != MouseState.None);
 
-				if (widget.IsDepressed != n)
-					Status.Flags |= StatusFlags.NeedUpdate;
-				else if (k.State == KeyState.Release)
-					return true; // swallor
+			bool n = (k.State == KeyState.Press) && (k.OnTarget || !requireOnTarget);
 
-				widget.IsDepressed = n;
+			if (widget.IsDepressed != n)
+				Status.Flags |= StatusFlags.NeedUpdate;
 
-				if (!(widget is TextEntryWidget) && !(widget is NumberEntryWidget))
-				{
-					if (k.State == KeyState.Press)
-						return true;
-				}
-				else
-				{
-					if (!k.OnTarget)
-						return true;
-				}
-			}
-			else
-			{
-				bool n = (k.State == KeyState.Press);
-
-				if (widget.IsDepressed != n)
-					Status.Flags |= StatusFlags.NeedUpdate;
-				else if (k.State == KeyState.Release)
-					return true; // swallor
-
-				widget.IsDepressed = n;
-
-				if (k.State == KeyState.Press)
-					return true;
-			}
+			widget.IsDepressed = n;
 
 			// OnActivated
-			if (k.Mouse != MouseState.None)
-			{
-				bool activate = true;
+			bool activate = (widget is not OtherWidget) && (k.State == widget.ActivateKeyState);
 
-				if ((widget is MenuToggleWidget) || (widget is ButtonWidget) || (widget is ToggleButtonWidget))
-					activate = k.OnTarget;
+			if (activate)
+			{
+				if (k.Mouse != MouseState.None)
+				{
+					if (!widget.ActivateOffTarget)
+						activate &= k.OnTarget;
+				}
 
 				if (activate)
-					widget.OnActivated();
+					return widget.HandleActivate(k) ?? false;
 			}
-			else if (!(widget is OtherWidget))
-				widget.OnActivated();
 
-			if (widget.HandleActivate(k) is bool activateResult)
-				return activateResult;
-			else
-				return false;
+			return false;
 		}
 
 		/* a WIDGET_OTHER that *didn't* handle the key itself needs to get run through the switch

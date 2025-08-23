@@ -43,8 +43,12 @@ public class ButtonWidget : Widget
 		VGAMem.DrawText(Text, Position.Advance(Padding), isSelected ? (3, 2) : (0, 2));
 	}
 
+	protected override bool ActivateOffTarget => false;
+
 	public override bool? HandleActivate(KeyEvent k)
 	{
+		base.HandleActivate(k);
+
 		if (k.State == KeyState.Drag)
 			IsDepressed = k.OnTarget;
 		else

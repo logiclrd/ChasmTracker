@@ -74,6 +74,22 @@ public class MIDIPage : Page
 
 		buttonMIDIOutputConfiguration.Clicked += ShowMIDIOutputConfig;
 		buttonSave.Clicked += () => Configuration.Save();
+
+		AddWidget(otherPortList);
+		AddWidget(toggleTickQuantize);
+		AddWidget(toggleBaseProgram1);
+		AddWidget(toggleRecordNoteOff);
+		AddWidget(toggleRecordVelocity);
+		AddWidget(toggleRecordAftertouch);
+		AddWidget(toggleCutNoteOff);
+		AddWidget(thumbBarAmplification);
+		AddWidget(thumbBarC5NoteValue);
+		AddWidget(toggleOutputMIDIPitch);
+		AddWidget(thumbBarPitchWheelDepth);
+		AddWidget(toggleEmbedMIDIConfig);
+		AddWidget(thumbBarIPMIDIPorts);
+		AddWidget(buttonMIDIOutputConfiguration);
+		AddWidget(buttonSave);
 	}
 
 	public override void DrawConst()
@@ -216,7 +232,8 @@ public class MIDIPage : Page
 
 		_currentPort = Math.Min(_currentPort, ct - 1);
 
-		for (int i = 0; i < 13; i++) {
+		for (int i = 0; i < 13; i++)
+		{
 			VGAMem.DrawCharacter(168, new Point(12, i + 15), (2, 0));
 
 			if (_topMIDIPort + i >= ct)
@@ -256,13 +273,15 @@ public class MIDIPage : Page
 
 			string state;
 
-			switch (p.IO) {
+			switch (p.IO)
+			{
 				case MIDIIO.None:                   state = "Disabled "; break;
 				case MIDIIO.Input:                  state = "   Input "; break;
 				case MIDIIO.Output:                 state = "  Output "; break;
 				case MIDIIO.Input | MIDIIO.Output:  state = "  Duplex "; break;
 				default:                            state = " Enabled?"; break;
 			}
+
 			VGAMem.DrawText(state, new Point(3, 15 + i), (fg, bg));
 		}
 	}

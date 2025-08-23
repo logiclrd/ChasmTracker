@@ -35,61 +35,29 @@ public class MenuToggleWidget : Widget
 			VGAMem.DrawText(choice, Position, (tfg, tbg));
 	}
 
-	public override bool? PreHandleKey(KeyEvent k)
+	public override bool? HandleActivate(KeyEvent k)
 	{
-		if ((k.Mouse == MouseState.Click) && k.OnTarget)
+		base.HandleActivate(k);
+
+		int newSelectionIndex;
+
+		if ((k.Mouse != MouseState.None) || (k.Sym == KeySym.Space))
+			newSelectionIndex = (State + 1) % Choices.Length;
+		else
 		{
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return false;
+			char ch = (char)k.Sym;
 
-			if (k.State != KeyState.Press)
-				return true;
+			newSelectionIndex = Array.FindIndex(Choices, c => c.ActivationKey == ch);
+		}
 
-			State = (State + 1)
-				% Choices.Length;
+		if (newSelectionIndex >= 0)
+		{
+			State = newSelectionIndex;
 
 			OnChanged();
-
 			Status.Flags |= StatusFlags.NeedUpdate;
 
 			return true;
-		}
-
-		return default;
-	}
-
-	public override bool HandleKey(KeyEvent k)
-	{
-		if (k.Mouse == MouseState.Click)
-		{
-			if (k.OnTarget)
-				OnActivated();
-		}
-		else
-		{
-			if (k.Modifiers.HasAnyFlag(KeyMod.ControlAltShift))
-				return false;
-
-			int newSelectionIndex;
-
-			if (k.Sym == KeySym.Space)
-				newSelectionIndex = (State + 1) % Choices.Length;
-			else
-			{
-				char ch = (char)k.Sym;
-
-				newSelectionIndex = Array.FindIndex(Choices, c => c.ActivationKey == ch);
-			}
-
-			if (newSelectionIndex >= 0)
-			{
-				State = newSelectionIndex;
-
-				OnChanged();
-				Status.Flags |= StatusFlags.NeedUpdate;
-
-				return true;
-			}
 		}
 
 		return false;
