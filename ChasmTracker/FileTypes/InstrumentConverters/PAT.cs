@@ -136,6 +136,7 @@ public class PAT : InstrumentFileConverter
 		file.Description = "Gravis Patch File";
 		file.Title = hdr.InstrumentName;
 		file.Type = FileSystem.FileTypes.InstrumentOther;
+		file.SampleCount = hdr.SampleCount.Clamp(1, 16);
 
 		return true;
 	}

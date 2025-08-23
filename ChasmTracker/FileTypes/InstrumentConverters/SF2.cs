@@ -167,6 +167,11 @@ public class SF2 : InstrumentFileConverter
 		if (cs.TryGetValue(SF2ChunkType.INAM, out var inam))
 			file.Title = IFF.ReadString(stream, inam);
 
+		if (cs.TryGetValue(SF2ChunkType.shdr, out var shdr))
+			file.SampleCount = shdr.Size / 46;
+
+		/* file.SampleCount = Math.Min(file.SampleCount, Constants.MaxSamples); -- some samples may be ignored */
+
 		return true;
 	}
 
