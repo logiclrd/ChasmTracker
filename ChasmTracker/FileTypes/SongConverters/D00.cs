@@ -217,7 +217,7 @@ public class D00 : SongFileConverter
 				/* ... sigh */
 				int[] ordTranspose = new int[Constants.MaxOrders];
 				bool transposeSet = false; /* stupid hack */
-				int[] ords = new int[Constants.MaxOrders];
+				int[] ords = new int[Constants.MaxOrders - 2]; /* need space for ORDER_LAST */
 				ushort memInstrument = 0; /* current instrument for the channel */
 				VolumeEffects memVolumeEffect = VolumeEffects.None; ;
 				byte memVolumeParameter = 0;
@@ -329,14 +329,17 @@ public class D00 : SongFileConverter
 							int r;
 
 							/* note event; data is stored in the low byte */
-							switch (note)
+							switch (note & 0x7F)
 							{
 								case 0: /* "REST" */
-								case 0x80: /* "REST" & 0x80 */
 									sn.Note = SpecialNotes.NoteOff;
 									row += count + 1;
+									if ((c == 3) && (pattern == 0))
+										Console.WriteLine("REST - c: {0}, pattern: {1}, count: {2}, row: {3}", c, pattern, count, row);
 									break;
 								case 0x7E: /* "HOLD" */
+									if ((c == 3) && (pattern == 0))
+										Console.WriteLine("HOLD - c: {0}, pattern: {1}, count: {2}, row: {3}", c, pattern, count, row);
 									/* copy the last effect... */
 									for (r = 0; pattern < Constants.MaxPatterns && r <= count; r++, row++, FixRow(ref pattern, ref row))
 									{
@@ -354,6 +357,7 @@ public class D00 : SongFileConverter
 									else
 										note += ordTranspose[n % nOrds];
 
+									/* reset fx */
 									memEffect = Effects.None;
 									memParameter = 0;
 
@@ -376,6 +380,9 @@ public class D00 : SongFileConverter
 
 									row += count + 1;
 
+									if ((c == 3) && (pattern == 0))
+										Console.WriteLine("NOTE - c: {0}, pattern: {1}, count: {2}, row: {3}", c, pattern, count, row);
+
 									break;
 							}
 
@@ -383,6 +390,9 @@ public class D00 : SongFileConverter
 						}
 						else
 						{
+							/* it's probably possible to have multiple effects
+							 * on one track. we should be able to handle this! */
+
 							byte fx = (byte)(@event >> 12);
 							ushort fxop = (ushort)(@event & 0x0FFF);
 
@@ -390,6 +400,7 @@ public class D00 : SongFileConverter
 							{
 								case 6: /* Cut/Stop Voice */
 									sn.Note = SpecialNotes.NoteCut;
+									row += fxop + 1;
 									continue;
 								case 7: /* Vibrato */
 									memEffect = Effects.Vibrato;
@@ -398,8 +409,8 @@ public class D00 : SongFileConverter
 									{
 										/* this is a total guess, mostly just based
 										* on what sounds "correct" */
-										byte depth = (byte)(((fxop >> 8) & 0xFF) * 2 / 3);
-										byte speed = (byte)((fxop & 0xFF) * 2 / 3);
+										byte depth = (byte)(((fxop >> 8) & 0xFF) * 4 / 3);
+										byte speed = (byte)((fxop & 0xFF) * 4 / 3);
 
 										depth = Math.Min(depth, (byte)0xF);
 										speed = Math.Min(speed, (byte)0xF);
@@ -420,9 +431,7 @@ public class D00 : SongFileConverter
 										* points to the next spfx structure to process. This is
 										* terrible for us, but we can at least haphazardly
 										* grab the instrument number from the first one, and
-										* hope it fits...
-										*
-										* FIXME: The other things in */
+										* hope it fits... */
 										long oldPos = stream.Position;
 
 										stream.Position = startPosition + hdr.SpfxParaptr + fxop;
@@ -435,7 +444,9 @@ public class D00 : SongFileConverter
 										*  - uint8_t modlev;
 										*  - int8_t modlevadd;
 										*  - uint8_t duration;
-										*  - uint16_t ptr; (seriously?) */
+										*  - uint16_t ptr; (seriously?)
+									  * it's likely that we can transform these into an instrument. */
+
 
 										stream.Position = oldPos;
 									}
@@ -447,11 +458,11 @@ public class D00 : SongFileConverter
 									break;
 								case 0xD: /* Pitch slide up */
 									memEffect = Effects.PortamentoUp;
-									memParameter = (byte)fxop;
+									memParameter = (byte)(fxop * 5 / 2);
 									break;
 								case 0xE: /* Pitch slide down */
 									memEffect = Effects.PortamentoDown;
-									memParameter = (byte)fxop;
+									memParameter = (byte)(fxop * 5 / 2);
 									break;
 								default:
 									break;
@@ -485,7 +496,9 @@ public class D00 : SongFileConverter
 
 			if (song.Patterns[maxPattern]!.Rows.Count != maxRow)
 			{
-				/* insert an effect to jump back to the start */
+				/* insert an effect to jump back to the start
+				 * this effect may be on the 10th channel if we can't
+				 * fit it anywhere else. */
 				for (int c = 0; c < Constants.MaxChannels; c++)
 				{
 					ref var note = ref song.Patterns[maxPattern]!.Rows[maxRow][c + 1];
@@ -498,7 +511,7 @@ public class D00 : SongFileConverter
 				}
 			}
 
-			for (int c = 0; c < maxPattern; c++)
+			for (int c = 0; c <= maxPattern; c++)
 				song.OrderList.Add(c);
 
 			song.OrderList.Add(SpecialOrders.Last);
@@ -509,7 +522,12 @@ public class D00 : SongFileConverter
 
 		{
 			/* FIXME: this isn't very good, we should be doing per-channel
-			* speed stuff or else we get broken modules */
+			 * speed stuff or else we get broken modules
+			 *
+			 * basically each channel ought to have an increment. if each speed
+			 * is the same this is okay, and we can probably just ignore the
+			 * "song speed" altogether. though i don't know how many songs
+			 * actually use different speeds for each channel. */
 			int maxCount = 1, count = 1;
 			var mode = speeds[0];
 
@@ -539,6 +557,8 @@ public class D00 : SongFileConverter
 		/* start reading instrument data */
 
 		stream.Position = startPosition + hdr.InstrumentParaptr;
+
+		nInst = Math.Min(nInst, Constants.MaxSamples);
 
 		byte[] bytes = new byte[11];
 
@@ -592,9 +612,11 @@ public class D00 : SongFileConverter
 
 			/* It's probably safe to ignore these */
 #if false
+			Log.Append(1, "inst: {0}", c);
 			Log.Append(1, "timer: {0}", stream.ReadByte());
 			Log.Append(1, "sr: {0}", stream.ReadByte());
 			Log.Append(1, "unknown bytes: {0}, {1}", stream.ReadByte(), stream.ReadByte());
+			Log.AppendNewLine();
 #else
 			stream.Position += 1; /* "timer" */
 			stream.Position += 1; /* "sr" */
