@@ -6,7 +6,6 @@ public enum WindowEventType
 	Hidden,
 	Exposed,
 	Resized,
-	SizeChanged,
 	Enter,
 	Leave,
 	FocusGained,

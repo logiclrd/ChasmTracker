@@ -203,7 +203,7 @@ public struct KeyEvent
 	{
 		get
 		{
-			if (!Modifiers.HasAnyFlag(KeyMod.ControlAlt))
+			if (Modifiers.HasAnyFlag(KeyMod.ControlAlt))
 				return -1;
 
 			int note;

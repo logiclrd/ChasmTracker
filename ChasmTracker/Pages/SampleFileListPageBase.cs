@@ -626,16 +626,22 @@ public class SampleFileListPageBase : Page
 		else if (file.Sample != null)
 		{
 			/* it's already been loaded, so copy it */
+			file.Sample.Name = file.Title;
+			file.Sample.FileName = file.BaseName;
+
 			Song.CurrentSong.Samples[cur] = file.Sample;
+
 			FinishLoad(cur);
 			MemoryUsage.NotifySongChanged();
 		}
 		else if (file.Type.HasAnyFlag(FileTypes.SampleMask))
 		{
 			/* load the sample */
-			Song.CurrentSong.LoadSample(cur, file.FullPath);
-			FinishLoad(cur);
-			MemoryUsage.NotifySongChanged();
+			if (Song.CurrentSong.LoadSample(cur, file.FullPath))
+			{
+				FinishLoad(cur);
+				MemoryUsage.NotifySongChanged();
+			}
 		}
 	}
 

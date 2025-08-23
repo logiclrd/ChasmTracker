@@ -300,7 +300,7 @@ public static class AudioPlayback
 		MixFlags ^= MixFlags.ReverseStereo;
 	}
 
-	static int s_currentPlayChannel;
+	static int s_currentPlayChannel = 1;
 	static bool s_multichannelMode;
 
 	public static int CurrentPlayChannel => s_currentPlayChannel;

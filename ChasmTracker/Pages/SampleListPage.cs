@@ -444,28 +444,25 @@ public class SampleListPage : Page
 		}
 
 		/* cursor */
-		if (SelectedActiveWidget == otherSampleList)
+		if (ActiveWidgetContext?.SelectedWidget == otherSampleList)
 		{
 			int pos = _currentSample - _topSample;
 
 			var sample = Song.CurrentSong.GetSample(_currentSample);
 
-			if (sample != null)
-			{
-				bool hasData = sample.HasData;
+			bool hasData = sample?.HasData ?? false;
 
-				if (pos < 0 || pos > 34)
-				{
-					/* err... */
-				}
-				else if (_sampleListCursorPos == 25)
-					VGAMem.DrawText("Play", new Point(31, 13 + pos), hasData ? (0, 3) : (0, 6));
-				else
-				{
-					VGAMem.DrawCharacter((_sampleListCursorPos > sample.Name.Length)
-							? (char)0 : sample.Name[_sampleListCursorPos],
-							new Point(_sampleListCursorPos + 5, 13 + pos), (0, 3));
-				}
+			if (pos < 0 || pos > 34)
+			{
+				/* err... */
+			}
+			else if (_sampleListCursorPos == 25)
+				VGAMem.DrawText("Play", new Point(31, 13 + pos), hasData ? (0, 3) : (0, 6));
+			else
+			{
+				VGAMem.DrawCharacter(((sample == null) || (_sampleListCursorPos > sample.Name.Length))
+						? (char)0 : sample.Name[_sampleListCursorPos],
+						new Point(_sampleListCursorPos + 5, 13 + pos), (0, 3));
 			}
 		}
 

@@ -4696,6 +4696,7 @@ public class Song
 
 					// this is after the loaders because i don't trust them, even though i wrote them ;)
 					smp.FileName = Path.GetFileName(file);
+					smp.Name = smp.FileName;
 
 					if ((smp.Name.Length >= 23) && (smp.Name[23] == '\xFF'))
 					{
@@ -4703,6 +4704,9 @@ public class Song
 						// (huhwhat?!)
 						smp.Name = smp.Name.Substring(0, 23) + ' ' + smp.Name.Substring(23);
 					}
+
+					while (n >= Samples.Count)
+						Samples.Add(null);
 
 					Samples[n] = smp;
 				}

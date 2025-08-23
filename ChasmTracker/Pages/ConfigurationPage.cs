@@ -69,6 +69,11 @@ public class ConfigurationPage : Page
 
 		toggleButtonFullScreenYes.Changed += ChangeVideoSettings;
 		toggleButtonFullScreenNo.Changed += ChangeVideoSettings;
+		toggleButtonVideoNearest.Changed += ChangeVideoSettings;
+		toggleButtonVideoLinear.Changed += ChangeVideoSettings;
+		toggleButtonVideoBest.Changed += ChangeVideoSettings;
+		toggleButtonRenderingHardware.Changed += ChangeVideoSettings;
+		toggleButtonRenderingSoftware.Changed += ChangeVideoSettings;
 
 		if (Video.HaveMenu)
 		{

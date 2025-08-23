@@ -16,7 +16,7 @@ public class Keyboard
 
 	public static KeyEvent CachedKeyEvent = default;
 
-	static int s_currentOctave;
+	static int s_currentOctave = 4;
 
 	public static int CurrentOctave
 	{

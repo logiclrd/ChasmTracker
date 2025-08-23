@@ -341,7 +341,7 @@ public class Program
 								Video.ShowCursor(true);
 								break;
 
-							case WindowEventType.SizeChanged: /* tiling window managers */
+							case WindowEventType.Resized: /* tiling window managers */
 								Video.Resize(windowEvent.NewSize);
 								goto case WindowEventType.Exposed;
 
