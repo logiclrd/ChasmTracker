@@ -777,7 +777,7 @@ public class SDLVideoBackend : VideoBackend
 		for (y = 0, fixedY = 0; y < height; y++, fixedY += scaleY)
 		{
 			/* add (1ul << 31) to round to nearest */
-			var scaledYLong = (fixedY + (1ul << 31)) >> 32;
+			var scaledYLong = fixedY >> 32;
 
 			// only scan again if we have to or if this the first scan
 			if (scaledYLong != lastScaledYLong || y == 0)
@@ -809,7 +809,7 @@ public class SDLVideoBackend : VideoBackend
 
 			for (x = 0, fixedX = 0; x < width; x++, fixedX += scaleX)
 			{
-				uint scaledX = unchecked((uint)((fixedX + (1ul << 31)) >> 32));
+				uint scaledX = unchecked((uint)(fixedX >> 32));
 
 				switch (bpp)
 				{
