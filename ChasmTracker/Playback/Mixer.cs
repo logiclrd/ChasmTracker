@@ -1364,7 +1364,9 @@ public static class Mixer
 			var rawSampleData = channelSample.RawData;
 			var lookaheadPtr = SampleWindow.Empty;
 
-			int lookaheadStart = (channel.LoopEnd < Constants.MaxInterpolationLookaheadBufferSize) ? channel.LoopStart : Math.Max(channel.LoopStart, channel.LoopEnd - Constants.MaxInterpolationLookaheadBufferSize);
+			int lookaheadStart = (channel.LoopEnd < Constants.MaxInterpolationLookaheadBufferSize)
+				? channel.LoopStart
+				: Math.Max(channel.LoopStart, channel.LoopEnd - Constants.MaxInterpolationLookaheadBufferSize);
 
 			if (rawSampleData != null)
 			{
@@ -1373,9 +1375,8 @@ public static class Mixer
 				// shouldn't be that heavy anyway :p
 				if (channel.Flags.HasAllFlags(ChannelFlags.Loop))
 				{
-					int lookaheadOffset = 3 * Constants.MaxInterpolationLookaheadBufferSize + channelSample.Length - channel.LoopEnd;
-					if (channel.Flags.HasAllFlags(ChannelFlags.SustainLoop))
-						lookaheadOffset += 4 * Constants.MaxInterpolationLookaheadBufferSize;
+					int lookaheadOffset = (channel.Flags.HasFlag(ChannelFlags.SustainLoop) ? 7 : 3) * Constants.MaxInterpolationLookaheadBufferSize
+						+ channelSample.Length - channel.LoopEnd;
 
 					lookaheadPtr = channelSample.Data.Shift(lookaheadOffset - SongSample.AllocatePrepend);
 				}
@@ -1447,8 +1448,10 @@ public static class Mixer
 					if (!lookaheadPtr.IsEmpty)
 					{
 						int oldcount = sampleCount;
-						int pos_dest = ((channel.Position << 16) + (channel.Increment * (numSamples - 1)) + channel.PositionFrac) >> 16;
+						int posDest = ((channel.Position << 16) + (channel.Increment * (numSamples - 1)) + channel.PositionFrac) >> 16;
 						bool atLoopStart = (channel.Position >= channel.LoopStart) && (channel.Position < channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize);
+						bool checkDest = true;
+
 						if (!atLoopStart)
 							channel.Flags &= ~ChannelFlags.LoopWrapped;
 
@@ -1458,25 +1461,52 @@ public static class Mixer
 						{
 							if (channel.Increment < 0)
 							{
+								// going backwards and we're in the loop
 								sampleCount = SamplesToBufferLength(channel.Position - lookaheadStart, ref channel);
 								channel.CurrentSampleData = lookaheadPtr;
+								checkDest = false;
 							}
 							else if (channel.Position <= channel.LoopEnd)
 							{
+								// going forwards and we're in the loop
 								sampleCount = SamplesToBufferLength(channel.LoopEnd - channel.Position, ref channel);
 								channel.CurrentSampleData = lookaheadPtr;
+								checkDest = false;
 							}
 							else
+							{
+								// loop has ended
 								sampleCount = SamplesToBufferLength(channel.Length - channel.Position, ref channel);
+								checkDest = true;
+							}
 						}
 						else if (channel.Flags.HasAllFlags(ChannelFlags.LoopWrapped) && atLoopStart)
 						{
 							// Interpolate properly after looping
-							sampleCount = SamplesToBufferLength(channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize - channel.Position, ref channel);
+							sampleCount = SamplesToBufferLength((channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize) - channel.Position, ref channel);
 							channel.CurrentSampleData = lookaheadPtr.Shift((channel.Length - channel.LoopStart) * (channelSample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1) * (channelSample.Flags.HasAllFlags(SampleFlags._16Bit) ? 2 : 1));
+							checkDest = false;
 						}
-						else if (channel.Increment >= 0 && pos_dest >= (int)lookaheadStart && sampleCount > 1)
+						else if (channel.Increment >= 0 && posDest >= (int)lookaheadStart && sampleCount > 1)
+						{
+							// Don't go past the loop start!
 							sampleCount = SamplesToBufferLength(lookaheadStart - channel.Position, ref channel);
+							checkDest = false;
+						}
+
+						if (checkDest)
+						{
+							if (channel.Increment < 0)
+							{
+								if (posDest < channel.LoopStart)
+									sampleCount = SamplesToBufferLength(channel.Position - channel.LoopStart, ref channel);
+							}
+							else
+							{
+								if (posDest >= channel.Length)
+									sampleCount = SamplesToBufferLength(channel.Length - channel.Position, ref channel);
+							}
+						}
 
 						sampleCount = sampleCount.Clamp(1, oldcount);
 					}
