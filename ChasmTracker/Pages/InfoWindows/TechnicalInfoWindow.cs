@@ -128,7 +128,7 @@ public class TechnicalInfoWindow : InfoWindow
 			// Frequency
 			VGAMem.DrawText($"{voice.SampleFrequency,10}", new Point(5, pos), (2, 0));
 			// Position
-			VGAMem.DrawText($"{voice.Position,10}", new Point(16, pos), (2, 0));
+			VGAMem.DrawText($"{voice.Position.Whole,10}", new Point(16, pos), (2, 0));
 
 			VGAMem.DrawText(smp.ToString("d3"), new Point(27, pos), (2, 0)); // Smp
 			VGAMem.DrawText((voice.FinalVolume / 128).ToString("d3"), new Point(32, pos), (2, 0)); // FVl
