@@ -334,12 +334,8 @@ public class D00 : SongFileConverter
 								case 0: /* "REST" */
 									sn.Note = SpecialNotes.NoteOff;
 									row += count + 1;
-									if ((c == 3) && (pattern == 0))
-										Console.WriteLine("REST - c: {0}, pattern: {1}, count: {2}, row: {3}", c, pattern, count, row);
 									break;
 								case 0x7E: /* "HOLD" */
-									if ((c == 3) && (pattern == 0))
-										Console.WriteLine("HOLD - c: {0}, pattern: {1}, count: {2}, row: {3}", c, pattern, count, row);
 									/* copy the last effect... */
 									for (r = 0; pattern < Constants.MaxPatterns && r <= count; r++, row++, FixRow(ref pattern, ref row))
 									{
@@ -379,9 +375,6 @@ public class D00 : SongFileConverter
 									}
 
 									row += count + 1;
-
-									if ((c == 3) && (pattern == 0))
-										Console.WriteLine("NOTE - c: {0}, pattern: {1}, count: {2}, row: {3}", c, pattern, count, row);
 
 									break;
 							}
