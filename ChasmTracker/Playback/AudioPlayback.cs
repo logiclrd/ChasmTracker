@@ -144,12 +144,21 @@ public static class AudioPlayback
 		}
 	}
 
+	static void ReallocateBuffer(int samples)
+	{
+		AudioBufferSamples = samples;
+		if (AudioBufferSamples > AudioBuffer?.Length)
+			AudioBuffer = new short[AudioBufferSamples];
+	}
+
 	static void AudioCallback(Span<byte> stream)
 	{
 		var wasRow = Song.CurrentSong.Row;
 		var wasPat = Song.CurrentSong.CurrentOrder;
 
 		stream.Clear();
+
+		ReallocateBuffer(stream.Length / AudioSampleSize);
 
 		if (stream.Length == 0)
 		{
@@ -976,7 +985,7 @@ public static class AudioPlayback
 			AudioOutputChannels = obtained.Channels;
 			AudioOutputBits = obtained.Bits;
 			AudioSampleSize = AudioOutputChannels * AudioOutputBits / 8;
-			AudioBufferSamples = obtained.BufferSizeSamples;
+			ReallocateBuffer(obtained.BufferSizeSamples);
 
 			if (verbose)
 			{
