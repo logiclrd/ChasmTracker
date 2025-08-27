@@ -1126,7 +1126,7 @@ public static class VGAMem
 
 				byte c = channel.Flags.HasAllFlags(ChannelFlags.KeyOff | ChannelFlags.NoteFade) ? SampleBackgroundMarkColour : SampleMarkColour;
 
-				int x = channel.Position * (r.Size.Width - 1) / sample.Length;
+				int x = channel.Position.Whole * (r.Size.Width - 1) / sample.Length;
 
 				if (x >= r.Size.Width)
 				{

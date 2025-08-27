@@ -2263,7 +2263,8 @@ public class Song
 			p.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
 
 			// Stop this channel
-			chan.Length = chan.Position = chan.PositionFrac = 0;
+			chan.Length = 0;
+			chan.Position = SamplePosition.Zero;
 			chan.ROfs = chan.LOfs = 0;
 			chan.LeftVolume = chan.RightVolume = 0;
 
@@ -2418,7 +2419,8 @@ public class Song
 				}
 
 				// Stop this channel
-				chan.Length = chan.Position = chan.PositionFrac = 0;
+				chan.Length = 0;
+				chan.Position = SamplePosition.Zero;
 				chan.ROfs = chan.LOfs = 0;
 			}
 		}
@@ -2443,7 +2445,7 @@ public class Song
 		chan.Flags |= ChannelFlags.NoteFade | ChannelFlags.FastVolumeRamp;
 		//if (chan->ptr_instrument) chan->volume = 0;
 		//chan.Frequency = 0;
-		chan.Increment = 0;
+		chan.Increment = SamplePosition.Zero;
 		chan.FadeOutVolume = 0;
 		//chan.Length = 0;
 
@@ -2487,7 +2489,7 @@ public class Song
 			// When in AdLib / MIDI mode, end the sample
 			chan.Flags |= ChannelFlags.FastVolumeRamp;
 			chan.Length = 0;
-			chan.Position = 0;
+			chan.Position = SamplePosition.Zero;
 			return;
 		}
 		*/
@@ -2998,7 +3000,7 @@ public class Song
 			if ((frequency != 0) && chan.RowNote == SpecialNotes.None)
 				chan.Frequency = frequency;
 
-			chan.Position = chan.PositionFrac = 0;
+			chan.Position = SamplePosition.Zero;
 		}
 	}
 
@@ -3419,7 +3421,7 @@ public class Song
 		}
 
 		if (portamento && (chan.Length == 0))
-			chan.Increment = 0;
+			chan.Increment = SamplePosition.Zero;
 
 		chan.Flags &= ~(ChannelFlags.SampleFlags | ChannelFlags.KeyOff | ChannelFlags.NoteFade
 					 | ChannelFlags.VolumeEnvelope | ChannelFlags.PanningEnvelope | ChannelFlags.PitchEnvelope);
@@ -3445,7 +3447,7 @@ public class Song
 				chan.Panning = pSmp.Panning;
 			chan.InstrumentVolume = oldInstrumentVolume;
 			chan.Volume = pSmp.Volume;
-			chan.Position = 0;
+			chan.Position = SamplePosition.Zero;
 			return;
 		}
 
@@ -3465,7 +3467,7 @@ public class Song
 		chan.LoopEnd = pSmp.LoopEnd;
 		chan.C5Speed = pSmp.C5Speed;
 		chan.CurrentSampleData = pSmp.Data;
-		chan.Position = 0;
+		chan.Position = SamplePosition.Zero;
 
 		if (chan.Flags.HasAllFlags(ChannelFlags.SustainLoop) && (!portamento || ((pEnv != null) && !wasKeyOff)))
 		{
@@ -3592,11 +3594,11 @@ public class Song
 					chan.LoopEnd = pIns.LoopEnd;
 					if (chan.Length > chan.LoopEnd) chan.Length = chan.LoopEnd;
 				}
-				chan.Position = chan.PositionFrac = 0;
+				chan.Position = SamplePosition.Zero;
 			}
 
 			if (chan.Position >= chan.Length)
-				chan.Position = chan.LoopStart;
+				chan.Position = new SamplePosition(chan.LoopStart, 0);
 		}
 		else
 			porta = false;
@@ -3754,9 +3756,9 @@ public class Song
 					chan.MemOffset = (chan.MemOffset & ~0xff00) | (param << 8);
 				if (SongNote.IsNote(chan.RowInstrumentNumber != 0 ? chan.NewNote : chan.RowNote))
 				{
-					chan.Position = chan.MemOffset;
+					chan.Position = new SamplePosition(chan.MemOffset, 0);
 					if (chan.Position > chan.Length)
-						chan.Position = Flags.HasAllFlags(SongFlags.ITOldEffects) ? chan.Length : 0;
+						chan.Position = Flags.HasAllFlags(SongFlags.ITOldEffects) ? new SamplePosition(chan.Length, 0) : SamplePosition.Zero;
 				}
 				break;
 
@@ -4252,15 +4254,12 @@ public class Song
 					if (Quirks[SchismQuirks.PortamentoSwapResetsPosition])
 					{
 						if (SongNote.IsNote(note) && (pSmp != chan.Sample))
-						{
-							chan.Position = 0;
-							chan.PositionFrac = 0;
-						}
+							chan.Position = SamplePosition.Zero;
 					}
 					else if (pSmp != chan.Sample)
 					{
 						// Special IT case: portamento+note causes sample change -> ignore portamento
-						chan.Position = chan.PositionFrac = 0;
+						chan.Position = SamplePosition.Zero;
 					}
 				}
 
@@ -5456,7 +5455,8 @@ public class Song
 				v.FadeOutVolume = 0;
 				v.Flags |= ChannelFlags.KeyOff | ChannelFlags.NoteFade;
 				v.Frequency = 0;
-				v.Position = v.Length = 0;
+				v.Position = SamplePosition.Zero;
+				v.Length = 0;
 				v.LoopStart = 0;
 				v.LoopEnd = 0;
 				v.ROfs = v.LOfs = 0;

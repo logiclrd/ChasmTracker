@@ -3,7 +3,6 @@ using System.Linq;
 
 namespace ChasmTracker.Playback;
 
-using System.Runtime.CompilerServices;
 using ChasmTracker.MIDI;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -608,14 +607,14 @@ public static class SongRenderer
 				chan.Flags |= ChannelFlags.NoIDO;
 				break;
 			case SourceMode.Linear:
-				if (chan.Increment >= 0xFF00)
+				if (chan.Increment >= new SamplePosition(0, 0xFF000000))
 				{
 					chan.Flags |= ChannelFlags.NoIDO;
 					break;
 				}
 				goto default;
 			default:
-				if (chan.Increment == 0x10000)
+				if (chan.Increment == new SamplePosition(1, 0))
 					chan.Flags |= ChannelFlags.NoIDO;
 				break;
 		}
@@ -1207,7 +1206,7 @@ public static class SongRenderer
 					continue;
 
 			// Reset channel data
-			chan.Increment = 0;
+			chan.Increment = SamplePosition.Zero;
 			chan.FinalVolume = 0;
 			chan.FinalPanning = chan.Panning + chan.PanningSwing;
 
@@ -1312,12 +1311,15 @@ public static class SongRenderer
 
 				chan.SampleFrequency = frequency;
 
-				int nInc = (int)(frequency * 0x10000L / AudioPlayback.MixFrequency);
+				var nInc = SamplePosition.Ratio(frequency, unchecked((uint)AudioPlayback.MixFrequency));
 
 				if (csf.FrequencyFactor != 128)
-					nInc = (nInc * csf.FrequencyFactor) >> 7;
+					nInc = nInc * csf.FrequencyFactor / 128;
 
-				chan.Increment = Math.Max(1, nInc);
+				if (nInc == SamplePosition.Zero)
+					nInc = new SamplePosition(0, 1);
+
+				chan.Increment = nInc;
 			}
 			else
 				ProcessMIDIMacro(csf, cn);
@@ -1334,12 +1336,12 @@ public static class SongRenderer
 				chan.Strike--;
 
 			// Check for too big increment
-			if (((chan.Increment >> 16) + 1) >= (chan.LoopEnd - chan.LoopStart))
+			if (chan.Increment.Whole + 1 >= (chan.LoopEnd - chan.LoopStart))
 				chan.Flags &= ~ChannelFlags.Loop;
 
 			chan.RightVolumeNew = chan.LeftVolumeNew = 0;
 
-			if ((chan.Length == 0) || (chan.Increment == 0))
+			if ((chan.Length == 0) || (chan.Increment == SamplePosition.Zero))
 				chan.CurrentSampleData = SampleWindow.Empty;
 
 			// Process the VU meter. This is filled in with real

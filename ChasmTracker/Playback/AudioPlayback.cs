@@ -749,7 +749,8 @@ public static class AudioPlayback
 				v.FadeOutVolume = 0;
 				v.Flags |= ChannelFlags.KeyOff | ChannelFlags.NoteFade;
 				v.Frequency = 0;
-				v.Position = v.Length = 0;
+				v.Position = SamplePosition.Zero;
+				v.Length = 0;
 				v.LoopStart = 0;
 				v.LoopEnd = 0;
 				v.ROfs = v.LOfs = 0;

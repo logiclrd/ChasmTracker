@@ -353,7 +353,7 @@ public static class Mixer
 
 	abstract class GetVolume<TSample>
 	{
-		public abstract void Do(Span<TSample> p, long position, out int left, out int right);
+		public abstract void Do(Span<TSample> p, SamplePosition position, out int left, out int right);
 	}
 
 	// No interpolation
@@ -364,9 +364,9 @@ public static class Mixer
 		static TBits s_bits = new TBits();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			left = right = (p[unchecked((int)(position >> 16))].ToInt32(null) << (16 - s_bits.Get()));
+			left = right = (p[position.Whole].ToInt32(null) << (16 - s_bits.Get()));
 		}
 	}
 
@@ -378,10 +378,10 @@ public static class Mixer
 		static TBits s_bits = new TBits();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			int poshi  = unchecked((int)(position >> 16));
-			int poslo   = unchecked((int)((position >> 8) & 0xFF));
+			int poshi  = position.Whole;
+			int poslo   = unchecked((int)(position.Fraction >> 24));
 			int srcvol  = p[poshi].ToInt32(null);
 			int destvol = p[poshi + 1].ToInt32(null);
 
@@ -399,10 +399,11 @@ public static class Mixer
 		static TShift s_shift = new TShift();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			int poshi = unchecked((int)(position >> 16));
-			int poslo = unchecked((int)((position >> SplineFracShift) & SplineFracMask));
+			int poshi = position.Whole;
+			/* FIXME this is stupid */
+			int poslo = unchecked((int)((((long)position >> 16) >> SplineFracShift) & SplineFracMask));
 			int vol   =
 				cubic_spline_lut[poslo + 0] * p[poshi - 1].ToInt32(null) +
 				cubic_spline_lut[poslo + 1] * p[poshi + 0].ToInt32(null) +
@@ -425,10 +426,10 @@ public static class Mixer
 		static TShift s_shift = new TShift();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			int poshi  = unchecked((int)(position >> 16));
-			int poslo  = unchecked((int)(position & 0xFFFF));
+			int poshi  = position.Whole;
+			int poslo  = unchecked((int)(position.Fraction >> 16));
 			int firidx = ((poslo + WindowedFIRFracHalve) >> WindowedFIRFracShift) & WindowedFIRFracMask;
 			int vol = (
 				((
@@ -459,10 +460,10 @@ public static class Mixer
 		static TBits s_bits = new TBits();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			left = p[(unchecked((int)(position >> 16))) * 2 + 0].ToInt32(null) << (16 - s_bits.Get());
-			right = p[(unchecked((int)(position >> 16))) * 2 + 1].ToInt32(null) << (16 - s_bits.Get());
+			left = p[position.Whole * 2 + 0].ToInt32(null) << (16 - s_bits.Get());
+			right = p[position.Whole * 2 + 1].ToInt32(null) << (16 - s_bits.Get());
 		}
 	}
 
@@ -473,10 +474,10 @@ public static class Mixer
 		static TBits s_bits = new TBits();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			int poshi  = unchecked((int)(position >> 16));
-			int poslo   = unchecked((int)((position >> 8) & 0xFF));
+			int poshi  = position.Whole;
+			int poslo   = unchecked((int)(position.Fraction >> 24));
 			int srcvol_l  = p[poshi * 2 + 0].ToInt32(null);
 			int srcvol_r  = p[poshi * 2 + 1].ToInt32(null);
 			int destvol_l = p[poshi * 2 + 2].ToInt32(null);
@@ -497,10 +498,11 @@ public static class Mixer
 		static TShift s_shift = new TShift();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			int poshi = unchecked((int)(position >> 16));
-			int poslo = unchecked((int)((position >> SplineFracShift) & SplineFracMask));
+			int poshi = position.Whole;
+			/* FIXME this is stupid */
+			int poslo = unchecked((int)((((long)position >> 16) >> SplineFracShift) & SplineFracMask));
 			int volL  =
 				cubic_spline_lut[poslo + 0] * p[(poshi - 1) * 2].ToInt32(null) +
 				cubic_spline_lut[poslo + 1] * p[(poshi + 0) * 2].ToInt32(null) +
@@ -527,10 +529,10 @@ public static class Mixer
 		static TShift s_shift = new TShift();
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-		public override void Do(Span<TSample> p, long position, out int left, out int right)
+		public override void Do(Span<TSample> p, SamplePosition position, out int left, out int right)
 		{
-			int poshi  = unchecked((int)(position >> 16));
-			int poslo  = unchecked((int)(position & 0xFFFF));
+			int poshi  = position.Whole;
+			int poslo  = unchecked((int)(position.Fraction >> 16));
 			int firidx = ((poslo + WindowedFIRFracHalve) >> WindowedFIRFracShift) & WindowedFIRFracMask;
 
 			left = (
@@ -790,9 +792,8 @@ public static class Mixer
 		[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 		public void Mix(ref SongVoice chan, Span<int> pVol)
 		{
-			int position = chan.PositionFrac;
-			Span<TSample> p = MemoryMarshal.Cast<byte, TSample>(chan.CurrentSampleData.Slice(chan.Position));
-			if (chan.Flags.HasAllFlags(ChannelFlags.Stereo)) p = p.Slice(chan.Position);
+			var position = chan.Position;
+			Span<TSample> p = MemoryMarshal.Cast<byte, TSample>(chan.CurrentSampleData.AsExtendedSpan());
 			Store.SetVUMeter(chan.VUMeter);
 
 			int leftRampVolume = chan.LeftRampVolume;
@@ -820,8 +821,7 @@ public static class Mixer
 			chan.LeftVolume      = (leftRampVolume >> Constants.VolumeRampPrecision);
 
 			chan.VUMeter = Store.GetVUMeter();
-			chan.Position     += position >> 16;
-			chan.PositionFrac = position & 0xFFFF;
+			chan.Position = position;
 		}
 	}
 
@@ -898,12 +898,12 @@ public static class Mixer
 
 		public void Resample(Span<sbyte> oldBuf, Span<sbyte> newBuf)
 		{
-			long position = 0;
+			var position = SamplePosition.Zero;
 
 			Span<sbyte> p = oldBuf;
 			Span<sbyte> pVol = newBuf;
 
-			long increment = (((long)oldBuf.Length) << 16) / newBuf.Length;
+			var increment = new SamplePosition(oldBuf.Length, 0) / newBuf.Length;
 
 			do
 			{
@@ -930,12 +930,12 @@ public static class Mixer
 
 		public void Resample(Span<short> oldBuf, Span<short> newBuf)
 		{
-			long position = 0;
+			var position = SamplePosition.Zero;
 
 			Span<short> p = oldBuf;
 			Span<short> pVol = newBuf;
 
-			long increment = (((long)oldBuf.Length) << 16) / newBuf.Length;
+			var increment = new SamplePosition(oldBuf.Length, 0) / newBuf.Length;
 
 			do
 			{
@@ -1112,175 +1112,244 @@ public static class Mixer
 			GetMixerKernel(16, 2, ResamplingType.FIRFilter, filter: true, ramp: true),
 		};
 
-	static int BufferLengthToSamples(int mixBufCount, ref SongVoice chan)
-		=> (chan.Increment * mixBufCount) + chan.PositionFrac;
+	/* yap */
+	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+	static int DistanceToBufferLength(SamplePosition from, SamplePosition to, SamplePosition increment)
+		=> unchecked((int)((((to - from) - new SamplePosition(1, 0)) / increment) + 1));
 
-	static int SamplesToBufferLength(int samples, ref SongVoice chan)
-		=> (((samples - 1) << 16) / Math.Abs(chan.Increment)) + 1;
-
-	static int GetSampleCount(ref SongVoice chan, int samples)
+	struct MixLoopState
 	{
-		int loopStart = chan.Flags.HasAllFlags(ChannelFlags.Loop) ? chan.LoopStart : 0;
-		int increment = chan.Increment;
+		public SampleWindow SamplePointer;
+		public SampleWindow LookaheadPointer;
+		public int LookaheadStart;
+		public int MaxSamples;
 
-		if (samples <= 0 || (increment == 0) || (chan.Length == 0))
-			return 0;
-
-		// Under zero ?
-		if (chan.Position < loopStart)
+		public MixLoopState(ref SongVoice chan)
 		{
-			if (increment < 0)
+			if (chan.CurrentSampleData.IsEmpty)
+				return;
+
+			UpdateLookaheadPointers(ref chan);
+
+			var inv = chan.Increment.Abs();
+
+			MaxSamples = 16384 / (inv.Whole + 1);
+			MaxSamples = Math.Max(MaxSamples, 2);
+		}
+
+		public void UpdateLookaheadPointers(ref SongVoice channel)
+		{
+			// Our loop lookahead buffer is basically the exact same as OpenMPT's.
+			// (in essence, it is mostly just a backport)
+			//
+			// This means that it has the same bugs that are notated in OpenMPT's
+			// `soundlib/Fastmix.cpp' file, which are the following:
+			//
+			// - Playing samples backwards should reverse interpolation LUTs for interpolation modes
+			//   with more than two taps since they're not symmetric. We might need separate LUTs
+			//   because otherwise we will add tons of branches.
+			// - Loop wraparound works pretty well in general, but not at the start of bidi samples.
+			// - The loop lookahead stuff might still fail for sampes with backward loops.
+			SamplePointer = channel.Sample?.Data ?? SampleWindow.Empty;
+			LookaheadPointer = SampleWindow.Empty;
+			LookaheadStart = (channel.LoopEnd < Constants.MaxInterpolationLookaheadBufferSize)
+				? channel.LoopStart
+				: Math.Max(channel.LoopStart, channel.LoopEnd - Constants.MaxInterpolationLookaheadBufferSize);
+
+			// This shouldn't be necessary with interpolation disabled but with that conditional
+			// it causes weird precision loss within the sample, hence why I've removed it. This
+			// shouldn't be that heavy anyway :p
+			if ((channel.Sample != null) && channel.Flags.HasAllFlags(ChannelFlags.Loop))
 			{
-				// Invert loop for bidi loops
-				int delta = ((loopStart - chan.Position) << 16) - (chan.PositionFrac & 0xFFFF);
-				chan.Position = loopStart + (delta >> 16);
-				chan.PositionFrac = delta & 0xFFFF;
+				var pIns = channel.Sample;
 
-				if (chan.Position < loopStart
-				 || chan.Position >= (loopStart + chan.Length) / 2)
-				{
-					chan.Position = loopStart;
-					chan.PositionFrac = 0;
-				}
+				var lookaheadOffset = ((channel.Flags.HasFlag(ChannelFlags.SustainLoop) ? 7 : 3) * Constants.MaxInterpolationLookaheadBufferSize)
+					+ (pIns.Length - channel.LoopEnd);
 
-				increment = -increment;
-				chan.Increment = increment;
-				// go forward
-				chan.Flags &= ~ChannelFlags.PingPongFlag;
-
-				if ((!chan.Flags.HasAllFlags(ChannelFlags.Loop))
-				 || (chan.Position >= chan.Length))
-				{
-					chan.Position = chan.Length;
-					chan.PositionFrac = 0;
-					return 0;
-				}
-			}
-			else
-			{
-				// We probably didn't hit the loop end yet (first loop), so we do nothing
-				if (chan.Position < 0)
-					chan.Position = 0;
+				LookaheadPointer = SamplePointer.Shift(lookaheadOffset);
 			}
 		}
-		// Past the end
-		else if (chan.Position >= chan.Length)
+
+		public int GetSampleCount(ref SongVoice chan, int samples)
 		{
-			// not looping -> stop this channel
-			if (!chan.Flags.HasAllFlags(ChannelFlags.Loop))
+			var loopStart = chan.Flags.HasAllFlags(ChannelFlags.Loop) ? new SamplePosition(chan.LoopStart, 0) : SamplePosition.Zero;
+			var increment = chan.Increment;
+
+			if (samples <= 0 || (increment == 0) || (chan.Length == 0))
 				return 0;
 
-			if (chan.Flags.HasAllFlags(ChannelFlags.PingPongLoop))
+			/* reset this */
+			chan.CurrentSampleData = SamplePointer;
+
+			// Under zero ?
+			if (chan.Position < loopStart)
 			{
-				// Invert loop
-				if (increment > 0)
+				if (increment < 0)
 				{
+					// Invert loop for bidi loops
+					var delta = loopStart - chan.Position;
+					chan.Position = loopStart + delta;
+
+					if (chan.Position < loopStart
+					|| chan.Position >= (loopStart + chan.Length) / 2)
+						chan.Position = loopStart;
+
 					increment = -increment;
 					chan.Increment = increment;
-				}
+					// go forward
+					chan.Flags &= ~ChannelFlags.PingPongFlag;
 
-				chan.Flags |= ChannelFlags.PingPongFlag;
-
-				// adjust loop position
-				long overshoot = (long)((chan.Position - chan.Length) << 16) + chan.PositionFrac;
-				long loopLength = (long)(chan.LoopEnd - chan.LoopStart - PingPongOffset) << 16;
-
-				if (overshoot < loopLength)
-				{
-					long newPosition = ((long)(chan.Length - PingPongOffset) << 16) - overshoot;
-
-					chan.Position = unchecked((int)(newPosition >> 16));
-					chan.PositionFrac = unchecked((int)(newPosition & 0xFFFF));
+					if ((!chan.Flags.HasAllFlags(ChannelFlags.Loop))
+					 || (chan.Position >= chan.Length))
+					{
+						chan.Position = new SamplePosition(chan.Length, 0);
+						return 0;
+					}
 				}
 				else
 				{
-					chan.Position = chan.LoopStart; /* not 100% accurate, but only matters for extremely small loops played at extremely high frequencies */
-					chan.PositionFrac = 0;
+					// We probably didn't hit the loop end yet (first loop), so we do nothing
+					if (chan.Position < 0)
+						chan.Position = SamplePosition.Zero;
 				}
 			}
-			else
+			// Past the end
+			else if (chan.Position >= chan.Length)
 			{
-				// This is a bug
+				// not looping -> stop this channel
+				if (!chan.Flags.HasAllFlags(ChannelFlags.Loop))
+					return 0;
+
+				if (chan.Flags.HasAllFlags(ChannelFlags.PingPongLoop))
+				{
+					// Invert loop
+					if (increment > 0)
+					{
+						increment = -increment;
+						chan.Increment = increment;
+					}
+
+					chan.Flags |= ChannelFlags.PingPongFlag;
+
+					// adjust loop position
+					var overshoot = chan.Position - chan.Length;
+					var loopLength = new SamplePosition(chan.LoopEnd - chan.LoopStart - PingPongOffset, 0);
+
+					if (overshoot < loopLength)
+						chan.Position = new SamplePosition(chan.Length - PingPongOffset, 0) - overshoot;
+					else
+					{
+						/* not 100% accurate, but only matters for extremely small loops played at extremely high frequencies */
+						chan.Position = new SamplePosition(chan.LoopStart, 0);
+					}
+				}
+				else
+				{
+					// This is a bug
+					if (increment < 0)
+					{
+						increment = -increment;
+						chan.Increment = increment;
+					}
+
+					// Restart at loop start
+					chan.Position += loopStart - chan.Length;
+
+					if (chan.Position < loopStart)
+						chan.Position = new SamplePosition(chan.LoopStart, 0);
+
+					chan.Flags |= ChannelFlags.LoopWrapped;
+				}
+			}
+
+			var position = chan.Position.Whole;
+
+			// too big increment, and/or too small loop length
+			if (position < loopStart.Whole)
+			{
+				if (position < 0 || increment < 0)
+					return 0;
+			}
+
+			if (position < 0 || position >= chan.Length)
+				return 0;
+
+			int sampleCount = samples;
+
+			var inv = increment.Abs();
+
+			sampleCount = Math.Min(sampleCount, MaxSamples);
+
+			var incSamples = increment * (sampleCount - 1);
+			int posDest = (chan.Position + incSamples).Whole;
+
+			bool atLoopStart = (chan.Position >= chan.LoopStart)
+				&& (chan.Position < chan.LoopStart + Constants.MaxInterpolationLookaheadBufferSize);
+
+			if (!atLoopStart)
+				chan.Flags &= ~ChannelFlags.LoopWrapped;
+
+			bool checkDest = true;
+
+			// Loop wrap-around magic. (yummers)
+			if (!LookaheadPointer.IsEmpty)
+			{
+				if (chan.Position >= LookaheadStart)
+				{
+					if (chan.Increment < 0)
+					{
+						// going backwards and we're in the loop. We have to set the sample count
+						// from the position from lookahead buffer start...
+						sampleCount = DistanceToBufferLength(new SamplePosition(LookaheadStart, 0), chan.Position, inv);
+						chan.CurrentSampleData = LookaheadPointer;
+					}
+					else if (chan.Position <= chan.LoopEnd)
+					{
+						// going forwards, and we're in the loop
+						sampleCount = DistanceToBufferLength(chan.Position, new SamplePosition(chan.LoopEnd, 0), inv);
+						chan.CurrentSampleData = LookaheadPointer;
+					}
+					else
+					{
+						// loop has ended, fix the position and keep going
+						sampleCount = DistanceToBufferLength(chan.Position, new SamplePosition(chan.Length, 0), inv);
+					}
+
+					checkDest = false;
+				}
+				else if (chan.Flags.HasAllFlags(ChannelFlags.LoopWrapped) && atLoopStart)
+				{
+					// Interpolate properly after looping
+					sampleCount = DistanceToBufferLength(chan.Position, loopStart + Constants.MaxInterpolationLookaheadBufferSize, inv);
+					chan.CurrentSampleData = LookaheadPointer.Shift(chan.Length - loopStart.Whole);
+					checkDest = false;
+				}
+				else if ((chan.Increment > 0) && (posDest >= LookaheadStart) && (sampleCount > 1))
+				{
+					// Don't go past the loop start!
+					sampleCount = DistanceToBufferLength(chan.Position, new SamplePosition(LookaheadStart, 0), inv);
+					checkDest = false;
+				}
+			}
+
+			if (checkDest)
+			{
 				if (increment < 0)
 				{
-					increment = -increment;
-					chan.Increment = increment;
+					if (posDest < loopStart)
+						sampleCount = DistanceToBufferLength(loopStart, chan.Position, inv);
 				}
-
-				// Restart at loop start
-				chan.Position += loopStart - chan.Length;
-
-				if ((int) chan.Position < loopStart)
-					chan.Position = chan.LoopStart;
-
-				chan.Flags |= ChannelFlags.LoopWrapped;
+				else
+				{
+					if (posDest >= chan.Length)
+						sampleCount = DistanceToBufferLength(chan.Position, new SamplePosition(chan.Length, 0), inv);
+				}
 			}
+
+			sampleCount = sampleCount.Clamp(1, samples);
+
+			return sampleCount;
 		}
-
-		int position = chan.Position;
-
-		// too big increment, and/or too small loop length
-		if (position < loopStart) {
-			if (position < 0 || increment < 0)
-				return 0;
-		}
-
-		if (position < 0 || position >= (int)chan.Length)
-			return 0;
-
-		int positionFrac = unchecked((ushort)chan.PositionFrac);
-		int sampleCount = samples;
-
-		if (increment < 0)
-		{
-			int inv = -increment;
-			int maxsamples = 16384 / ((inv >> 16) + 1);
-
-			if (maxsamples < 2)
-				maxsamples = 2;
-
-			if (samples > maxsamples)
-				samples = maxsamples;
-
-			int deltaHi = (inv >> 16) * (samples - 1);
-			int deltaLo = (inv & 0xffff) * (samples - 1);
-			int posDest = position - deltaHi + ((positionFrac - deltaLo) >> 16);
-
-			if (posDest < loopStart)
-			{
-				sampleCount =
-					unchecked((int)((((((long)position -
-						loopStart) << 16) + positionFrac -
-							1) / inv) + 1));
-			}
-		}
-		else
-		{
-			int maxsamples = 16384 / ((increment >> 16) + 1);
-
-			if (maxsamples < 2)
-				maxsamples = 2;
-
-			if (samples > maxsamples)
-				samples = maxsamples;
-
-			int deltaHi = (increment >> 16) * (samples - 1);
-			int deltaLo = (increment & 0xffff) * (samples - 1);
-			int posDest = position + deltaHi + ((positionFrac + deltaLo) >> 16);
-
-			if (posDest >= (int) chan.Length)
-			{
-				sampleCount = unchecked((int)(
-					(((((long) chan.Length - position) << 16) - positionFrac - 1) / increment) + 1));
-			}
-		}
-
-		if (sampleCount <= 1)
-			return 1;
-		else if (sampleCount > samples)
-			return samples;
-
-		return sampleCount;
 	}
 
 	public static int CreateStereoMix(Song csf, int count)
@@ -1349,41 +1418,10 @@ public static class Mixer
 
 			numChannelsUsed++;
 
-			// Our loop lookahead buffer is basically the exact same as OpenMPT's.
-			// (in essence, it is mostly just a backport)
-			//
-			// This means that it has the same bugs that are notated in OpenMPT's
-			// `soundlib/Fastmix.cpp' file, which are the following:
-			//
-			// - Playing samples backwards should reverse interpolation LUTs for interpolation modes
-			//   with more than two taps since they're not symmetric. We might need separate LUTs
-			//   because otherwise we will add tons of branches.
-			// - Loop wraparound works pretty well in general, but not at the start of bidi samples.
-			// - The loop lookahead stuff might still fail for samples with backward loops.
-
-			var rawSampleData = channelSample.RawData;
-			var lookaheadPtr = SampleWindow.Empty;
-
-			int lookaheadStart = (channel.LoopEnd < Constants.MaxInterpolationLookaheadBufferSize)
-				? channel.LoopStart
-				: Math.Max(channel.LoopStart, channel.LoopEnd - Constants.MaxInterpolationLookaheadBufferSize);
-
-			if (rawSampleData != null)
-			{
-				// This shouldn't be necessary with interpolation disabled but with that conditional
-				// it causes weird precision loss within the sample, hence why I've removed it. This
-				// shouldn't be that heavy anyway :p
-				if (channel.Flags.HasAllFlags(ChannelFlags.Loop))
-				{
-					int lookaheadOffset = (channel.Flags.HasFlag(ChannelFlags.SustainLoop) ? 7 : 3) * Constants.MaxInterpolationLookaheadBufferSize
-						+ channelSample.Length - channel.LoopEnd;
-
-					lookaheadPtr = channelSample.Data.Shift(lookaheadOffset - SongSample.AllocatePrepend);
-				}
-			}
-
 			////////////////////////////////////////////////////
 			int nAddMix = 0;
+
+			var mls = new MixLoopState(ref channel);
 
 			channel.VUMeter <<= 16;
 
@@ -1404,15 +1442,14 @@ public static class Mixer
 				* artificial KeyOffs)
 				*/
 				if (!channel.Flags.HasAllFlags(ChannelFlags.AdLib))
-					sampleCount = GetSampleCount(ref channel, nrampsamples);
+					sampleCount = mls.GetSampleCount(ref channel, nrampsamples);
 
 				if (sampleCount <= 0)
 				{
 					// Stopping the channel
 					channel.CurrentSampleData = SampleWindow.Empty;
 					channel.Length = 0;
-					channel.Position = 0;
-					channel.PositionFrac = 0;
+					channel.Position = SamplePosition.Zero;
 					channel.RampLength = 0;
 					MixUtility.EndChannelOfs(ref channel, pBuffer, numSamples);
 					AudioPlayback.DryROfsVol += channel.ROfs;
@@ -1427,10 +1464,7 @@ public static class Mixer
 				if ((numChannelsMixed >= AudioPlayback.MaxVoices && !AudioPlayback.MixFlags.HasAllFlags(MixFlags.DirectToDisk))
 					|| ((channel.RampLength == 0) && ((channel.LeftVolume | channel.RightVolume) == 0)))
 				{
-					int delta = BufferLengthToSamples(sampleCount, ref channel);
-
-					channel.PositionFrac = delta & 0xFFFF;
-					channel.Position += (delta >> 16);
+					channel.Position += channel.Increment * sampleCount;
 					channel.ROfs = channel.LOfs = 0;
 
 					pBuffer = pBuffer.Slice(sampleCount * 2);
@@ -1443,54 +1477,6 @@ public static class Mixer
 					var mixKernel = (channel.RampLength != 0)
 						? s_mixKernels[flags | MixIndex_Ramp]
 						: s_mixKernels[flags];
-
-					// Loop wrap-around magic
-					if (!lookaheadPtr.IsEmpty)
-					{
-						int oldcount = sampleCount;
-						int posDest = ((channel.Position << 16) + (channel.Increment * (numSamples - 1)) + channel.PositionFrac) >> 16;
-						bool atLoopStart = (channel.Position >= channel.LoopStart) && (channel.Position < channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize);
-
-						if (!atLoopStart)
-							channel.Flags &= ~ChannelFlags.LoopWrapped;
-
-						channel.CurrentSampleData = channelSample.Data;
-
-						if (channel.Position >= lookaheadStart)
-						{
-							if (channel.Increment < 0)
-							{
-								// going backwards and we're in the loop. we have to set the sample count
-								// from the position from lookahead buffer start...
-								sampleCount = SamplesToBufferLength(channel.Position - lookaheadStart, ref channel);
-								channel.CurrentSampleData = lookaheadPtr;
-							}
-							else if (channel.Position <= channel.LoopEnd)
-							{
-								// going forwards and we're in the loop
-								sampleCount = SamplesToBufferLength(channel.LoopEnd - channel.Position, ref channel);
-								channel.CurrentSampleData = lookaheadPtr;
-							}
-							else
-							{
-								// loop has ended, fix the buffer and keep going
-								sampleCount = SamplesToBufferLength(channel.Length - channel.Position, ref channel);
-							}
-						}
-						else if (channel.Flags.HasAllFlags(ChannelFlags.LoopWrapped) && atLoopStart)
-						{
-							// Interpolate properly after looping
-							sampleCount = SamplesToBufferLength((channel.LoopStart + Constants.MaxInterpolationLookaheadBufferSize) - channel.Position, ref channel);
-							channel.CurrentSampleData = lookaheadPtr.Shift((channel.Length - channel.LoopStart) * (channelSample.Flags.HasAllFlags(SampleFlags.Stereo) ? 2 : 1) * (channelSample.Flags.HasAllFlags(SampleFlags._16Bit) ? 2 : 1));
-						}
-						else if (channel.Increment >= 0 && posDest >= (int)lookaheadStart && sampleCount > 1)
-						{
-							// Don't go past the loop start!
-							sampleCount = SamplesToBufferLength(lookaheadStart - channel.Position, ref channel);
-						}
-
-						sampleCount = sampleCount.Clamp(1, oldcount);
-					}
 
 					var pbufferRange = pBuffer.Slice(0, sampleCount * 2);
 
@@ -1531,6 +1517,9 @@ public static class Mixer
 						channel.RampLength -= sampleCount;
 				}
 			} while (numSamples > 0);
+
+			/* Restore sample pointer in case it got changed through loop wrap-around */
+			channel.CurrentSampleData = mls.SamplePointer;
 
 			channel.VUMeter >>= 16;
 			if (channel.VUMeter > 0xFF)

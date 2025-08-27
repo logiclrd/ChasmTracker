@@ -12,9 +12,8 @@ public struct SongVoice
 
 	// First 32-bytes: Most used mixing information: don't change it
 	public SampleWindow CurrentSampleData = SampleWindow.Empty;
-	public int Position; // sample position, fixed-point -- integer part
-	public int PositionFrac; // fractional part
-	public int Increment; // 16.16 fixed point, how much to add to position per sample-frame of output
+	public SamplePosition Position;
+	public SamplePosition Increment;
 	public int RightVolume; // volume of the left channel
 	public int LeftVolume; // volume of the right channel
 	public int RightRamp; // amount to ramp the left channel
