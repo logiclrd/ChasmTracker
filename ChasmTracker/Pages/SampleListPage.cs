@@ -15,6 +15,7 @@ using ChasmTracker.FileTypes;
 using ChasmTracker.FileTypes.SampleConverters;
 using ChasmTracker.FM;
 using ChasmTracker.Input;
+using ChasmTracker.Memory;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -1192,7 +1193,8 @@ public class SampleListPage : Page
 	void DoDeleteSample()
 	{
 		Song.CurrentSong.ClearSample(_currentSample);
-		Status.Flags |= StatusFlags.SongNeedsSave;
+		MemoryUsage.NotifySongChanged();
+		Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.SongNeedsSave;
 	}
 
 	void DoDownmix()

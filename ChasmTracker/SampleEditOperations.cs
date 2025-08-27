@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace ChasmTracker;
 
+using ChasmTracker.Memory;
 using ChasmTracker.Playback;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -234,6 +235,8 @@ public static class SampleEditOperations
 			}
 
 			sample.AdjustLoop();
+
+				MemoryUsage.NotifySongChanged();
 		}
 	}
 
@@ -287,6 +290,8 @@ public static class SampleEditOperations
 				Centralise8(sample.RawData);
 
 			sample.AdjustLoop();
+
+			MemoryUsage.NotifySongChanged();
 		}
 	}
 
@@ -346,6 +351,8 @@ public static class SampleEditOperations
 			sample.Flags |= ~SampleFlags.Stereo;
 
 			sample.AdjustLoop();
+
+			MemoryUsage.NotifySongChanged();
 		}
 	}
 
@@ -633,6 +640,8 @@ public static class SampleEditOperations
 			}
 
 			sample.AdjustLoop();
+
+			MemoryUsage.NotifySongChanged();
 		}
 	}
 
@@ -681,6 +690,8 @@ public static class SampleEditOperations
 				sample.Flags &= SampleFlags.Stereo;
 
 				sample.AdjustLoop();
+
+				MemoryUsage.NotifySongChanged();
 			}
 		}
 	}
@@ -703,6 +714,8 @@ public static class SampleEditOperations
 				sample.Flags &= SampleFlags.Stereo;
 
 				sample.AdjustLoop();
+
+				MemoryUsage.NotifySongChanged();
 			}
 		}
 	}

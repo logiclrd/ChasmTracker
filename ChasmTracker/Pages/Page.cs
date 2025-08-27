@@ -596,10 +596,17 @@ public abstract class Page : WidgetContext
 		}
 		else
 		{
-			int sum = MemoryUsage.GetPatternUsage() + MemoryUsage.GetInstrumentUsage() + MemoryUsage.GetSongMessageUsage();
+			int songMemory;
+			int sampleMemory;
 
-			VGAMem.DrawText($"   Song {sum >> 10}k", new Point(63, 6), (0, 2));
-			VGAMem.DrawText($"Samples {MemoryUsage.GetSampleUsage() > 10}k", new Point(63, 7), (0, 2));
+			songMemory = MemoryUsage.GetPatternUsage() + MemoryUsage.GetInstrumentUsage() + MemoryUsage.GetSongMessageUsage();
+			songMemory >>= 10;
+
+			sampleMemory = MemoryUsage.GetSampleUsage();
+			sampleMemory >>= 10;
+
+			VGAMem.DrawText($"   Song {songMemory}k", new Point(63, 6), (0, 2));
+			VGAMem.DrawText($"Samples {sampleMemory}k", new Point(63, 7), (0, 2));
 		}
 	}
 
