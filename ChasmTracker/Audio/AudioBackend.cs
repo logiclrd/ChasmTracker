@@ -4,11 +4,23 @@ using System.Linq;
 
 namespace ChasmTracker.Audio;
 
+using System.ComponentModel;
 using ChasmTracker.Utility;
 
 public abstract class AudioBackend
 {
-	public const int DefaultID = ~0;
+	/* Pass this to OpenDevice to get the default audio interface for the
+	 * system. This may be one of the audio devices listed, but it can also
+	 * be something entirely different. */
+	public const int DefaultID = ~0 & DeviceIDMask;
+
+	/* This is a flag, bitwise OR it with an audio device ID, and you will
+	 * receive an input device. */
+	public const int CaptureDevice = unchecked((int)0x80000000);
+
+	public const int DeviceIDMask = 0x7FFFFFFF;
+
+	public AudioBackendCapabilities Capabilities;
 
 	public static AudioBackend[] Backends = Array.Empty<AudioBackend>();
 
@@ -26,7 +38,7 @@ public abstract class AudioBackend
 
 		var deviceList = new List<AudioDevice>();
 
-		foreach (var device in Current.EnumerateDevices())
+		foreach (var device in Current.EnumerateDevices(AudioBackendCapabilities.Output))
 		{
 			device.ID = deviceList.Count;
 			deviceList.Add(device);
@@ -40,7 +52,7 @@ public abstract class AudioBackend
 		Drivers = Backends.SelectMany(backend => backend.EnumerateDrivers()).ToArray();
 	}
 
-	public abstract IEnumerable<AudioDevice> EnumerateDevices();
+	public abstract IEnumerable<AudioDevice> EnumerateDevices(AudioBackendCapabilities capabilities);
 	public abstract IEnumerable<AudioDriver> EnumerateDrivers();
 
 	public abstract bool Initialize();

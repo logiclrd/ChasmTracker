@@ -4,6 +4,8 @@ public class AudioDevice
 {
 	public readonly AudioBackend Backend;
 
+	public AudioBackendCapabilities Capabilities;
+
 	public int ID;
 	public string Name;
 

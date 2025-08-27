@@ -3,6 +3,8 @@ using System.Collections.Generic;
 
 namespace ChasmTracker.SDLBackends;
 
+using System.Text.RegularExpressions;
+using System.Threading;
 using ChasmTracker.Audio;
 using ChasmTracker.Utility;
 
@@ -55,7 +57,7 @@ public class SDLAudioBackend : AudioBackend
 	public override void QuitDriver()
 	{
 		SDL.QuitSubSystem(SDL.InitFlags.Audio);
-		_devices = null;
+		_outputDevices = null;
 	}
 
 	/* ---------------------------------------------------------- */
@@ -79,56 +81,65 @@ public class SDLAudioBackend : AudioBackend
 
 	/* --------------------------------------------------------------- */
 
-	uint[]? _devices = null;
+	uint[]? _outputDevices = null;
+	uint[]? _inputDevices = null;
 
 	int GetAudioDeviceInformation()
 	{
-		_devices = SDL.GetAudioPlaybackDevices(out var deviceCount);
+		_outputDevices = SDL.GetAudioPlaybackDevices(out var outputDeviceCount);
+		_inputDevices = SDL.GetAudioRecordingDevices(out var inputDeviceCount);
 
-		if (_devices == null)
+		if (_outputDevices == null)
 			throw new Exception("GetAudioPlaybackDevices failed");
 
-		// I don't think this ever happens, but because we're returned both the array
+		// I don't think this is ever actually needed, but because we're returned both the array
 		// and, independently, the count, better safe than sorry.
 
-		if (deviceCount < _devices.Length)
-			_devices = _devices.Slice(0, deviceCount).ToArray();
-
-		if (deviceCount > _devices.Length)
+		void EnsureArraySize(ref uint[]? array, int count)
 		{
-			uint[] moreDevices = new uint[deviceCount];
+			array ??= Array.Empty<uint>();
 
-			_devices.CopyTo(moreDevices, 0);
-			for (int i=_devices.Length; i < moreDevices.Length; i++)
-				moreDevices[i] = uint.MaxValue;
+			int oldCount = array.Length;
 
-			_devices = moreDevices;
+			Array.Resize(ref array, count);
+
+			for (int i = oldCount; i < count; i++)
+				array[i] = uint.MaxValue;
 		}
 
-		return _devices.Length;
+		EnsureArraySize(ref _outputDevices, outputDeviceCount);
+		EnsureArraySize(ref _inputDevices, inputDeviceCount);
+
+		return _outputDevices!.Length;
 	}
 
 	public override string GetDeviceName(int i)
 	{
-		if (i >= int.MaxValue) return "";
-		if (_devices == null) return "";
-		if (i >= _devices.Length) return "";
+		var devices = i.HasBitSet(CaptureDevice) ? _inputDevices : _outputDevices;
 
-		return SDL.GetAudioDeviceName(_devices[i]) ?? "";
+		i &= DeviceIDMask;
+
+		if (devices == null) return "";
+		if (i >= devices.Length) return "";
+
+		return SDL.GetAudioDeviceName(devices[i]) ?? "";
 	}
 
-	public override IEnumerable<AudioDevice> EnumerateDevices()
+	public override IEnumerable<AudioDevice> EnumerateDevices(AudioBackendCapabilities capabilities)
 	{
-		if (_devices == null)
+		var devices = capabilities.HasAllFlags(AudioBackendCapabilities.Input) ? _inputDevices : _outputDevices;
+
+		if (devices == null)
 			yield break;
 
-		for (int i=0; i < _devices.Length; i++)
+		for (int i=0; i < devices.Length; i++)
 			yield return new SDLAudioDevice(this, i, GetDeviceName(i));
 	}
 
 	/* -------------------------------------------------------- */
 
-	unsafe void AudioCallback(IntPtr userdata, IntPtr stream, int additionalAmount, int totalAmount)
+	/* XXX need to adapt this callback for input devices */
+	unsafe void AudioOutputCallback(IntPtr userdata, IntPtr stream, int additionalAmount, int totalAmount)
 	{
 		int deviceIndex = (int)userdata;
 
@@ -137,21 +148,40 @@ public class SDLAudioBackend : AudioBackend
 
 		Assert.IsTrue(dev.Stream == stream, "dev.Stream == stream", "streams should never differ");
 
+		if (additionalAmount <= 0)
+			return;
 
-		if (additionalAmount > 0)
-		{
-			byte *data = stackalloc byte[additionalAmount];
+		byte *data = stackalloc byte[additionalAmount];
 
-			lock (dev.Mutex)
-				dev.Callback(new Span<byte>(data, additionalAmount));
+		lock (dev.Mutex)
+			dev.Callback(new Span<byte>(data, additionalAmount));
 
-			SDL.PutAudioStreamData(stream, (IntPtr)data, additionalAmount);
-		}
+		SDL.PutAudioStreamData(stream, (IntPtr)data, additionalAmount);
+	}
+
+	unsafe void AudioInputCallback(IntPtr userdata, IntPtr stream, int additionalAmount, int totalAmount)
+	{
+		int deviceIndex = (int)userdata;
+
+		if (!_audioDevices.TryGetValue(deviceIndex, out var dev))
+			return;
+
+		Assert.IsTrue(dev.Stream == stream, "dev.Stream == stream", "streams should never differ");
+
+		if (additionalAmount <= 0)
+			return;
+
+		byte *data = stackalloc byte[additionalAmount];
+
+		int len = SDL.GetAudioStreamData(stream, (IntPtr)data, additionalAmount);
+
+		lock (dev.Mutex)
+			dev.Callback(new Span<byte>(data, additionalAmount));
 	}
 
 	public override AudioDevice OpenDevice(int deviceID, AudioSpecs desired, out AudioSpecs obtained)
 	{
-		if (_devices == null)
+		if (_outputDevices == null)
 			throw new Exception("Devices list not initialized");
 
 		int devNumber = _nextAudioDevice++;
@@ -185,13 +215,19 @@ public class SDLAudioBackend : AudioBackend
 			// As it turns out, SDL is still just a shell script in disguise, and requires you to
 			// pass everything as strings in order to change behavior. As for why they don't just
 			// include this in the spec structure anymore is beyond me.
-			uint sdlDeviceID = (deviceID == DefaultID || deviceID >= _devices.Length)
-				? SDL.AudioDeviceDefaultPlayback
-				: _devices![deviceID];
+			bool capture = deviceID.HasBitSet(CaptureDevice);
+
+			deviceID &= DeviceIDMask;
+
+			var devices = capture ? _inputDevices : _outputDevices;
+
+			uint sdlDeviceID = (devices == null || deviceID == DefaultID || deviceID >= devices.Length)
+				? (capture ? SDL.AudioDeviceDefaultRecording : SDL.AudioDeviceDefaultPlayback)
+				: _outputDevices![deviceID];
 
 			using (new SDLHintScope(SDL.Hints.AudioDeviceSampleFrames, desired.BufferSizeSamples.ToString()))
 			{
-				dev.SDLCallback = AudioCallback;
+				dev.SDLCallback = capture ? AudioInputCallback : AudioOutputCallback;
 
 				dev.Stream = SDL.OpenAudioDeviceStream(
 					sdlDeviceID,
@@ -203,24 +239,20 @@ public class SDLAudioBackend : AudioBackend
 					throw new Exception("Device initialization failed");
 			}
 
-			// PAUSE!
-			SDL.PauseAudioDevice(SDL.GetAudioStreamDevice(dev.Stream));
-
-			// lolwut
+			// For the most part we can just copy everything
 			obtained = desired;
 
-			// Retrieve the actual buffer size SDL is using (i.e., don't lie to the user)
-			SDL.GetAudioDeviceFormat(sdlDeviceID, out var xyzzy, out int samples);
-
-			obtained.BufferSizeSamples = unchecked((ushort)samples);
+			/* Retrieve the actual buffer size SDL is using (i.e., don't lie to the user)
+			 * This can also improve speeds since we won't have to deal with different
+			 * buffer sizes clashing ;) */
+			if (SDL.GetAudioDeviceFormat(sdlDeviceID, out var xyzzy, out int samples))
+				obtained.BufferSizeSamples = unchecked((ushort)samples);
 
 			return dev;
 		}
 		catch
 		{
-			if (dev != null)
-				CloseDevice(dev);
-
+			CloseDevice(dev);
 			throw;
 		}
 	}

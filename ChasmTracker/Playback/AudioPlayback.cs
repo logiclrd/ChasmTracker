@@ -834,7 +834,7 @@ public static class AudioPlayback
 		{
 			int i = 0;
 
-			foreach (var device in Backend.EnumerateDevices())
+			foreach (var device in Backend.EnumerateDevices(AudioBackendCapabilities.Output))
 			{
 				if (device.Name == deviceName)
 				{
