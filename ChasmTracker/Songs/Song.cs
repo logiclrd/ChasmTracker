@@ -4509,9 +4509,15 @@ public class Song
 
 			if (s != null)
 			{
-				if (c.Flags.HasAllFlags(ChannelFlags.AdLib) && (s.AdLibBytes != null))
+				if (c.Flags.HasAllFlags(ChannelFlags.AdLib))
 				{
+					// get rid of previous OPL activity
 					OPLNoteOff(chanInternal);
+				}
+
+				if (s.Flags.HasAllFlags(SampleFlags.AdLib) && (s.AdLibBytes != null))
+				{
+					// set up for OPL call if the sample needs it, regardless of where the channel is at
 					OPLPatch(chanInternal, s.AdLibBytes);
 				}
 
