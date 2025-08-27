@@ -584,11 +584,11 @@ public class Song
 	public int OPLRegNumber;
 	public bool OPLFMActive;
 
-	public byte[]?[] OPLDTab = new byte[9][];
-	public byte[] OPLKeyOnTab = new byte[9];
+	public byte[]?[] OPLDTab = new byte[FMDriver.OPLChannels][];
+	public byte[] OPLKeyOnTab = new byte[FMDriver.OPLChannels];
 	public int[] OPLPans = new int[Constants.MaxVoices];
 
-	public int[] OPLToChan = new int[9];
+	public int[] OPLToChan = new int[FMDriver.OPLChannels];
 	public int[] OPLFromChan = new int[Constants.MaxVoices];
 
 	public void InitializeOPL(int mixFrequency)
@@ -612,7 +612,7 @@ public class Song
 		{
 			// Search for unused chans
 
-			for (int a = 0; a < 9; a++)
+			for (int a = 0; a < FMDriver.OPLChannels; a++)
 			{
 				if (OPLToChan[a] == -1)
 				{
@@ -625,7 +625,7 @@ public class Song
 			if (OPLFromChan[c] == -1)
 			{
 				// Search for note-released chans
-				for (int a = 0; a < 9; a++)
+				for (int a = 0; a < FMDriver.OPLChannels; a++)
 				{
 					if (!OPLKeyOnTab[a].HasBitSet(FMDriver.KeyOnBit))
 					{
@@ -692,7 +692,10 @@ public class Song
 
 		OPLKeyOnTab[oplc] &= unchecked((byte)~FMDriver.KeyOnBit);
 
-		OPLByte(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
+		if (oplc < FMDriver.OPLBankSize)
+			OPLByte(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
+		else
+			OPLByteRightSide(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
 	}
 
 	/* OPLNoteOn changes the frequency on specified
@@ -729,8 +732,16 @@ public class Song
 					| (outblock << 2)                  // Octave
 					| ((outfnum >> 8) & FMDriver.FNumHighMask))); // F-number high 2 bits
 
-		OPLByte(FMDriver.FNumLow +    oplc, unchecked((byte)(outfnum & 0xFF)));  // F-Number low 8 bits
-		OPLByte(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
+		if (oplc < FMDriver.OPLBankSize)
+		{
+			OPLByte(FMDriver.FNumLow +    oplc, unchecked((byte)(outfnum & 0xFF)));  // F-Number low 8 bits
+			OPLByte(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
+		}
+		else
+		{
+			OPLByteRightSide(FMDriver.FNumLow +    oplc, unchecked((byte)(outfnum & 0xFF)));  // F-Number low 8 bits
+			OPLByteRightSide(FMDriver.KeyOnBlock + oplc, OPLKeyOnTab[oplc]);
+		}
 	}
 
 	public void OPLTouch(int c, int vol)
@@ -744,6 +755,13 @@ public class Song
 
 		byte[] D = OPLDTab[oplc] ?? throw new Exception("Internal error: OPL function parameters not set");
 		int Ope = FMDriver.PortBases[oplc];
+
+		Action<int, byte> SendByte;
+
+		if (oplc < FMDriver.OPLBankSize)
+			SendByte = OPLByte;
+		else
+			SendByte = OPLByteRightSide;
 
 		/*
 			Bytes 40-55 - Level Key Scaling / Total Level
@@ -808,14 +826,14 @@ public class Song
 		// Set volume of both operators in additive mode
 		if (D[10].HasBitSet(FMDriver.ConnectionBit))
 		{
-			OPLByte(
+			SendByte(
 				FMDriver.KSLLevel + Ope,
 				unchecked((byte)(
 					(D[2] & FMDriver.KSLMask) | (63 + ((D[2] & FMDriver.TotalLevelMask) * vol / 63) - vol)
 				)));
 		}
 
-		OPLByte(
+		SendByte(
 			FMDriver.KSLLevel + 3+Ope,
 			unchecked((byte)(
 				(D[3] & FMDriver.KSLMask) | (63 + ((D[3] & FMDriver.TotalLevelMask) * vol / 63) - vol)
@@ -833,8 +851,15 @@ public class Song
 
 		byte[] D = OPLDTab[oplc] ?? throw new Exception("Internal error: OPL function parameters not set");
 
+		Action<int, byte> SendByte;
+
+		if (oplc < FMDriver.OPLBankSize)
+			SendByte = OPLByte;
+		else
+			SendByte = OPLByteRightSide;
+
 		/* feedback, additive synthesis and Panning... */
-		OPLByte(
+		SendByte(
 			FMDriver.FeedbackConnection + oplc,
 			unchecked((byte)(
 				(D[10] & ~FMDriver.StereoBits)
@@ -852,22 +877,29 @@ public class Song
 			return;
 
 		OPLDTab[oplc] = D;
-		int Ope = FMDriver.PortBases[oplc];
+		int Ope = FMDriver.PortBases[oplc % FMDriver.OPLBankSize];
 
-		OPLByte(FMDriver.AMVib+           Ope, D[0]);
-		OPLByte(FMDriver.KSLLevel+        Ope, D[2]);
-		OPLByte(FMDriver.AttackDecay+     Ope, D[4]);
-		OPLByte(FMDriver.SustainRelease+  Ope, D[6]);
-		OPLByte(FMDriver.WaveSelect+      Ope, unchecked((byte)(D[8]&7)));// 5 high bits used elsewhere
+		Action<int, byte> SendByte;
 
-		OPLByte(FMDriver.AMVib+         3+Ope, D[1]);
-		OPLByte(FMDriver.KSLLevel+      3+Ope, D[3]);
-		OPLByte(FMDriver.AttackDecay+   3+Ope, D[5]);
-		OPLByte(FMDriver.SustainRelease+3+Ope, D[7]);
-		OPLByte(FMDriver.WaveSelect+    3+Ope, unchecked((byte)(D[9]&7)));// 5 high bits used elsewhere
+		if (oplc < FMDriver.OPLBankSize)
+			SendByte = OPLByte;
+		else
+			SendByte = OPLByteRightSide;
+
+		SendByte(FMDriver.AMVib+           Ope, D[0]);
+		SendByte(FMDriver.KSLLevel+        Ope, D[2]);
+		SendByte(FMDriver.AttackDecay+     Ope, D[4]);
+		SendByte(FMDriver.SustainRelease+  Ope, D[6]);
+		SendByte(FMDriver.WaveSelect+      Ope, unchecked((byte)(D[8]&7)));// 5 high bits used elsewhere
+
+		SendByte(FMDriver.AMVib+         3+Ope, D[1]);
+		SendByte(FMDriver.KSLLevel+      3+Ope, D[3]);
+		SendByte(FMDriver.AttackDecay+   3+Ope, D[5]);
+		SendByte(FMDriver.SustainRelease+3+Ope, D[7]);
+		SendByte(FMDriver.WaveSelect+    3+Ope, unchecked((byte)(D[9]&7)));// 5 high bits used elsewhere
 
 		/* feedback, additive synthesis and Panning... */
-		OPLByte(
+		SendByte(
 			FMDriver.FeedbackConnection + oplc,
 			unchecked((byte)(
 				(D[10] & ~FMDriver.StereoBits)
@@ -907,20 +939,26 @@ public class Song
 	{
 		/* Reset timers 1 and 2 */
 		OPLByte(FMDriver.TimerControlRegister, FMDriver.Timer1Mask | FMDriver.Timer2Mask);
+		OPLByteRightSide(FMDriver.TimerControlRegister, FMDriver.Timer1Mask | FMDriver.Timer2Mask);
 
 		/* Reset the IRQ of the FM chip */
 		OPLByte(FMDriver.TimerControlRegister, FMDriver.IRQReset);
+		OPLByteRightSide(FMDriver.TimerControlRegister, FMDriver.IRQReset);
 
 		byte ST1 = OPLInPortB(FMDriver.BasePort); /* Status register */
 
 		OPLByte(FMDriver.Timer1Register, 255);
 		OPLByte(FMDriver.TimerControlRegister, FMDriver.Timer2Mask | FMDriver.Timer1Start);
+		OPLByteRightSide(FMDriver.Timer1Register, 255);
+		OPLByteRightSide(FMDriver.TimerControlRegister, FMDriver.Timer2Mask | FMDriver.Timer1Start);
 
 		/*_asm xor cx,cx;P1:_asm loop P1*/
 		byte ST2 = OPLInPortB(FMDriver.BasePort);
 
 		OPLByte(FMDriver.TimerControlRegister, FMDriver.Timer1Mask | FMDriver.Timer2Mask);
 		OPLByte(FMDriver.TimerControlRegister, FMDriver.IRQReset);
+		OPLByteRightSide(FMDriver.TimerControlRegister, FMDriver.Timer1Mask | FMDriver.Timer2Mask);
+		OPLByteRightSide(FMDriver.TimerControlRegister, FMDriver.IRQReset);
 
 		bool OPLMode = (ST2 & 0xE0) == 0xC0 && !ST1.HasAnyBitSet(0xE0);
 

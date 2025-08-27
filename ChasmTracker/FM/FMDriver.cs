@@ -7,6 +7,9 @@ using ChasmTracker.Songs;
 
 public abstract class FMDriver
 {
+	public const int OPLBankSize = 9;
+	public const int OPLChannels = 18; // TODO: change when driver changes?
+
 	public const uint RateBase = 49716u; // It's not a good idea to deviate from this.
 
 	/* Chasm Tracker output buffer works in 27bits: [MIXING_CLIPMIN..MIXING_CLIPMAX]
@@ -149,19 +152,13 @@ public abstract class FMDriver
 		}
 	}
 
-	[InlineArray(18)]
-	struct BuffersArray
-	{
-		Memory<int>? _element0;
-	}
-
-	Memory<int>?[] _buffersArray = new Memory<int>?[18];
+	Memory<int>?[] _buffersArray = new Memory<int>?[OPLChannels];
 
 	void UpdateOne(Memory<int> buffer, uint[] vuMax)
 	{
 		int i;
 
-		for (i = 0; i < 18; i++)
+		for (i = 0; i < OPLChannels; i++)
 			_buffersArray[i] = buffer;
 
 		UpdateMulti(_buffersArray, vuMax);
@@ -170,7 +167,7 @@ public abstract class FMDriver
 	// count, like csf_create_stereo_mix, is in samples
 	public void Mix(Song csf, int count)
 	{
-		uint[] vuMax = new uint[18];
+		uint[] vuMax = new uint[OPLChannels];
 
 		if (!csf.OPLFMActive || (csf.OPL is not FMDriver opl))
 			return;
@@ -181,13 +178,13 @@ public abstract class FMDriver
 		// and do the panning here.
 		if (csf.MultiWrite != null)
 		{
-			Memory<int>?[] buffers = new Memory<int>?[18];
+			Memory<int>?[] buffers = new Memory<int>?[OPLChannels];
 
 			for (int i = 0; i < Constants.MaxChannels; i++)
 			{
 				int oplV = csf.OPLFromChan[i];
 
-				if (oplV < 0 || oplV >= 18)
+				if (oplV < 0 || oplV >= OPLChannels)
 					continue;
 
 				buffers[oplV] = csf.MultiWrite[i].Buffer;
@@ -209,7 +206,7 @@ public abstract class FMDriver
 		else
 			UpdateOne(csf.MixBuffer, vuMax);
 
-		for (int i = 0; i < 9; i++)
+		for (int i = 0; i < OPLChannels; i++)
 		{
 			int oplV = csf.OPLToChan[i];
 			if (oplV < 0 || oplV >= Constants.MaxVoices /* this is a bug */)
