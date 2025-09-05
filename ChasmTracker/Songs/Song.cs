@@ -243,7 +243,7 @@ public class Song
 	// Total count of orders in orderlist before end of data
 	public int GetOrderCount()
 	{
-		for (int n = OrderList.Count; n >= 0; n--)
+		for (int n = OrderList.Count - 1; n >= 0; n--)
 			if (OrderList[n] != SpecialOrders.Last)
 				return n + 1;
 

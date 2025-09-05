@@ -104,6 +104,8 @@ public class ToggleButtonWidget : Widget
 
 	protected override bool ActivateOffTarget => false;
 
+	protected override bool IsActivateKeyState(KeyState state) => true;
+
 	public override bool? HandleActivate(KeyEvent k)
 	{
 		base.HandleActivate(k);
@@ -115,7 +117,8 @@ public class ToggleButtonWidget : Widget
 			if (Status.Flags.HasAllFlags(StatusFlags.DiskWriterActive))
 				return false;
 
-			SetState(!_state || (Group != null));
+			if (k.State == KeyState.Release)
+				SetState(!_state || (Group != null));
 		}
 
 		return true;

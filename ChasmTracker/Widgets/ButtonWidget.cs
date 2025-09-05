@@ -45,6 +45,8 @@ public class ButtonWidget : Widget
 
 	protected override bool ActivateOffTarget => false;
 
+	protected override bool IsActivateKeyState(KeyState state) => true;
+
 	public override bool? HandleActivate(KeyEvent k)
 	{
 		base.HandleActivate(k);
@@ -59,10 +61,9 @@ public class ButtonWidget : Widget
 			{
 				OnChanged();
 				Status.Flags |= StatusFlags.NeedUpdate;
-				return true;
 			}
 		}
 
-		return false;
+		return true;
 	}
 }

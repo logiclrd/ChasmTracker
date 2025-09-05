@@ -190,7 +190,10 @@ public abstract class ModuleLoadSavePageBase : Page
 			if (!DirectoryScanner.Populate(Configuration.Directories.ModulesDirectory, s_flist, s_dlist, loadLibrary: null))
 				Log.Append(4, Configuration.Directories.ModulesDirectory + ": error while scanning directory");
 
-			var filterOperation = s_flist.BeginFilter(ModGrep, s_flist.SelectedIndexRef);
+			DirectoryScanner.SetAsynchronousFileListParameters(
+				s_flist,
+				ModGrep,
+				s_flist.SelectedIndexRef);
 
 			DirectoryScanner.CacheLookup(Configuration.Directories.ModulesDirectory, s_flist, s_dlist);
 

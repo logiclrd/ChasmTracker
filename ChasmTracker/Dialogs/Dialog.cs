@@ -333,6 +333,8 @@ public class Dialog : WidgetContext
 				goto case MessageBoxTypes.OKCancel;
 		}
 
+		WidgetNext.Initialize(Widgets);
+
 		s_activeDialogs.Push(this);
 
 		Page.ActiveWidgetContext = this;

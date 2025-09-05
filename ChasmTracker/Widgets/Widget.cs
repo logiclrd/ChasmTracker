@@ -40,7 +40,7 @@ public abstract class Widget
 		return new Rect(Position, Size).Contains(pt);
 	}
 
-	protected virtual KeyState ActivateKeyState => KeyState.Press;
+	protected virtual bool IsActivateKeyState(KeyState state) => state == KeyState.Press;
 	protected virtual bool ActivateOffTarget => true;
 
 	event Action? _changed;
@@ -144,7 +144,7 @@ public abstract class Widget
 		}
 
 		if (k.Mouse == MouseState.None)
-			k.OnTarget = false;
+			k.OnTarget = true;
 		else
 			k.OnTarget = widget.ContainsPoint(k.MousePosition);
 
@@ -186,7 +186,7 @@ public abstract class Widget
 			widget.IsDepressed = n;
 
 			// OnActivated
-			bool activate = (widget is not OtherWidget) && (k.State == widget.ActivateKeyState);
+			bool activate = (widget is not OtherWidget) && widget.IsActivateKeyState(k.State);
 
 			if (activate)
 			{

@@ -169,6 +169,13 @@ public class ITI : InstrumentFileConverter
 			this[ITEnvelopeFlags.SustainLoop] = sustainLoop;
 			this[ITEnvelopeFlags.Carry] = carry;
 		}
+
+		public EnvelopeFlagSet AddFlag(ITEnvelopeFlags itFlag, InstrumentFlags chasmFlag)
+		{
+			this[itFlag] = chasmFlag;
+
+			return this;
+		}
 	}
 
 	static readonly Dictionary<EnvelopeType, EnvelopeFlagSet> EnvelopeFlagTranslation =
@@ -176,7 +183,11 @@ public class ITI : InstrumentFileConverter
 		{
 			{ EnvelopeType.Volume, new EnvelopeFlagSet(InstrumentFlags.VolumeEnvelope, InstrumentFlags.VolumeEnvelopeLoop, InstrumentFlags.VolumeEnvelopeSustain, InstrumentFlags.VolumeEnvelopeCarry) },
 			{ EnvelopeType.Panning, new EnvelopeFlagSet(InstrumentFlags.PanningEnvelope, InstrumentFlags.PanningEnvelopeLoop, InstrumentFlags.PanningEnvelopeSustain, InstrumentFlags.VolumeEnvelopeCarry) },
-			{ EnvelopeType.Pitch, new EnvelopeFlagSet(InstrumentFlags.PitchEnvelope, InstrumentFlags.PitchEnvelopeLoop, InstrumentFlags.PitchEnvelopeSustain, InstrumentFlags.VolumeEnvelopeCarry) },
+			{
+				EnvelopeType.Pitch,
+				new EnvelopeFlagSet(InstrumentFlags.PitchEnvelope, InstrumentFlags.PitchEnvelopeLoop, InstrumentFlags.PitchEnvelopeSustain, InstrumentFlags.VolumeEnvelopeCarry)
+					.AddFlag(ITEnvelopeFlags.Filter, InstrumentFlags.Filter)
+			},
 		};
 
 	const int EOF = -1;
