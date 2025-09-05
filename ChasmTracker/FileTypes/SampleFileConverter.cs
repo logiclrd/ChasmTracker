@@ -21,6 +21,9 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 	public abstract SongSample LoadSample(Stream stream);
 	public virtual SaveResult SaveSample(SongSample sample, Stream stream) => throw new NotSupportedException();
 
+	// TODO need a way to filter out sample formats that cannot
+	// be saved in a specific format (i.e. pcm in sbi or adlib in wav)
+
 	static Type[] s_converterTypes =
 		typeof(SampleFileConverter).Assembly.GetTypes()
 		.Where(t => typeof(SampleFileConverter).IsAssignableFrom(t) && !t.IsAbstract)

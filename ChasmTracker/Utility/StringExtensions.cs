@@ -275,6 +275,19 @@ public static class StringExtensions
 		return buffer;
 	}
 
+	public static byte[] ToCP437(this string? str, int len)
+	{
+		byte[] buffer = new byte[len];
+
+		if (str != null)
+		{
+			for (int i=0; i < len && i < str.Length; i++)
+				buffer[i] = unchecked((byte)str[i].ToCP437());
+		}
+
+		return buffer;
+	}
+
 	public static void CopyTruncatedTo(this string str, Span<char> target)
 	{
 		int ch = Math.Min(str.Length, target.Length);
