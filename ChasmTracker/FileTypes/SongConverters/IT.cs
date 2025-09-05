@@ -508,9 +508,9 @@ public class IT : SongFileConverter
 
 		int paraMin = (hdr.Special.HasBitSet(1) && (hdr.MsgLength != 0)) ? hdr.MsgOffset : (int)stream.Length;
 
-		paraMin = Math.Min(paraMin, paraIns.Min());
-		paraMin = Math.Min(paraMin, paraSmp.Min());
-		paraMin = Math.Min(paraMin, paraPat.Min());
+		paraMin = Math.Min(paraMin, paraIns.DefaultIfEmpty(paraMin).Min());
+		paraMin = Math.Min(paraMin, paraSmp.DefaultIfEmpty(paraMin).Min());
+		paraMin = Math.Min(paraMin, paraPat.DefaultIfEmpty(paraMin).Min());
 
 		byte[] shortBuffer = new byte[2];
 		byte[] intBuffer = new byte[4];
