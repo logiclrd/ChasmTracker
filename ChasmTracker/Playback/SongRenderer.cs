@@ -1321,8 +1321,6 @@ public static class SongRenderer
 
 				chan.Increment = nInc;
 			}
-			else
-				ProcessMIDIMacro(csf, cn);
 
 			chan.FinalPanning = chan.FinalPanning.Clamp(0, 256);
 

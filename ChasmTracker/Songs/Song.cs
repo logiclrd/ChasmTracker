@@ -3935,6 +3935,13 @@ public class Song
 			case Effects.NoteSlideDown:
 				EffectNoteSlide(Flags | (firstTick ? SongFlags.FirstTick : 0), ref chan, param, -1);
 				break;
+
+			case Effects.MIDI:
+				/* This effect is the bane of my existence */
+				if (Flags.HasAllFlags(SongFlags.FirstTick))
+					EffectMidiZxx(ref chan, nChan);
+
+				break;
 		}
 	}
 
