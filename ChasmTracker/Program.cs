@@ -118,12 +118,25 @@ public class Program
 
 						kk.Mouse = MouseState.None;
 
+						/* wow, I hate this */
+						if (kk.Sym == KeySym.CapsLock)
+						{
+							if (keyboardEvent.EventType == KeyboardEventType.KeyDown)
+								Status.KeyMod |= KeyMod.CapsPressed;
+							else
+								Status.KeyMod &= ~KeyMod.CapsPressed;
+						}
+
 						// normalize the text for processing
 						kk.Text = keyboardEvent.Text;
 
 						// grab the keymod
 						kk.Modifiers = keyboardEvent.Modifiers;
-						// fix it
+						// apply stupid hacky shit
+						kk.Modifiers &= ~KeyMod.CapsPressed;
+						kk.Modifiers |= Status.KeyMod & KeyMod.CapsPressed;
+
+						// apply OS-specific fixups to account for bugs in SDL
 						OS.GetModKey(ref kk.Modifiers);
 
 						// numlock hacks, mostly here because of macs
