@@ -88,7 +88,7 @@ public class WidgetContext
 			SelectedWidget.IsDepressed = false;
 
 			if (SelectedWidget is TextEntryWidget textEntry)
-				textEntry.CursorPosition = textEntry.Text.Length;
+				textEntry.CursorPosition = textEntry.TextLength;
 		}
 
 		Status.Flags |= StatusFlags.NeedUpdate;

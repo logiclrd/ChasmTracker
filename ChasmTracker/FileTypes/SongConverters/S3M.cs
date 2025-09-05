@@ -17,6 +17,8 @@ public class S3M : SongFileConverter
 	public override string Description => "Scream Tracker 3";
 	public override string Extension => ".s3m";
 
+	public override bool CanSave => true;
+
 	public override int SortOrder => 2;
 	public override int SaveOrder => 2;
 

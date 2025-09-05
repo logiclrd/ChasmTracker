@@ -1247,7 +1247,7 @@ public class Song
 		return Samples[n];
 	}
 
-	public SongSample EnsureSample(int n)
+	public SongSample EnsureSample(int n, SongSample? smp = null)
 	{
 		if (n > Constants.MaxSamples)
 			throw new ArgumentOutOfRangeException(nameof(n));
@@ -1255,7 +1255,7 @@ public class Song
 		while (n >= Samples.Count)
 			Samples.Add(null);
 
-		return Samples[n] ??= new SongSample();
+		return Samples[n] ??= smp ?? new SongSample();
 	}
 
 	public int GetSampleNumber(SongSample? samp)

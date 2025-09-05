@@ -39,7 +39,7 @@ public class SongVariablesPage : Page
 	{
 		textEntrySongName = new TextEntryWidget(new Point(17, 16), 26, Song.CurrentSong.Title, 25);
 
-		thumbBarInitialTempo = new ThumbBarWidget(new Point(17, 20), 33, 31, 255);
+		thumbBarInitialTempo = new ThumbBarWidget(new Point(17, 19), 33, 31, 255);
 		thumbBarInitialSpeed = new ThumbBarWidget(new Point(17, 20), 33, 1, 255);
 
 		thumbBarGlobalVolume = new ThumbBarWidget(new Point(17, 23), 17, 0, 128);
@@ -55,8 +55,8 @@ public class SongVariablesPage : Page
 		toggleButtonPlaybackStereo = new ToggleButtonWidget(new Point(17, 33), 11, "Stereo", 1, PlaybackGroup);
 		toggleButtonPlaybackMono = new ToggleButtonWidget(new Point(32, 33), 11, "Mono", 1, PlaybackGroup);
 
-		toggleButtonPitchSlideLinear = new ToggleButtonWidget(new Point(17, 33), 11, "Linear", 1, PitchSlideGroup);
-		toggleButtonPitchSlideAmiga = new ToggleButtonWidget(new Point(32, 33), 11, Amiga, 1, PitchSlideGroup);
+		toggleButtonPitchSlideLinear = new ToggleButtonWidget(new Point(17, 36), 11, "Linear", 1, PitchSlideGroup);
+		toggleButtonPitchSlideAmiga = new ToggleButtonWidget(new Point(32, 36), 11, Amiga, 1, PitchSlideGroup);
 
 		textEntryModulesDirectory = new TextEntryWidget(new Point(13, 42), 65, Configuration.Directories.ModulesDirectory, Constants.MaxPathLength);
 		textEntrySamplesDirectory = new TextEntryWidget(new Point(13, 43), 65, Configuration.Directories.SamplesDirectory, Constants.MaxPathLength);
@@ -178,6 +178,8 @@ public class SongVariablesPage : Page
 
 	void UpdateSongTitle()
 	{
+		Song.CurrentSong.Title = textEntrySongName.Text;
+
 		Status.Flags |= StatusFlags.NeedUpdate | StatusFlags.SongNeedsSave;
 	}
 

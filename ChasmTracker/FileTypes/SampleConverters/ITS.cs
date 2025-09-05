@@ -128,7 +128,7 @@ public class ITS : SampleFileConverter
 
 		/* alright, let's get started */
 		smp.Length = its.Length;
-		if (its.Flags.HasAllFlags(ITSampleFlags.HasData))
+		if (!its.Flags.HasAllFlags(ITSampleFlags.HasData))
 			return false; // sample associated with header
 
 		smp.GlobalVolume = its.GlobalVolume;

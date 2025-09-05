@@ -254,61 +254,61 @@ public class IT : SongFileConverter
 				else
 					c += SpecialNotes.First;
 
-				patternRow[chan].Note = (byte)c;
-				lastNote[chan].Note = patternRow[chan].Note;
+				patternRow[chan + 1].Note = (byte)c;
+				lastNote[chan].Note = patternRow[chan + 1].Note;
 			}
 
 			if (maskVar.HasAllFlags(NoteFields.Sample))
 			{
-				patternRow[chan].Instrument = (byte)fp.ReadByte();
-				lastNote[chan].Instrument = patternRow[chan].Instrument;
+				patternRow[chan + 1].Instrument = (byte)fp.ReadByte();
+				lastNote[chan].Instrument = patternRow[chan + 1].Instrument;
 			}
 
 			if (maskVar.HasAllFlags(NoteFields.Volume))
 			{
-				ImportVolumeEffect(ref patternRow[chan], (byte)fp.ReadByte());
-				lastNote[chan].VolumeEffect = patternRow[chan].VolumeEffect;
-				lastNote[chan].VolumeParameter = patternRow[chan].VolumeParameter;
+				ImportVolumeEffect(ref patternRow[chan + 1], (byte)fp.ReadByte());
+				lastNote[chan].VolumeEffect = patternRow[chan + 1].VolumeEffect;
+				lastNote[chan].VolumeParameter = patternRow[chan + 1].VolumeParameter;
 			}
 
 			if (maskVar.HasAllFlags(NoteFields.Effect))
 			{
-				patternRow[chan].EffectByte = (byte)(fp.ReadByte() & 0x1f);
-				patternRow[chan].Parameter = (byte)fp.ReadByte();
+				patternRow[chan + 1].EffectByte = (byte)(fp.ReadByte() & 0x1f);
+				patternRow[chan + 1].Parameter = (byte)fp.ReadByte();
 
-				EffectUtility.ImportS3MEffect(ref patternRow[chan], true);
+				EffectUtility.ImportS3MEffect(ref patternRow[chan + 1], true);
 
-				if (patternRow[chan].Effect == Effects.Special && (patternRow[chan].Parameter & 0xf0) == 0xa0 && createdWithTrackerVersion < 0x0200)
+				if (patternRow[chan + 1].Effect == Effects.Special && (patternRow[chan + 1].Parameter & 0xf0) == 0xa0 && createdWithTrackerVersion < 0x0200)
 				{
 					// IT 1.xx does not support high offset command
-					patternRow[chan].Effect = Effects.None;
+					patternRow[chan + 1].Effect = Effects.None;
 				}
-				else if (patternRow[chan].Effect == Effects.GlobalVolume && patternRow[chan].Parameter > 0x80 && createdWithTrackerVersion >= 0x1000 && createdWithTrackerVersion <= 0x1050)
+				else if (patternRow[chan + 1].Effect == Effects.GlobalVolume && patternRow[chan + 1].Parameter > 0x80 && createdWithTrackerVersion >= 0x1000 && createdWithTrackerVersion <= 0x1050)
 				{
 					// Fix handling of commands V81-VFF in ITs made with old Schism Tracker versions
 					// (fixed in commit ab5517d4730d4c717f7ebffb401445679bd30888 - one of the last versions to identify as v0.50)
-					patternRow[chan].Parameter = 0x80;
+					patternRow[chan + 1].Parameter = 0x80;
 				}
 
-				lastNote[chan].Effect = patternRow[chan].Effect;
-				lastNote[chan].Parameter = patternRow[chan].Parameter;
+				lastNote[chan].Effect = patternRow[chan + 1].Effect;
+				lastNote[chan].Parameter = patternRow[chan + 1].Parameter;
 			}
 
 			if (maskVar.HasAllFlags(NoteFields.SameNote))
-				patternRow[chan].Note = lastNote[chan].Note;
+				patternRow[chan + 1].Note = lastNote[chan].Note;
 			if (maskVar.HasAllFlags(NoteFields.SameSample))
-				patternRow[chan].Instrument = lastNote[chan].Instrument;
+				patternRow[chan + 1].Instrument = lastNote[chan].Instrument;
 
 			if (maskVar.HasAllFlags(NoteFields.SameVolume))
 			{
-				patternRow[chan].VolumeEffect = lastNote[chan].VolumeEffect;
-				patternRow[chan].VolumeParameter = lastNote[chan].VolumeParameter;
+				patternRow[chan + 1].VolumeEffect = lastNote[chan].VolumeEffect;
+				patternRow[chan + 1].VolumeParameter = lastNote[chan].VolumeParameter;
 			}
 
 			if (maskVar.HasAllFlags(NoteFields.SameEffect))
 			{
-				patternRow[chan].Effect = lastNote[chan].Effect;
-				patternRow[chan].Parameter = lastNote[chan].Parameter;
+				patternRow[chan + 1].Effect = lastNote[chan].Effect;
+				patternRow[chan + 1].Parameter = lastNote[chan].Parameter;
 			}
 		}
 	}
@@ -504,7 +504,7 @@ public class IT : SongFileConverter
 		for (int i = 0; i < hdr.SmpNum; i++)
 			paraSmp[i] = BitConverter.ToInt32(paraPointerBytes, (i + hdr.InsNum) * 4);
 		for (int i = 0; i < hdr.PatNum; i++)
-			paraPat[i] = BitConverter.ToInt32(paraPointerBytes, (i + hdr.InsNum + hdr.PatNum) * 4);
+			paraPat[i] = BitConverter.ToInt32(paraPointerBytes, (i + hdr.InsNum + hdr.SmpNum) * 4);
 
 		int paraMin = (hdr.Special.HasBitSet(1) && (hdr.MsgLength != 0)) ? hdr.MsgOffset : (int)stream.Length;
 
@@ -630,7 +630,7 @@ public class IT : SongFileConverter
 
 				its.TryLoadSample(stream, hdr.CreatedWithTrackerVersion, out var sample);
 
-				song.Samples[n + 1] = sample;
+				song.EnsureSample(n + 1, sample);
 			}
 		}
 

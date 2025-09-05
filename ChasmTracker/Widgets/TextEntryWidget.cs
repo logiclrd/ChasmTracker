@@ -29,7 +29,7 @@ public class TextEntryWidget : Widget
 	{
 		get
 		{
-			int terminatorIndex = Array.IndexOf(TextCharacters, 0);
+			int terminatorIndex = Array.IndexOf(TextCharacters, '\0');
 
 			if (terminatorIndex < 0)
 				terminatorIndex = TextCharacters.Length;
