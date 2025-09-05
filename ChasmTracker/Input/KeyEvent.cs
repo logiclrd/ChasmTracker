@@ -206,63 +206,79 @@ public struct KeyEvent
 			if (Modifiers.HasAnyFlag(KeyMod.ControlAlt))
 				return -1;
 
-			int note;
-
-			switch (ScanCode)
+			if (Modifiers.HasAnyFlag(KeyMod.Shift))
 			{
-				case ScanCode.Grave:
-					if (Modifiers.HasAnyFlag(KeyMod.Shift))
+				switch (ScanCode)
+				{
+					case ScanCode.Grave:
 						return SpecialNotes.NoteFade;
-					else
+
+					default:
+						return -1;
+				}
+			}
+			else
+			{
+				int note;
+
+				/* hm, old behavior ignored whether shift was down,
+				 * but thats obviously broken and dumb.
+				 *
+				 * hopefully no one relies on that. */
+				switch (ScanCode)
+				{
+					case ScanCode.Grave:
+					case ScanCode.NonUSHash: /* for delt */
+					case ScanCode.KP_Hash:
 						return SpecialNotes.NoteOff;
 
-				case ScanCode.NonUSHash: /* for delt */
-				case ScanCode.KP_Hash:
-					return SpecialNotes.NoteOff;
+					case ScanCode._1:
+						return SpecialNotes.NoteCut;
 
-				case ScanCode._1:
-					return SpecialNotes.NoteCut;
+					case ScanCode.Period:
+						return 0; /* clear */
 
-				case ScanCode.Period:
-					return 0; /* clear */
+					/* low row */
+					case ScanCode.Z: note = 1; break;
+					case ScanCode.S: note = 2; break;
+					case ScanCode.X: note = 3; break;
+					case ScanCode.D: note = 4; break;
+					case ScanCode.C: note = 5; break;
+					case ScanCode.V: note = 6; break;
+					case ScanCode.G: note = 7; break;
+					case ScanCode.B: note = 8; break;
+					case ScanCode.H: note = 9; break;
+					case ScanCode.N: note = 10; break;
+					case ScanCode.J: note = 11; break;
+					case ScanCode.M: note = 12; break;
 
-				case ScanCode.Z: note = 1; break;
-				case ScanCode.S: note = 2; break;
-				case ScanCode.X: note = 3; break;
-				case ScanCode.D: note = 4; break;
-				case ScanCode.C: note = 5; break;
-				case ScanCode.V: note = 6; break;
-				case ScanCode.G: note = 7; break;
-				case ScanCode.B: note = 8; break;
-				case ScanCode.H: note = 9; break;
-				case ScanCode.N: note = 10; break;
-				case ScanCode.J: note = 11; break;
-				case ScanCode.M: note = 12; break;
+					/* high row */
+					case ScanCode.Q: note = 13; break;
+					case ScanCode._2: note = 14; break;
+					case ScanCode.W: note = 15; break;
+					case ScanCode._3: note = 16; break;
+					case ScanCode.E: note = 17; break;
+					case ScanCode.R: note = 18; break;
+					case ScanCode._5: note = 19; break;
+					case ScanCode.T: note = 20; break;
+					case ScanCode._6: note = 21; break;
+					case ScanCode.Y: note = 22; break;
+					case ScanCode._7: note = 23; break;
+					case ScanCode.U: note = 24; break;
+					case ScanCode.I: note = 25; break;
+					case ScanCode._9: note = 26; break;
+					case ScanCode.O: note = 27; break;
+					case ScanCode._0: note = 28; break;
+					case ScanCode.P: note = 29; break;
 
-				case ScanCode.Q: note = 13; break;
-				case ScanCode._2: note = 14; break;
-				case ScanCode.W: note = 15; break;
-				case ScanCode._3: note = 16; break;
-				case ScanCode.E: note = 17; break;
-				case ScanCode.R: note = 18; break;
-				case ScanCode._5: note = 19; break;
-				case ScanCode.T: note = 20; break;
-				case ScanCode._6: note = 21; break;
-				case ScanCode.Y: note = 22; break;
-				case ScanCode._7: note = 23; break;
-				case ScanCode.U: note = 24; break;
-				case ScanCode.I: note = 25; break;
-				case ScanCode._9: note = 26; break;
-				case ScanCode.O: note = 27; break;
-				case ScanCode._0: note = 28; break;
-				case ScanCode.P: note = 29; break;
+					/* nada */
+					default: return -1;
+				}
 
-				default: return -1;
+				note += 12 * Keyboard.CurrentOctave;
+
+				return note.Clamp(1, 120);
 			}
-
-			note += 12 * Keyboard.CurrentOctave;
-
-			return note.Clamp(1, 120);
 		}
 	}
 
