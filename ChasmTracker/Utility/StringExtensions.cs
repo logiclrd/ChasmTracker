@@ -288,6 +288,46 @@ public static class StringExtensions
 		return buffer;
 	}
 
+	public static string FromCP437(this Span<byte> str, bool zeroTerminated)
+	{
+		char[] buffer = new char[str.Length];
+
+		for (int i=0; i < str.Length; i++)
+		{
+			if (str[i] == 0)
+			{
+				if (zeroTerminated)
+					break;
+
+				buffer[i] = ' ';
+			}
+			else
+				buffer[i] = str[i].FromCP437();
+		}
+
+		return new string(buffer);
+	}
+
+	public static string FromCP437(this ReadOnlySpan<byte> str, bool zeroTerminated)
+	{
+		char[] buffer = new char[str.Length];
+
+		for (int i=0; i < str.Length; i++)
+		{
+			if (str[i] == 0)
+			{
+				if (zeroTerminated)
+					break;
+
+				buffer[i] = ' ';
+			}
+			else
+				buffer[i] = str[i].FromCP437();
+		}
+
+		return new string(buffer);
+	}
+
 	public static void CopyTruncatedTo(this string str, Span<char> target)
 	{
 		int ch = Math.Min(str.Length, target.Length);

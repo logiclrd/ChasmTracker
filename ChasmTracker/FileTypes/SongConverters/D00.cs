@@ -1,3 +1,11 @@
+/*
+#define D00_ENABLE_BROKEN_LEVELPULS
+
+To enable broken levelpuls support.
+This is broken because somewhere in the replayer, effects are ignored
+after noteoff, and I don't care enough to fix it right now.
+*/
+
 using System;
 using System.ComponentModel;
 using System.IO;
@@ -5,6 +13,8 @@ using System.Runtime.InteropServices;
 
 namespace ChasmTracker.FileTypes.SongConverters;
 
+using System.Collections.Generic;
+using System.Linq;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -22,8 +32,6 @@ public class D00 : SongFileConverter
 	{
 		public D00Header() { }
 
-		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 6)]
-		public string ID = "";
 		public byte Type;
 		public byte Version;
 		public byte Speed; // apparently this is in Hz? wtf
@@ -45,9 +53,35 @@ public class D00 : SongFileConverter
 		public short EndMark; // what?
 	}
 
-	// This function, like many of the other read functions, also
-	// performs sanity checks on the data itself.
-	static D00Header ReadHeader(Stream stream)
+	static D00Header ReadHeaderV1(Stream stream)
+	{
+		/* reads old D00 header. this doesn't have a lot of identifying
+		 * info, besides some assumptions we make that I am going to abuse */
+		long streamLength = stream.Length - stream.Position;
+
+		if (streamLength <= 15 || streamLength > ushort.MaxValue)
+			throw new FormatException();
+
+		var hdr = new D00Header();
+
+		hdr.Version = stream.ReadStructure<byte>();
+		/* old headers should never be higher than version 1 */
+		if (hdr.Version < 1)
+			throw new FormatException();
+
+		hdr.Speed = stream.ReadStructure<byte>();
+		hdr.Subsongs = stream.ReadStructure<byte>();
+		hdr.Tpoin = stream.ReadStructure<short>();
+		hdr.SequenceParaptr = stream.ReadStructure<short>();
+		hdr.InstrumentParaptr = stream.ReadStructure<short>();
+		hdr.InfoParaptr = stream.ReadStructure<short>();
+		hdr.SpfxParaptr = stream.ReadStructure<short>(); /* actually levelpuls */
+		hdr.EndMark = stream.ReadStructure<short>();
+
+		return hdr;
+	}
+
+	static D00Header ReadHeaderNew(Stream stream)
 	{
 		int fplen = Marshal.SizeOf<D00Header>();
 
@@ -56,6 +90,31 @@ public class D00 : SongFileConverter
 		// otherwise. 119 is just the size of the header.
 		if (fplen <= 119 || fplen > ushort.MaxValue)
 			throw new FormatException();
+
+		byte[] magic = new byte[6];
+
+		stream.ReadExactly(magic);
+
+		if (magic.ToStringZ() != "JCH\x26\x02\x66")
+			throw new FormatException();
+
+		long fpofs = stream.Position;
+
+		stream.Position++;
+
+		int version = stream.ReadByte();
+
+		if (version.HasBitSet(0x80))
+		{
+		/* from adplug: "reheadered old-style song" */
+			stream.Position = 0x68;
+
+			Log.Append(1, " D00: This is a reheadered old-style song!");
+
+			return ReadHeaderV1(stream);
+		}
+
+		stream.Position = fpofs;
 
 		byte[] bytes = new byte[fplen];
 
@@ -67,9 +126,6 @@ public class D00 : SongFileConverter
 		{
 			var hdr = Marshal.PtrToStructure<D00Header>(pin.AddrOfPinnedObject());
 
-			if (hdr.ID != "JCH\x26\x02\x66")
-				throw new FormatException();
-
 			/* this should always be zero? */
 			if (hdr.Type != 0)
 				throw new FormatException();
@@ -80,11 +136,6 @@ public class D00 : SongFileConverter
 
 			/* > EdLib always sets offset 0009h to 01h. You cannot make more than
 			* > one piece of music at a time in the editor. */
-			if (hdr.Subsongs != 1)
-				throw new FormatException();
-
-			if (hdr.SoundCard != 0)
-				throw new FormatException();
 
 			// verify the parapointers
 			if (hdr.Tpoin < 119
@@ -101,6 +152,62 @@ public class D00 : SongFileConverter
 		{
 			pin.Free();
 		}
+	}
+
+	static D00Header ReadHeader(Stream stream)
+	{
+		/* this function is responsible for reading and verification
+		 * most of this verification isn't useful for v2-v4 d00 files,
+		 * but v0-v1 d00 files have virtually no identifying information
+		 * if they haven't been reheadered. */
+
+		D00Header hdr;
+
+		try
+		{
+			hdr = ReadHeaderNew(stream);
+		}
+		catch (FormatException)
+		{
+			stream.Position = 0;
+			hdr = ReadHeaderV1(stream);
+		}
+
+		/* should always be zero */
+		if (hdr.Type != 0)
+			throw new FormatException();
+
+		if (hdr.Version > 4)
+			throw new FormatException();
+
+		/* ignore files with more than one subsong.
+		 * we can't handle them anyway. */
+		if (hdr.Subsongs != 1)
+			throw new FormatException();
+
+		/* make sure that none of our pointers point inside
+		 * the file header (good for v0-v1, less-so for >v2) */
+		long streamPosition = stream.Position;
+		if (streamPosition < 0)
+			throw new FormatException(); /* wut */
+
+		if (hdr.Tpoin < streamPosition
+		 || hdr.SequenceParaptr < streamPosition
+		 || hdr.InstrumentParaptr < streamPosition
+		 || hdr.InfoParaptr < streamPosition
+		 || hdr.SpfxParaptr < streamPosition)
+			throw new FormatException();
+
+		/* endmark should ALWAYS be 0xFFFF
+		 * this is actually a pretty good identifier of sorts... */
+		if (hdr.EndMark != unchecked((short)0xFFFF))
+			throw new FormatException();
+
+		/* AdPlug: overwrite speed with 70hz if version is 0 */
+		if (hdr.Version == 0)
+			hdr.Speed = 70;
+
+	 	return hdr;
 	}
 
 	public override bool FillExtendedData(Stream stream, FileReference fileReference)
@@ -128,21 +235,37 @@ public class D00 : SongFileConverter
 	* Loosely based off the AdPlug code, written by
 	* Simon Peter <dn.tlp@gmx.net> */
 
-	static void HzToSpeedTempo(int hz, out int pspeed, out int ptempo)
+	static void HzToSpeedTempo(byte ver, int hz, out int pspeed, out int ptempo)
 	{
-		/* "close enough" calculation; based on known values ;)
-		*
-		* "AAAAARGGGHHH" BPM is 131-ish, and the Hz is 32.
-		* 131/32 is a little over 4. */
-		pspeed = 3;
-		ptempo = (hz * 4);
-
-		while (ptempo > 255)
+		if (ver >= 3)
 		{
-			/* eh... */
-			pspeed *= 2;
-			ptempo /= 2;
+			/* have to do a bit more work here...
+			 *
+			 * this is really just a guesstimate.
+			 * "AAAAARGGGHHH" BPM is 131-ish, and the hz value is 32.
+			 * hence we just multiple by 131/32. :) */
+			double tempo;
+			int speed;
+
+			speed = 3;
+			tempo = hz * (131.0 / 32.0);
+
+			while (tempo > 255.0)
+			{
+				/* divide until we get a valid tempo */
+				speed *= 2;
+				tempo /= 2;
+			}
+
+			pspeed = speed;
+			ptempo = (int)Math.Round(tempo);
 		}
+		else
+		{
+			/* hz is basically just speed. */
+			pspeed = hz;
+			ptempo = 131;
+ 		}
 	}
 
 	const int D00PatternRows = 64;
@@ -171,7 +294,87 @@ public class D00 : SongFileConverter
 		Experimental = 1,
 		[Description("SPFX effects not implemented")]
 		SPFX = 2,
+#if !D00_ENABLE_BROKEN_LEVELPULS
+		[Description("Levelpuls not implemented")]
+		LevelPuls = 4,
+#endif
+		[Description("Instrument finetune ignored")]
+		FineTune = 8,
 	}
+
+	static byte EdLibVolumeToITVolume(int x)
+		=> unchecked((byte)((63 - (x & 63)) * 64 / 63));
+
+#if D00_ENABLE_BROKEN_LEVELPULS
+	/* return of false means catastrophic failure */
+	static bool LoadLevelpuls(short paraptr, int tunelev,
+		SongInstrument ins, SongSample smp, Stream fp)
+	{
+		/* FIXME: The first iteration of the tunelev takes in a "timer",
+		 * which is weird-speak for sustain for given amount of ticks. */
+		var loop = new System.Collections.BitArray(255);
+		int x = 0;
+		long start = fp.Position;;
+
+		if (ins.VolumeEnvelope == null)
+			return false;
+
+		int i;
+
+		for (i = 0; i < 25 /* node array size? */; i++)
+		{
+			if (tunelev == 0xFF)
+				break; /* end of levelpuls. FIXME i think we need to loop this point */
+
+			fp.Position = paraptr + tunelev * 4;
+
+			loop[tunelev] = true;
+
+			int level = fp.ReadByte();
+			if (level < 0)
+				return false;
+
+			/* int8_t voladd; -- ignored */
+
+			int duration = fp.ReadByte();
+			if (duration < 0)
+				return false;
+
+			while (i >= ins.VolumeEnvelope.Nodes.Count)
+				ins.VolumeEnvelope.Nodes.Add((0, 0));
+
+			ins.VolumeEnvelope.Nodes[i].Tick = x;
+
+			if (level != 0xFF)
+				ins.VolumeEnvelope.Nodes[i].Value = EdLibVolumeToITVolume(level);
+			else if (i > 0)
+			{
+				/* total guesstimate */
+				ins.VolumeEnvelope.Nodes[i].Value = ins.VolumeEnvelope.Nodes[i - 1].Value;
+			}
+			else
+				ins.VolumeEnvelope.Nodes[i].Value = 64;
+
+			x += Math.Max(duration / 20, 1) + 1;
+
+			tunelev = fp.ReadByte();
+			if (tunelev < 0)
+				return false;
+
+			/* XXX set loop here */
+			if (loop[tunelev])
+				break;
+		}
+
+		if ((i >= 2) && (ins.VolumeEnvelope.Nodes.Count > i))
+			ins.VolumeEnvelope.Nodes.RemoveRange(i, ins.VolumeEnvelope.Nodes.Count - i);
+
+		fp.Position = start;
+
+		/* I guess */
+		return true;
+	}
+#endif
 
 	public override Song LoadSong(Stream stream, LoadFlags flags)
 	{
@@ -185,6 +388,49 @@ public class D00 : SongFileConverter
 		var hdr = ReadHeader(stream);
 
 		song.Title = hdr.Title;
+
+		/* read in song info (message).
+		 * this is USUALLY simply 0xFFFF (end marking) but in some
+		 * old songs (e.g. "the alibi.d00") it contains real data */
+		stream.Position = hdr.InfoParaptr;
+
+		var messageBuffer = new List<byte>();
+
+		for (int msgp = 0; msgp < Constants.MaxMessage; )
+		{
+			int ch = stream.ReadByte();
+
+			if (ch < 0)
+			{
+				/* end of file before end marker == error
+				 * OR we've misidentified a file :( */
+				throw new FormatException();
+			}
+
+			if (ch == 0xFF)
+			{
+				int ch2 = stream.ReadByte();
+
+				if (ch2 < 0)
+					throw new FormatException();
+
+				if (ch2 == 0xFF)
+					break; /* message end */
+				else
+				{
+					messageBuffer.Append((byte)ch);
+
+					if (messageBuffer.Count >= Constants.MaxMessage)
+						break;
+
+					messageBuffer.Append((byte)ch2);
+				}
+			}
+			else
+				messageBuffer.Append((byte)ch);
+		}
+
+		song.Message = messageBuffer.ToArray().AsSpan().FromCP437(zeroTerminated: false);
 
 		int[] speeds = new int[10];
 
@@ -228,10 +474,13 @@ public class D00 : SongFileConverter
 				{
 					// I think this actually just adds onto the existing volume,
 					// instead of averaging them together ???????
-					//song->channels[c].volume = volume[c];
+					song.Channels[c].Volume = EdLibVolumeToITVolume(volume[c]);
 				}
 				else
+				{
 					song.Channels[c].Flags |= ChannelFlags.Mute;
+					continue; /* wut */
+				}
 
 				stream.Position = startPosition + ptrs[c];
 
@@ -414,9 +663,10 @@ public class D00 : SongFileConverter
 								case 9: /* New Level (in layman's terms, volume) */
 									memVolumeEffect = VolumeEffects.Volume;
 									/* volume is backwards, WTF */
-									memVolumeParameter = (byte)((63 - (fxop & 63)) * 64 / 63);
+									memVolumeParameter = EdLibVolumeToITVolume(fxop);
 									break;
 								case 0xB: /* Set spfx (need to handle this appropriately...) */
+									if (hdr.Version == 4)
 									{
 										/* SPFX is a linked list.
 										*
@@ -520,7 +770,8 @@ public class D00 : SongFileConverter
 			 * basically each channel ought to have an increment. if each speed
 			 * is the same this is okay, and we can probably just ignore the
 			 * "song speed" altogether. though i don't know how many songs
-			 * actually use different speeds for each channel. */
+			 * actually use different speeds for each channel, and such
+			 * songs are likely incredibly rare. */
 			int maxCount = 1, count = 1;
 			var mode = speeds[0];
 
@@ -544,7 +795,7 @@ public class D00 : SongFileConverter
 			for (int c = 0; c < 10; c++)
 				Log.Append(1, "speeds[{0}] = {1}", c, speeds[c]);
 
-			HzToSpeedTempo(mode, out song.InitialSpeed, out song.InitialTempo);
+			HzToSpeedTempo(hdr.Version, mode, out song.InitialSpeed, out song.InitialTempo);
 		}
 
 		/* start reading instrument data */
@@ -552,6 +803,12 @@ public class D00 : SongFileConverter
 		stream.Position = startPosition + hdr.InstrumentParaptr;
 
 		nInst = Math.Min(nInst, Constants.MaxSamples);
+
+		/* enable instrument mode so we can read in levelpuls info */
+#if D00_ENABLE_BROKEN_LEVELPULS
+		if (hdr.Version == 1 || hdr.Version == 2)
+			song.Flags |= SongFlags.InstrumentMode;
+#endif
 
 		byte[] bytes = new byte[11];
 
@@ -596,16 +853,42 @@ public class D00 : SongFileConverter
 			smp.Length = 1;
 			smp.AllocateData();
 
-#if false
-			/* I don't think this is right... */
-			smp.C5Speed += stream.ReadByte();
-#else
-			stream.ReadByte();
+#if D00_ENABLE_BROKEN_LEVELPULS
+			var inst = song.GetInstrument(c + 1);
+			inst.FadeOut = 256 << 5;
 #endif
 
-			/* It's probably safe to ignore these */
+			int tunelev = stream.ReadByte();
+			if (tunelev < 0)
+				break; /* truncated file?? */
+
+			switch (hdr.Version)
+			{
+				case 1:
+				case 2:
+				{
+					if (tunelev == 0xFF)
+						break;
+
+#if D00_ENABLE_BROKEN_LEVELPULS
+					if (!LoadLevelpuls(hdr.SpfxParaptr, tunelev, inst, smp, stream))
+						throw new FormatException(); /* WUT */
+#else
+					warn |= Warnings.LevelPuls;
+#endif
+					break;
+				}
+				case 4:
+					warn |= Warnings.FineTune;
+					break;
+				default:
+					/* just padding? */
+					break;
+			}
+
+			/* It's probably safe to ignore these (?)
+			 * I think Adplug also ignores these values if SPFX isn't used ... */
 #if false
-			Log.Append(1, "inst: {0}", c);
 			Log.Append(1, "timer: {0}", stream.ReadByte());
 			Log.Append(1, "sr: {0}", stream.ReadByte());
 			Log.Append(1, "unknown bytes: {0}, {1}", stream.ReadByte(), stream.ReadByte());
@@ -617,11 +900,15 @@ public class D00 : SongFileConverter
 #endif
 		}
 
+		/* TODO for older D00 files we can use the levelpuls structure
+		 * to create an instrument that plays stuff properly */
+
 		for (int c = 9; c < Constants.MaxChannels; c++)
 			song.Channels[c].Flags |= ChannelFlags.Mute;
 
-		song.TrackerID =
-			(hdr.Version < 4) ? "Unknown AdLib tracker" : "EdLib Tracker";
+		if (hdr.Version == 4)
+			song.TrackerID = "EdLib Tracker";
+		/* otherwise... it's probably some random tracker */
 
 		foreach (var warning in Enum.GetValues<Warnings>())
 			if (warn.HasAllFlags(warning))
