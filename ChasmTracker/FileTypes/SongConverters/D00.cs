@@ -7,14 +7,14 @@ after noteoff, and I don't care enough to fix it right now.
 */
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace ChasmTracker.FileTypes.SongConverters;
 
-using System.Collections.Generic;
-using System.Linq;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -65,9 +65,6 @@ public class D00 : SongFileConverter
 		var hdr = new D00Header();
 
 		hdr.Version = stream.ReadStructure<byte>();
-		/* old headers should never be higher than version 1 */
-		if (hdr.Version < 1)
-			throw new FormatException();
 
 		hdr.Speed = stream.ReadStructure<byte>();
 		hdr.Subsongs = stream.ReadStructure<byte>();
@@ -75,7 +72,8 @@ public class D00 : SongFileConverter
 		hdr.SequenceParaptr = stream.ReadStructure<short>();
 		hdr.InstrumentParaptr = stream.ReadStructure<short>();
 		hdr.InfoParaptr = stream.ReadStructure<short>();
-		hdr.SpfxParaptr = stream.ReadStructure<short>(); /* actually levelpuls */
+		if (hdr.Version > 0)
+			hdr.SpfxParaptr = stream.ReadStructure<short>(); /* actually levelpuls */
 		hdr.EndMark = stream.ReadStructure<short>();
 
 		return hdr;
@@ -106,10 +104,8 @@ public class D00 : SongFileConverter
 
 		if (version.HasBitSet(0x80))
 		{
-		/* from adplug: "reheadered old-style song" */
+			/* from adplug: "reheadered old-style song" */
 			stream.Position = 0x68;
-
-			Log.Append(1, " D00: This is a reheadered old-style song!");
 
 			return ReadHeaderV1(stream);
 		}
@@ -185,27 +181,67 @@ public class D00 : SongFileConverter
 		if (hdr.Subsongs != 1)
 			throw new FormatException();
 
-		/* make sure that none of our pointers point inside
-		 * the file header (good for v0-v1, less-so for >v2) */
+		/* validate the parapointers */
 		long streamPosition = stream.Position;
 		if (streamPosition < 0)
 			throw new FormatException(); /* wut */
 
-		if (hdr.Tpoin < streamPosition
-		 || hdr.SequenceParaptr < streamPosition
-		 || hdr.InstrumentParaptr < streamPosition
-		 || hdr.InfoParaptr < streamPosition
-		 || hdr.SpfxParaptr < streamPosition)
+		long streamLength = stream.Length;
+
+		/* verify that the parapointers are within range for the file */
+		bool ParapointerValid(long ptr)
+			=> (streamPosition <= ptr || streamLength >= ptr);
+
+		if (!ParapointerValid(hdr.Tpoin)
+		 || !ParapointerValid(hdr.InfoParaptr)
+		 || !ParapointerValid(hdr.InstrumentParaptr)
+		 || !ParapointerValid(hdr.SequenceParaptr))
 			throw new FormatException();
 
+		/* this pointer is used differently based on the version.
+		 * some versions have nothing! */
+		switch (hdr.Version)
+		{
+			case 1:
+			case 2:
+				/* Levelpuls */
+				break;
+			case 4:
+				/* SPFX */
+				if (!ParapointerValid(hdr.SpfxParaptr))
+					throw new FormatException();
+				break;
+		}
+
 		/* endmark should ALWAYS be 0xFFFF
-		 * this is actually a pretty good identifier of sorts... */
+		 * at this point, there's a fairly good chance we're working with
+		 * a v0 or v1 d00 file. */
 		if (hdr.EndMark != unchecked((short)0xFFFF))
 			throw new FormatException();
 
 		/* AdPlug: overwrite speed with 70hz if version is 0 */
 		if (hdr.Version == 0)
 			hdr.Speed = 70;
+
+		{
+			/* do some additional verification of the tpoin stuff.
+			 * this is likely a very weird edge case, but... */
+			long start = stream.Position;
+			if (start < 0)
+				throw new FormatException(); /* oops */
+
+			stream.Position = hdr.Tpoin;
+
+			for (int j=0; j < 9; j++)
+			{
+				var ptr = stream.ReadStructure<ushort>();
+
+				if (ptr >= streamLength)
+					throw new FormatException();
+			}
+
+			stream.Position = start;
+		}
 
 	 	return hdr;
 	}
@@ -300,6 +336,8 @@ public class D00 : SongFileConverter
 #endif
 		[Description("Instrument finetune ignored")]
 		FineTune = 8,
+		[Description("Order speed ignored")]
+		OrderSpeed = 16,
 	}
 
 	static byte EdLibVolumeToITVolume(int x)
@@ -390,7 +428,7 @@ public class D00 : SongFileConverter
 		song.Title = hdr.Title;
 
 		/* read in song info (message).
-		 * this is USUALLY simply 0xFFFF (end marking) but in some
+		 * this is USUALLY simply "\xFF\xFF" (end marking) but in some
 		 * old songs (e.g. "the alibi.d00") it contains real data */
 		stream.Position = hdr.InfoParaptr;
 
@@ -402,9 +440,9 @@ public class D00 : SongFileConverter
 
 			if (ch < 0)
 			{
-				/* end of file before end marker == error
-				 * OR we've misidentified a file :( */
-				throw new FormatException();
+				/* some old files actually have this case.
+				 * (platest.d00) */
+				break;
 			}
 
 			if (ch == 0xFF)
@@ -412,7 +450,7 @@ public class D00 : SongFileConverter
 				int ch2 = stream.ReadByte();
 
 				if (ch2 < 0)
-					throw new FormatException();
+					break;
 
 				if (ch2 == 0xFF)
 					break; /* message end */
@@ -433,6 +471,8 @@ public class D00 : SongFileConverter
 		song.Message = messageBuffer.ToArray().AsSpan().FromCP437(zeroTerminated: false);
 
 		int[] speeds = new int[10];
+
+		speeds[0] = hdr.Speed;
 
 		{
 			/* handle pattern/order stuff
@@ -513,8 +553,11 @@ public class D00 : SongFileConverter
 					if (ords[nOrds] == 0xFFFF || ords[nOrds] == 0xFFFE)
 						break;
 					else if (ords[nOrds] >= 0x9000)
+					{
 						/* set speed -- IGNORED for now */
+						warn |= Warnings.OrderSpeed;
 						continue;
+					}
 					else if (ords[nOrds] >= 0x8000)
 					{
 						ordTranspose[nOrds] = (ords[nOrds] & 0xff);
@@ -537,6 +580,10 @@ public class D00 : SongFileConverter
 					}
 				}
 
+				/* avoid possible divide-by-zero (phase.d00) */
+				if (nOrds == 0)
+					continue;
+
 				int pattern = 0;
 				int row = 0;
 
@@ -551,6 +598,8 @@ public class D00 : SongFileConverter
 
 					for (; pattern < Constants.MaxPatterns; FixRow(ref pattern, ref row))
 					{
+						int count = 0;
+
 					D00_readnote: /* this goto is kind of ugly... */
 						int @event;
 
@@ -574,8 +623,10 @@ public class D00 : SongFileConverter
 						if (@event < 0x4000)
 						{
 							int note = (@event & 0xFF);
-							int count = (@event >> 8);
 							int r;
+
+							if (hdr.Version > 0)
+								count = @event >> 8;
 
 							/* note event; data is stored in the low byte */
 							switch (note & 0x7F)
@@ -596,32 +647,42 @@ public class D00 : SongFileConverter
 
 									break;
 								default:
-									/* 0x80 flag == ignore channel transpose */
-									if (note.HasBitSet(0x80))
-										note -= 0x80;
-									else
-										note += ordTranspose[n % nOrds];
-
-									/* reset fx */
+									/* reset fx (does v0 do this)?
+									 * ALSO: is this even right ?? lol */
 									memEffect = Effects.None;
 									memParameter = 0;
+
+									if (hdr.Version > 0)
+									{
+										/* 0x80 flag == ignore channel transpose */
+										if (note.HasBitSet(0x80))
+											note -= 0x80;
+										else
+											note += ordTranspose[n % nOrds];
+
+										if (count >= 0x20)
+										{
+											/* "tied note" */
+											if (sn.Effect == Effects.None)
+											{
+												sn.Effect = Effects.TonePortamento;
+												sn.Parameter = 0xFF;
+											}
+
+											count -= 0x20;
+										}
+									}
+									else
+									{
+										/* note handling for v0 */
+										if (count < 2) /* unlocked note */
+											note += ordTranspose[n % nOrds];
+									}
 
 									sn.Note = (byte)(note + SpecialNotes.First + 12);
 									sn.Instrument = (byte)memInstrument;
 									sn.VolumeEffect = memVolumeEffect;
 									sn.VolumeParameter = memVolumeParameter;
-
-									if (count >= 0x20)
-									{
-										/* "tied note" */
-										if (sn.Effect == Effects.None)
-										{
-											sn.Effect = Effects.TonePortamento;
-											sn.Parameter = 0xFF;
-										}
-
-										count -= 0x20;
-									}
 
 									row += count + 1;
 
@@ -659,6 +720,10 @@ public class D00 : SongFileConverter
 
 										memParameter = (byte)((speed << 4) | depth);
 									}
+									break;
+								case 8: /* Duration (v0) */
+									if (hdr.Version == 0)
+										count = fxop;
 									break;
 								case 9: /* New Level (in layman's terms, volume) */
 									memVolumeEffect = VolumeEffects.Volume;
@@ -716,6 +781,8 @@ public class D00 : SongFileConverter
 						}
 					}
 
+					/* FIXME: this isn't perfect; "like galway.d00" add some
+					 * weird stuff on the end */
 					if (n == nOrds)
 					{
 						if (maxPattern < pattern)
@@ -729,14 +796,26 @@ public class D00 : SongFileConverter
 				}
 			}
 
+			//Log.Append(1, "pat: {0}, row: {1}", maxPattern, maxRow);
+
+			/* fixup max patterns / rows (off by one?) */
+			if (maxRow == 0)
+			{
+				maxPattern--;
+				maxRow = D00PatternRows - 1;
+			}
+			else
+				maxRow--;
+
 			/* now, clean up the giant mess we've made.
-			*
-			* FIXME: don't make a giant mess to begin with :) */
+			 *
+			 * FIXME: don't make a giant mess to begin with :) */
 
 			if (maxPattern + 1 < Constants.MaxPatterns)
 				for (int c = maxPattern + 1; c < Constants.MaxPatterns; c++)
 					song.Patterns[c] = Pattern.CreateEmpty();
 
+#if false
 			if (song.Patterns[maxPattern]!.Rows.Count != maxRow)
 			{
 				/* insert an effect to jump back to the start
@@ -753,6 +832,9 @@ public class D00 : SongFileConverter
 					note.Parameter = 0;
 				}
 			}
+#else
+			song.GetPattern(maxPattern)!.Resize(maxRow + 1);
+#endif
 
 			for (int c = 0; c <= maxPattern; c++)
 				song.OrderList.Add(c);
@@ -790,10 +872,12 @@ public class D00 : SongFileConverter
 				}
 			}
 
+#if true
 			Log.Append(1, "mode: " + mode);
 
 			for (int c = 0; c < 10; c++)
 				Log.Append(1, "speeds[{0}] = {1}", c, speeds[c]);
+#endif
 
 			HzToSpeedTempo(hdr.Version, mode, out song.InitialSpeed, out song.InitialTempo);
 		}
@@ -908,6 +992,8 @@ public class D00 : SongFileConverter
 
 		if (hdr.Version == 4)
 			song.TrackerID = "EdLib Tracker";
+		else
+			song.TrackerID = "Unknown AdLib Tracker, file version " + hdr.Version;
 		/* otherwise... it's probably some random tracker */
 
 		foreach (var warning in Enum.GetValues<Warnings>())
