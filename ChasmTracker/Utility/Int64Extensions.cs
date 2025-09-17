@@ -14,4 +14,9 @@ public static class Int64Extensions
 	{
 		return (value & flag) == flag;
 	}
+
+	public static bool HasAnyBitSet(this long value, long bits)
+	{
+		return (value & bits) != 0;
+	}
 }

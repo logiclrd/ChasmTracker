@@ -216,23 +216,9 @@ public static class AudioPlayback
 				/* convert 8-bit unsigned to signed by XORing the high bit */
 				if (AudioOutputBits == 8)
 				{
-					int sz = n * AudioSampleSize;
+					var pretendBytes = MemoryMarshal.Cast<short, byte>(AudioBuffer);
 
-					/* TODO make this work for buffer sizes than aren't multiples of 4 */
-					if (!sz.HasAnyBitSet(3))
-					{
-						/* 32-bit fast path */
-						var pretendWords = MemoryMarshal.Cast<short, uint>(AudioBuffer);
-						for (int i = 0; i < sz; i += 4)
-							pretendWords[i >> 2] ^= 0x80808080;
-					}
-					else
-					{
-						/* 8-bit slow path */
-						var pretendBytes = MemoryMarshal.Cast<short, byte>(AudioBuffer);
-						for (int i = 0; i < sz; i++)
-							pretendBytes[i] ^= 0x80;
-					}
+					pretendBytes.ExclusiveOr(0x80);
 				}
 
 				if ((Status.CurrentPage is WaterfallPage) || (Status.VisualizationStyle == TrackerVisualizationStyle.FFT))
