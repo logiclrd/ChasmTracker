@@ -26,7 +26,6 @@ public class Program
 {
 	public static readonly DateTime StartTimeUTC = DateTime.UtcNow;
 
-	//VideoDriver s_videoDriver;
 	//AudioDriver s_audioDriver;
 	//AudioDevice s_audioDevice;
 
@@ -706,7 +705,13 @@ public class Program
 
 		s_args = new CommandLineArguments(); /* shouldn't this be like, first? */
 
-		if (s_args.StartupFlags.HasAllFlags(StartupFlags.Headless))
+		if (!string.IsNullOrWhiteSpace(s_args.VideoDriverSpec))
+		{
+			Environment.SetEnvironmentVariable("SDL_VIDEODRIVER", s_args.VideoDriverSpec);
+			Environment.SetEnvironmentVariable("SDL_VIDEO_DRIVER", s_args.VideoDriverSpec);
+		}
+
+		if (s_args.Headless)
 			Status.Flags |= StatusFlags.Headless;
 
 		/* Eh. */
@@ -715,7 +720,7 @@ public class Program
 
 		Configuration.InitializeDirectory();
 
-		if (s_args.StartupFlags.HasAllFlags(StartupFlags.Hooks))
+		if (s_args.EnableHooks)
 		{
 			Hooks.Startup();
 			s_shutdownProcess |= ShutdownFlags.RunHook;
@@ -738,17 +743,17 @@ public class Program
 		{
 			Status.Flags &= ~StatusFlags.ClassicMode;
 
-			if (s_args.StartupFlags.HasAllFlags(StartupFlags.Classic))
+			if (s_args.ClassicMode)
 				Status.Flags |= StatusFlags.ClassicMode;
 		}
 
-		if (!s_args.StartupFlags.HasAllFlags(StartupFlags.Network))
+		if (!s_args.NetworkMIDI)
 			Status.Flags |= StatusFlags.NoNetwork;
 
 		s_shutdownProcess |= ShutdownFlags.SaveConfiguration;
 		s_shutdownProcess |= ShutdownFlags.SDLQuit;
 
-		if (s_args.StartupFlags.HasAllFlags(StartupFlags.Headless))
+		if (s_args.Headless)
 		{
 			if (s_args.DiskwriteTo == null)
 			{
@@ -832,7 +837,7 @@ public class Program
 			Configuration.Directories.InstrumentsDirectory = s_args.InitialDirectory;
 		}
 
-		if (s_args.StartupFlags.HasAllFlags(StartupFlags.FontEdit))
+		if (s_args.FontEditor)
 		{
 			Status.Flags |= StatusFlags.StartupFontEdit;
 			Page.SetPage(PageNumbers.FontEditor);
@@ -864,7 +869,7 @@ public class Program
 					if (Song.CurrentSong.ExportSong(s_args.DiskwriteTo, driver) != SaveResult.Success)
 						Exit(1);
 				}
-				else if (s_args.StartupFlags.HasAllFlags(StartupFlags.Play))
+				else if (s_args.PlayOnStartup)
 				{
 					AudioPlayback.Start();
 					Page.SetPage(PageNumbers.Info);

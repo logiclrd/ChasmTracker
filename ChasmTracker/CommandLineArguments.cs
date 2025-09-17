@@ -14,10 +14,10 @@ public class CommandLineArguments
 	public bool ClassicMode, ClassicModeSpecified;
 	public bool PlayOnStartup;
 	public bool FontEditor;
+	public bool EnableHooks = true; /* --no-hooks: don't run startup/exit scripts */
+	public bool Headless;
 	/* diskwrite? */
 	public string? DiskwriteTo;
-	/* startup flags */
-	public StartupFlags StartupFlags = StartupFlags.Hooks | StartupFlags.Network;
 	/* initial module directory */
 	public string? InitialDirectory;
 	/* filename of song to load on startup, or NULL for none */
@@ -87,7 +87,20 @@ public class CommandLineArguments
 			if ((arg == "--audio-driver") || (arg == "-a"))
 				AudioDriverSpec = ExtractArgument(ref commandLine, out _);
 			else if ((arg == "--video-driver") || (arg == "-v"))
+			{
+				/* this is largely only here for historical reasons, as
+				 * old Schism used to be able to utilize:
+				 *   1. SDL 1.2 surfaces
+				 *   2. YUV overlays
+				 *   3. OpenGL <3.0
+				 *   4. DirectDraw
+				 * However, all of this cruft has been ripped out over
+				 * time. Possibly we could re-add OpenGL (maybe YUV
+				 * overlays as well) but the way its implemented in
+				 * SDL 1.2 seems to be buggy, and that's really the
+				 * only place where it's actually useful. */
 				VideoDriverSpec = ExtractArgument(ref commandLine, out _);
+			}
 			else if ((arg == "--network") || (arg == "--no-network"))
 			{
 				NoValue();
@@ -123,14 +136,14 @@ public class CommandLineArguments
 			{
 				NoValue();
 				if (arg == "--hooks")
-					StartupFlags |= StartupFlags.Hooks;
+					EnableHooks = true;
 				else
-					StartupFlags &= ~StartupFlags.Hooks;
+					EnableHooks = false;
 			}
 			else if (arg == "--headless")
 			{
 				NoValue();
-				StartupFlags |= StartupFlags.Headless;
+				Headless = true;
 			}
 			else if (arg == "--version")
 			{

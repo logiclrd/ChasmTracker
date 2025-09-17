@@ -44,8 +44,6 @@ public static class Configuration
 	[ConfigurationKey("MIDI Port %d", FirstIndex = 1)]
 	public static List<MIDIPortConfiguration> MIDIPorts = new List<MIDIPortConfiguration>();
 
-	public static StartupFlags StartupFlags;
-
 	public static readonly Dictionary<object, List<string>> CommentsByOwner = new Dictionary<object, List<string>>();
 
 	public static readonly Dictionary<string, ConfigurationSection> SectionByKey = typeof(Configuration)
