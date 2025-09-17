@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace ChasmTracker.FileSystem;
 
@@ -47,6 +48,8 @@ public class DirectoryScanner
 		return true;
 	}
 
+	static Task<bool>? s_executingStep;
+
 	// dmoz_worker
 	// this is called by main to actually do some dmoz work. returns 0 if there is no dmoz work to do...
 	public static bool TakeAsynchronousFileListStep()
@@ -54,7 +57,21 @@ public class DirectoryScanner
 		if (CurrentFilterOperation == null)
 			return false;
 
-		return CurrentFilterOperation.TakeStep();
+		if (s_executingStep == null)
+		{
+			s_executingStep = Task.Run(() => CurrentFilterOperation.TakeStep());
+
+			return true;
+		}
+
+		if (s_executingStep.Status < TaskStatus.RanToCompletion)
+			return true;
+
+		var ret = s_executingStep.Result;
+
+		s_executingStep = null;
+
+		return ret;
 	}
 
 	public static void AddPlatformDirs(FileList fileList, DirectoryList? dirList, string? parentDirectoryPath)
