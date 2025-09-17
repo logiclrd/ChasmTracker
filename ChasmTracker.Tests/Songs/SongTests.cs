@@ -1,10 +1,12 @@
+using System;
+
+using NUnit.Framework;
+
+using FluentAssertions;
+
 namespace ChasmTracker.Tests.Songs;
 
-using System;
-using System.Linq;
 using ChasmTracker.Songs;
-using FluentAssertions;
-using NUnit.Framework;
 
 [TestFixture]
 public class SongTests
