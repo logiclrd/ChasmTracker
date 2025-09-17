@@ -872,7 +872,7 @@ public class D00 : SongFileConverter
 				}
 			}
 
-#if true
+#if false
 			Log.Append(1, "mode: " + mode);
 
 			for (int c = 0; c < 10; c++)
