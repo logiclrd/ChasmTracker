@@ -9,6 +9,7 @@ using System.Text;
 
 namespace ChasmTracker.FileTypes;
 
+using System.ComponentModel.DataAnnotations;
 using ChasmTracker.FileSystem;
 using ChasmTracker.Songs;
 using ChasmTracker.Utility;
@@ -50,6 +51,34 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 		}
 
 		return null;
+	}
+
+	static void DecodeDelta8bit1chn(Span<byte> buf, int numSamples)
+	{
+		byte iadd = 0;
+
+		for (int i=0; i < numSamples; i++)
+		{
+			buf[i] = unchecked((byte)(buf[i] + iadd));
+			iadd = buf[i];
+		}
+	}
+
+	static void DecodeDelta8bit2chn(Span<byte> buf, int numSamples)
+	{
+		byte iadd1 = 0;
+		byte iadd2 = 0;
+
+		for (int i=0; i < numSamples; i++)
+		{
+			buf[0] = unchecked((byte)(buf[0] + iadd1));
+			buf[1] = unchecked((byte)(buf[1] + iadd2));
+
+			iadd1 = buf[0];
+			iadd2 = buf[1];
+
+			buf.Slice(2);
+		}
 	}
 
 	public static int ReadSample(SongSample sample, SampleFormat flags, Stream fp)
@@ -163,25 +192,27 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 			case SampleFormat._8 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMUnsigned:
 			case SampleFormat._8 | SampleFormat.Mono | SampleFormat.BigEndian | SampleFormat.PCMDeltaEncoded:
 			{
-				byte iAdd = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMUnsigned ? (byte)0x80 : (byte)0;
-
 				if (sample.Length > memSize)
 					sample.Length = memSize;
 
-				// read
+				/* first, read it all in */
 				var buffer = MemoryMarshal.Cast<sbyte, byte>(sample.Data8);
 
 				fp.ReadExactly(buffer);
 
-				// process
-				bool delta = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMDeltaEncoded;
-
-				for (int j = 0; j < buffer.Length; j++)
+				/* then do extra processing to get it into our format */
+				switch (flags & SampleFormat.EncodingMask)
 				{
-					buffer[j] = unchecked((byte)(buffer[j] + iAdd));
-
-					if (delta)
-						iAdd = buffer[j];
+					case SampleFormat.PCMDeltaEncoded:
+						DecodeDelta8bit1chn(sample.Data.AsSpan(), sample.Length);
+						break;
+					case SampleFormat.PCMUnsigned:
+						/* use fast 8-bit XOR function */
+						sample.Data.Slice(0, sample.Length).ExclusiveOr(0x80);
+						break;
+					case SampleFormat.PCMSigned:
+						/* nottin */
+						break;
 				}
 
 				sampleBytes = sample.Length;
@@ -202,24 +233,24 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 				if (len > memSize)
 					len = memSize >> 1;
 
-				var buffer = MemoryMarshal.Cast<sbyte, byte>(sample.Data8);
-
-				fp.ReadExactly(buffer);
-
-				bool delta = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMDeltaEncoded;
-
+				/* Convert split to interleaved */
 				for (int c = 0; c < 2; c++)
+					for (int j = 0; j < len; j += 2)
+						sample.Data[j + c] = fp.ReadStructure<byte>();
+
+				/* then do extra processing to get it into our format */
+				switch (flags & SampleFormat.EncodingMask)
 				{
-					int d = c * sample.Length;
-
-					byte iAdd = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMUnsigned ? (byte)0x80 : (byte)0;
-
-					for (int j = 0; j < sample.Length; j++)
-					{
-						sample.Data8[j + j + c] = unchecked((sbyte)(buffer[j + d] + iAdd));
-						if (delta)
-							iAdd = unchecked((byte)sample.Data8[j + j + c]);
-					}
+					case SampleFormat.PCMDeltaEncoded:
+						DecodeDelta8bit2chn(sample.Data.AsSpan(), sample.Length);
+						break;
+					case SampleFormat.PCMUnsigned:
+						/* use fast 8-bit XOR function */
+						sample.Data.Slice(0, sample.Length).ExclusiveOr(0x80);
+						break;
+					case SampleFormat.PCMSigned:
+						/* nottin */
+						break;
 				}
 
 				sampleBytes = sample.Length * 2;
@@ -244,18 +275,19 @@ public abstract class SampleFileConverter : FileConverter, IFileInfoReader
 
 				fp.ReadExactly(buffer);
 
-				bool delta = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMDeltaEncoded;
-
-				for (int c = 0; c < 2; c++)
+				/* then do extra processing to get it into our format */
+				switch (flags & SampleFormat.EncodingMask)
 				{
-					byte iAdd = (flags & SampleFormat.EncodingMask) == SampleFormat.PCMUnsigned ? (byte)0x80 : (byte)0;
-
-					for (int j = 0; j < len; j += 2)
-					{
-						sample.Data8[j + c] = unchecked((sbyte)(buffer[j + c] + iAdd));
-						if (delta)
-							iAdd = unchecked((byte)sample.Data8[j + c]);
-					}
+					case SampleFormat.PCMDeltaEncoded:
+						DecodeDelta8bit2chn(sample.Data.AsSpan(), sample.Length);
+						break;
+					case SampleFormat.PCMUnsigned:
+						/* use fast 8-bit XOR function */
+						sample.Data.Slice(0, sample.Length).ExclusiveOr(0x80);
+						break;
+					case SampleFormat.PCMSigned:
+						/* nottin */
+						break;
 				}
 
 				sampleBytes = sample.Length * 2;
