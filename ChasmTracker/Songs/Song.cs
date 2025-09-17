@@ -3238,14 +3238,45 @@ public class Song
 					chan.PanningSwing = 0;
 				}
 				break;
-			// S9x: Set Surround
+			// S9x: Sound Control
 			case 0x90:
-				if (param == 1 && Flags.HasAllFlags(SongFlags.FirstTick))
+				if (!Flags.HasAllFlags(SongFlags.FirstTick))
+					break;
+
+				switch (param & 0x0F)
 				{
-					chan.Flags |= ChannelFlags.Surround;
-					chan.PanbrelloDelta = 0;
-					chan.Panning = 128;
-					chan.ChannelPanning = 0;
+					/* S90: Surround Off (modplug hack I think) */
+
+					case 0x01: /* S91: Set Surround */
+					{
+						chan.Flags |= ChannelFlags.Surround;
+						chan.PanbrelloDelta = 0;
+						chan.Panning = 128;
+						chan.ChannelPanning = 0;
+						break;
+					}
+
+					/* ---- ModPlug extensions ----
+					 *
+					 * S98: Reverb Off
+					 * S99: Reverb On
+					 * S9A: 2-Channels Surround Mode (??)
+					 * S9B: 4-Channels Surround Mode (??)
+					 * S9C: IT filter mode
+					 * S9D: MPT filter mode (??) */
+
+					case 0x0E: /* S9E: Go forward */
+						chan.Flags &= ~ChannelFlags.PingPongFlag;
+						break;
+					case 0x0F: /* S9F: Go backward */
+						/* Set playback position to the end if the sample has just started */
+						if ((chan.Position == SamplePosition.Zero)
+						 && (chan.Length > 0)
+						 && SongNote.IsNote(chan.RowNote)
+						 || !chan.Flags.HasAnyFlag(ChannelFlags.Loop))
+							chan.Position = new SamplePosition(chan.Length - 1, 0xFFFFFFFFu);
+						chan.Flags |= ChannelFlags.PingPongFlag;
+						break;
 				}
 				break;
 			// SAx: Set 64k Offset
